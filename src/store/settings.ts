@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SourceConfig, Station } from '../sources/types';
+import type { ChartSource, Genre } from '../sources/charts';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman';
@@ -37,6 +38,10 @@ interface SettingsState {
   skin: Skin;
   deemix: { url: string; arl: string; bitrate: number };
   ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string };
+  /** Discover: which charts each genre uses. A genre that isn't listed uses the built-in defaults. */
+  discoverCharts: Partial<Record<Genre, ChartSource[]>>;
+  /** Pass undefined to put a genre back on the defaults. */
+  setDiscoverCharts(g: Genre, charts: ChartSource[] | undefined): void;
   setYtdlp(d: Partial<SettingsState['ytdlp']>): void;
   upsertSource(s: SourceConfig): void;
   removeSource(id: string): void;
@@ -54,6 +59,14 @@ export const useSettings = create<SettingsState>()(
       skin: 'neon',
       deemix: { url: 'http://localhost:6595', arl: '', bitrate: 9 },
       ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '' },
+      discoverCharts: {},
+      setDiscoverCharts: (g, charts) =>
+        set((st) => {
+          const discoverCharts = { ...st.discoverCharts };
+          if (charts?.length) discoverCharts[g] = charts;
+          else delete discoverCharts[g];
+          return { discoverCharts };
+        }),
       setYtdlp: (d) => set((st) => ({ ytdlp: { ...st.ytdlp, ...d } })),
       upsertSource: (s) =>
         set((st) => {

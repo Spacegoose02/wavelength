@@ -6,11 +6,11 @@ import { useSettings } from '../store/settings';
 import { useCatalog } from '../store/catalog';
 import { useDownloads } from '../store/downloads';
 import { useUi } from '../store/ui';
-import { Cover, Spinner, fmtTime } from '../components/common';
+import { Spinner, fmtTime } from '../components/common';
 import { IconDownload, IconRefresh } from '../components/Icons';
 import { isAndroid } from '../lib/platform';
+import { BrowseBar, DeezerAlbum, DeezerArtist, DzRow, statusKey, type Browse, type SendStatus } from './DeezerBrowse';
 
-type Status = 'queued' | 'error' | 'sending';
 type Tab = 'deezer' | 'ytdlp';
 
 export function Downloads() {
@@ -46,8 +46,12 @@ function DeezerTab({ q, onFallback }: { q: string; onFallback?: () => void }) {
   const [results, setResults] = useState<DeezerResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [status, setStatus] = useState<Record<string, { s: Status; msg?: string }>>({});
+  const [status, setStatus] = useState<Record<string, SendStatus>>({});
   const [queue, setQueue] = useState<any[]>([]);
+  // artist/album pages opened from the results; a new search starts back at the results
+  const [stack, setStack] = useState<Browse[]>([]);
+  const open = (b: Browse) => setStack((st) => [...st, b]);
+  useEffect(() => setStack([]), [q]);
 
   useEffect(() => {
     if (q.trim().length < 2) {
@@ -93,7 +97,7 @@ function DeezerTab({ q, onFallback }: { q: string; onFallback?: () => void }) {
   }, [deemix.url]);
 
   const send = async (r: DeezerResult) => {
-    const key = `${r.type}:${r.id}`;
+    const key = statusKey(r);
     setStatus((s) => ({ ...s, [key]: { s: 'sending' } }));
     try {
       await new Deemix(deemix.url, deemix.arl).addToQueue(r.link, deemix.bitrate);
@@ -104,11 +108,22 @@ function DeezerTab({ q, onFallback }: { q: string; onFallback?: () => void }) {
     }
   };
 
+  const current = stack[stack.length - 1];
+  const browse = { open, send, status };
+
   if (!deemix.url) return <p className="muted">Set your deemix server URL in Settings — or use the yt-dlp tab.</p>;
 
   return (
     <div className="dl-layout">
-      <div>
+      {current ? (
+        <div>
+          <BrowseBar stack={stack} back={() => setStack((st) => st.slice(0, -1))} home={() => setStack([])} />
+          {current.type === 'artist'
+            ? <DeezerArtist key={current.id} id={current.id} {...browse} />
+            : <DeezerAlbum key={current.id} id={current.id} {...browse} />}
+        </div>
+      ) : <div>
+        {!searched && !busy && <p className="muted">Search for an artist, album or song. Open an artist to see their whole discography, or an album to pick single tracks.</p>}
         {busy && <Spinner />}
         {searched && onFallback && (
           <div className="fallback">
@@ -116,23 +131,8 @@ function DeezerTab({ q, onFallback }: { q: string; onFallback?: () => void }) {
             <button className="link" onClick={onFallback}>Search with yt-dlp instead →</button>
           </div>
         )}
-        {results.map((r) => {
-          const st = status[`${r.type}:${r.id}`];
-          return (
-            <div key={`${r.type}:${r.id}`} className="station-row">
-              <Cover src={r.cover} alt={r.title} className="tiny" />
-              <div className="track-main">
-                <div className="track-title">{r.title} <span className="tag">{r.type}</span></div>
-                <div className="track-sub">{r.artist}{r.album ? ` — ${r.album}` : ''}{r.trackCount ? ` · ${r.trackCount} tracks` : ''}{r.duration ? ` · ${fmtTime(r.duration)}` : ''}</div>
-                {st?.s === 'error' && <div className="card-err">{st.msg}</div>}
-              </div>
-              <button className="btn" disabled={st?.s === 'sending' || st?.s === 'queued'} onClick={() => send(r)}>
-                <IconDownload /> {st?.s === 'queued' ? 'Queued' : st?.s === 'sending' ? '…' : 'Get'}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+        {results.map((r) => <DzRow key={statusKey(r)} r={r} open={open} send={send} status={status} />)}
+      </div>}
       <aside className="dl-queue">
         <h3>deemix queue</h3>
         {!queue.length && <p className="muted">Empty</p>}

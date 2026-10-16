@@ -135,8 +135,33 @@ const BY_GENRE: Record<Genre, ChartSource[]> = {
   rnb: ['ihRnbHits', 'apple', 'ihHipHopRnbTop40', 'rwRhythmic'],
 };
 
-export function sourcesFor(g: Genre): ChartSource[] {
+/** The charts each genre uses out of the box (Settings → Discover charts can override them). */
+export function defaultSourcesFor(g: Genre): ChartSource[] {
   return BY_GENRE[g];
+}
+
+/** The charts a genre is using: the user's pick from Settings if they made one, else the defaults. */
+export function sourcesFor(g: Genre, custom?: Partial<Record<Genre, ChartSource[]>>): ChartSource[] {
+  const pick = custom?.[g]?.filter((s) => chartsFor(g).includes(s));
+  return pick?.length ? pick : BY_GENRE[g];
+}
+
+/**
+ * Every chart that can serve a genre. Billboard and Apple only have some genres; the playlist
+ * charts (Deezer editors, RadioWave, iHeartRadio) are one fixed list, so they fit under any genre.
+ */
+export function chartsFor(g: Genre): ChartSource[] {
+  return (Object.keys(CHART_LABELS) as ChartSource[]).filter((s) =>
+    s === 'billboard' ? !!BILLBOARD[g] : s === 'apple' ? g in APPLE : true,
+  );
+}
+
+/** Who publishes a chart, for grouping in Settings. */
+export function chartProvider(s: ChartSource): string {
+  if (s.startsWith('ih')) return 'iHeartRadio';
+  if (s.startsWith('rw')) return 'RadioWave';
+  if (s.startsWith('dz')) return 'Deezer editors';
+  return CHART_LABELS[s];
 }
 
 /** RadioWave publishes with a ~2-week lag, so it gets a longer window. */
@@ -356,8 +381,7 @@ export function getChart(source: ChartSource, g: Genre): Promise<Chart> {
  * Aggregate every live chart for a genre: songs score higher the more charts they're on and
  * the higher they rank there (Borda-style), so cross-platform hits float to the top.
  */
-export async function getMix(g: Genre): Promise<{ entries: ChartEntry[]; failed: { source: ChartSource; reason: string }[]; used: ChartSource[] }> {
-  const sources = sourcesFor(g);
+export async function getMix(g: Genre, sources: ChartSource[] = sourcesFor(g)): Promise<{ entries: ChartEntry[]; failed: { source: ChartSource; reason: string }[]; used: ChartSource[] }> {
   const results = await Promise.allSettled(sources.map((s) => getChart(s, g)));
   const map = new Map<string, ChartEntry & { score: number }>();
   const failed: { source: ChartSource; reason: string }[] = [];

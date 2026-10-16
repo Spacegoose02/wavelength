@@ -28,7 +28,9 @@ All in `src/sources/charts.ts`:
    - iHeartRadio editorial playlist? Just add `{ myId: '<id from the iheart.com URL>' }` to `IHEART`
      and `myId: iheart('myId')` to `FETCHERS`.
    - Deezer editorial playlist? Add to `DEEZER_PLAYLISTS` and use `deezerPlaylist('myId')`.
-3. Register it in `FETCHERS` and list it under genres in `BY_GENRE`.
+3. Register it in `FETCHERS` and list it under genres in `BY_GENRE` (the defaults). It also appears in
+   Settings → Discover charts automatically. If it only serves some genres, teach `chartsFor()` that,
+   the way Billboard and Apple are handled.
 4. Validate against the live site before committing (titles, artists, rank 1, row count, date).
 
 New genre: add to `Genre` and `GENRES`, then give it an entry in `BY_GENRE` (and `APPLE` if Apple's

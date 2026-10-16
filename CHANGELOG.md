@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Browse Deezer by artist and album** (Downloads → Deezer): search now finds artists too. Artist pages
+  show top songs, the full discography (albums, EPs, singles, compilations) and related artists, with
+  **Get discography**. Album pages show the tracklist with 30-second previews, **Get album** and per-track **Get**.
+- **Pick your Discover charts**: Settings → Discover charts (or **Edit charts** on Discover) chooses which
+  charts each genre shows and mixes. iHeartRadio, RadioWave and Deezer lists can be added to any genre.
+- New [user guide](docs/USER-GUIDE.md) with screenshots for both.
+
 ## 0.5.0 — first public release
 
 Everything below, plus project documentation (`docs/`), brand assets and an MIT license.
