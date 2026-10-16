@@ -13,7 +13,7 @@ around in an afternoon, fix bugs without archaeology, and add features in the ho
 5. **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** — read this before debugging anything; most problems
    have already been met once.
 6. **[USER-GUIDE.md](USER-GUIDE.md)** — how features look and work for a listener, with screenshots
-   (Deezer artist/album browsing, choosing Discover charts).
+   (Deezer artist/album/playlist browsing, choosing Discover charts).
 7. **[RELEASING.md](RELEASING.md)** — ship a new version.
 8. **[BRAND.md](BRAND.md)** — the look and the voice.
 

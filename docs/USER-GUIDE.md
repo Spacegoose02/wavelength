@@ -1,30 +1,30 @@
 # User guide: finding music to download, and tuning Discover
 
-How to use two features added after 0.5.0: browsing Deezer by artist and album in **Downloads**, and
+How to use two features added after 0.5.0: browsing Deezer by artist, album and playlist in **Downloads**, and
 choosing which charts **Discover** shows. For how they're built, see the developer notes at the
 end of each section and [SOURCES.md](SOURCES.md).
 
 ---
 
-## Browse Deezer by artist and album
+## Browse Deezer by artist, album and playlist
 
 **Where:** Downloads → **Deezer** tab. You need a deemix server URL in Settings → deemix.
 
 Before this, the Deezer tab only listed albums and songs that matched your search. Now you can open
-an artist or an album and browse the way you would in a streaming app, then send exactly what you
-want to deemix.
+an artist, an album or a playlist and browse the way you would in a streaming app, then send exactly
+what you want to deemix.
 
 ### 1. Search
 
-Type an artist, album or song. Results come in three groups: **artists** first, then **albums**
-(singles and EPs are tagged), then **songs**.
+Type an artist, album, playlist or song. Results come in four groups: **artists** first, then
+**albums** (singles and EPs are tagged), then **playlists**, then **songs**.
 
 <p align="center">
   <img src="screenshots/deezer-search.png" alt="Deezer search results: artists with fan counts and a Browse button, then albums and songs with Get buttons" width="88%">
 </p>
 
 - **Browse** (or clicking an artist's name) opens the artist page.
-- Clicking an album opens the album page.
+- Clicking an album or a playlist opens its page.
 - On a song row, the artist name and album name are links too.
 - **Get** sends that album or song to deemix straight away, as before.
 
@@ -41,7 +41,8 @@ Type an artist, album or song. Results come in three groups: **artists** first, 
 
 Scroll down for the whole discography, newest first, split into **Albums**, **EPs**, **Singles**
 and **Compilations**. Each cover opens the album page, and each has its own **Get** button.
-At the bottom, **Fans also like** lists related artists so you can keep exploring.
+Below that, **Playlists with …** shows public playlists the artist is on, and **Fans also like**
+lists related artists so you can keep exploring.
 
 <p align="center">
   <img src="screenshots/deezer-discography.png" alt="Discography grid: albums with year and a Get button under each, then EPs" width="88%">
@@ -57,6 +58,26 @@ At the bottom, **Fans also like** lists related artists so you can keep explorin
 - Or pick songs one by one: each track has ▶ (30-second preview) and **Get**.
 - The artist name under the title goes back to the artist page.
 
+### 4. Playlist page
+
+Search for a mood, genre or playlist name (for example *Electronic Hits*) and the matching public
+playlists show up, tagged **playlist**, with who made them and how many songs they have.
+
+<p align="center">
+  <img src="screenshots/deezer-search-playlists.png" alt="Search results with playlists tagged PLAYLIST, showing the creator and track count, each with a Get button" width="88%">
+</p>
+
+<p align="center">
+  <img src="screenshots/deezer-playlist.png" alt="Playlist page: cover, creator, track count, total length, fans, description, a Get playlist button and the song list" width="88%">
+</p>
+
+- **Get playlist** sends every song in the playlist to deemix (you'll be asked first if it has more
+  than 50 songs). With its default settings, deemix saves them in a folder named after the playlist.
+- Or pick songs one by one with ▶ (preview) and **Get**. Each song's artist and album are links.
+- Long playlists load in full, up to 2,000 songs.
+- Only public playlists can be found; private ones (including your own private Deezer playlists)
+  aren't visible to the public API.
+
 ### Getting around
 
 - The bar above every page shows where you are, e.g. **Results / Tame Impala / Currents**.
@@ -66,11 +87,12 @@ At the bottom, **Fans also like** lists related artists so you can keep explorin
 - Everything works with a TV remote: titles, links and buttons are all focusable.
 
 > **Developer notes.** Deezer's public API, no login: `GET /artist/<id>`, `/artist/<id>/top`,
-> `/artist/<id>/albums`, `/artist/<id>/related` and `/album/<id>`, wrapped by `getDeezerArtist()` and
-> `getDeezerAlbum()` in `src/sources/deemix.ts`. The pages live in `src/views/DeezerBrowse.tsx`, and the
+> `/artist/<id>/albums`, `/artist/<id>/related`, `/artist/<id>/playlists`, `/album/<id>` and
+> `/playlist/<id>` (+ `/playlist/<id>/tracks` paging), wrapped by `getDeezerArtist()`, `getDeezerAlbum()` and
+> `getDeezerPlaylist()` in `src/sources/deemix.ts`. The pages live in `src/views/DeezerBrowse.tsx`, and the
 > Deezer tab in `src/views/Downloads.tsx` keeps a small stack of opened pages. **Get** on any row
-> sends that item's deezer.com link to deemix's `addToQueue`. deemix accepts artist links too and
-> queues the whole discography.
+> sends that item's deezer.com link to deemix's `addToQueue`. deemix accepts playlist and artist links
+> too (an artist link queues the whole discography).
 
 ---
 

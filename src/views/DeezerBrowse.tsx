@@ -1,22 +1,23 @@
 /**
  * Browse the Deezer catalog inside Downloads → Deezer: artist pages (top songs, discography,
- * related artists) and album pages (full tracklist), each with Get buttons that go to deemix.
+ * related artists, playlists), album pages and playlist pages (full tracklists), each with Get
+ * buttons that go to deemix.
  * Navigation is a small stack owned by the Deezer tab, so Back walks back through what you opened.
  */
 import { useEffect, useState } from 'react';
-import { getDeezerAlbum, getDeezerArtist, type DeezerAlbumPage, type DeezerArtistPage, type DeezerResult } from '../sources/deemix';
+import { getDeezerAlbum, getDeezerArtist, getDeezerPlaylist, type DeezerAlbumPage, type DeezerArtistPage, type DeezerPlaylistPage, type DeezerResult } from '../sources/deemix';
 import type { Track } from '../sources/types';
 import { usePlayer } from '../store/player';
 import { Cover, Spinner, fmtTime } from '../components/common';
 import { IconBack, IconDownload, IconPause, IconPlay } from '../components/Icons';
 
-export type Browse = { type: 'artist' | 'album'; id: number; title: string };
+export type Browse = { type: 'artist' | 'album' | 'playlist'; id: number; title: string };
 export type SendStatus = { s: 'queued' | 'error' | 'sending'; msg?: string };
 
 export interface BrowseProps {
-  /** Open another artist or album page on top of the stack. */
+  /** Open another artist, album or playlist page on top of the stack. */
   open(b: Browse): void;
-  /** Send a Deezer link (song, album or artist) to deemix. */
+  /** Send a Deezer link (song, album, playlist or artist) to deemix. */
   send(r: DeezerResult): void;
   status: Record<string, SendStatus>;
 }
@@ -54,12 +55,12 @@ export function GetButton({ r, send, status, label = 'Get' }: { r: DeezerResult;
   );
 }
 
-/** One row in search results or a page: artist, album or song. Titles open their page. */
+/** One row in search results or a page: artist, album, playlist or song. Titles open their page. */
 export function DzRow({ r, open, send, status, numbered }: BrowseProps & { r: DeezerResult; numbered?: boolean }) {
   const st = status[statusKey(r)];
   const target: Browse | undefined =
     r.type === 'artist' ? { type: 'artist', id: r.id, title: r.title }
-    : r.type === 'album' ? { type: 'album', id: r.id, title: r.title }
+    : r.type === 'album' || r.type === 'playlist' ? { type: r.type, id: r.id, title: r.title }
     : undefined;
   const year = r.releaseDate?.slice(0, 4);
   return (
@@ -73,6 +74,8 @@ export function DzRow({ r, open, send, status, numbered }: BrowseProps & { r: De
         <div className="track-sub">
           {r.type === 'artist'
             ? <>{r.fans ? `${r.fans.toLocaleString()} fans` : 'Artist'}</>
+            : r.type === 'playlist'
+            ? <>By {r.artist}{r.trackCount ? ` · ${r.trackCount} tracks` : ''}</>
             : <>
                 {r.artistId
                   ? <button className="dz-link" onClick={(e) => { e.stopPropagation(); open({ type: 'artist', id: r.artistId!, title: r.artist }); }}>{r.artist}</button>
@@ -122,7 +125,7 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
   const { data, error } = useLoad<DeezerArtistPage>(() => getDeezerArtist(id), [id]);
   if (error) return <div className="errors">{error}</div>;
   if (!data) return <Spinner />;
-  const { artist, top, albums, related } = data;
+  const { artist, top, albums, related, playlists } = data;
   return (
     <div className="dz-page">
       <div className="dz-head">
@@ -165,6 +168,21 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
         );
       })}
 
+      {playlists.length > 0 && <>
+        <h3 className="dz-section">Playlists with {artist.title}</h3>
+        <div className="grid dz-grid">
+          {playlists.map((pl) => (
+            <div key={pl.id} className="dz-card">
+              <button className="card" onClick={() => p.open({ type: 'playlist', id: pl.id, title: pl.title })}>
+                <Cover src={pl.cover} alt={pl.title} />
+                <div className="card-title" title={pl.title}>{pl.title}</div>
+                <div className="card-sub"><span>By {pl.artist}</span></div>
+              </button>
+            </div>
+          ))}
+        </div>
+      </>}
+
       {related.length > 0 && <>
         <h3 className="dz-section">Fans also like</h3>
         <div className="grid dz-grid">
@@ -206,6 +224,34 @@ export function DeezerAlbum({ id, ...p }: BrowseProps & { id: number }) {
         </div>
       </div>
       {tracks.map((t) => <DzRow key={statusKey(t)} r={t} numbered {...p} />)}
+    </div>
+  );
+}
+
+export function DeezerPlaylist({ id, ...p }: BrowseProps & { id: number }) {
+  const { data, error } = useLoad<DeezerPlaylistPage>(() => getDeezerPlaylist(id), [id]);
+  if (error) return <div className="errors">{error}</div>;
+  if (!data) return <Spinner />;
+  const { playlist, tracks, description } = data;
+  const length = tracks.reduce((n, t) => n + (t.duration ?? 0), 0);
+  return (
+    <div className="dz-page">
+      <div className="dz-head">
+        <Cover src={playlist.cover} alt={playlist.title} className="dz-art" />
+        <div>
+          <div className="kicker">Playlist on Deezer</div>
+          <h2>{playlist.title}</h2>
+          <div className="muted small">
+            By {playlist.artist} · {tracks.length} tracks · {fmtTime(length)}{playlist.fans ? ` · ${playlist.fans.toLocaleString()} fans` : ''}
+          </div>
+          {description && <p className="muted small dz-desc">{description}</p>}
+          <div className="hero-actions">
+            <GetButton r={playlist} send={(r) => (tracks.length <= 50 || confirm(`Send all ${tracks.length} songs in "${playlist.title}" to deemix?`)) && p.send(r)} status={p.status} label="Get playlist" />
+          </div>
+          {p.status[statusKey(playlist)]?.s === 'error' && <div className="card-err">{p.status[statusKey(playlist)].msg}</div>}
+        </div>
+      </div>
+      {tracks.map((t, i) => <DzRow key={`${i}:${t.id}`} r={t} {...p} />)}
     </div>
   );
 }

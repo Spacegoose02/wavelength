@@ -50,11 +50,12 @@ Project: <https://github.com/perminder-klair/subwave>. Ports: web `:7700` (API m
 - Talks to the deemix web server (default `:6595`). `POST /api/addToQueue { url, bitrate }` (9 = FLAC, 3 = MP3 320, 1 = MP3 128), `GET /api/getQueue`, `GET /api/connect`.
 - **deemix keeps login per session** — a fresh Wavelength connection is logged out. If `addToQueue` returns `NotLoggedIn`, Wavelength calls `POST /api/loginArl { arl }` with the ARL from Settings and retries.
 - deemix answers HTTP 200 with `{ result: false, errid }` on failure — always check `result`.
-- Search and browsing use Deezer's public API, no login: `/search/artist`, `/search/album`, `/search` for results;
-  `/artist/<id>` + `/top` + `/albums` + `/related` for artist pages (`getDeezerArtist`); `/album/<id>` for album pages
-  (`getDeezerAlbum`). Unknown ids come back as HTTP 200 with `{ error }` — check it. The album endpoint's embedded
+- Search and browsing use Deezer's public API, no login: `/search/artist`, `/search/album`, `/search/playlist`, `/search` for results;
+  `/artist/<id>` + `/top` + `/albums` + `/related` + `/playlists` for artist pages (`getDeezerArtist`); `/album/<id>` for album pages
+  (`getDeezerAlbum`); `/playlist/<id>` for playlist pages (`getDeezerPlaylist`) — its embedded tracklist is cut short on big
+  playlists, so the rest is paged from `/playlist/<id>/tracks?index=&limit=` (capped at 2,000). Private playlists return `{ error }`. Unknown ids come back as HTTP 200 with `{ error }` — check it. The album endpoint's embedded
   tracklist has no `album` object or `track_position`, so both are filled in from the album.
-- Any deezer.com link works in `addToQueue`: song, album, or **artist** (deemix queues the whole discography).
+- Any deezer.com link works in `addToQueue`: song, album, playlist, or **artist** (deemix queues the whole discography).
 - UI: `views/DeezerBrowse.tsx` (pages) inside the Deezer tab of `views/Downloads.tsx`. User-facing walkthrough: [USER-GUIDE.md](USER-GUIDE.md).
 
 ### yt-dlp (desktop only) — `src-tauri/src/ytdlp.rs`, `src/sources/ytdlp.ts`

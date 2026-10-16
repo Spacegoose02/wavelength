@@ -9,7 +9,7 @@ import { useUi } from '../store/ui';
 import { Spinner, fmtTime } from '../components/common';
 import { IconDownload, IconRefresh } from '../components/Icons';
 import { isAndroid } from '../lib/platform';
-import { BrowseBar, DeezerAlbum, DeezerArtist, DzRow, statusKey, type Browse, type SendStatus } from './DeezerBrowse';
+import { BrowseBar, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, type Browse, type SendStatus } from './DeezerBrowse';
 
 type Tab = 'deezer' | 'ytdlp';
 
@@ -120,10 +120,12 @@ function DeezerTab({ q, onFallback }: { q: string; onFallback?: () => void }) {
           <BrowseBar stack={stack} back={() => setStack((st) => st.slice(0, -1))} home={() => setStack([])} />
           {current.type === 'artist'
             ? <DeezerArtist key={current.id} id={current.id} {...browse} />
-            : <DeezerAlbum key={current.id} id={current.id} {...browse} />}
+            : current.type === 'album'
+            ? <DeezerAlbum key={current.id} id={current.id} {...browse} />
+            : <DeezerPlaylist key={current.id} id={current.id} {...browse} />}
         </div>
       ) : <div>
-        {!searched && !busy && <p className="muted">Search for an artist, album or song. Open an artist to see their whole discography, or an album to pick single tracks.</p>}
+        {!searched && !busy && <p className="muted">Search for an artist, album, playlist or song. Open an artist to see their whole discography, or an album or playlist to pick single tracks.</p>}
         {busy && <Spinner />}
         {searched && onFallback && (
           <div className="fallback">
