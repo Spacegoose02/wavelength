@@ -1,6 +1,6 @@
 # User guide: finding music to download, and tuning Discover
 
-How to use two features added after 0.5.0: browsing Deezer by artist, album and playlist in **Downloads**, and
+How to use two features added in 0.6.0: browsing Deezer by artist, album and playlist in **Downloads**, and
 choosing which charts **Discover** shows. For how they're built, see the developer notes at the
 end of each section and [SOURCES.md](SOURCES.md).
 
