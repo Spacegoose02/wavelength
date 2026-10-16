@@ -1,0 +1,14 @@
+node_modules
+dist
+src-tauri/target
+src-tauri/gen/schemas
+*.log
+*.jks
+keystore.properties
+release/
+# generated per machine (contains local cargo paths)
+src-tauri/gen/android/tauri.settings.gradle
+src-tauri/gen/android/app/tauri.properties
+src-tauri/gen/android/app/tauri.build.gradle.kts
+# signing secrets — never commit
+*.keystore

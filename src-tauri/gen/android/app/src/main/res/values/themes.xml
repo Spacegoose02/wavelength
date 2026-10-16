@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme: Wavelength neon navy, no white flash on launch. -->
+    <style name="Theme.tonearm" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/wl_bg</item>
+        <item name="android:statusBarColor">@color/wl_bg</item>
+        <item name="android:navigationBarColor">@color/wl_bar</item>
+        <item name="colorPrimary">@color/wl_cyan</item>
+    </style>
+</resources>
