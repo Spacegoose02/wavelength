@@ -12,8 +12,10 @@ around in an afternoon, fix bugs without archaeology, and add features in the ho
 4. **[CONTRIBUTING.md](CONTRIBUTING.md)** — recipes: add a source, a chart, a page, a skin, a Rust command.
 5. **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** — read this before debugging anything; most problems
    have already been met once.
-6. **[RELEASING.md](RELEASING.md)** — ship a new version.
-7. **[BRAND.md](BRAND.md)** — the look and the voice.
+6. **[USER-GUIDE.md](USER-GUIDE.md)** — how features look and work for a listener, with screenshots
+   (Deezer artist/album/playlist browsing, choosing Discover charts).
+7. **[RELEASING.md](RELEASING.md)** — ship a new version.
+8. **[BRAND.md](BRAND.md)** — the look and the voice.
 
 ## The 60-second tour
 
@@ -28,7 +30,7 @@ src/                React + TypeScript UI (Vite). Almost all features live here.
   styles.css        All styling + all 23 skins (CSS variables per [data-skin])
 src-tauri/          Rust shell (Tauri 2): http plugin, yt-dlp, SMB login, offline files
   gen/android/      The Android project (Kotlin): media session, playback service, TV, permissions
-docs/               You are here. brand/ = logo & banners, screenshots/ = README images
+docs/               You are here. brand/ = logo & banners, screenshots/ = README and user-guide images
 ```
 
 ## Ground rules that keep it maintainable

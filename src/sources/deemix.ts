@@ -1,7 +1,7 @@
 import { getJson, http, qs, trimSlash } from '../lib/http';
 
 export interface DeezerResult {
-  type: 'track' | 'album' | 'artist';
+  type: 'track' | 'album' | 'artist' | 'playlist';
   id: number;
   title: string;
   artist: string;
@@ -10,35 +10,175 @@ export interface DeezerResult {
   duration?: number;
   link: string;
   trackCount?: number;
+  /** Deezer artist id, so albums and songs can link through to the artist's page. */
+  artistId?: number;
+  /** Songs: the album they're on, so they can link through to it. */
+  albumId?: number;
+  /** Songs: 30-second clip. */
+  preview?: string;
+  /** Songs on an album page: position on the album. */
+  trackNumber?: number;
+  /** Albums: "album" | "single" | "ep" | "compile". */
+  recordType?: string;
+  /** Albums: YYYY-MM-DD. */
+  releaseDate?: string;
+  /** Artists and playlists: Deezer follower count. */
+  fans?: number;
 }
 
-/** Search the public Deezer catalog (no login needed). */
+const DZ = 'https://api.deezer.com';
+
+function toTrack(t: any, album?: any): DeezerResult {
+  const al = t.album ?? album;
+  return {
+    type: 'track',
+    id: t.id,
+    title: t.title,
+    artist: t.artist?.name,
+    artistId: t.artist?.id,
+    album: al?.title,
+    albumId: al?.id,
+    cover: al?.cover_medium,
+    duration: t.duration,
+    link: t.link,
+    preview: t.preview || undefined,
+    trackNumber: t.track_position,
+  };
+}
+
+function toAlbum(a: any, artist?: any): DeezerResult {
+  const ar = a.artist ?? artist;
+  return {
+    type: 'album',
+    id: a.id,
+    title: a.title,
+    artist: ar?.name,
+    artistId: ar?.id,
+    cover: a.cover_medium,
+    link: a.link ?? `https://www.deezer.com/album/${a.id}`,
+    trackCount: a.nb_tracks,
+    recordType: a.record_type,
+    releaseDate: a.release_date,
+  };
+}
+
+function toArtist(a: any): DeezerResult {
+  return {
+    type: 'artist',
+    id: a.id,
+    title: a.name,
+    artist: a.name,
+    artistId: a.id,
+    cover: a.picture_medium,
+    link: a.link ?? `https://www.deezer.com/artist/${a.id}`,
+    fans: a.nb_fan,
+  };
+}
+
+/** A playlist: `artist` holds whoever made it (a user or Deezer's editors). */
+function toPlaylist(p: any): DeezerResult {
+  return {
+    type: 'playlist',
+    id: p.id,
+    title: p.title,
+    artist: (p.creator ?? p.user)?.name ?? 'Deezer',
+    cover: p.picture_medium,
+    link: p.link ?? `https://www.deezer.com/playlist/${p.id}`,
+    trackCount: p.nb_tracks,
+    fans: p.fans,
+  };
+}
+
+/** Search the public Deezer catalog (no login needed): artists, albums, playlists, then songs. */
 export async function searchDeezer(q: string): Promise<DeezerResult[]> {
-  const [albums, tracks] = await Promise.all([
-    getJson(`https://api.deezer.com/search/album?${qs({ q, limit: 24 })}`),
-    getJson(`https://api.deezer.com/search?${qs({ q, limit: 40 })}`),
+  const [artists, albums, playlists, tracks] = await Promise.all([
+    getJson(`${DZ}/search/artist?${qs({ q, limit: 4 })}`).catch(() => ({ data: [] })),
+    getJson(`${DZ}/search/album?${qs({ q, limit: 24 })}`),
+    getJson(`${DZ}/search/playlist?${qs({ q, limit: 8 })}`).catch(() => ({ data: [] })),
+    getJson(`${DZ}/search?${qs({ q, limit: 40 })}`),
   ]);
   return [
-    ...(albums.data ?? []).map((a: any) => ({
-      type: 'album' as const,
-      id: a.id,
-      title: a.title,
-      artist: a.artist?.name,
-      cover: a.cover_medium,
-      link: a.link,
-      trackCount: a.nb_tracks,
-    })),
-    ...(tracks.data ?? []).map((t: any) => ({
-      type: 'track' as const,
-      id: t.id,
-      title: t.title,
-      artist: t.artist?.name,
-      album: t.album?.title,
-      cover: t.album?.cover_medium,
-      duration: t.duration,
-      link: t.link,
-    })),
+    ...(artists.data ?? []).map(toArtist),
+    ...(albums.data ?? []).map((a: any) => toAlbum(a)),
+    ...(playlists.data ?? []).map(toPlaylist),
+    ...(tracks.data ?? []).map((t: any) => toTrack(t)),
   ];
+}
+
+export interface DeezerArtistPage {
+  artist: DeezerResult;
+  /** Most played songs on Deezer right now. */
+  top: DeezerResult[];
+  /** Every release (albums, EPs, singles, compilations), newest first. */
+  albums: DeezerResult[];
+  /** Similar artists, to keep exploring. */
+  related: DeezerResult[];
+  /** Public playlists the artist is on. */
+  playlists: DeezerResult[];
+}
+
+/** Everything for an artist page: top songs, discography, related artists and playlists they're on. */
+export async function getDeezerArtist(id: number): Promise<DeezerArtistPage> {
+  const [a, top, albums, related, playlists] = await Promise.all([
+    getJson(`${DZ}/artist/${id}`),
+    getJson(`${DZ}/artist/${id}/top?${qs({ limit: 10 })}`).catch(() => ({ data: [] })),
+    getJson(`${DZ}/artist/${id}/albums?${qs({ limit: 200 })}`).catch(() => ({ data: [] })),
+    getJson(`${DZ}/artist/${id}/related?${qs({ limit: 12 })}`).catch(() => ({ data: [] })),
+    getJson(`${DZ}/artist/${id}/playlists?${qs({ limit: 12 })}`).catch(() => ({ data: [] })),
+  ]);
+  // Deezer answers 200 with { error } for unknown ids
+  if (a?.error) throw new Error(a.error.message ?? 'Deezer has no such artist');
+  return {
+    artist: toArtist(a),
+    top: (top.data ?? []).map((t: any) => toTrack(t)),
+    albums: (albums.data ?? [])
+      .map((x: any) => toAlbum(x, a))
+      .sort((x: DeezerResult, y: DeezerResult) => (y.releaseDate ?? '').localeCompare(x.releaseDate ?? '')),
+    related: (related.data ?? []).map(toArtist),
+    playlists: (playlists.data ?? []).map(toPlaylist),
+  };
+}
+
+export interface DeezerAlbumPage {
+  album: DeezerResult;
+  tracks: DeezerResult[];
+  label?: string;
+}
+
+/** Everything for an album page: its tracklist (with previews) in album order. */
+export async function getDeezerAlbum(id: number): Promise<DeezerAlbumPage> {
+  const a = await getJson(`${DZ}/album/${id}`);
+  if (a?.error) throw new Error(a.error.message ?? 'Deezer has no such album');
+  return {
+    album: toAlbum(a),
+    label: a.label,
+    // the embedded tracklist has no album object or position — fill both in from the album
+    tracks: (a.tracks?.data ?? []).map((t: any, i: number) => ({ ...toTrack(t, a), trackNumber: t.track_position ?? i + 1 })),
+  };
+}
+
+export interface DeezerPlaylistPage {
+  playlist: DeezerResult;
+  tracks: DeezerResult[];
+  description?: string;
+}
+
+/** Everything for a playlist page. Long playlists are paged in, up to 2,000 songs. */
+export async function getDeezerPlaylist(id: number): Promise<DeezerPlaylistPage> {
+  const p = await getJson(`${DZ}/playlist/${id}`);
+  if (p?.error) throw new Error(p.error.message ?? 'Deezer has no such playlist (it may be private)');
+  const raw: any[] = [...(p.tracks?.data ?? [])];
+  // the embedded tracklist stops at a few hundred songs — fetch the rest from /tracks
+  while (raw.length < Math.min(p.nb_tracks ?? 0, 2000)) {
+    const page = await getJson(`${DZ}/playlist/${id}/tracks?${qs({ index: raw.length, limit: 100 })}`).catch(() => null);
+    if (!page?.data?.length) break;
+    raw.push(...page.data);
+  }
+  return {
+    playlist: toPlaylist(p),
+    description: p.description || undefined,
+    tracks: raw.map((t, i) => ({ ...toTrack(t), trackNumber: i + 1 })),
+  };
 }
 
 /** Talks to a deemix web server (deemix-gui / deemix-docker). */

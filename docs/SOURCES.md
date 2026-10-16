@@ -50,7 +50,13 @@ Project: <https://github.com/perminder-klair/subwave>. Ports: web `:7700` (API m
 - Talks to the deemix web server (default `:6595`). `POST /api/addToQueue { url, bitrate }` (9 = FLAC, 3 = MP3 320, 1 = MP3 128), `GET /api/getQueue`, `GET /api/connect`.
 - **deemix keeps login per session** — a fresh Wavelength connection is logged out. If `addToQueue` returns `NotLoggedIn`, Wavelength calls `POST /api/loginArl { arl }` with the ARL from Settings and retries.
 - deemix answers HTTP 200 with `{ result: false, errid }` on failure — always check `result`.
-- Search uses Deezer's public API (`api.deezer.com/search`), no login.
+- Search and browsing use Deezer's public API, no login: `/search/artist`, `/search/album`, `/search/playlist`, `/search` for results;
+  `/artist/<id>` + `/top` + `/albums` + `/related` + `/playlists` for artist pages (`getDeezerArtist`); `/album/<id>` for album pages
+  (`getDeezerAlbum`); `/playlist/<id>` for playlist pages (`getDeezerPlaylist`) — its embedded tracklist is cut short on big
+  playlists, so the rest is paged from `/playlist/<id>/tracks?index=&limit=` (capped at 2,000). Private playlists return `{ error }`. Unknown ids come back as HTTP 200 with `{ error }` — check it. The album endpoint's embedded
+  tracklist has no `album` object or `track_position`, so both are filled in from the album.
+- Any deezer.com link works in `addToQueue`: song, album, playlist, or **artist** (deemix queues the whole discography).
+- UI: `views/DeezerBrowse.tsx` (pages) inside the Deezer tab of `views/Downloads.tsx`. User-facing walkthrough: [USER-GUIDE.md](USER-GUIDE.md).
 
 ### yt-dlp (desktop only) — `src-tauri/src/ytdlp.rs`, `src/sources/ytdlp.ts`
 - Backup when a song isn't on Deezer. Search = `yt-dlp -J --flat-playlist ytsearch25:<q>`; also accepts any URL yt-dlp supports.
@@ -59,7 +65,7 @@ Project: <https://github.com/perminder-klair/subwave>. Ports: web `:7700` (API m
 - SMB shares: `connect_share` logs in with the stored username/password before downloading.
 
 ## Discover charts — `src/sources/charts.ts`
-Each source returns `Chart { entries, asOf }`. `getMix(genre)` combines sources with Borda-style scoring
+Each source returns `Chart { entries, asOf }`. `getMix(genre, sources)` combines sources with Borda-style scoring
 (songs on more charts, ranked higher, float up). **Every chart passes a freshness check** — if a source
 can't prove it updated recently (21 days by default; RadioWave 35, iHeart R&B Hits 45), it's dropped.
 
@@ -73,6 +79,10 @@ can't prove it updated recently (21 days by default; RadioWave 35, iHeart R&B Hi
 | iHeartRadio editors | `us.api.iheart.com/api/v3/collection/user/312064750/collection/<id>` + `api/v3/catalog/tracks/<ids>`; freshness = `lastUpdated` | many | Playlist ids are in the `IHEART` map. To add one: take the id at the end of an iheart.com playlist URL |
 | ~~Shazam~~ | — | — | Removed |
 | Beatport, Traxsource | — | — | Cloudflare / 403 — apps can't read them. Don't scrape around bot checks. |
+
+**Which charts a genre uses** is the user's choice: Settings → Discover charts stores `discoverCharts` (genre → ids)
+in the settings store. `sourcesFor(genre, custom)` returns that pick, or the built-in `BY_GENRE` list. `chartsFor(genre)`
+is what the picker offers: everything, except Billboard/Apple under genres they don't publish (`BILLBOARD`, `APPLE`).
 
 Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others).
 

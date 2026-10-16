@@ -6,6 +6,58 @@ import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { SKINS, useSettings } from '../store/settings';
+import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
+
+/** Settings → Discover charts: tick which charts feed each genre's tabs and Mix. */
+function DiscoverCharts() {
+  const custom = useSettings((s) => s.discoverCharts);
+  const setCharts = useSettings((s) => s.setDiscoverCharts);
+  const [genre, setGenre] = useState<Genre>('all');
+  const using = sourcesFor(genre, custom);
+  const defaults = defaultSourcesFor(genre);
+  const isCustom = !!custom[genre]?.length;
+  // group by publisher so the 14 iHeartRadio playlists don't drown out the rest
+  const groups = new Map<string, ChartSource[]>();
+  for (const s of chartsFor(genre)) groups.set(chartProvider(s), [...(groups.get(chartProvider(s)) ?? []), s]);
+  const toggle = (s: ChartSource, on: boolean) => {
+    // keep the order charts are listed in, so tabs don't jump around
+    const next = chartsFor(genre).filter((c) => (c === s ? on : using.includes(c)));
+    if (!next.length) return;
+    setCharts(genre, next.length === defaults.length && next.every((c) => defaults.includes(c)) ? undefined : next);
+  };
+  return (
+    <section id="discover-charts">
+      <h2>Discover charts</h2>
+      <p className="muted small">Pick which charts show up as tabs for each genre and get combined into its Mix. Charts that work for any genre (iHeartRadio, RadioWave and Deezer playlists) can be added anywhere; Billboard and Apple Music only offer the genres they publish.</p>
+      <div className="chips">
+        {GENRES.map((g) => (
+          <button key={g.id} className={`chip ${genre === g.id ? 'on' : ''}`} onClick={() => setGenre(g.id)}>
+            {g.label}{custom[g.id]?.length ? ' •' : ''}
+          </button>
+        ))}
+      </div>
+      <div className="editor">
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <span className="muted small">{using.length} chart{using.length === 1 ? '' : 's'} in {GENRES.find((g) => g.id === genre)!.label} · {isCustom ? 'customised' : 'defaults'}</span>
+          <button className="btn small ghost" disabled={!isCustom} onClick={() => setCharts(genre, undefined)}>Reset to defaults</button>
+        </div>
+        <div className="chart-picker">
+          {[...groups].map(([provider, list]) => (
+            <div key={provider}>
+              <div className="kicker">{provider}</div>
+              {list.map((s) => (
+                <label key={s} className="check">
+                  <input type="checkbox" checked={using.includes(s)} disabled={using.length === 1 && using.includes(s)} onChange={(e) => toggle(s, e.target.checked)} />
+                  {CHART_LABELS[s]}{defaults.includes(s) ? <small className="muted"> default</small> : null}
+                </label>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 const HINTS: Record<SourceKind, { url: string; fields: (keyof SourceConfig)[]; help: string; labels?: Partial<Record<keyof SourceConfig, string>> }> = {
   navidrome: { url: 'http://192.168.1.10:4533', fields: ['username', 'password'], help: 'Your Navidrome login. Any Subsonic-compatible server works too.' },
@@ -197,6 +249,8 @@ export function Settings() {
           </div>
         </div>
       </section>}
+
+      <DiscoverCharts />
 
       <section>
         <h2>Skin</h2>

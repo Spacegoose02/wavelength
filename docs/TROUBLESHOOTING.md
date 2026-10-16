@@ -49,6 +49,8 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | Symptom | Cause | Fix |
 |---|---|---|
 | Old songs in a genre chart | Source stopped updating (Deezer genre charts, several Billboard genre pages) | Freshness guard drops stale charts; if one slips through, check its date and remove it from `BY_GENRE` |
+| A genre shows different charts than expected | It was customised in Settings → Discover charts (genre chip has a •) | **Reset to defaults** for that genre |
+| Deezer artist/album page says "no such artist/album" | Deezer removed or merged the id | Search again; Deezer answers 200 with `{ error }` for dead ids |
 | "Skipped: Apple Music timed out / 504" | Apple's RSS service is down | Nothing to do; Mix uses the rest |
 | A chart shows 0 rows / "layout changed" | Site HTML changed (Billboard, RadioWave scrapers) | Update the parser in `charts.ts`; test against the live page |
 | Everything goes to yt-dlp instead of deemix | deemix not logged in (per-session login) | Settings → deemix → ARL; **Test deemix** reports whether it's logged in |

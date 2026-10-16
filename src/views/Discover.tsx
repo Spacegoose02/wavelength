@@ -41,11 +41,12 @@ export function Discover() {
   const [error, setError] = useState<string>();
   const [info, setInfo] = useState<string>();
   const [checked, setChecked] = useState(0);
-  const available = sourcesFor(genre);
+  const custom = useSettings((s) => s.discoverCharts);
+  const available = sourcesFor(genre, custom);
   // switching genre can remove the current tab (e.g. Billboard has no current rap chart)
   useEffect(() => {
     if (view !== 'mix' && !available.includes(view)) setView('mix');
-  }, [genre]);
+  }, [genre, available.join()]);
   const [nonce, setNonce] = useState(0);
   const deemix = useSettings((s) => s.deemix);
   const yt = useSettings((s) => s.ytdlp);
@@ -63,7 +64,7 @@ export function Discover() {
       try {
         let entries: ChartEntry[];
         if (view === 'mix') {
-          const m = await getMix(genre);
+          const m = await getMix(genre, available);
           entries = m.entries;
           setInfo(`Combining ${m.used.map((s) => CHART_LABELS[s]).join(' + ')}`);
           if (!m.used.length) throw new Error(m.failed.map((f) => f.reason).join(' · ') || "Couldn't reach any chart service.");
@@ -89,7 +90,7 @@ export function Discover() {
         if (id === run.current) setError(String((e as Error).message ?? e));
       }
     })();
-  }, [genre, view, nonce]);
+  }, [genre, view, nonce, available.join()]);
 
   const patch = (i: number, p: Partial<Row>) => setRows((rs) => rs?.map((r, j) => (j === i ? { ...r, ...p } : r)));
 
@@ -154,6 +155,10 @@ export function Discover() {
       <header className="page-head">
         <h1>Discover</h1>
         <button className="btn small" onClick={() => setNonce(nonce + 1)}><IconRefresh /> Refresh</button>
+        <button className="btn small ghost" onClick={() => {
+          useUi.getState().go({ view: 'settings' });
+          window.setTimeout(() => document.getElementById('discover-charts')?.scrollIntoView({ behavior: 'smooth' }), 80);
+        }} title="Pick which charts each genre uses">Edit charts</button>
       </header>
       <div className="chips">
         {GENRES.map((g) => <button key={g.id} className={`chip ${genre === g.id ? 'on' : ''}`} onClick={() => setGenre(g.id)}>{g.label}</button>)}
