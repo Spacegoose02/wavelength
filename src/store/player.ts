@@ -6,7 +6,7 @@ import { sourceFor } from '../sources/registry';
 import type { Track } from '../sources/types';
 import { useSettings } from './settings';
 import { useLibrary } from './library';
-import { offlineUrl } from './offline';
+import { offlinePlaybackUrl } from './offline';
 
 export type Repeat = 'off' | 'all' | 'one';
 
@@ -164,6 +164,13 @@ let lastTick = 0;
 let lastSync = 0;
 let nowPlayingTimer: number | undefined;
 let loadSeq = 0;
+/** blob: URL of the downloaded song playing on Android (see offlinePlaybackUrl) */
+let localBlob: string | undefined;
+
+function releaseLocalBlob() {
+  if (localBlob) URL.revokeObjectURL(localBlob);
+  localBlob = undefined;
+}
 
 async function loadCurrent(startAt = 0) {
   const t = usePlayer.getState().current();
@@ -176,8 +183,14 @@ async function loadCurrent(startAt = 0) {
   watchNowPlaying(t);
   try {
     // Downloaded on this device? Play the local file — no server, works offline.
-    const local = offlineUrl(t);
+    const local = await offlinePlaybackUrl(t);
+    if (token !== loadSeq) {
+      if (local?.startsWith('blob:')) URL.revokeObjectURL(local);
+      return;
+    }
     if (local) {
+      releaseLocalBlob();
+      if (local.startsWith('blob:')) localBlob = local;
       await engine.load(local, startAt);
       if (t.kind === 'track') sourceOf(t)?.scrobble?.(t, false).catch(() => {});
       return;
@@ -190,6 +203,7 @@ async function loadCurrent(startAt = 0) {
       usePlayer.setState((s) => ({ queue: s.queue.map((q, i) => (i === s.index ? ready : q)) }));
     }
     if (!ready.streamUrl) throw new Error('No stream for this item');
+    releaseLocalBlob();
     await engine.load(ready.streamUrl, startAt || prepared.startAt || 0);
     if (ready.kind === 'track') sourceOf(ready)?.scrobble?.(ready, false).catch(() => {});
   } catch (e) {
