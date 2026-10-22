@@ -1066,6 +1066,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 @keyframes np-hint { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 @media (max-width: 760px) {
   .np-stage { width: min(78vw, 360px); justify-self: center; }
+}
 /* ============ 0.7 skins ============ */
 /* Dracula */
 :root[data-skin='dracula'] { --bg:#282a36; --bg-2:#21222c; --panel:#343746; --panel-2:#44475a; --line:#4d5066; --text:#f8f8f2; --muted:#a4a8c4; --accent:#bd93f9; --accent-ink:#21222c; --lcd-bg:#191a21; --lcd-text:#50fa7b; --lcd-dim:#24402c; --viz-low:#8be9fd; --viz-mid:#bd93f9; --viz-high:#ff79c6; --viz-peak:#f1fa8c; --bevel:none; --bevel-in:inset 0 0 0 1px #44475a; color-scheme:dark; }
@@ -1134,3 +1135,52 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
   .eq-pop, .np-actions .eq-pop { position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; max-height: 80vh; overflow-y: auto; }
   .eq .eq-band input[type='range'] { height: 110px; }
 }
+
+/* ============ Neon skins ============ */
+/* Outrun: chrome sunset, hot pink and orange over a purple laser grid */
+:root[data-skin='outrun'] { --bg:#0d0221; --bg-2:#090118; --panel:#1a0636; --panel-2:#261048; --line:#3d1a6e; --text:#fff0fb; --muted:#c09ad8; --accent:#ff2975; --accent-ink:#ffffff; --lcd-bg:#07010f; --lcd-text:#ff901f; --lcd-dim:#3a1c0a; --viz-low:#00e5ff; --viz-mid:#ff2975; --viz-high:#ff901f; --viz-peak:#fff35c; --radius:6px; --radius-lg:10px; --bevel:none; --bevel-in:inset 0 0 0 1px #3d1a6e; color-scheme:dark; }
+:root[data-skin='outrun'] body { background: linear-gradient(transparent 60%, rgb(255 41 117 / 0.12)), repeating-linear-gradient(90deg, rgb(255 41 117 / 0.06) 0 1px, transparent 1px 48px), repeating-linear-gradient(0deg, rgb(255 41 117 / 0.06) 0 1px, transparent 1px 48px), #0d0221; }
+:root[data-skin='outrun'] .brand { background:linear-gradient(180deg,#fff35c,#ff901f 50%,#ff2975); -webkit-background-clip:text; background-clip:text; color:transparent; font-style:italic; }
+:root[data-skin='outrun'] .btn.primary, :root[data-skin='outrun'] .tbtn.play { background:linear-gradient(90deg,#ff2975,#ff901f); color:#fff; box-shadow:0 0 16px rgb(255 41 117 / 0.45); }
+:root[data-skin='outrun'] .chip.on { background:#00e5ff; color:#0d0221; } :root[data-skin='outrun'] .tabs button.on { border-bottom-color:#ff2975; text-shadow:0 0 10px rgb(255 41 117 / 0.6); }
+:root[data-skin='outrun'] .lcd { box-shadow:inset 0 0 16px rgb(0 0 0 / 0.9), 0 0 14px rgb(255 144 31 / 0.15); }
+/* Laser grid: cyan light lines on black, everything glows */
+:root[data-skin='lasergrid'] { --bg:#02040a; --bg-2:#000206; --panel:#07101c; --panel-2:#0c1a2b; --line:#0f3a52; --text:#dffbff; --muted:#7fb3c4; --accent:#00e5ff; --accent-ink:#001318; --lcd-bg:#000000; --lcd-text:#00e5ff; --lcd-dim:#06323a; --viz-low:#0077ff; --viz-mid:#00e5ff; --viz-high:#ff8a00; --viz-peak:#ffffff; --radius:2px; --radius-lg:4px; --bevel:none; --bevel-in:inset 0 0 0 1px #0f3a52; color-scheme:dark; }
+:root[data-skin='lasergrid'] body { background: repeating-linear-gradient(90deg, rgb(0 229 255 / 0.05) 0 1px, transparent 1px 40px), repeating-linear-gradient(0deg, rgb(0 229 255 / 0.05) 0 1px, transparent 1px 40px), #02040a; }
+:root[data-skin='lasergrid'] .brand { color:#00e5ff; text-shadow:0 0 8px rgb(0 229 255 / 0.8); letter-spacing:2px; text-transform:uppercase; }
+:root[data-skin='lasergrid'] .card, :root[data-skin='lasergrid'] .deck { box-shadow:0 0 0 1px rgb(0 229 255 / 0.25), 0 0 14px rgb(0 229 255 / 0.08); }
+:root[data-skin='lasergrid'] .btn.primary, :root[data-skin='lasergrid'] .tbtn.play { background:transparent; color:#00e5ff; box-shadow:inset 0 0 0 2px #00e5ff, 0 0 14px rgb(0 229 255 / 0.5); }
+:root[data-skin='lasergrid'] .nav.on svg { color:#00e5ff; filter:drop-shadow(0 0 6px rgb(0 229 255 / 0.8)); }
+:root[data-skin='lasergrid'] .chip.on { background:#ff8a00; color:#02040a; } :root[data-skin='lasergrid'] .tabs button.on { border-bottom-color:#00e5ff; }
+/* Acid rave: toxic lime and UV magenta */
+:root[data-skin='acid'] { --bg:#0a0d05; --bg-2:#060803; --panel:#141a0b; --panel-2:#1e2710; --line:#33441a; --text:#f4ffe0; --muted:#a3b884; --accent:#b6ff00; --accent-ink:#0a0d05; --lcd-bg:#050602; --lcd-text:#b6ff00; --lcd-dim:#2b3a0a; --viz-low:#00ff9c; --viz-mid:#b6ff00; --viz-high:#ff00e1; --viz-peak:#ffffff; --radius:12px; --radius-lg:18px; --bevel:none; --bevel-in:inset 0 0 0 1px #33441a; color-scheme:dark; }
+:root[data-skin='acid'] .brand { color:#b6ff00; text-shadow:0 0 10px rgb(182 255 0 / 0.7), 3px 3px 0 #ff00e1; }
+:root[data-skin='acid'] .btn.primary, :root[data-skin='acid'] .tbtn.play { background:#b6ff00; color:#0a0d05; box-shadow:0 0 18px rgb(182 255 0 / 0.5); }
+:root[data-skin='acid'] .chip.on { background:#ff00e1; color:#ffffff; } :root[data-skin='acid'] .tabs button.on { border-bottom-color:#ff00e1; }
+:root[data-skin='acid'] .lcd { box-shadow:inset 0 0 16px rgb(0 0 0 / 0.9), 0 0 16px rgb(182 255 0 / 0.15); }
+/* Miami nights: flamingo pink and teal neon signs */
+:root[data-skin='miami'] { --bg:#120d24; --bg-2:#0d091b; --panel:#1d1636; --panel-2:#2a2048; --line:#3d2f63; --text:#fff3fa; --muted:#b9a6d6; --accent:#ff3ea5; --accent-ink:#ffffff; --lcd-bg:#0a0716; --lcd-text:#00f5d4; --lcd-dim:#0b3a35; --viz-low:#00f5d4; --viz-mid:#7b5cff; --viz-high:#ff3ea5; --viz-peak:#fee440; --radius:14px; --radius-lg:22px; --bevel:none; --bevel-in:inset 0 0 0 1px #3d2f63; color-scheme:dark; }
+:root[data-skin='miami'] .brand { color:#ff3ea5; text-shadow:0 0 6px rgb(255 62 165 / 0.9), 0 0 18px rgb(255 62 165 / 0.5); font-style:italic; }
+:root[data-skin='miami'] .btn.primary, :root[data-skin='miami'] .tbtn.play { background:linear-gradient(135deg,#ff3ea5,#7b5cff); color:#fff; box-shadow:0 0 16px rgb(255 62 165 / 0.4); }
+:root[data-skin='miami'] .chip.on { background:#00f5d4; color:#120d24; } :root[data-skin='miami'] .tabs button.on { border-bottom-color:#00f5d4; text-shadow:0 0 10px rgb(0 245 212 / 0.6); }
+:root[data-skin='miami'] .nav.on svg { color:#00f5d4; filter:drop-shadow(0 0 6px rgb(0 245 212 / 0.7)); }
+/* Blacklight UV: deep violet with fluorescent highlighter colours */
+:root[data-skin='blacklight'] { --bg:#0b0014; --bg-2:#07000d; --panel:#170528; --panel-2:#230a3b; --line:#3a1660; --text:#f5ecff; --muted:#b69ad6; --accent:#9d4dff; --accent-ink:#ffffff; --lcd-bg:#05000a; --lcd-text:#f5ff3b; --lcd-dim:#3a3a0a; --viz-low:#9d4dff; --viz-mid:#ff3bf2; --viz-high:#ff6b1a; --viz-peak:#f5ff3b; --radius:8px; --radius-lg:14px; --bevel:none; --bevel-in:inset 0 0 0 1px #3a1660; color-scheme:dark; }
+:root[data-skin='blacklight'] body { background: radial-gradient(900px 500px at 20% -10%, rgb(157 77 255 / 0.22), transparent 70%), #0b0014; }
+:root[data-skin='blacklight'] .brand { color:#f5ff3b; text-shadow:0 0 10px rgb(245 255 59 / 0.6); }
+:root[data-skin='blacklight'] .btn.primary, :root[data-skin='blacklight'] .tbtn.play { background:#9d4dff; color:#fff; box-shadow:0 0 18px rgb(157 77 255 / 0.6); }
+:root[data-skin='blacklight'] .chip.on { background:#f5ff3b; color:#0b0014; } :root[data-skin='blacklight'] .tabs button.on { border-bottom-color:#ff3bf2; }
+:root[data-skin='blacklight'] .lcd { box-shadow:inset 0 0 16px rgb(0 0 0 / 0.9), 0 0 16px rgb(245 255 59 / 0.12); }
+/* Electric: arc-welder blue and white-hot violet */
+:root[data-skin='electric'] { --bg:#050a1f; --bg-2:#030716; --panel:#0b1433; --panel-2:#122047; --line:#1f3570; --text:#eef3ff; --muted:#93a7dc; --accent:#3d7bff; --accent-ink:#ffffff; --lcd-bg:#020510; --lcd-text:#8fd3ff; --lcd-dim:#10284a; --viz-low:#3d7bff; --viz-mid:#8fd3ff; --viz-high:#c13bff; --viz-peak:#ffffff; --radius:8px; --radius-lg:12px; --bevel:none; --bevel-in:inset 0 0 0 1px #1f3570; color-scheme:dark; }
+:root[data-skin='electric'] .brand { color:#ffffff; text-shadow:0 0 4px #8fd3ff, 0 0 12px #3d7bff, 0 0 24px #c13bff; }
+:root[data-skin='electric'] .btn.primary, :root[data-skin='electric'] .tbtn.play { background:linear-gradient(135deg,#3d7bff,#c13bff); color:#fff; box-shadow:0 0 18px rgb(61 123 255 / 0.55); }
+:root[data-skin='electric'] .chip.on { background:#8fd3ff; color:#050a1f; } :root[data-skin='electric'] .tabs button.on { border-bottom-color:#c13bff; text-shadow:0 0 10px rgb(193 59 255 / 0.6); }
+:root[data-skin='electric'] .progress i { background:linear-gradient(90deg,#3d7bff,#8fd3ff,#c13bff); }
+
+.skin-card.outrun .skin-preview { background:linear-gradient(180deg,#0d0221 55%,#3d0a4e); } .skin-card.outrun .skin-preview span { flex:1; background:linear-gradient(to top,#ff2975,#ff901f 60%,#fff35c); box-shadow:0 0 10px rgb(255 41 117 / 0.5); }
+.skin-card.lasergrid .skin-preview { background:repeating-linear-gradient(90deg,rgb(0 229 255 / 0.15) 0 1px,transparent 1px 12px),#02040a; border:1px solid #00e5ff; border-radius:2px; } .skin-card.lasergrid .skin-preview span { flex:1; background:transparent; box-shadow:inset 0 0 0 2px #00e5ff, 0 0 8px rgb(0 229 255 / 0.7); }
+.skin-card.acid .skin-preview { background:#0a0d05; } .skin-card.acid .skin-preview span { flex:1; background:linear-gradient(to top,#00ff9c,#b6ff00 55%,#ff00e1); border-radius:6px 6px 0 0; box-shadow:0 0 10px rgb(182 255 0 / 0.45); }
+.skin-card.miami .skin-preview { background:linear-gradient(180deg,#120d24,#2a2048); } .skin-card.miami .skin-preview span { flex:1; background:linear-gradient(to top,#00f5d4,#7b5cff,#ff3ea5); border-radius:8px 8px 0 0; }
+.skin-card.blacklight .skin-preview { background:radial-gradient(circle at 30% 0%,#3a1660,#0b0014 70%); } .skin-card.blacklight .skin-preview span { flex:1; background:linear-gradient(to top,#9d4dff,#ff3bf2,#f5ff3b); box-shadow:0 0 10px rgb(157 77 255 / 0.6); }
+.skin-card.electric .skin-preview { background:#050a1f; } .skin-card.electric .skin-preview span { flex:1; background:linear-gradient(to top,#3d7bff,#8fd3ff 60%,#ffffff); box-shadow:0 0 10px rgb(61 123 255 / 0.7); }

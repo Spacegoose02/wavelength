@@ -53,6 +53,9 @@ genre names cover it).
 3. Optional component overrides (`.btn.primary`, `.nav.on`, `.chip.on`, `.tabs button.on`, `.deck`).
 4. A picker preview: `.skin-card.myskin .skin-preview { … }` and its `span`s (three bars).
 5. Check: album art keeps its real colours, text contrast on `--panel`, the LCD, phone layout.
+6. Put the rules at the top level of `styles.css` (not inside a `@media` block), then check the picker card
+   and the skin itself at desktop width as well as phone width. A rule stuck inside the phone media query looks
+   fine on Android and does nothing on Windows.
 
 ## Add a native (Rust) command
 

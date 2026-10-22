@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Fix: Dracula, Monokai, Solarized, OLED black, High contrast, Sakura and Cyberpunk didn't work on Windows.**
+  A missing closing brace in `styles.css` (lost in a merge) put those skins, and the equalizer's styles, inside
+  the phone-width media query, so on a desktop-sized window the skin picker showed blank cards and picking
+  them did nothing. They now apply and preview at every window size; the EQ pop-over is also back in place on desktop.
+- **6 new neon skins** (Settings → Skin), on Windows, Android phones/tablets and Android TV: Outrun (chrome
+  sunset over a laser grid), Laser grid (glowing cyan outlines on black), Acid rave (toxic lime and magenta),
+  Miami nights (flamingo pink and teal), Blacklight UV (violet with highlighter yellow) and Electric (arc blue
+  and violet). See the [user guide](docs/USER-GUIDE.md#skins).
 - **Releases now include the Windows installer and Android APK automatically.** Publishing a release on
   GitHub runs a build that attaches `Wavelength_X.Y.Z_x64-setup.exe`, `Wavelength.exe` and the signed
   `Wavelength-X.Y.Z-android.apk`. See [RELEASING.md](docs/RELEASING.md#automated-builds-github-actions).
