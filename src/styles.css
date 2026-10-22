@@ -1056,3 +1056,45 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .skin-card.ipod .skin-preview { background:#f2f3f5; border:1px solid #c4c8ce; } .skin-card.ipod .skin-preview span { flex:1; background:linear-gradient(to top,#2f7ae5,#5ea2ff); }
 .skin-card.aqua .skin-preview { background:repeating-linear-gradient(180deg,#eef0f4 0 2px,#e6e9ef 2px 4px); } .skin-card.aqua .skin-preview span { flex:1; background:linear-gradient(180deg,#bfe0ff,#2a7ff0); border-radius:6px 6px 0 0; }
 .skin-card.walkman .skin-preview { background:#cfd2d6; } .skin-card.walkman .skin-preview span:nth-child(1) { flex:1; background:#2d5fa8; } .skin-card.walkman .skin-preview span:nth-child(2) { flex:1; background:#e8681a; } .skin-card.walkman .skin-preview span:nth-child(3) { flex:1; background:#1d2430; }
+
+/* ============ 0.7 skins ============ */
+/* Dracula */
+:root[data-skin='dracula'] { --bg:#282a36; --bg-2:#21222c; --panel:#343746; --panel-2:#44475a; --line:#4d5066; --text:#f8f8f2; --muted:#a4a8c4; --accent:#bd93f9; --accent-ink:#21222c; --lcd-bg:#191a21; --lcd-text:#50fa7b; --lcd-dim:#24402c; --viz-low:#8be9fd; --viz-mid:#bd93f9; --viz-high:#ff79c6; --viz-peak:#f1fa8c; --bevel:none; --bevel-in:inset 0 0 0 1px #44475a; color-scheme:dark; }
+:root[data-skin='dracula'] .chip.on { background:#ff79c6; color:#21222c; } :root[data-skin='dracula'] .tabs button.on { border-bottom-color:#50fa7b; }
+/* Monokai */
+:root[data-skin='monokai'] { --bg:#272822; --bg-2:#1e1f1c; --panel:#33342d; --panel-2:#3e3d32; --line:#49483e; --text:#f8f8f2; --muted:#a59f85; --accent:#a6e22e; --accent-ink:#1e1f1c; --lcd-bg:#1a1b17; --lcd-text:#e6db74; --lcd-dim:#3a3720; --viz-low:#66d9ef; --viz-mid:#a6e22e; --viz-high:#f92672; --viz-peak:#fd971f; --radius:6px; --radius-lg:10px; --bevel:none; --bevel-in:inset 0 0 0 1px #49483e; color-scheme:dark; }
+:root[data-skin='monokai'] .chip.on { background:#f92672; color:#f8f8f2; } :root[data-skin='monokai'] .tabs button.on { border-bottom-color:#fd971f; }
+/* Solarized (Ethan Schoonover's palette) */
+:root[data-skin='solarized'] { --bg:#002b36; --bg-2:#00212b; --panel:#073642; --panel-2:#0d4250; --line:#18505e; --text:#eee8d5; --muted:#93a1a1; --accent:#268bd2; --accent-ink:#fdf6e3; --lcd-bg:#00212b; --lcd-text:#859900; --lcd-dim:#1c3a1a; --viz-low:#2aa198; --viz-mid:#268bd2; --viz-high:#d33682; --viz-peak:#b58900; --bevel:none; --bevel-in:inset 0 0 0 1px #18505e; color-scheme:dark; }
+:root[data-skin='solarized'] .chip.on { background:#b58900; color:#002b36; } :root[data-skin='solarized'] .tabs button.on { border-bottom-color:#cb4b16; }
+:root[data-skin='solarizedlight'] { --bg:#fdf6e3; --bg-2:#f3ecd7; --panel:#eee8d5; --panel-2:#e4ddc7; --line:#cfc7ae; --text:#073642; --muted:#586e75; --accent:#268bd2; --accent-ink:#fdf6e3; --lcd-bg:#073642; --lcd-text:#b58900; --lcd-dim:#2a3a2a; --viz-low:#2aa198; --viz-mid:#268bd2; --viz-high:#d33682; --viz-peak:#cb4b16; --bevel:none; --bevel-in:inset 0 0 0 1px #cfc7ae; color-scheme:light; }
+:root[data-skin='solarizedlight'] .chip.on { background:#b58900; color:#fdf6e3; } :root[data-skin='solarizedlight'] .tabs button.on { border-bottom-color:#cb4b16; }
+:root[data-skin='solarizedlight'] .lcd { text-shadow:none; }
+/* OLED black: true #000 so OLED phone screens switch the pixels off */
+:root[data-skin='oled'] { --bg:#000000; --bg-2:#000000; --panel:#0d0d0d; --panel-2:#1a1a1a; --line:#222222; --text:#f2f2f2; --muted:#8c8c8c; --accent:#4fc3f7; --accent-ink:#000000; --lcd-bg:#000000; --lcd-text:#4fc3f7; --lcd-dim:#0f2a36; --viz-low:#4fc3f7; --viz-mid:#7c4dff; --viz-high:#ff4081; --viz-peak:#ffffff; --bevel:none; --bevel-in:inset 0 0 0 1px #222222; color-scheme:dark; }
+:root[data-skin='oled'] .sidebar, :root[data-skin='oled'] .deck { background:#000; border-color:#1a1a1a; }
+/* High contrast: big contrast ratios, thick focus/selection, for low vision or bright sunlight */
+:root[data-skin='contrast'] { --bg:#000000; --bg-2:#000000; --panel:#000000; --panel-2:#1c1c1c; --line:#ffffff; --text:#ffffff; --muted:#e0e0e0; --accent:#ffff00; --accent-ink:#000000; --lcd-bg:#000000; --lcd-text:#ffff00; --lcd-dim:#333300; --viz-low:#00ffff; --viz-mid:#ffff00; --viz-high:#ff00ff; --viz-peak:#ffffff; --radius:4px; --radius-lg:6px; --bevel:inset 0 0 0 2px #ffffff; --bevel-in:inset 0 0 0 2px #ffffff; color-scheme:dark; }
+:root[data-skin='contrast'] .card, :root[data-skin='contrast'] .btn, :root[data-skin='contrast'] .chip { border:2px solid #ffffff; }
+:root[data-skin='contrast'] .nav.on, :root[data-skin='contrast'] .chip.on, :root[data-skin='contrast'] .btn.primary, :root[data-skin='contrast'] .tbtn.play { background:#ffff00; color:#000; }
+:root[data-skin='contrast'] .nav.on svg { color:#000; }
+:root[data-skin='contrast'] .tabs button.on { border-bottom:3px solid #ffff00; }
+:root[data-skin='contrast'] :focus-visible { outline:3px solid #00ffff; outline-offset:2px; }
+/* Sakura: soft pink and cream, light */
+:root[data-skin='sakura'] { --bg:#fff5f7; --bg-2:#fde8ee; --panel:#ffffff; --panel-2:#fbe3ea; --line:#efc7d3; --text:#3d2a33; --muted:#86636f; --accent:#e5568a; --accent-ink:#ffffff; --lcd-bg:#3d2a33; --lcd-text:#ffb7c9; --lcd-dim:#5a3a46; --viz-low:#f7a8c0; --viz-mid:#e5568a; --viz-high:#9c3d6b; --viz-peak:#6fbf8e; --radius:14px; --radius-lg:20px; --bevel:0 1px 3px rgb(156 61 107 / 0.15); --bevel-in:inset 0 0 0 1px #efc7d3; color-scheme:light; }
+:root[data-skin='sakura'] .chip.on { background:#6fbf8e; color:#fff; } :root[data-skin='sakura'] .tabs button.on { border-bottom-color:#e5568a; }
+/* Cyberpunk: hazard yellow, cyan, hot red, hard edges */
+:root[data-skin='cyberpunk'] { --bg:#0b0b12; --bg-2:#07070c; --panel:#15151f; --panel-2:#1f1f2c; --line:#2f2f44; --text:#eafcff; --muted:#8aa0a8; --accent:#fcee0a; --accent-ink:#0b0b12; --font-display:'Bahnschrift','Segoe UI',sans-serif; --lcd-bg:#05050a; --lcd-text:#00f0ff; --lcd-dim:#0a3338; --viz-low:#00f0ff; --viz-mid:#fcee0a; --viz-high:#ff003c; --viz-peak:#ffffff; --radius:0px; --radius-lg:2px; --bevel:none; --bevel-in:inset 0 0 0 1px #2f2f44; color-scheme:dark; }
+:root[data-skin='cyberpunk'] .brand { text-transform:uppercase; letter-spacing:3px; color:#fcee0a; }
+:root[data-skin='cyberpunk'] .btn.primary, :root[data-skin='cyberpunk'] .tbtn.play { clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px)); }
+:root[data-skin='cyberpunk'] .chip.on { background:#00f0ff; color:#0b0b12; } :root[data-skin='cyberpunk'] .tabs button.on { border-bottom-color:#ff003c; }
+:root[data-skin='cyberpunk'] .lcd { box-shadow:inset 0 0 14px rgb(0 240 255 / 0.15); }
+
+.skin-card.dracula .skin-preview { background:#282a36; } .skin-card.dracula .skin-preview span { flex:1; background:linear-gradient(to top,#8be9fd,#bd93f9,#ff79c6); }
+.skin-card.monokai .skin-preview { background:#272822; } .skin-card.monokai .skin-preview span { flex:1; background:linear-gradient(to top,#66d9ef,#a6e22e,#f92672); }
+.skin-card.solarized .skin-preview { background:#002b36; } .skin-card.solarized .skin-preview span { flex:1; background:linear-gradient(to top,#2aa198,#268bd2,#d33682); }
+.skin-card.solarizedlight .skin-preview { background:#fdf6e3; border:1px solid #cfc7ae; } .skin-card.solarizedlight .skin-preview span { flex:1; background:linear-gradient(to top,#2aa198,#268bd2,#cb4b16); }
+.skin-card.oled .skin-preview { background:#000; } .skin-card.oled .skin-preview span { flex:1; background:linear-gradient(to top,#4fc3f7,#7c4dff,#ff4081); }
+.skin-card.contrast .skin-preview { background:#000; border:2px solid #fff; } .skin-card.contrast .skin-preview span { flex:1; background:#ffff00; }
+.skin-card.sakura .skin-preview { background:#fff5f7; border:1px solid #efc7d3; } .skin-card.sakura .skin-preview span { flex:1; background:linear-gradient(to top,#f7a8c0,#e5568a); border-radius:6px 6px 0 0; }
+.skin-card.cyberpunk .skin-preview { background:#0b0b12; } .skin-card.cyberpunk .skin-preview span { flex:1; background:linear-gradient(to top,#00f0ff,#fcee0a 60%,#ff003c); }

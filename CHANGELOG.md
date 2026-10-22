@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- **8 new skins** (Settings → Skin): Dracula, Monokai, Solarized Dark, Solarized Light, OLED black (true black for
+  OLED phone screens), High contrast (yellow on black, thick outlines, strong focus rings), Sakura (light) and Cyberpunk.
+
 ## 0.6.0
 - **Browse Deezer by artist, album and playlist** (Downloads → Deezer): search now finds artists and playlists too. Artist pages
   show top songs, the full discography (albums, EPs, singles, compilations) and related artists, with
