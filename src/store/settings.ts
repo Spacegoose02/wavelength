@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
+import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman';
@@ -45,6 +46,8 @@ interface SettingsState {
   discoverCharts: Partial<Record<Genre, ChartSource[]>>;
   npScene: NpScene;
   setNpScene(s: NpScene): void;
+  eq: EqSettings;
+  setEq(e: Partial<EqSettings>): void;
   /** Pass undefined to put a genre back on the defaults. */
   setDiscoverCharts(g: Genre, charts: ChartSource[] | undefined): void;
   setYtdlp(d: Partial<SettingsState['ytdlp']>): void;
@@ -67,6 +70,8 @@ export const useSettings = create<SettingsState>()(
       discoverCharts: {},
       npScene: 'art',
       setNpScene: (npScene) => set({ npScene }),
+      eq: DEFAULT_EQ,
+      setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       setDiscoverCharts: (g, charts) =>
         set((st) => {
           const discoverCharts = { ...st.discoverCharts };

@@ -1,8 +1,8 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), and the **Now Playing visualizers**. For how they're built, see the developer notes at the
-end of each section and [SOURCES.md](SOURCES.md).
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** and the **equalizer**. For how they're built, see the
+developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
 
@@ -160,3 +160,37 @@ spectrum under the title does the same.
 > `Draw` function that gets a `Frame` (frequency bins, waveform, bass/mid/treble levels, a `beat` flag,
 > the skin's `--viz-*` colours and the cover image) and draws on one square canvas every animation frame.
 > To add one, write a `Draw`, add its id to `NpScene` (`store/settings.ts`), and add it to `SCENES` and `DRAW`.
+## Equalizer
+
+A 10-band equalizer with presets. There are three ways to open it:
+
+- **Desktop:** the **EQ** button in the player bar, next to the queue button.
+- **Now Playing** (phone and desktop): the **EQ** chip under the song title.
+- **Settings → Equalizer**.
+
+<img src="screenshots/equalizer.png" alt="Equalizer pop-over with the Bass boost preset" width="60%">
+
+- **Presets.** Tap one to apply it: Flat, Bass boost, Treble boost, Loudness, Vocal, Podcasts & books,
+  Rock, Pop, Electronic, Hip-hop, Jazz, Classical and Phone speaker. Picking a preset also turns the EQ on
+  and lowers the preamp by the preset's biggest boost, so loud songs don't distort.
+- **Sliders.** Each band goes from −12 to +12 dB, and moving one switches the preset to **Custom**.
+  Double-click a slider to set it back to 0. **Pre** (preamp) changes the overall level before the bands.
+- **Curve.** The green line shows the combined effect across 20 Hz to 20 kHz.
+- **On/off.** The checkbox switches the EQ off without losing your settings. **Reset** goes back to Flat.
+
+The EQ applies to everything Wavelength plays: music, radio, podcasts, audiobooks and downloaded songs.
+Your settings are saved on this device.
+
+**Phone speaker** is worth trying on Android. It cuts the deep bass a phone speaker can't play anyway
+and lifts the mids, so music sounds louder and clearer.
+
+**One limit.** Some radio stations and servers don't let the app process their audio (no CORS headers).
+The EQ can't change those streams, and the panel shows a note while one is playing. The same streams
+also show the idle visualiser animation.
+
+> **Developer notes.** The bands and presets are in `src/player/eq.ts`, and the filter chain is in
+> `ensureGraph()` in `src/player/engine.ts` (preamp → 31 Hz low shelf → 8 peaking bands, Q 1.41 → 16 kHz
+> high shelf → analyser). Settings are stored as `eq` in the settings store. `store/player.ts` subscribes
+> to them and calls `engine.setEq`, which ramps each gain over about 20 ms so dragging a slider doesn't click.
+> The curve comes from `BiquadFilterNode.getFrequencyResponse` on a throwaway `OfflineAudioContext`. To
+> add a preset, add an entry to `EQ_PRESETS` (10 gains, low to high).

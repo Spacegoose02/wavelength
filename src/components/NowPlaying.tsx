@@ -4,6 +4,7 @@ import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat, I
 import { Visualizer } from './Visualizer';
 import { NowPlayingStage } from './Scenes';
 import { AddToPlaylist } from './AddToPlaylist';
+import { EqButton } from './Equalizer';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
 export function NowPlaying() {
@@ -25,7 +26,10 @@ export function NowPlaying() {
           <div className="np-kicker">{live ? 'Live radio' : t.kind === 'book' ? 'Audiobook' : t.album}</div>
           <h1 className="np-title">{live ? p.liveTitle ?? t.title : t.title}</h1>
           <div className="np-artist">{live ? t.title : t.artist}</div>
-          {t.kind !== 'book' && <div><AddToPlaylist tracks={[t]} label="Add to playlist" /></div>}
+          <div className="np-actions">
+            {t.kind !== 'book' && <AddToPlaylist tracks={[t]} label="Add to playlist" />}
+            <EqButton className="chip" />
+          </div>
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && (
             <div className="seek big">

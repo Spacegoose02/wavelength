@@ -4,6 +4,9 @@
 - **Now Playing visualizers**: tap the artwork in Now Playing to cycle through Halo, Oscilloscope, Starfield,
   Mirror spectrum and Pulse rings (and back to the cover). They react to the music, use your skin's colours, and
   your choice is remembered. See the [user guide](docs/USER-GUIDE.md#now-playing-visualizers).
+- **Equalizer**: 10 bands with a preamp, 13 presets (including Phone speaker and Podcasts & books) and a live
+  response curve. Open it with **EQ** in the player bar or in Now Playing, or in Settings → Equalizer. See the
+  [user guide](docs/USER-GUIDE.md#equalizer).
 
 ## 0.6.0
 - **Browse Deezer by artist, album and playlist** (Downloads → Deezer): search now finds artists and playlists too. Artist pages
