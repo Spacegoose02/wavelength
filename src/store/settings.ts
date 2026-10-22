@@ -5,7 +5,8 @@ import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
-  | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman';
+  | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
+  | 'dracula' | 'monokai' | 'solarized' | 'solarizedlight' | 'oled' | 'contrast' | 'sakura' | 'cyberpunk';
 
 /** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
 export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings';
@@ -34,6 +35,14 @@ export const SKINS: { id: Skin; label: string }[] = [
   { id: 'everforest', label: 'Everforest (Omarchy)' },
   { id: 'kanagawa', label: 'Kanagawa (Omarchy)' },
   { id: 'rosepine', label: 'Rosé Pine (Omarchy)' },
+  { id: 'dracula', label: 'Dracula' },
+  { id: 'monokai', label: 'Monokai' },
+  { id: 'solarized', label: 'Solarized Dark' },
+  { id: 'solarizedlight', label: 'Solarized Light' },
+  { id: 'oled', label: 'OLED black (saves battery)' },
+  { id: 'contrast', label: 'High contrast' },
+  { id: 'sakura', label: 'Sakura (light)' },
+  { id: 'cyberpunk', label: 'Cyberpunk' },
 ];
 
 interface SettingsState {
