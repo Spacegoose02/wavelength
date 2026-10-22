@@ -29,7 +29,7 @@ binary. The same codebase builds a Windows desktop app and an Android APK (phone
 | `main.tsx` | Boot: enables TV remote navigation and the Android media bridge, renders `<App/>`. |
 | `App.tsx` | Layout (sidebar or phone tab bar), keyboard shortcuts, back-button handling, the `View` router switch. |
 | `views/` | One file per page. Pages read stores and call source adapters; they don't fetch directly. |
-| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar`, `Visualizer`, `ErrorBoundary`. |
+| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar`, `Visualizer`, `ErrorBoundary`. |
 | `store/` | Global state (zustand). See §4. |
 | `sources/` | Adapters for each backend + chart/radio/download helpers. See [SOURCES.md](SOURCES.md). |
 | `player/engine.ts` | The audio engine. See §3. |
@@ -84,10 +84,15 @@ browser (dev preview). The capability file `src-tauri/capabilities/default.json`
 
 **Engine.** Two `<audio>` elements:
 
-- `visual` has `crossOrigin="anonymous"` and is routed through Web Audio → an `AnalyserNode` feeds
-  the spectrum visualiser.
+- `visual` has `crossOrigin="anonymous"` and is routed through Web Audio:
+  element → preamp `GainNode` → 10 `BiquadFilterNode` EQ bands → `AnalyserNode` (feeds the spectrum
+  visualiser) → speakers. The EQ (`player/eq.ts` for bands and presets, `engine.setEq`) sits before the
+  analyser, so the visualiser shows the equalised sound. When the EQ is off, every gain is 0 dB, which
+  leaves the audio unchanged.
 - `plain` has no CORS. If a host fails CORS, the engine remembers the host and uses `plain` from then
-  on (the visualiser falls back to an idle animation). Many radio streams need this.
+  on (the visualiser falls back to an idle animation). Many radio streams need this. Web Audio can't
+  read audio from these hosts, so the EQ doesn't affect them either (`engine.eqAvailable()` is false and
+  the EQ panel says so).
 
 **Lifecycle** (`loadCurrent` in `store/player.ts`):
 
@@ -111,7 +116,7 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 
 | Store / key | Contents | Persisted as |
 |---|---|---|
-| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations, skin, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
+| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations, skin, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`), equalizer (`eq`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
 | `store/library.ts` | Mixed-source playlists, local play history | `tonearm.library` |
 | `store/offline.ts` | Downloaded tracks (path, size), covers, downloaded collections | `tonearm.offline` (files in `<app data>/offline/`) |
 | `store/catalog.ts` | Merged albums/artists/books/podcasts loaded at start | memory |
