@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.0
 - **Fix: Dracula, Monokai, Solarized, OLED black, High contrast, Sakura and Cyberpunk didn't work on Windows.**
   A missing closing brace in `styles.css` (lost in a merge) put those skins, and the equalizer's styles, inside
   the phone-width media query, so on a desktop-sized window the skin picker showed blank cards and picking
