@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Fix: downloaded songs stopped after a moment on Android.** Offline songs now load fully before playing on
+  Android (desktop is unchanged), so they play to the end, seek normally and drive the visualiser.
+- **Now Playing visualizers**: tap the artwork in Now Playing to cycle through Halo, Oscilloscope, Starfield,
+  Mirror spectrum and Pulse rings (and back to the cover). They react to the music, use your skin's colours, and
+  your choice is remembered. See the [user guide](docs/USER-GUIDE.md#now-playing-visualizers).
 - **8 new skins** (Settings → Skin): Dracula, Monokai, Solarized Dark, Solarized Light, OLED black (true black for
   OLED phone screens), High contrast (yellow on black, thick outlines, strong focus rings), Sakura (light) and Cyberpunk.
 - **Equalizer**: 10 bands with a preamp, 13 presets (including Phone speaker and Podcasts & books) and a live
