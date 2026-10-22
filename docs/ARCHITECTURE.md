@@ -91,7 +91,9 @@ browser (dev preview). The capability file `src-tauri/capabilities/default.json`
 
 **Lifecycle** (`loadCurrent` in `store/player.ts`):
 
-1. If the track is **downloaded** (`store/offline.ts`), play the local file via the asset protocol — no network.
+1. If the track is **downloaded** (`store/offline.ts`), play the local file — no network. Desktop streams it
+   from the asset protocol; Android loads the whole file into a `blob:` URL first, because the asset protocol
+   serves media in ~1 MB ranges that Android's WebView doesn't follow (`offlinePlaybackUrl`).
 2. Else call the source's `prepare(track)` (fresh Navidrome token, Audiobookshelf session, …).
 3. `engine.load(url, startAt)`.
 4. Scrobble "now playing"; at 50% or 4 min record a play (local history + server scrobble).

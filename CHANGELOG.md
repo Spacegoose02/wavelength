@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- **Fix: downloaded songs stopped after a moment on Android.** Offline songs now load fully before playing on
+  Android (desktop is unchanged), so they play to the end, seek normally and drive the visualiser.
+
 ## 0.6.0
 - **Browse Deezer by artist, album and playlist** (Downloads → Deezer): search now finds artists and playlists too. Artist pages
   show top songs, the full discography (albums, EPs, singles, compilations) and related artists, with

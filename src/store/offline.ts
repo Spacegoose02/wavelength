@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { isTauri } from '../lib/http';
+import { isAndroid } from '../lib/platform';
 import { sourceFor } from '../sources/registry';
 import type { Track } from '../sources/types';
 import { useSettings } from './settings';
@@ -154,10 +155,34 @@ export const useOffline = create<OfflineState>()(
   ),
 );
 
-/** Local playback URL if this song is saved on the device. */
-export function offlineUrl(t: Pick<Track, 'sourceId' | 'id'>): string | undefined {
+const AUDIO_TYPES: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  flac: 'audio/flac',
+  ogg: 'audio/ogg',
+  m4a: 'audio/mp4',
+  wav: 'audio/wav',
+};
+
+/**
+ * URL the player should load for a saved song, or undefined if it isn't downloaded.
+ *
+ * Desktop streams straight from the asset protocol. Android can't: Tauri answers each media
+ * Range request with at most ~1 MB (206 Partial Content), and Android's WebView doesn't come
+ * back for the next range of an intercepted response, so playback stopped after the first
+ * chunk. There we read the whole file once (no Range header, so a full 200 response) and play
+ * it from a Blob, which seeks normally. The caller owns the returned blob: URL and should
+ * `URL.revokeObjectURL` it once another song is loaded.
+ */
+export async function offlinePlaybackUrl(t: Pick<Track, 'sourceId' | 'id'>): Promise<string | undefined> {
   const hit = useOffline.getState().tracks[trackKey(t)];
-  return hit ? convertFileSrc(hit.path) : undefined;
+  if (!hit) return undefined;
+  const url = convertFileSrc(hit.path);
+  if (!isAndroid) return url;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Couldn't open the downloaded file (${res.status})`);
+  const data = await res.arrayBuffer();
+  const ext = hit.path.slice(hit.path.lastIndexOf('.') + 1).toLowerCase();
+  return URL.createObjectURL(new Blob([data], { type: AUDIO_TYPES[ext] ?? 'audio/mpeg' }));
 }
 
 /** Local artwork for a remote cover URL (falls back to the remote one). */
