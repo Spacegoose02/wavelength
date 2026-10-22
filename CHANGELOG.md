@@ -3,6 +3,9 @@
 ## Unreleased
 - **Fix: downloaded songs stopped after a moment on Android.** Offline songs now load fully before playing on
   Android (desktop is unchanged), so they play to the end, seek normally and drive the visualiser.
+- **Equalizer**: 10 bands with a preamp, 13 presets (including Phone speaker and Podcasts & books) and a live
+  response curve. Open it with **EQ** in the player bar or in Now Playing, or in Settings → Equalizer. See the
+  [user guide](docs/USER-GUIDE.md#equalizer).
 
 ## 0.6.0
 - **Browse Deezer by artist, album and playlist** (Downloads → Deezer): search now finds artists and playlists too. Artist pages

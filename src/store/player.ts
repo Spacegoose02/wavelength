@@ -47,6 +47,11 @@ const savedVolume = (() => {
   }
 })();
 engine.setVolume(savedVolume);
+// equalizer: apply the saved settings, then follow changes from the EQ panel
+engine.setEq(useSettings.getState().eq);
+useSettings.subscribe((s, prev) => {
+  if (s.eq !== prev.eq) engine.setEq(s.eq);
+});
 
 const sourceOf = (t: Track) => {
   const cfg = useSettings.getState().sources.find((s) => s.id === t.sourceId);
