@@ -9,12 +9,59 @@
 - Android `versionCode` is derived from it (`0.4.1` → `4001`). It must always go **up**, or the APK
   won't install as an update.
 
+## Automated builds (GitHub Actions)
+
+`.github/workflows/release.yml` builds and attaches the binaries whenever a release is **published**
+on GitHub, so creating the release in the web UI is enough:
+
+| Job | Runner | Attaches |
+| --- | --- | --- |
+| `windows` | `windows-latest` | `Wavelength_X.Y.Z_x64-setup.exe`, `Wavelength.exe` |
+| `android` | `ubuntu-latest` | `Wavelength-X.Y.Z-android.apk` (arm64 + armv7, signed) |
+
+- The version is taken from the **tag** (`v0.7.0` → `0.7.0`) and written into `package.json` and
+  `tauri.conf.json` before building, so the file names and Android `versionCode` always match the tag.
+  Still bump both files in the repo so local builds agree.
+- The Android job **fails rather than publish** an unsigned APK or one signed with a different
+  certificate (it checks the SHA-256 below).
+- Binaries appear on the release about 15–25 minutes after publishing (watch the **Actions** tab).
+- To build or rebuild an existing release (e.g. one published before the workflow existed):
+  **Actions → Release builds → Run workflow**, enter the tag (e.g. `v0.7.0`). Existing assets with the
+  same name are replaced.
+
+### One-time setup: signing secrets
+
+Add these under **Settings → Secrets and variables → Actions → New repository secret**, using the
+values from your local `src-tauri/gen/android/keystore.properties`:
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | the keystore file, base64-encoded (see below) |
+| `ANDROID_KEYSTORE_PASSWORD` | `storePassword` |
+| `ANDROID_KEY_ALIAS` | `keyAlias` (normally `wavelength`) |
+| `ANDROID_KEY_PASSWORD` | `keyPassword` |
+
+Encode the keystore on Windows (copies it to the clipboard):
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes('src-tauri\gen\android\wavelength-release.jks')) | Set-Clipboard
+```
+(macOS/Linux: `base64 -w0 wavelength-release.jks`.) The Windows job needs no secrets.
+
 ## Checklist
 
-1. Update `CHANGELOG.md`.
+1. Update `CHANGELOG.md` (rename **Unreleased** to the new version).
 2. Bump the version (both files).
 3. `npx tsc` clean.
-4. **Use a neutral Cargo home for release builds.** Rust embeds the paths of dependency sources in
+4. Commit and push to `main`.
+5. On GitHub: **Releases → Draft a new release**, create tag `vX.Y.Z` on `main`, title
+   `Wavelength X.Y.Z`, paste notes (template below), **Publish**. The workflow attaches the exe and APK.
+6. When the Actions run is green, check the release shows the three files.
+
+## Manual builds (fallback)
+
+Use these if Actions is unavailable, or to test a release build locally.
+
+1. **Use a neutral Cargo home for release builds.** Rust embeds the paths of dependency sources in
    the binary (panic messages), and the default Cargo home is inside your user folder
    (`C:\Users\<you>\.cargo`) — that would publish your username. In the same terminal as the builds:
    ```powershell
@@ -24,16 +71,16 @@
    ```bash
    npm run tauri build
    ```
-5. Build Android (see DEVELOPMENT.md for the TEMP workaround on Windows):
+2. Build Android (see DEVELOPMENT.md for the TEMP workaround on Windows):
    ```bash
    npx tauri android build --apk --target aarch64 --target armv7
    ```
-6. Verify the APK is signed with the **same certificate** as the last release:
+3. Verify the APK is signed with the **same certificate** as the last release:
    ```bash
    apksigner verify --print-certs app-universal-release.apk
    ```
    Release certificate SHA-256: `22530aa081ae26e241d328bd4e97dfe919f2a86c995e9e4e4dcb96610c985a31`
-7. Commit, tag and publish:
+4. Commit, tag and publish (or upload to an existing release with `gh release upload vX.Y.Z … --clobber`):
    ```bash
    git commit -am "vX.Y.Z"
    git tag vX.Y.Z && git push && git push --tags

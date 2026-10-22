@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Releases now include the Windows installer and Android APK automatically.** Publishing a release on
+  GitHub runs a build that attaches `Wavelength_X.Y.Z_x64-setup.exe`, `Wavelength.exe` and the signed
+  `Wavelength-X.Y.Z-android.apk`. See [RELEASING.md](docs/RELEASING.md#automated-builds-github-actions).
+
+## 0.7.0
 - **Fix: downloaded songs stopped after a moment on Android.** Offline songs now load fully before playing on
   Android (desktop is unchanged), so they play to the end, seek normally and drive the visualiser.
 - **Now Playing visualizers**: tap the artwork in Now Playing to cycle through Halo, Oscilloscope, Starfield,
