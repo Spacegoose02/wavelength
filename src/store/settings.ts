@@ -8,6 +8,9 @@ export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
   | 'dracula' | 'monokai' | 'solarized' | 'solarizedlight' | 'oled' | 'contrast' | 'sakura' | 'cyberpunk';
 
+/** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
+export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings';
+
 export const SKINS: { id: Skin; label: string }[] = [
   { id: 'neon', label: 'Neon synth (default)' },
   { id: 'plexamp', label: 'Midnight (Plexamp-inspired)' },
@@ -50,6 +53,8 @@ interface SettingsState {
   ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string };
   /** Discover: which charts each genre uses. A genre that isn't listed uses the built-in defaults. */
   discoverCharts: Partial<Record<Genre, ChartSource[]>>;
+  npScene: NpScene;
+  setNpScene(s: NpScene): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
   /** Pass undefined to put a genre back on the defaults. */
@@ -72,6 +77,8 @@ export const useSettings = create<SettingsState>()(
       deemix: { url: 'http://localhost:6595', arl: '', bitrate: 9 },
       ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '' },
       discoverCharts: {},
+      npScene: 'art',
+      setNpScene: (npScene) => set({ npScene }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       setDiscoverCharts: (g, charts) =>

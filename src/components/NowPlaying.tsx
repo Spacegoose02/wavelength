@@ -2,6 +2,7 @@ import { usePlayer } from '../store/player';
 import { Cover, fmtTime } from './common';
 import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat, IconShuffle } from './Icons';
 import { Visualizer } from './Visualizer';
+import { NowPlayingStage } from './Scenes';
 import { AddToPlaylist } from './AddToPlaylist';
 import { EqButton } from './Equalizer';
 
@@ -20,7 +21,7 @@ export function NowPlaying() {
       <div className="np-bg" style={{ backgroundImage: art ? `url("${art}")` : undefined }} />
       <button className="np-close" onClick={close} title="Close"><IconChevronDown /></button>
       <div className="np-body">
-        <Cover key={art} src={art} alt={t.title} className="np-art" />
+        <NowPlayingStage art={art} alt={t.title} />
         <div className="np-side">
           <div className="np-kicker">{live ? 'Live radio' : t.kind === 'book' ? 'Audiobook' : t.album}</div>
           <h1 className="np-title">{live ? p.liveTitle ?? t.title : t.title}</h1>

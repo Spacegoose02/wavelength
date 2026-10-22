@@ -1,8 +1,8 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), and the **equalizer**. For how they're built, see the developer notes at the
-end of each section and [SOURCES.md](SOURCES.md).
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** and the **equalizer**. For how they're built, see the
+developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
 
@@ -132,6 +132,34 @@ whether you picked it or not.
 
 ---
 
+## Now Playing visualizers
+
+Open **Now Playing** (tap the song in the player bar) and **tap the artwork** to switch to the next
+visualizer. A label shows each one's name as you go. Keep tapping to cycle through them all and back
+to the artwork. Wavelength remembers your pick for next time.
+
+<img src="screenshots/now-playing-scenes.png" alt="The six Now Playing views: artwork, Halo, Oscilloscope, Starfield, Mirror spectrum, Pulse rings" width="80%">
+
+| Visualizer | What it does |
+|---|---|
+| Artwork | The album cover (the default) |
+| Halo | The cover in a circle, with a ring of spectrum bars around it that pulses with the bass |
+| Oscilloscope | The live waveform, glowing, with short trails |
+| Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
+| Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
+| Pulse rings | A ring ripples out from the cover on every beat |
+
+Colours come from your skin's visualizer colours, so each skin gives them a different look.
+
+Some radio stations and servers don't let the app read their audio (no CORS headers). On those, the
+visualizers still move, but they follow a calm made-up pattern instead of the real music. The small
+spectrum under the title does the same.
+
+> **Developer notes.** The visualizers are in `src/components/Scenes.tsx`. `NowPlayingStage` replaces the
+> cover in `NowPlaying.tsx`, and the current choice is `npScene` in the settings store. Each scene is a
+> `Draw` function that gets a `Frame` (frequency bins, waveform, bass/mid/treble levels, a `beat` flag,
+> the skin's `--viz-*` colours and the cover image) and draws on one square canvas every animation frame.
+> To add one, write a `Draw`, add its id to `NpScene` (`store/settings.ts`), and add it to `SCENES` and `DRAW`.
 ## Equalizer
 
 A 10-band equalizer with presets. There are three ways to open it:
