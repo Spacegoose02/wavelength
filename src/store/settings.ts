@@ -6,7 +6,8 @@ import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
-  | 'dracula' | 'monokai' | 'solarized' | 'solarizedlight' | 'oled' | 'contrast' | 'sakura' | 'cyberpunk';
+  | 'dracula' | 'monokai' | 'solarized' | 'solarizedlight' | 'oled' | 'contrast' | 'sakura' | 'cyberpunk'
+  | 'outrun' | 'lasergrid' | 'acid' | 'miami' | 'blacklight' | 'electric';
 
 /** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
 export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings';
@@ -43,6 +44,12 @@ export const SKINS: { id: Skin; label: string }[] = [
   { id: 'contrast', label: 'High contrast' },
   { id: 'sakura', label: 'Sakura (light)' },
   { id: 'cyberpunk', label: 'Cyberpunk' },
+  { id: 'outrun', label: 'Outrun (neon)' },
+  { id: 'lasergrid', label: 'Laser grid (neon)' },
+  { id: 'acid', label: 'Acid rave (neon)' },
+  { id: 'miami', label: 'Miami nights (neon)' },
+  { id: 'blacklight', label: 'Blacklight UV (neon)' },
+  { id: 'electric', label: 'Electric (neon)' },
 ];
 
 interface SettingsState {

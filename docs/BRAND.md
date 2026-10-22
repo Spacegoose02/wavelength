@@ -66,10 +66,10 @@ No web fonts — the app must work offline and stay small.
 
 ## Skins
 
-The brand is the Neon synth default, but the app is skinnable by design (31 skins: Winamp, Plexamp,
+The brand is the Neon synth default, but the app is skinnable by design (37 skins: Winamp, Plexamp,
 Windows 95, MS-DOS, Game Boy Color, C64, Green/Amber CRT, Vaporwave, Synthwave sunset, Arcade, '70s,
-iPod Classic, Aqua, Walkman, the Omarchy palettes, Dracula, Monokai, Solarized Dark/Light, OLED black, High contrast, Sakura and
-Cyberpunk). Skins change colour and chrome, never layout.
+iPod Classic, Aqua, Walkman, the Omarchy palettes, Dracula, Monokai, Solarized Dark/Light, OLED black, High contrast, Sakura,
+Cyberpunk and the neon set: Outrun, Laser grid, Acid rave, Miami nights, Blacklight UV and Electric). Skins change colour and chrome, never layout.
 Album art always keeps its real colours.
 
 ## Screenshots

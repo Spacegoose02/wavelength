@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** and the **equalizer**. For how they're built, see the
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers**, the **equalizer** and **skins**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -194,3 +194,33 @@ also show the idle visualiser animation.
 > to them and calls `engine.setEq`, which ramps each gain over about 20 ms so dragging a slider doesn't click.
 > The curve comes from `BiquadFilterNode.getFrequencyResponse` on a throwaway `OfflineAudioContext`. To
 > add a preset, add an entry to `EQ_PRESETS` (10 gains, low to high).
+
+## Skins
+
+**Settings → Skin** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
+device and applies straight away. The visualizers and the LCD follow the skin's colours too.
+Every skin works on Windows, Android phones and tablets, and Android TV.
+
+<img src="screenshots/neon-skins.png" alt="Skin picker with the neon skins, Blacklight UV selected" width="80%">
+
+**Neon skins.** For a brighter, glowing look, try one of these alongside the default Neon synth, Vaporwave,
+Synthwave sunset and Cyberpunk:
+
+| Skin | Look |
+| --- | --- |
+| **Outrun** | Hot pink and orange chrome-sunset gradients over a faint purple laser grid. |
+| **Laser grid** | Black with a cyan grid; cards, buttons and icons are glowing cyan outlines. |
+| **Acid rave** | Toxic lime green with UV magenta, rounded and loud. |
+| **Miami nights** | Flamingo pink and teal neon-sign glow on deep purple. |
+| **Blacklight UV** | Deep violet with highlighter yellow and pink, like a blacklight poster. |
+| **Electric** | Arc-welder blue and violet with a white-hot glow. |
+
+**Other skins worth knowing.** **OLED black** uses true black so OLED phone screens switch those pixels off,
+which saves battery. **High contrast** is yellow on black with thick outlines and strong focus rings, for low
+vision or bright sunlight. **Sakura** and **Solarized Light** are light skins.
+
+> **Developer notes.** A skin is a `:root[data-skin='…']` block of CSS variables in `src/styles.css` plus a
+> `.skin-card.<id> .skin-preview` rule for its picker card, and an entry in `SKINS` (`store/settings.ts`).
+> Recipe: [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skin). Skin rules must sit at the top level of
+> `styles.css`; one inside a `@media (max-width: 760px)` block only applies at phone width, which is what
+> broke seven skins on Windows in 0.7.0.
