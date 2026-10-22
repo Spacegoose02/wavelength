@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- **Now Playing visualizers**: tap the artwork in Now Playing to cycle through Halo, Oscilloscope, Starfield,
+  Mirror spectrum and Pulse rings (and back to the cover). They react to the music, use your skin's colours, and
+  your choice is remembered. See the [user guide](docs/USER-GUIDE.md#now-playing-visualizers).
+
 ## 0.6.0
 - **Browse Deezer by artist, album and playlist** (Downloads → Deezer): search now finds artists and playlists too. Artist pages
   show top songs, the full discography (albums, EPs, singles, compilations) and related artists, with

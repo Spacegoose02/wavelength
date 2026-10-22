@@ -1056,3 +1056,14 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .skin-card.ipod .skin-preview { background:#f2f3f5; border:1px solid #c4c8ce; } .skin-card.ipod .skin-preview span { flex:1; background:linear-gradient(to top,#2f7ae5,#5ea2ff); }
 .skin-card.aqua .skin-preview { background:repeating-linear-gradient(180deg,#eef0f4 0 2px,#e6e9ef 2px 4px); } .skin-card.aqua .skin-preview span { flex:1; background:linear-gradient(180deg,#bfe0ff,#2a7ff0); border-radius:6px 6px 0 0; }
 .skin-card.walkman .skin-preview { background:#cfd2d6; } .skin-card.walkman .skin-preview span:nth-child(1) { flex:1; background:#2d5fa8; } .skin-card.walkman .skin-preview span:nth-child(2) { flex:1; background:#e8681a; } .skin-card.walkman .skin-preview span:nth-child(3) { flex:1; background:#1d2430; }
+
+/* Now Playing stage: tap the artwork to cycle visualizer scenes (components/Scenes.tsx) */
+.np-stage { position: relative; display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; border-radius: var(--radius-lg); }
+.np-stage .np-art { width: 100%; }
+.np-stage.scene { aspect-ratio: 1; }
+.np-scene-canvas { display: block; width: 100%; height: 100%; }
+.np-stage-hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgb(0 0 0 / 0.6); color: #fff; font-size: 13px; font-weight: 600; pointer-events: none; animation: np-hint 1.6s ease forwards; white-space: nowrap; }
+@keyframes np-hint { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@media (max-width: 760px) {
+  .np-stage { width: min(78vw, 360px); justify-self: center; }
+}

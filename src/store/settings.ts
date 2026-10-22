@@ -6,6 +6,9 @@ import type { ChartSource, Genre } from '../sources/charts';
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman';
 
+/** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
+export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings';
+
 export const SKINS: { id: Skin; label: string }[] = [
   { id: 'neon', label: 'Neon synth (default)' },
   { id: 'plexamp', label: 'Midnight (Plexamp-inspired)' },
@@ -40,6 +43,8 @@ interface SettingsState {
   ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string };
   /** Discover: which charts each genre uses. A genre that isn't listed uses the built-in defaults. */
   discoverCharts: Partial<Record<Genre, ChartSource[]>>;
+  npScene: NpScene;
+  setNpScene(s: NpScene): void;
   /** Pass undefined to put a genre back on the defaults. */
   setDiscoverCharts(g: Genre, charts: ChartSource[] | undefined): void;
   setYtdlp(d: Partial<SettingsState['ytdlp']>): void;
@@ -60,6 +65,8 @@ export const useSettings = create<SettingsState>()(
       deemix: { url: 'http://localhost:6595', arl: '', bitrate: 9 },
       ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '' },
       discoverCharts: {},
+      npScene: 'art',
+      setNpScene: (npScene) => set({ npScene }),
       setDiscoverCharts: (g, charts) =>
         set((st) => {
           const discoverCharts = { ...st.discoverCharts };
