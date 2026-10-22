@@ -3,6 +3,8 @@
  * and a plain one for servers/radio streams that don't send CORS headers. We try the
  * visualized path first and fall back per-host, remembering hosts that failed.
  */
+import { EQ_BANDS, type EqSettings } from './eq';
+
 type Listener = (e: Event, el: HTMLAudioElement) => void;
 
 const visual = new Audio();
@@ -15,6 +17,9 @@ const noCorsHosts = new Set<string>();
 let current: HTMLAudioElement = visual;
 let ctx: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
+let preamp: GainNode | null = null;
+let bands: BiquadFilterNode[] = [];
+let eqState: EqSettings | null = null;
 let loadToken = 0;
 let fallbackPending = false;
 const listeners = new Map<string, Listener[]>();
@@ -34,8 +39,28 @@ function ensureGraph() {
   analyser = ctx.createAnalyser();
   analyser.fftSize = 512;
   analyser.smoothingTimeConstant = 0.78;
-  src.connect(analyser);
-  analyser.connect(ctx.destination);
+  // element → preamp → 10 EQ bands → analyser (so the visualizer shows the EQ'd sound) → speakers.
+  // With the EQ off every gain is 0 dB, which leaves the signal untouched.
+  const c = ctx;
+  preamp = c.createGain();
+  bands = EQ_BANDS.map((hz, i) => {
+    const f = c.createBiquadFilter();
+    f.type = i === 0 ? 'lowshelf' : i === EQ_BANDS.length - 1 ? 'highshelf' : 'peaking';
+    f.frequency.value = hz;
+    f.Q.value = 1.41;
+    return f;
+  });
+  [src, preamp, ...bands, analyser, c.destination].reduce((a: AudioNode, b) => (a.connect(b), b));
+  applyEq();
+}
+
+function applyEq() {
+  if (!ctx || !preamp) return;
+  const on = !!eqState?.enabled;
+  const now = ctx.currentTime;
+  // short ramps so dragging a slider doesn't click
+  preamp.gain.setTargetAtTime(on ? Math.pow(10, eqState!.preamp / 20) : 1, now, 0.02);
+  bands.forEach((f, i) => f.gain.setTargetAtTime(on ? eqState!.gains[i] ?? 0 : 0, now, 0.02));
 }
 
 for (const el of [visual, plain]) {
@@ -109,6 +134,15 @@ export const engine = {
   },
   seek(t: number) {
     if (Number.isFinite(t)) current.currentTime = t;
+  },
+  /** Apply equalizer settings now, or as soon as the audio graph exists. */
+  setEq(eq: EqSettings) {
+    eqState = eq;
+    applyEq();
+  },
+  /** False while playing through the plain (no-CORS) element, which the EQ can't reach. */
+  eqAvailable() {
+    return current === visual;
   },
   setVolume(v: number) {
     visual.volume = plain.volume = v;

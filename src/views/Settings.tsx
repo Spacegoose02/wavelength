@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Deemix } from '../sources/deemix';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid } from '../lib/platform';
+import { Equalizer } from '../components/Equalizer';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -251,6 +252,11 @@ export function Settings() {
       </section>}
 
       <DiscoverCharts />
+
+      <section id="equalizer">
+        <h2>Equalizer</h2>
+        <Equalizer />
+      </section>
 
       <section>
         <h2>Skin</h2>
