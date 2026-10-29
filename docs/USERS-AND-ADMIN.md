@@ -341,9 +341,10 @@ token gets `403` from every admin route.
 
 Done: the keys vault ([HUB.md → Server logins](HUB.md#server-logins)): Plex, Audiobookshelf, SUB/WAVE,
 deemix and yt-dlp logins are kept on the Hub, encrypted, and handed to each device by role, Access and
-Autodownload, with per-person Plex/ABS logins. Members never get the SUB/WAVE admin login or download logins
-without Autodownload. Still open: SUB/WAVE admin proxy (so admin devices don't hold it either), Navidrome
-user provisioning, active users view.
+Autodownload, with per-person Plex/ABS logins. SUB/WAVE admin, deemix and yt-dlp now run through the Hub
+(`hub/src/routes/proxy.ts`), so no device holds the SUB/WAVE admin login, the ARL or a share login, and yt-dlp
+downloads straight into `/music` from any device (part of Phase 3's server-side downloads). Still open:
+Navidrome user provisioning, active users view.
 
 Keys vault, link keys to profiles, Navidrome user provisioning, ABS account assignment, Plex keys,
 SUB/WAVE admin proxy (admin controls for admins only), active users view. **Cards closed:** keys under

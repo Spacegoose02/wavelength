@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Deemix, searchDeezer, type DeezerResult } from '../sources/deemix';
-import { ytdlp, type YtResult } from '../sources/ytdlp';
+import { deemixClient, useHubRuns } from '../lib/hubServices';
+import { searchDeezer, type DeezerResult } from '../sources/deemix';
+import type { YtResult } from '../sources/ytdlp';
 import { sourceFor } from '../sources/registry';
 import { useSettings } from '../store/settings';
 import { useCatalog } from '../store/catalog';
-import { useDownloads } from '../store/downloads';
+import { refreshHub, useDownloads, watchHub, ytSearch } from '../store/downloads';
 import { useUi } from '../store/ui';
 import { useCan } from '../store/hub';
 import { Spinner, fmtTime } from '../components/common';
@@ -20,6 +21,9 @@ export function Downloads() {
   const [q, setQ] = useState('');
   // signed in to a Hub: only admins and people with Autodownload get the download logins
   const canDownload = useCan('downloads.run');
+  // the Hub runs yt-dlp for every device, Android included; otherwise it needs the desktop app
+  const hubYt = useHubRuns('ytdlp');
+  const ytHere = hubYt || !isAndroid;
 
   const rescan = async () => {
     await Promise.all(sources.filter((s) => s.enabled).map((cfg) => sourceFor(cfg).rescan?.().catch(() => {})));
@@ -35,12 +39,12 @@ export function Downloads() {
       {!canDownload ? <p className="muted">Your Hub admin looks after downloads. Ask them to turn on <b>Autodownload</b> for you to download music yourself.</p> : <>
       <div className="tabs">
         <button className={tab === 'deezer' ? 'on' : ''} onClick={() => setTab('deezer')}>Deezer <small>via deemix</small></button>
-        {!isAndroid && <button className={tab === 'ytdlp' ? 'on' : ''} onClick={() => setTab('ytdlp')}>YouTube &amp; more <small>via yt-dlp</small></button>}
+        {ytHere && <button className={tab === 'ytdlp' ? 'on' : ''} onClick={() => setTab('ytdlp')}>YouTube &amp; more <small>via yt-dlp</small></button>}
       </div>
       <input className="search-big" autoFocus
         placeholder={tab === 'deezer' ? 'Search Deezer to download into your library…' : 'Search YouTube, or paste a YouTube / SoundCloud / Bandcamp URL…'}
         value={q} onChange={(e) => setQ(e.target.value)} />
-      {tab === 'deezer' ? <DeezerTab q={q} onFallback={isAndroid ? undefined : () => setTab('ytdlp')} /> : <YtTab q={q} />}
+      {tab === 'deezer' ? <DeezerTab q={q} onFallback={ytHere ? () => setTab('ytdlp') : undefined} /> : <YtTab q={q} />}
       </>}
     </div>
   );
@@ -87,7 +91,7 @@ function DeezerTab({ q, onFallback }: { q: string; onFallback?: () => void }) {
 
   const refreshQueue = async () => {
     try {
-      const r = await new Deemix(deemix.url, deemix.arl).getQueue();
+      const r = await deemixClient().getQueue();
       const order: string[] = r.queueOrder ?? Object.keys(r.queue ?? {});
       setQueue(order.map((id) => r.queue?.[id]).filter(Boolean).reverse());
     } catch {
@@ -105,7 +109,7 @@ function DeezerTab({ q, onFallback }: { q: string; onFallback?: () => void }) {
     const key = statusKey(r);
     setStatus((s) => ({ ...s, [key]: { s: 'sending' } }));
     try {
-      await new Deemix(deemix.url, deemix.arl).addToQueue(r.link, deemix.bitrate);
+      await deemixClient().addToQueue(r.link, deemix.bitrate);
       setStatus((s) => ({ ...s, [key]: { s: 'queued' } }));
       refreshQueue();
     } catch (e) {
@@ -158,7 +162,12 @@ function DeezerTab({ q, onFallback }: { q: string; onFallback?: () => void }) {
 
 function YtTab({ q }: { q: string }) {
   const settings = useSettings((s) => s.ytdlp);
+  const hubYt = useHubRuns('ytdlp');
   const { jobs, start, clearFinished } = useDownloads();
+  // show downloads already running on the Hub (from any device)
+  useEffect(() => {
+    if (hubYt) refreshHub().then((busy) => busy && watchHub()).catch(() => undefined);
+  }, [hubYt]);
   const [results, setResults] = useState<YtResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -173,7 +182,7 @@ function YtTab({ q }: { q: string }) {
       setBusy(true);
       setError(undefined);
       try {
-        const r = await ytdlp.search(q.trim(), settings.bin);
+        const r = await ytSearch(q.trim());
         if (alive) setResults(r);
       } catch (e) {
         if (alive) setError(String((e as Error).message ?? e));
@@ -192,7 +201,7 @@ function YtTab({ q }: { q: string }) {
   return (
     <div className="dl-layout">
       <div>
-        {!settings.outDir && (
+        {!hubYt && !settings.outDir && (
           <div className="errors">
             Choose where yt-dlp saves files in <button className="link" onClick={() => useUi.getState().go({ view: 'settings', tab: 'downloads' })}>Settings</button> — ideally your Navidrome music folder (e.g. a network share).
           </div>
@@ -220,11 +229,11 @@ function YtTab({ q }: { q: string }) {
           <h3>yt-dlp downloads</h3>
           {jobs.some((j) => j.status === 'done' || j.status === 'error') && <button className="link small" onClick={clearFinished}>Clear</button>}
         </div>
-        {!jobs.length && <p className="muted">Nothing yet. Files are saved as Artist / Album / Title with cover art embedded.</p>}
+        {!jobs.length && <p className="muted">Nothing yet. Files are saved as Artist / Album / Title with cover art embedded{hubYt ? ', by your Hub, straight into the music folder' : ''}.</p>}
         {jobs.map((j) => (
           <div key={j.jobId} className="dl-item">
             <div className="track-title">{j.title}</div>
-            <div className="track-sub">{j.channel}</div>
+            <div className="track-sub">{j.channel}{j.username ? ` · ${j.username}` : ''}</div>
             <div className="progress"><i style={{ width: `${j.status === 'done' ? 100 : Math.round(j.percent)}%` }} /></div>
             <small className={j.status === 'error' ? 'card-err' : 'muted'}>{j.status === 'error' ? j.message : labelFor(j.status)}</small>
           </div>

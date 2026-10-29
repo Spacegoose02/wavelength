@@ -7,7 +7,8 @@ import { HttpError } from './http.ts';
 /**
  * Server logins the Hub keeps for the household: Plex, Audiobookshelf, SUB/WAVE, deemix and yt-dlp.
  * Navidrome stays a per-person login on each device. Secrets are sealed at rest and handed to a device
- * only when its user may use them (servicesFor). The admin view never includes a secret, only which
+ * only when its user may use them (servicesFor); admin and download logins never leave the Hub, which
+ * makes those calls itself (routes/proxy.ts). The admin view never includes a secret, only which
  * fields are set. See docs/HUB.md "Server logins".
  */
 
@@ -18,18 +19,19 @@ interface KindSpec {
   own: readonly string[];
   /** Settings that aren't secret. */
   config: readonly string[];
-  /** Secret fields only handed to people allowed to control SUB/WAVE. */
-  controlOnly?: readonly string[];
-  /** Download tools: one per Hub, handed only to people allowed to download (admins, Autodownload). */
+  /** Secret fields the Hub uses itself and never hands to a device (routes/proxy.ts). */
+  hubOnly?: readonly string[];
+  /** Download tools: one per Hub, run by the Hub for people allowed to download (admins, Autodownload). */
   download?: boolean;
 }
 
 export const KINDS = {
   plex: { secrets: ['token'], own: ['token'], config: [] },
   audiobookshelf: { secrets: ['token'], own: ['token'], config: [] },
-  subwave: { secrets: ['username', 'password', 'token'], own: [], config: ['streamUrl', 'apiUrl', 'nowPlayingUrl'], controlOnly: ['username', 'password'] },
-  deemix: { secrets: ['arl'], own: [], config: ['bitrate'], download: true },
-  ytdlp: { secrets: ['shareUser', 'sharePass'], own: [], config: ['outDir', 'format'], download: true },
+  subwave: { secrets: ['username', 'password', 'token'], own: [], config: ['streamUrl', 'apiUrl', 'nowPlayingUrl'], hubOnly: ['username', 'password'] },
+  deemix: { secrets: ['arl'], own: [], config: ['bitrate'], hubOnly: ['arl'], download: true },
+  // runs inside the Hub container and saves into its music folder, so there's no share login
+  ytdlp: { secrets: [], own: [], config: ['folder', 'format'], download: true },
 } satisfies Record<string, KindSpec>;
 export type ServiceKind = keyof typeof KINDS;
 const spec = (k: ServiceKind): KindSpec => KINDS[k];
@@ -76,6 +78,8 @@ export interface DeviceService {
   secrets: Fields;
   /** This person has their own login rather than the shared one. */
   ownLogin: boolean;
+  /** SUB/WAVE: admin controls work through the Hub for this person (the login itself stays on the Hub). */
+  hubAdmin?: boolean;
 }
 
 const aadShared = (id: number) => `service:${id}`;
@@ -249,8 +253,19 @@ export function servicesFor(db: Db, key: Buffer, { user, permissions }: Auth): D
     if (!allowed) continue;
     const own = open(key, mine?.secrets ?? null, aadUser(r.id, user.id)).fields;
     const secrets = { ...open(key, r.secrets, aadShared(r.id)).fields, ...own };
-    if (!permissions.includes('subwave.control')) for (const f of s.controlOnly ?? []) delete secrets[f];
-    out.push({ id: r.id, kind: r.kind, name: r.name, url: r.url, config: JSON.parse(r.config) as Config, secrets, ownLogin: Object.keys(own).length > 0 });
+    const hubAdmin = r.kind === 'subwave' ? permissions.includes('subwave.control') && !!secrets.username && !!secrets.password : undefined;
+    for (const f of s.hubOnly ?? []) delete secrets[f];
+    out.push({ id: r.id, kind: r.kind, name: r.name, url: r.url, config: JSON.parse(r.config) as Config, secrets, ownLogin: Object.keys(own).length > 0, ...(hubAdmin !== undefined && { hubAdmin }) });
   }
   return out;
 }
+
+/** A server with its shared login, for the Hub's own calls to it. */
+export function serviceForHub(db: Db, key: Buffer, id: number): { id: number; kind: ServiceKind; name: string; url: string; config: Config; secrets: Fields; updatedAt: number } | undefined {
+  const r = db.prepare('SELECT * FROM services WHERE id = ?').get(id) as unknown as (Row & { updated_at: number }) | undefined;
+  if (!r) return undefined;
+  return { id: r.id, kind: r.kind, name: r.name, url: r.url, config: JSON.parse(r.config) as Config, secrets: open(key, r.secrets, aadShared(r.id)).fields, updatedAt: r.updated_at };
+}
+
+export const serviceIdOfKind = (db: Db, kind: ServiceKind) =>
+  (db.prepare('SELECT id FROM services WHERE kind = ? ORDER BY id LIMIT 1').get(kind) as { id: number } | undefined)?.id;

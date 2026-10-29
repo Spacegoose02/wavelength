@@ -86,6 +86,20 @@ export interface HubService {
   config: Config;
   secrets: Record<string, string>;
   ownLogin: boolean;
+  /** SUB/WAVE: admin controls work through the Hub (the admin login itself stays there). */
+  hubAdmin?: boolean;
+}
+
+/** A yt-dlp download the Hub is running. */
+export interface HubYtJob {
+  jobId: string;
+  username: string;
+  title: string;
+  channel: string;
+  url: string;
+  status: 'queued' | 'downloading' | 'processing' | 'done' | 'error';
+  percent: number;
+  message?: string;
 }
 
 /** What an admin sees: which secrets are set, never their values. */
@@ -157,6 +171,17 @@ export class HubClient {
   putPrefs = (changes: HubPrefs) => this.call<{ applied: string[]; stale: string[]; prefs: HubPrefs }>('PUT', '/api/me/prefs', { changes });
 
   services = () => this.call<{ services: HubService[] }>('GET', '/api/me/services');
+
+  // ---- calls the Hub makes with its own saved logins ----
+  /** A SUB/WAVE admin call (path relative to its API, e.g. `/dj/skip?x=1`). Needs subwave.control. */
+  subwaveAdmin = <T>(serviceId: number, method: string, path: string, body?: unknown) => this.call<T>(method, `/api/admin/subwave/${serviceId}${path}`, body);
+  deemixStatus = () => this.call<{ user: string | null }>('GET', '/api/downloads/deemix');
+  deemixQueue = () => this.call<any>('GET', '/api/downloads/deemix/queue');
+  deemixAdd = (link: string, bitrate?: number) => this.call<any>('POST', '/api/downloads/deemix/queue', { link, bitrate });
+  ytSearch = (query: string) => this.call<{ results: { id: string; title: string; channel: string; url: string; duration?: number; thumbnail?: string }[] }>('POST', '/api/downloads/ytdlp/search', { query });
+  ytJobs = () => this.call<{ jobs: HubYtJob[] }>('GET', '/api/downloads/ytdlp/jobs');
+  ytStart = (r: { url: string; title?: string; channel?: string }) => this.call<{ job: HubYtJob }>('POST', '/api/downloads/ytdlp/jobs', r);
+  ytClear = () => this.call('DELETE', '/api/downloads/ytdlp/jobs');
 
   // ---- admin (the Hub refuses these unless the user holds the permission) ----
   users = () => this.call<{ users: HubAdminUser[] }>('GET', '/api/admin/users');

@@ -135,7 +135,9 @@ Hub sees it) is an extra lock you can add.
 | `WAVELENGTH_PUBLIC_URL` | `http://localhost:7780` | Base URL in pairing links and QR codes. Set it to your NPM host. |
 | `PORT` | `7780` | Port inside the container. |
 | `WAVELENGTH_DATA_DIR` | `/data` (image) | Database (`hub.db`) and `secret.key`. |
-| `WAVELENGTH_SECRET_KEY` | generated into `secret.key` | 32 bytes (64 hex chars or base64). Signs pairing forms; encrypts service keys from Phase 2. |
+| `WAVELENGTH_SECRET_KEY` | generated into `secret.key` | 32 bytes (64 hex chars or base64). Signs pairing forms; encrypts the saved server logins. |
+| `WAVELENGTH_MUSIC_DIR` | `/music` (image) | The music library. yt-dlp downloads go into a folder inside it. |
+| `WAVELENGTH_YTDLP` | `yt-dlp` | The yt-dlp command (the image includes it). |
 | `WAVELENGTH_SSO` | `false` | Accept tinyauth identity headers on `/auth/sso/`. |
 | `WAVELENGTH_PROXY_SECRET` | — | Value the proxy sends as `X-Wavelength-Proxy-Secret`. |
 | `WAVELENGTH_TRUSTED_PROXIES` | — | Comma-separated IPs allowed to send identity headers. SSO refuses to start unless this or the secret is set. |
@@ -174,33 +176,38 @@ that token; disabling a user signs out all their devices at once.
 ## Server logins
 
 The Hub keeps the household's server logins so they don't have to be typed into, or stored on, every
-device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and the **yt-dlp** download folder and its
-network-share login. **Navidrome logins stay on each device** (everyone signs in to Navidrome as themselves).
+device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**. **Navidrome logins stay on
+each device** (everyone signs in to Navidrome as themselves).
 
 - **Adding them:** in the app, an admin uses **Move to Hub** on a server in Settings → Sources, or on deemix /
   yt-dlp in Settings → Downloads. New Plex, Audiobookshelf and SUB/WAVE servers an admin adds while signed in
   go straight to the Hub.
 - **Who gets what** (decided by the Hub, in `servicesFor` in `hub/src/services.ts`):
 
-  | Login | Admin | Member | Kid |
+  | | Admin | Member | Kid |
   |---|---|---|---|
-  | Plex, Audiobookshelf, SUB/WAVE listening | per the server's **Access**: Everyone, Admins only, or People I choose (admins always) | same | same |
-  | SUB/WAVE admin user and password | ✓ | – | – |
-  | deemix (incl. ARL), yt-dlp folder and share login | ✓ | only with **Autodownload** | – |
+  | Plex, Audiobookshelf, SUB/WAVE listening (login sent to the device) | per the server's **Access**: Everyone, Admins only, or People I choose (admins always) | same | same |
+  | SUB/WAVE admin controls (**the Hub** calls SUB/WAVE with the admin login) | ✓ | – | – |
+  | deemix and yt-dlp downloads (**the Hub** runs them; the ARL stays on the Hub) | ✓ | only with **Autodownload** | – |
 
+- **Logins that never leave the Hub:** the SUB/WAVE admin user and password and the deemix ARL aren't sent
+  to any device, admins' included. The app sends those calls to the Hub (`/api/admin/subwave/…`,
+  `/api/downloads/…`, in `hub/src/routes/proxy.ts`), which checks the permission and adds the login. SUB/WAVE
+  changes and every download are written to the audit log, so admins see who queued what.
+- **yt-dlp on the Hub:** the image ships yt-dlp (fetched fresh on each image build) and ffmpeg. It downloads
+  into a folder inside the music folder (`/music`, set in Settings → Downloads; `yt-dlp` by default) as
+  Artist / Album / Title, from any device, Android included. No network-share login is needed. Map your
+  music share to `/music` read-write (the Unraid template does).
 - **Own logins:** for Plex and Audiobookshelf an admin can give someone their own token or API key (Settings
   → Sources → Edit → **Own login**), so their listening progress and history are their own. They get that
   instead of the shared one.
 - **At rest:** secrets are encrypted with AES-256-GCM using a key derived from `secret.key` /
-  `WAVELENGTH_SECRET_KEY`, and bound to their row. Admins see which fields are set, never the values (the
-  admin's own devices receive them like anyone else's, to use them). The audit log names changed fields only.
+  `WAVELENGTH_SECRET_KEY`, and bound to their row. Admins see which fields are set, never the values. The
+  audit log names changed fields only.
 - **On devices:** a signed-in device fetches its logins at start, on focus and every few minutes. Turning
-  Autodownload off, changing Access or removing a server takes the login away on the next check, and signing
-  out removes everything that came from the Hub. Signed-in members and kids without Autodownload have
-  download logins wiped from the device, even ones typed in before.
-- **Not yet:** SUB/WAVE admin and downloads still run from the admin's device with the login it was given.
-  Running them through the Hub, so even admin devices don't hold those secrets, comes with requests and
-  server-side downloads (Phase 3).
+  Autodownload off, changing Access or removing a server takes it away on the next check, and signing out
+  removes everything that came from the Hub. ARLs and share logins typed into a device before are wiped
+  from it once the Hub runs that downloader (and for anyone signed in without Autodownload).
 
 ## Roles and permissions
 
@@ -242,6 +249,11 @@ with a 4xx status.
 | `GET/POST /api/admin/services` | `keys.manage` | list (secrets shown as `secretsSet`, never values) / add `{ kind, name, url, access?, config?, secrets? }` |
 | `PATCH/DELETE /api/admin/services/:id` | `keys.manage` | change (a secret set to `''` or `null` is cleared, a missing one kept) / remove |
 | `PUT/DELETE /api/admin/services/:id/users/:userId` | `keys.manage` | let someone use a "chosen" server, with an optional own login `{ secrets: { token } }` / take it away |
+| `GET/POST/PUT/DELETE /api/admin/subwave/:id/<path>` | `subwave.control` | a SUB/WAVE admin call, made by the Hub with its saved admin login (`<path>` is relative to SUB/WAVE's `/api`) |
+| `GET /api/downloads/deemix` | `downloads.run` | `{ user }`: who deemix is logged in as (the Hub logs in with its ARL) |
+| `GET/POST /api/downloads/deemix/queue` | `downloads.run` | deemix's queue / add `{ link, bitrate? }` (a Deezer link) |
+| `POST /api/downloads/ytdlp/search` | `downloads.run` | `{ query }` → `{ results }` (YouTube search, or a link's contents) |
+| `GET/POST/DELETE /api/downloads/ytdlp/jobs` | `downloads.run` | downloads (your own; admins see everyone's) / start `{ url, title?, channel? }` / clear finished |
 | `GET /api/admin/audit?limit=&before=` | `audit.view` | newest first |
 
 A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`,

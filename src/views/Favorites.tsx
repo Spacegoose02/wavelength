@@ -14,7 +14,7 @@ import { QueueAllOnSubwave } from '../components/TrackButtons';
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
 export function Favorites() {
-  const sources = useSettings((s) => s.sources.filter((x) => x.enabled && (x.kind === 'navidrome' || (x.kind === 'subwave' && x.username))));
+  const sources = useSettings((s) => s.sources.filter((x) => x.enabled && (x.kind === 'navidrome' || (x.kind === 'subwave' && (x.username || x.hubAdmin)))));
   const [tab, setTab] = useState(sources[0]?.id);
   const cfg = sources.find((s) => s.id === tab) ?? sources[0];
 

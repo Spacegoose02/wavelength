@@ -422,8 +422,8 @@ few minutes; **Sync now** does it at once). Each setting syncs on its own, so ch
 the skin on another never overwrite each other. Changes made with no connection are kept and sent later.
 
 Server logins your admin keeps on the Hub arrive too: Plex, Audiobookshelf and SUB/WAVE show up in
-Settings → Sources marked **from your Hub**, and people allowed to download get deemix and yt-dlp set up
-in Settings → Downloads. Navidrome logins and downloaded music stay on each device. **Downloaded music always
+Settings → Sources marked **from your Hub**, and people allowed to download can use the Hub's deemix and
+yt-dlp from Downloads (on Android too). Navidrome logins and downloaded music stay on each device. **Downloaded music always
 plays**, signed in or not, with or without the Hub.
 
 ### Server logins on the Hub (admins)
@@ -433,9 +433,13 @@ plays**, signed in or not, with or without the Hub.
   to the Hub straight away.
 - **Edit** a Hub server to change it for everyone, and to pick **who can use it**: Everyone, Admins only, or
   People I choose. **Own login** gives someone their own Plex token or Audiobookshelf key.
-- **Settings → Downloads → Move to Hub** does the same for deemix (with its ARL) and the yt-dlp folder and
-  network-share login. After that, change them there and press **Save to Hub**.
-- Members and kids never get the SUB/WAVE admin login. Download logins only go to admins and people with
+- **Settings → Downloads → Move to Hub** hands deemix (with its ARL) and yt-dlp to the Hub. From then on the
+  Hub does the downloading: deemix with the ARL it keeps, and yt-dlp straight into a folder inside its music
+  folder (pick the folder there; no network-share login). It works from any device, phones and TVs included.
+  Change the settings there and press **Save to Hub**.
+- SUB/WAVE DJ controls, the schedule and shows go through the Hub too, which keeps the SUB/WAVE admin login.
+  No device is sent that login or the deemix ARL, not even yours.
+- Members and kids never get SUB/WAVE admin controls. Downloads are for admins and people with
   **Autodownload**; everyone else sees "Your Hub admin looks after downloads".
 
 <p align="center"><img src="screenshots/hub-account.png" alt="Settings → Account when signed in" width="80%"></p>

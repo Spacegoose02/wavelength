@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Deemix } from '../sources/deemix';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid } from '../lib/platform';
 import { Equalizer } from '../components/Equalizer';
@@ -11,7 +10,7 @@ import { useCatalog } from '../store/catalog';
 import { SKIN_GROUPS, SKINS, useSettings, type Skin } from '../store/settings';
 import { useUi, type SettingsTab } from '../store/ui';
 import { hubClient, useCan, useHub } from '../store/hub';
-import { hubKeeps, loadHubServices, saveDownloaderToHub, saveSourceToHub } from '../lib/hubServices';
+import { deemixClient, hubKeeps, loadHubServices, saveDownloaderToHub, saveSourceToHub, useHubRuns } from '../lib/hubServices';
 import { AccountTab, HubAccess, UsersTab } from './HubSettings';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
@@ -126,7 +125,8 @@ function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew
         <label className="span2">Server URL<input value={cfg.url} onChange={(e) => set('url', e.target.value)} placeholder={hint.url} required /></label>
         {hint.fields.map((f) => (
           <label key={f}>{hint.labels?.[f] ?? LABELS[f]}
-            <input type={f === 'password' || f === 'token' ? 'password' : 'text'} value={(cfg[f] as string) ?? ''} onChange={(e) => set(f, e.target.value)} />
+            <input type={f === 'password' || f === 'token' ? 'password' : 'text'} value={(cfg[f] as string) ?? ''} onChange={(e) => set(f, e.target.value)}
+              placeholder={cfg.hubId !== undefined && ['username', 'password', 'token'].includes(f) ? 'Kept on the Hub; type to replace' : undefined} />
           </label>
         ))}
       </div>
@@ -227,7 +227,7 @@ function SourcesTab() {
 /** Where a downloader's settings come from when signed in to a Hub, and the admin's Save/Move button. */
 function HubDownloader({ kind, onMsg }: { kind: 'deemix' | 'ytdlp'; onMsg(m: string): void }) {
   const canKeys = useHub((s) => !!s.token && s.permissions.includes('keys.manage'));
-  const onHub = useHub((s) => s.services.some((x) => x.kind === kind));
+  const onHub = useHubRuns(kind);
   if (!useHub((s) => !!s.token)) return null;
   const save = async () => {
     onMsg('Saving to your Hub…');
@@ -238,17 +238,29 @@ function HubDownloader({ kind, onMsg }: { kind: 'deemix' | 'ytdlp'; onMsg(m: str
       onMsg(String((e as Error).message ?? e));
     }
   };
+  const what = kind === 'deemix'
+    ? 'Your Hub runs deemix with the ARL it keeps; no device is sent it.'
+    : "Your Hub runs yt-dlp and saves into its music folder, from any device (Android too). No share login needed.";
   return (
     <div className="row gap">
       {canKeys && <button className="btn" onClick={save}>{onHub ? 'Save to Hub' : 'Move to Hub'}</button>}
       <span className="muted small">
         {onHub
-          ? `Kept on your Hub: admins and people with Autodownload get these settings.${canKeys ? ' Change them here, then Save to Hub.' : ' Your admin changes them.'}`
-          : canKeys ? 'Only on this device. Move to Hub so you and people with Autodownload get it on every device.' : ''}
+          ? `${what} Admins and people with Autodownload can use it.${canKeys ? ' Change it here, then Save to Hub.' : ' Your admin changes the settings.'}`
+          : canKeys ? `Only on this device. Move to Hub so you and people with Autodownload can use it on every device. ${what}` : ''}
       </span>
     </div>
   );
 }
+
+const YT_FORMATS = (
+  <>
+    <option value="opus">Opus (best quality from YouTube)</option>
+    <option value="m4a">M4A / AAC</option>
+    <option value="mp3">MP3 (most compatible)</option>
+    <option value="flac">FLAC (lossless container, not lossless source)</option>
+  </>
+);
 
 function DownloadsTab() {
   const { deemix, setDeemix, ytdlp, setYtdlp } = useSettings();
@@ -256,10 +268,10 @@ function DownloadsTab() {
   const [ytTest, setYtTest] = useState<string>();
   const signedIn = useHub((s) => !!s.token);
   const canDownload = useCan('downloads.run');
+  const hubDm = useHubRuns('deemix');
+  const hubYt = useHubRuns('ytdlp');
   // a downloader who isn't an admin uses the Hub's settings as they are
   const locked = useHub((s) => !!s.token && !s.permissions.includes('keys.manage'));
-  const dmLocked = useHub((s) => s.services.some((x) => x.kind === 'deemix')) && locked;
-  const ytLocked = useHub((s) => s.services.some((x) => x.kind === 'ytdlp')) && locked;
   if (signedIn && !canDownload) {
     return (
       <section>
@@ -273,10 +285,14 @@ function DownloadsTab() {
       <section>
         <h2>deemix</h2>
         <div className="editor">
-          <fieldset className="plain" disabled={dmLocked}>
+          <fieldset className="plain" disabled={hubDm && locked}>
           <div className="editor-grid">
-            <label className="span2">deemix server URL<input value={deemix.url} onChange={(e) => setDeemix({ url: e.target.value })} placeholder="http://192.168.1.10:6595" /></label>
-            <label>ARL (only if deemix asks to log in)<input type="password" value={deemix.arl} onChange={(e) => setDeemix({ arl: e.target.value })} /></label>
+            <label className="span2">deemix server URL{hubDm ? ' (as the Hub reaches it)' : ''}<input value={deemix.url} onChange={(e) => setDeemix({ url: e.target.value })} placeholder="http://192.168.1.10:6595" /></label>
+            {!(hubDm && locked) && (
+              <label>ARL (only if deemix asks to log in)
+                <input type="password" value={deemix.arl} onChange={(e) => setDeemix({ arl: e.target.value })} placeholder={hubDm ? 'Kept on the Hub; type a new one to replace it' : ''} autoComplete="new-password" />
+              </label>
+            )}
             <label>Quality
               <select value={deemix.bitrate} onChange={(e) => setDeemix({ bitrate: Number(e.target.value) })}>
                 <option value={9}>FLAC</option>
@@ -290,7 +306,7 @@ function DownloadsTab() {
             <button className="btn" onClick={async () => {
               setDmTest('Testing…');
               try {
-                setDmTest(await new Deemix(deemix.url, deemix.arl).test());
+                setDmTest(await deemixClient().test());
               } catch (e) {
                 setDmTest(String((e as Error).message ?? e));
               }
@@ -301,47 +317,54 @@ function DownloadsTab() {
         </div>
       </section>
 
-      {!isAndroid && <section>
+      {(hubYt || !isAndroid) && <section>
         <h2>yt-dlp <small className="muted">backup downloader</small></h2>
         <div className="editor">
-          <p className="muted small">For anything deemix can't find: YouTube, YouTube Music, SoundCloud, Bandcamp and more. Point the folder at your Navidrome music library (a mapped drive or <code>\\server\music</code> share works) so downloads show up after a rescan.</p>
-          <div className="editor-grid">
-            <label className="span2">Download folder<input value={ytdlp.outDir} disabled={ytLocked} onChange={(e) => setYtdlp({ outDir: e.target.value })} placeholder="\\nas\music\yt-dlp  or  D:\Music\yt-dlp" /></label>
-            <label>Audio format
-              <select value={ytdlp.format} disabled={ytLocked} onChange={(e) => setYtdlp({ format: e.target.value })}>
-                <option value="opus">Opus (best quality from YouTube)</option>
-                <option value="m4a">M4A / AAC</option>
-                <option value="mp3">MP3 (most compatible)</option>
-                <option value="flac">FLAC (lossless container, not lossless source)</option>
-              </select>
-            </label>
-            <label>yt-dlp.exe path (optional)<input value={ytdlp.bin} onChange={(e) => setYtdlp({ bin: e.target.value })} placeholder="auto-detect" /></label>
-            {/^(\\\\|\/\/)/.test(ytdlp.outDir) && (
-              <>
-                <label>Network share username<input value={ytdlp.shareUser} disabled={ytLocked} onChange={(e) => setYtdlp({ shareUser: e.target.value })} placeholder={'NAS\\user or user'} autoComplete="off" /></label>
-                <label>Network share password<input type="password" value={ytdlp.sharePass} disabled={ytLocked} onChange={(e) => setYtdlp({ sharePass: e.target.value })} autoComplete="new-password" /></label>
-              </>
-            )}
-          </div>
-          <div className="row gap">
-            <button className="btn" onClick={async () => {
-              setYtTest('Testing…');
-              try {
-                setYtTest(await ytdlpApi.version(ytdlp.bin));
-              } catch (e) {
-                setYtTest(`${e} — install with: winget install yt-dlp.yt-dlp`);
-              }
-            }}>Test yt-dlp</button>
-            <button className="btn" disabled={!ytdlp.outDir} onClick={async () => {
-              setYtTest('Checking folder…');
-              try {
-                setYtTest(`✓ ${await ytdlpApi.connectShare(ytdlp.outDir, ytdlp.shareUser, ytdlp.sharePass)}`);
-              } catch (e) {
-                setYtTest(`Folder problem: ${e}`);
-              }
-            }}>Test folder</button>
-            {ytTest && <span className="muted">{ytTest}</span>}
-          </div>
+          {hubYt ? (
+            <>
+              <p className="muted small">For anything deemix can't find: YouTube, YouTube Music, SoundCloud, Bandcamp and more. Your Hub downloads into a folder inside its music folder, so new songs show up after a Navidrome scan.</p>
+              <fieldset className="plain" disabled={locked}>
+                <div className="editor-grid">
+                  <label>Folder inside the Hub's music folder<input value={ytdlp.hubFolder} onChange={(e) => setYtdlp({ hubFolder: e.target.value })} placeholder="yt-dlp" /></label>
+                  <label>Audio format<select value={ytdlp.format} onChange={(e) => setYtdlp({ format: e.target.value })}>{YT_FORMATS}</select></label>
+                </div>
+              </fieldset>
+            </>
+          ) : (
+            <>
+              <p className="muted small">For anything deemix can't find: YouTube, YouTube Music, SoundCloud, Bandcamp and more. Point the folder at your Navidrome music library (a mapped drive or <code>\\server\music</code> share works) so downloads show up after a rescan.</p>
+              <div className="editor-grid">
+                <label className="span2">Download folder<input value={ytdlp.outDir} onChange={(e) => setYtdlp({ outDir: e.target.value })} placeholder="\\nas\music\yt-dlp  or  D:\Music\yt-dlp" /></label>
+                <label>Audio format<select value={ytdlp.format} onChange={(e) => setYtdlp({ format: e.target.value })}>{YT_FORMATS}</select></label>
+                <label>yt-dlp.exe path (optional)<input value={ytdlp.bin} onChange={(e) => setYtdlp({ bin: e.target.value })} placeholder="auto-detect" /></label>
+                {/^(\\\\|\/\/)/.test(ytdlp.outDir) && (
+                  <>
+                    <label>Network share username<input value={ytdlp.shareUser} onChange={(e) => setYtdlp({ shareUser: e.target.value })} placeholder={'NAS\\user or user'} autoComplete="off" /></label>
+                    <label>Network share password<input type="password" value={ytdlp.sharePass} onChange={(e) => setYtdlp({ sharePass: e.target.value })} autoComplete="new-password" /></label>
+                  </>
+                )}
+              </div>
+              <div className="row gap">
+                <button className="btn" onClick={async () => {
+                  setYtTest('Testing…');
+                  try {
+                    setYtTest(await ytdlpApi.version(ytdlp.bin));
+                  } catch (e) {
+                    setYtTest(`${e} — install with: winget install yt-dlp.yt-dlp`);
+                  }
+                }}>Test yt-dlp</button>
+                <button className="btn" disabled={!ytdlp.outDir} onClick={async () => {
+                  setYtTest('Checking folder…');
+                  try {
+                    setYtTest(`✓ ${await ytdlpApi.connectShare(ytdlp.outDir, ytdlp.shareUser, ytdlp.sharePass)}`);
+                  } catch (e) {
+                    setYtTest(`Folder problem: ${e}`);
+                  }
+                }}>Test folder</button>
+              </div>
+            </>
+          )}
+          {ytTest && <p className="muted small">{ytTest}</p>}
           <HubDownloader kind="ytdlp" onMsg={setYtTest} />
         </div>
       </section>}
