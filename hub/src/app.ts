@@ -12,6 +12,7 @@ import { meRoutes } from './routes/me.ts';
 import { navidromeRoutes } from './routes/navidrome.ts';
 import { relayRoutes } from './routes/relay.ts';
 import { remoteRoutes } from './routes/remote.ts';
+import { togetherRoutes } from './routes/together.ts';
 import { mineRoutes } from './routes/mine.ts';
 import { importRoutes } from './routes/imports.ts';
 import { inviteRoutes } from './routes/invites.ts';
@@ -123,6 +124,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   artworkRoutes(app, ctx);
   listeningRoutes(app, ctx);
   remoteRoutes(app, ctx);
+  togetherRoutes(app, ctx);
   navidromeRoutes(app, ctx);
   relayRoutes(app, ctx);
   mineRoutes(app, ctx);

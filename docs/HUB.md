@@ -268,6 +268,17 @@ pause it there) and **Continue there** (send this device's queue and place there
 person's own devices see each other. It's all kept in memory (`hub/src/routes/remote.ts`); nothing is
 stored. **Settings → Account → Let my other devices see and control this one** turns it off per device.
 
+## Listen together
+
+**Listen together** (the party button by the volume, and on Now Playing) starts a party on one device, the
+host, which keeps playing as usual and reports its queue and position (`hub/src/routes/together.ts`, in
+memory only). Anyone signed in to the Hub sees it and can join; their devices play the same song at the same
+spot and stay within a couple of seconds of the host. Guests' **+ Queue** and **Next** on a song send it to
+the host's queue (the host can turn that off), and if the host allows it, their skip, pause and seek go to
+the host too. Songs travel without their stream links: each guest plays them with their own login for that
+server, found by the Hub's id for it, or by title and artist when they don't have that server. Kids skip
+anything not for kids. The party ends when the host ends it or their device goes away for a minute.
+
 ## Tag editor
 
 Admins fix an album's tags from its page (**Edit tags**, on Navidrome albums). The Hub asks Navidrome for the
@@ -349,6 +360,12 @@ with a 4xx status.
 | `GET /api/me/remote/devices` | signed in | your devices that are open, each with `current`, `listening` and its `state` (position worked out to now) |
 | `POST /api/me/remote/command` | signed in | `{ deviceId, action: toggle/play/pause/next/prev/seek/volume/jump/load, value?, index?, queue?, position?, play? }` to one of your own devices |
 | `DELETE /api/me/remote` | signed in | this device stops showing up |
+| `GET /api/together`, `POST …` | signed in | parties going on now / start one with this device as host (`{ name?, guestsAdd?, guestsControl? }`) |
+| `POST /api/together/:id/join`, `…/leave` | signed in | join / leave (the host leaving ends it) |
+| `PATCH /api/together/:id` | host | `{ guestsAdd?, guestsControl? }` |
+| `PUT /api/together/:id/state` | host | `{ queue, index, position, duration, playing }`, which guests follow |
+| `POST /api/together/:id/request` | member | `{ action: add/playNext/next/prev/toggle/seek/jump, tracks?, value?, index? }`, applied by the host's device |
+| `GET /api/together/:id/wait?version=` | member | waits (up to 25 s) for a newer version; the host also gets requests. `{ party: null }` once it's over |
 | `GET /api/me/rewind?year=&month=&tz=` | signed in | your Rewind for a year (or one month of it); `tz` is the device's `getTimezoneOffset()` so days and hours are local |
 | `GET /api/me/rewind/periods?tz=` | signed in | `{ periods: [{ year, month, plays }] }`, newest first |
 | `PUT /api/me/prefs` | signed in | `{ changes: { key: { value, updatedAt } } }` → `{ applied, stale, prefs }`. Newest `updatedAt` wins per key. |

@@ -64,7 +64,7 @@ function applyEq() {
 }
 
 for (const el of [visual, plain]) {
-  for (const type of ['timeupdate', 'durationchange', 'play', 'pause', 'ended', 'error', 'waiting', 'playing']) {
+  for (const type of ['timeupdate', 'durationchange', 'play', 'pause', 'ended', 'error', 'waiting', 'playing', 'seeked']) {
     el.addEventListener(type, (e) => {
       if (el !== current) return;
       if (type === 'error' && el === visual && fallbackPending) return;

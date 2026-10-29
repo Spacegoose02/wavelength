@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Listen together** (with a Hub): start a party from the new button by the volume; everyone who joins
+  hears the same song at the same moment on their own device. Guests can add songs, and skip and pause if
+  the host allows it.
+- **Hub:** `/api/together/*` (in memory, long polling).
 - **Devices** (with a Hub): the new button by the volume shows your other open devices and what they're
   playing. Control them, or move playback: **Continue there** sends what's playing here to that device at the
   same spot, **Play here** brings it back. Turn it off per device under Settings → Account.
