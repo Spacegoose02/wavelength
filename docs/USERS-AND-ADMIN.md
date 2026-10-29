@@ -337,7 +337,13 @@ Everything else in the users/admin column depends on this.
 Exit criteria: two people sign in on different devices, each keeps their own settings, and a member's
 token gets `403` from every admin route.
 
-### Phase 2 — Keys and admin-only enforcement · ~2–3 weeks
+### Phase 2 — Keys and admin-only enforcement · ~2–3 weeks · **in progress**
+
+Done: the keys vault ([HUB.md → Server logins](HUB.md#server-logins)): Plex, Audiobookshelf, SUB/WAVE,
+deemix and yt-dlp logins are kept on the Hub, encrypted, and handed to each device by role, Access and
+Autodownload, with per-person Plex/ABS logins. Members never get the SUB/WAVE admin login or download logins
+without Autodownload. Still open: SUB/WAVE admin proxy (so admin devices don't hold it either), Navidrome
+user provisioning, active users view.
 
 Keys vault, link keys to profiles, Navidrome user provisioning, ABS account assignment, Plex keys,
 SUB/WAVE admin proxy (admin controls for admins only), active users view. **Cards closed:** keys under

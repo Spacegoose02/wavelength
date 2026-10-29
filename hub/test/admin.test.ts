@@ -8,7 +8,7 @@ test('every admin route refuses members, kids and anonymous callers', async () =
   const adminRoutes = app.hubRoutes.filter((r) => r.url.startsWith('/api/admin/'));
   assert.ok(adminRoutes.length >= 7, 'admin routes were registered');
   for (const r of adminRoutes) {
-    const url = r.url.replace(':id', String(ids.admin));
+    const url = r.url.replace(':userId', String(ids.member)).replace(':id', String(ids.admin));
     for (const who of ['member', 'kid'] as const) {
       const res = await json(app, r.method, url, { token: tokens[who], body: r.method === 'GET' || r.method === 'DELETE' ? undefined : { role: 'admin' } });
       assert.equal(res.status, 403, `${who} ${r.method} ${r.url}`);

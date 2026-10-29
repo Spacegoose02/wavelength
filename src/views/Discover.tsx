@@ -10,6 +10,7 @@ import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { enabledSources, useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
+import { useHub } from '../store/hub';
 import { Cover, Spinner } from '../components/common';
 import { IconDownload, IconPause, IconPlay, IconRefresh } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
@@ -129,7 +130,7 @@ export function Discover() {
     const e = rows![i];
     if (!deemix.url) {
       if (ytAvailable) return viaYtdlp(i);
-      return patch(i, { dl: { state: 'error', msg: 'Set your deemix URL in Settings' } });
+      return patch(i, { dl: { state: 'error', msg: useHub.getState().token && !useHub.getState().permissions.includes('downloads.run') ? 'Ask your Hub admin for Autodownload' : 'Set your deemix URL in Settings' } });
     }
     patch(i, { dl: { state: 'sending' } });
     const link = await deezerLinkFor(e);

@@ -171,11 +171,42 @@ Every device has its own token. Tokens are stored hashed on the Hub, so a databa
 working tokens. Signing a device out (from the device, from your profile, or by an admin) revokes just
 that token; disabling a user signs out all their devices at once.
 
+## Server logins
+
+The Hub keeps the household's server logins so they don't have to be typed into, or stored on, every
+device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and the **yt-dlp** download folder and its
+network-share login. **Navidrome logins stay on each device** (everyone signs in to Navidrome as themselves).
+
+- **Adding them:** in the app, an admin uses **Move to Hub** on a server in Settings → Sources, or on deemix /
+  yt-dlp in Settings → Downloads. New Plex, Audiobookshelf and SUB/WAVE servers an admin adds while signed in
+  go straight to the Hub.
+- **Who gets what** (decided by the Hub, in `servicesFor` in `hub/src/services.ts`):
+
+  | Login | Admin | Member | Kid |
+  |---|---|---|---|
+  | Plex, Audiobookshelf, SUB/WAVE listening | per the server's **Access**: Everyone, Admins only, or People I choose (admins always) | same | same |
+  | SUB/WAVE admin user and password | ✓ | – | – |
+  | deemix (incl. ARL), yt-dlp folder and share login | ✓ | only with **Autodownload** | – |
+
+- **Own logins:** for Plex and Audiobookshelf an admin can give someone their own token or API key (Settings
+  → Sources → Edit → **Own login**), so their listening progress and history are their own. They get that
+  instead of the shared one.
+- **At rest:** secrets are encrypted with AES-256-GCM using a key derived from `secret.key` /
+  `WAVELENGTH_SECRET_KEY`, and bound to their row. Admins see which fields are set, never the values (the
+  admin's own devices receive them like anyone else's, to use them). The audit log names changed fields only.
+- **On devices:** a signed-in device fetches its logins at start, on focus and every few minutes. Turning
+  Autodownload off, changing Access or removing a server takes the login away on the next check, and signing
+  out removes everything that came from the Hub. Signed-in members and kids without Autodownload have
+  download logins wiped from the device, even ones typed in before.
+- **Not yet:** SUB/WAVE admin and downloads still run from the admin's device with the login it was given.
+  Running them through the Hub, so even admin devices don't hold those secrets, comes with requests and
+  server-side downloads (Phase 3).
+
 ## Roles and permissions
 
 | Role | Permissions today |
 |---|---|
-| **admin** | `users.manage`, `audit.view`, and every admin permission later phases add (`keys.manage`, `subwave.control`, `requests.approve`, `downloads.run`, `library.edit`, `server.view`). |
+| **admin** | `users.manage`, `audit.view`, `keys.manage` (server logins), `subwave.control`, `downloads.run`, and the ones later phases use (`requests.approve`, `library.edit`, `server.view`). |
 | **member** | `requests.create`; plus `downloads.run` while the admin has their **Autodownload** switch on. |
 | **kid** | `requests.create`. Kids can never be given Autodownload. |
 
@@ -207,6 +238,10 @@ with a 4xx status.
 | `GET/POST /api/admin/users` | `users.manage` | list / create `{ username, role, password?, ssoSubject?, displayName?, autodownload? }` |
 | `PATCH/DELETE /api/admin/users/:id` | `users.manage` | change `{ displayName, role, password, ssoSubject, autodownload, disabled }` / delete |
 | `GET /api/admin/devices`, `DELETE /api/admin/devices/:id` | `users.manage` | every signed-in device / sign one out |
+| `GET /api/me/services` | signed in | `{ services: [{ id, kind, name, url, config, secrets, ownLogin }] }`: the server logins this user may use |
+| `GET/POST /api/admin/services` | `keys.manage` | list (secrets shown as `secretsSet`, never values) / add `{ kind, name, url, access?, config?, secrets? }` |
+| `PATCH/DELETE /api/admin/services/:id` | `keys.manage` | change (a secret set to `''` or `null` is cleared, a missing one kept) / remove |
+| `PUT/DELETE /api/admin/services/:id/users/:userId` | `keys.manage` | let someone use a "chosen" server, with an optional own login `{ secrets: { token } }` / take it away |
 | `GET /api/admin/audit?limit=&before=` | `audit.view` | newest first |
 
 A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`,
@@ -224,8 +259,9 @@ A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`
 
 ## Backups
 
-Back up the appdata folder (`hub.db*` and `secret.key`). Keep `secret.key` with the database: from
-Phase 2 it decrypts the stored service keys.
+Back up the appdata folder (`hub.db*` and `secret.key`). Keep `secret.key` with the database: it decrypts
+the stored server logins. With a different key the Hub still starts, but shows those logins as unreadable
+until an admin enters them again.
 
 ## Developing the Hub
 

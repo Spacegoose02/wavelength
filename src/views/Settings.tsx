@@ -8,8 +8,9 @@ import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from
 import { useCatalog } from '../store/catalog';
 import { SKIN_GROUPS, SKINS, useSettings, type Skin } from '../store/settings';
 import { useUi, type SettingsTab } from '../store/ui';
-import { useHub } from '../store/hub';
-import { AccountTab, UsersTab } from './HubSettings';
+import { hubClient, useCan, useHub } from '../store/hub';
+import { hubKeeps, loadHubServices, saveDownloaderToHub, saveSourceToHub } from '../lib/hubServices';
+import { AccountTab, HubAccess, UsersTab } from './HubSettings';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
 
@@ -88,23 +89,34 @@ const LABELS: Partial<Record<keyof SourceConfig, string>> = {
   token: 'Token / API key',
 };
 
-function SourceEditor({ initial, onDone }: { initial: SourceConfig; onDone(): void }) {
+function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew: boolean; onDone(): void }) {
   const upsert = useSettings((s) => s.upsertSource);
+  const canKeys = useHub((s) => !!s.token && s.permissions.includes('keys.manage'));
   const [cfg, setCfg] = useState(initial);
   const [test, setTest] = useState<{ ok: boolean; msg: string } | null>(null);
   const hint = HINTS[cfg.kind];
   const set = (k: keyof SourceConfig, v: string) => setCfg({ ...cfg, [k]: v });
+  // a Hub admin adds Plex, Audiobookshelf and SUB/WAVE to the Hub, so everyone signed in gets them
+  const toHub = canKeys && hubKeeps(cfg.kind) && (cfg.hubId !== undefined || isNew);
 
   return (
-    <form className="editor" onSubmit={(e) => {
+    <form className="editor" onSubmit={async (e) => {
       e.preventDefault();
-      upsert(cfg);
+      if (toHub) {
+        try {
+          setTest({ ok: true, msg: 'Saving to your Hub…' });
+          await saveSourceToHub(cfg);
+        } catch (err) {
+          setTest({ ok: false, msg: String((err as Error).message ?? err) });
+          return;
+        }
+      } else upsert(cfg);
       onDone();
       useCatalog.getState().load();
     }}>
       <div className="editor-grid">
         <label>Type
-          <select value={cfg.kind} onChange={(e) => setCfg({ ...cfg, kind: e.target.value as SourceKind, name: cfg.name || SOURCE_LABELS[e.target.value as SourceKind] })}>
+          <select value={cfg.kind} disabled={cfg.hubId !== undefined} onChange={(e) => setCfg({ ...cfg, kind: e.target.value as SourceKind, name: cfg.name || SOURCE_LABELS[e.target.value as SourceKind] })}>
             {(Object.keys(SOURCE_LABELS) as SourceKind[]).map((k) => <option key={k} value={k}>{SOURCE_LABELS[k]}</option>)}
           </select>
         </label>
@@ -117,6 +129,7 @@ function SourceEditor({ initial, onDone }: { initial: SourceConfig; onDone(): vo
         ))}
       </div>
       <p className="muted small">{hint.help}</p>
+      {toHub && <p className="muted small">Saved on your Hub, not this device. Devices signed in to the Hub get this server{cfg.kind === 'subwave' ? ', but only admins get the SUB/WAVE admin login' : ''}.</p>}
       {test && <div className={test.ok ? 'ok' : 'errors'}>{test.msg}</div>}
       <div className="row gap">
         <button type="button" className="btn" onClick={async () => {
@@ -133,7 +146,7 @@ function SourceEditor({ initial, onDone }: { initial: SourceConfig; onDone(): vo
             });
           }
         }}>Test connection</button>
-        <button className="btn primary">Save</button>
+        <button className="btn primary">{toHub ? 'Save to Hub' : 'Save'}</button>
         <button type="button" className="btn ghost" onClick={onDone}>Cancel</button>
       </div>
     </form>
@@ -142,31 +155,59 @@ function SourceEditor({ initial, onDone }: { initial: SourceConfig; onDone(): vo
 
 function SourcesTab() {
   const { sources, removeSource, moveSource, upsertSource } = useSettings();
+  const signedIn = useHub((s) => !!s.token);
+  const canKeys = useHub((s) => !!s.token && s.permissions.includes('keys.manage'));
   const [editing, setEditing] = useState<SourceConfig | null>(null);
+  const [err, setErr] = useState('');
+  const hubDo = async (f: () => Promise<unknown>) => {
+    try {
+      setErr('');
+      await f();
+      await loadHubServices();
+      useCatalog.getState().load();
+    } catch (e) {
+      setErr(String((e as Error).message ?? e));
+    }
+  };
   return (
     <>
       <section>
         <h2>Sources</h2>
         <p className="muted small">When the same album is on several servers, the source listed first wins. Use the arrows to reorder.</p>
+        {signedIn && <p className="muted small">Plex, Audiobookshelf and SUB/WAVE logins can be kept on your Hub, so signed-in devices get them without typing them in. Navidrome logins stay on each device.{canKeys ? ' Use Move to Hub on a server that is only on this device.' : ''}</p>}
+        {err && <div className="errors">{err}</div>}
         {sources.map((s, i) => (
-          <div key={s.id} className={`source-row ${s.enabled ? '' : 'off'}`}>
-            <i className="dot big" style={{ background: SOURCE_COLORS[s.kind] }} />
-            <div className="track-main">
-              <div className="track-title">{s.name}</div>
-              <div className="track-sub">{SOURCE_LABELS[s.kind]} · {s.url}</div>
+          <div key={s.id}>
+            <div className={`source-row ${s.enabled ? '' : 'off'}`}>
+              <i className="dot big" style={{ background: SOURCE_COLORS[s.kind] }} />
+              <div className="track-main">
+                <div className="track-title">{s.name}</div>
+                <div className="track-sub">
+                  {SOURCE_LABELS[s.kind]} · {s.url}
+                  {s.hubId !== undefined ? ' · from your Hub' : signedIn && hubKeeps(s.kind) ? ' · this device only' : ''}
+                </div>
+              </div>
+              <button className="icon-btn" disabled={i === 0} onClick={() => moveSource(s.id, -1)}>▲</button>
+              <button className="icon-btn" disabled={i === sources.length - 1} onClick={() => moveSource(s.id, 1)}>▼</button>
+              <label className="switch"><input type="checkbox" checked={s.enabled} onChange={(e) => {
+                upsertSource({ ...s, enabled: e.target.checked });
+                useCatalog.getState().load();
+              }} /><span /></label>
+              {canKeys && s.hubId === undefined && hubKeeps(s.kind) && (
+                <button className="btn small" onClick={() => confirm(`Move ${s.name} to your Hub? Everyone signed in to the Hub gets it${s.kind === 'subwave' ? ' (the SUB/WAVE admin login goes to admins only)' : ''}.`) && hubDo(() => saveSourceToHub(s))}>Move to Hub</button>
+              )}
+              {(s.hubId === undefined || canKeys) && <button className="btn small" onClick={() => setEditing(s)}>Edit</button>}
+              {s.hubId === undefined ? (
+                <button className="btn small ghost" onClick={() => confirm(`Remove ${s.name}?`) && removeSource(s.id)}>Remove</button>
+              ) : canKeys && (
+                <button className="btn small ghost" onClick={() => confirm(`Remove ${s.name} from your Hub? It goes from every signed-in device.`) && hubDo(() => hubClient()!.deleteService(s.hubId!))}>Remove</button>
+              )}
             </div>
-            <button className="icon-btn" disabled={i === 0} onClick={() => moveSource(s.id, -1)}>▲</button>
-            <button className="icon-btn" disabled={i === sources.length - 1} onClick={() => moveSource(s.id, 1)}>▼</button>
-            <label className="switch"><input type="checkbox" checked={s.enabled} onChange={(e) => {
-              upsertSource({ ...s, enabled: e.target.checked });
-              useCatalog.getState().load();
-            }} /><span /></label>
-            <button className="btn small" onClick={() => setEditing(s)}>Edit</button>
-            <button className="btn small ghost" onClick={() => confirm(`Remove ${s.name}?`) && removeSource(s.id)}>Remove</button>
+            {canKeys && s.hubId !== undefined && editing?.id === s.id && <HubAccess serviceId={s.hubId} kind={s.kind} />}
           </div>
         ))}
         {editing ? (
-          <SourceEditor key={editing.id} initial={editing} onDone={() => setEditing(null)} />
+          <SourceEditor key={editing.id} initial={editing} isNew={!sources.some((x) => x.id === editing.id)} onDone={() => setEditing(null)} />
         ) : (
           <div className="row gap wrap">
             {(Object.keys(SOURCE_LABELS) as SourceKind[]).map((k) => (
@@ -181,15 +222,56 @@ function SourcesTab() {
   );
 }
 
+/** Where a downloader's settings come from when signed in to a Hub, and the admin's Save/Move button. */
+function HubDownloader({ kind, onMsg }: { kind: 'deemix' | 'ytdlp'; onMsg(m: string): void }) {
+  const canKeys = useHub((s) => !!s.token && s.permissions.includes('keys.manage'));
+  const onHub = useHub((s) => s.services.some((x) => x.kind === kind));
+  if (!useHub((s) => !!s.token)) return null;
+  const save = async () => {
+    onMsg('Saving to your Hub…');
+    try {
+      await saveDownloaderToHub(kind);
+      onMsg('✓ Saved on your Hub');
+    } catch (e) {
+      onMsg(String((e as Error).message ?? e));
+    }
+  };
+  return (
+    <div className="row gap">
+      {canKeys && <button className="btn" onClick={save}>{onHub ? 'Save to Hub' : 'Move to Hub'}</button>}
+      <span className="muted small">
+        {onHub
+          ? `Kept on your Hub: admins and people with Autodownload get these settings.${canKeys ? ' Change them here, then Save to Hub.' : ' Your admin changes them.'}`
+          : canKeys ? 'Only on this device. Move to Hub so you and people with Autodownload get it on every device.' : ''}
+      </span>
+    </div>
+  );
+}
+
 function DownloadsTab() {
   const { deemix, setDeemix, ytdlp, setYtdlp } = useSettings();
   const [dmTest, setDmTest] = useState<string>();
   const [ytTest, setYtTest] = useState<string>();
+  const signedIn = useHub((s) => !!s.token);
+  const canDownload = useCan('downloads.run');
+  // a downloader who isn't an admin uses the Hub's settings as they are
+  const locked = useHub((s) => !!s.token && !s.permissions.includes('keys.manage'));
+  const dmLocked = useHub((s) => s.services.some((x) => x.kind === 'deemix')) && locked;
+  const ytLocked = useHub((s) => s.services.some((x) => x.kind === 'ytdlp')) && locked;
+  if (signedIn && !canDownload) {
+    return (
+      <section>
+        <h2>Downloads</h2>
+        <p className="muted">Your Hub admin looks after downloads. Ask them to turn on <b>Autodownload</b> for you to download music yourself.</p>
+      </section>
+    );
+  }
   return (
     <>
       <section>
         <h2>deemix</h2>
         <div className="editor">
+          <fieldset className="plain" disabled={dmLocked}>
           <div className="editor-grid">
             <label className="span2">deemix server URL<input value={deemix.url} onChange={(e) => setDeemix({ url: e.target.value })} placeholder="http://192.168.1.10:6595" /></label>
             <label>ARL (only if deemix asks to log in)<input type="password" value={deemix.arl} onChange={(e) => setDeemix({ arl: e.target.value })} /></label>
@@ -201,6 +283,7 @@ function DownloadsTab() {
               </select>
             </label>
           </div>
+          </fieldset>
           <div className="row gap">
             <button className="btn" onClick={async () => {
               setDmTest('Testing…');
@@ -212,6 +295,7 @@ function DownloadsTab() {
             }}>Test deemix</button>
             {dmTest && <span className="muted">{dmTest}</span>}
           </div>
+          <HubDownloader kind="deemix" onMsg={setDmTest} />
         </div>
       </section>
 
@@ -220,9 +304,9 @@ function DownloadsTab() {
         <div className="editor">
           <p className="muted small">For anything deemix can't find: YouTube, YouTube Music, SoundCloud, Bandcamp and more. Point the folder at your Navidrome music library (a mapped drive or <code>\\server\music</code> share works) so downloads show up after a rescan.</p>
           <div className="editor-grid">
-            <label className="span2">Download folder<input value={ytdlp.outDir} onChange={(e) => setYtdlp({ outDir: e.target.value })} placeholder="\\nas\music\yt-dlp  or  D:\Music\yt-dlp" /></label>
+            <label className="span2">Download folder<input value={ytdlp.outDir} disabled={ytLocked} onChange={(e) => setYtdlp({ outDir: e.target.value })} placeholder="\\nas\music\yt-dlp  or  D:\Music\yt-dlp" /></label>
             <label>Audio format
-              <select value={ytdlp.format} onChange={(e) => setYtdlp({ format: e.target.value })}>
+              <select value={ytdlp.format} disabled={ytLocked} onChange={(e) => setYtdlp({ format: e.target.value })}>
                 <option value="opus">Opus (best quality from YouTube)</option>
                 <option value="m4a">M4A / AAC</option>
                 <option value="mp3">MP3 (most compatible)</option>
@@ -232,8 +316,8 @@ function DownloadsTab() {
             <label>yt-dlp.exe path (optional)<input value={ytdlp.bin} onChange={(e) => setYtdlp({ bin: e.target.value })} placeholder="auto-detect" /></label>
             {/^(\\\\|\/\/)/.test(ytdlp.outDir) && (
               <>
-                <label>Network share username<input value={ytdlp.shareUser} onChange={(e) => setYtdlp({ shareUser: e.target.value })} placeholder={'NAS\\user or user'} autoComplete="off" /></label>
-                <label>Network share password<input type="password" value={ytdlp.sharePass} onChange={(e) => setYtdlp({ sharePass: e.target.value })} autoComplete="new-password" /></label>
+                <label>Network share username<input value={ytdlp.shareUser} disabled={ytLocked} onChange={(e) => setYtdlp({ shareUser: e.target.value })} placeholder={'NAS\\user or user'} autoComplete="off" /></label>
+                <label>Network share password<input type="password" value={ytdlp.sharePass} disabled={ytLocked} onChange={(e) => setYtdlp({ sharePass: e.target.value })} autoComplete="new-password" /></label>
               </>
             )}
           </div>
@@ -256,6 +340,7 @@ function DownloadsTab() {
             }}>Test folder</button>
             {ytTest && <span className="muted">{ytTest}</span>}
           </div>
+          <HubDownloader kind="ytdlp" onMsg={setYtTest} />
         </div>
       </section>}
     </>

@@ -72,6 +72,38 @@ export interface HubAuditEntry {
   ip: string | null;
 }
 
+/** A server login kept by the Hub (hub/src/services.ts). Navidrome stays a per-person login on each device. */
+export type HubServiceKind = 'plex' | 'audiobookshelf' | 'subwave' | 'deemix' | 'ytdlp';
+export type HubAccess = 'everyone' | 'admins' | 'chosen';
+type Config = Record<string, string | number>;
+
+/** What this device gets: only servers its user may use, with the logins filled in. */
+export interface HubService {
+  id: number;
+  kind: HubServiceKind;
+  name: string;
+  url: string;
+  config: Config;
+  secrets: Record<string, string>;
+  ownLogin: boolean;
+}
+
+/** What an admin sees: which secrets are set, never their values. */
+export interface HubAdminService {
+  id: number;
+  kind: HubServiceKind;
+  name: string;
+  url: string;
+  access: HubAccess;
+  config: Config;
+  secretsSet: string[];
+  unreadable: boolean;
+  users: { userId: number; secretsSet: string[]; unreadable: boolean }[];
+}
+
+/** Secrets to save: a value sets it, '' or null clears it, a missing key keeps it. */
+export type HubServiceInput = Partial<{ kind: HubServiceKind; name: string; url: string; access: HubAccess; config: Record<string, string | number | null>; secrets: Record<string, string | null> }>;
+
 /** An error the Hub answered with (as opposed to "couldn't reach it"). */
 export class HubError extends Error {
   status: number;
@@ -124,6 +156,8 @@ export class HubClient {
   getPrefs = () => this.call<{ prefs: HubPrefs }>('GET', '/api/me/prefs');
   putPrefs = (changes: HubPrefs) => this.call<{ applied: string[]; stale: string[]; prefs: HubPrefs }>('PUT', '/api/me/prefs', { changes });
 
+  services = () => this.call<{ services: HubService[] }>('GET', '/api/me/services');
+
   // ---- admin (the Hub refuses these unless the user holds the permission) ----
   users = () => this.call<{ users: HubAdminUser[] }>('GET', '/api/admin/users');
   createUser = (b: { username: string; role: HubRole; displayName?: string; password?: string; ssoSubject?: string; autodownload?: boolean }) =>
@@ -133,5 +167,12 @@ export class HubClient {
   deleteUser = (id: number) => this.call('DELETE', `/api/admin/users/${id}`);
   devices = () => this.call<{ devices: (HubDevice & { username?: string; displayName?: string })[] }>('GET', '/api/admin/devices');
   signOutDevice = (id: number) => this.call('DELETE', `/api/admin/devices/${id}`);
+  adminServices = () => this.call<{ services: HubAdminService[] }>('GET', '/api/admin/services');
+  createService = (b: HubServiceInput) => this.call<{ service: HubAdminService }>('POST', '/api/admin/services', b);
+  updateService = (id: number, b: HubServiceInput) => this.call<{ service: HubAdminService }>('PATCH', `/api/admin/services/${id}`, b);
+  deleteService = (id: number) => this.call('DELETE', `/api/admin/services/${id}`);
+  setServiceUser = (id: number, userId: number, secrets?: Record<string, string | null>) =>
+    this.call<{ service: HubAdminService }>('PUT', `/api/admin/services/${id}/users/${userId}`, { secrets });
+  removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);
   audit = (limit = 50) => this.call<{ entries: HubAuditEntry[] }>('GET', `/api/admin/audit?limit=${limit}`);
 }
