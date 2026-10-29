@@ -14,6 +14,8 @@ export interface DeezerResult {
   artistId?: number;
   /** Songs: the album they're on, so they can link through to it. */
   albumId?: number;
+  /** Explicit lyrics, as Deezer marks them. */
+  explicit?: boolean;
   /** Songs: 30-second clip. */
   preview?: string;
   /** Songs on an album page: position on the album. */
@@ -27,6 +29,9 @@ export interface DeezerResult {
 }
 
 const DZ = 'https://api.deezer.com';
+
+/** Deezer's `explicit_lyrics` (true / false), or undefined when the listing leaves it out. */
+const explicitOf = (x: any): boolean | undefined => (typeof x?.explicit_lyrics === 'boolean' ? x.explicit_lyrics : undefined);
 
 function toTrack(t: any, album?: any): DeezerResult {
   const al = t.album ?? album;
@@ -43,6 +48,7 @@ function toTrack(t: any, album?: any): DeezerResult {
     link: t.link,
     preview: t.preview || undefined,
     trackNumber: t.track_position,
+    explicit: explicitOf(t),
   };
 }
 
@@ -59,6 +65,7 @@ function toAlbum(a: any, artist?: any): DeezerResult {
     trackCount: a.nb_tracks,
     recordType: a.record_type,
     releaseDate: a.release_date,
+    explicit: explicitOf(a),
   };
 }
 

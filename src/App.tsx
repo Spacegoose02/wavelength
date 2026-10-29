@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
 import { startHubSync } from './lib/hubSync';
 import { inboxBadge, startInboxChecks, useInbox } from './lib/inbox';
+import { startFlagChecks } from './lib/kids';
 import { useHub } from './store/hub';
 import { skinGroup, useSettings } from './store/settings';
 import { useUi, type Route } from './store/ui';
@@ -129,6 +130,7 @@ export default function App() {
     startHubSync();
     startUpdateChecks();
     startInboxChecks();
+    startFlagChecks();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back

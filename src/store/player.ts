@@ -1,3 +1,4 @@
+import { kidSafe } from '../lib/kids';
 import { create } from 'zustand';
 import { engine } from '../player/engine';
 import { getJson } from '../lib/http';
@@ -70,7 +71,11 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   repeat: 'off',
   current: () => get().queue[get().index],
 
-  playTracks(tracks, start = 0, startAt = 0) {
+  playTracks(all, start = 0, startAt = 0) {
+    // kid profiles: drop what they may not play, keeping the chosen song's place when it stays
+    const tracks = kidSafe(all);
+    if (!tracks.length) return;
+    if (tracks !== all) start = Math.max(0, tracks.indexOf(all[start]));
     let queue = [...tracks];
     let index = start;
     if (get().shuffle && tracks.length > 1) {
@@ -81,12 +86,16 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     set({ queue, index });
     loadCurrent(startAt);
   },
-  enqueue(tracks) {
+  enqueue(all) {
+    const tracks = kidSafe(all);
+    if (!tracks.length) return;
     const wasEmpty = get().queue.length === 0;
     set((s) => ({ queue: [...s.queue, ...tracks], index: wasEmpty ? 0 : s.index }));
     if (wasEmpty) loadCurrent();
   },
-  playNext(tracks) {
+  playNext(all) {
+    const tracks = kidSafe(all);
+    if (!tracks.length) return;
     if (!get().queue.length) return get().playTracks(tracks);
     set((s) => {
       const queue = [...s.queue];

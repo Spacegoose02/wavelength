@@ -16,6 +16,7 @@ import { AddToPlaylist } from '../components/AddToPlaylist';
 import { QueueAllOnSubwave, QueueOnSubwave } from '../components/TrackButtons';
 import { isAndroid } from '../lib/platform';
 import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
+import { useHidden } from '../lib/kids';
 import { ReleaseRadar } from '../components/ReleaseRadar';
 
 type View = 'mix' | ChartSource;
@@ -97,6 +98,7 @@ export function Discover() {
 
   const hubYt = useHubRuns('ytdlp');
   const ask = useMustRequest();
+  const hidden = useHidden();
   const ytAvailable = hubYt || (!isAndroid && !!yt.outDir);
   const nowPlayingId = usePlayer((s) => s.queue[s.index]?.id);
   const playing = usePlayer((s) => s.playing);
@@ -210,7 +212,7 @@ export function Discover() {
 
       {!rows ? <Spinner /> : (
         <div className="tracklist">
-          {rows.map((r, i) => (
+          {rows.map((r, i) => hidden.track({ kind: 'track', id: '', sourceId: '', title: r.title, artist: r.artist, explicit: r.lib?.explicit }) ? null : (
             <div key={`${i}:${r.title}`} className={`track-row chart-row ${r.lib ? 'owned' : ''}`} onDoubleClick={() => r.lib && playTracks([r.lib])}>
               <div className="chart-rank">{r.rank}</div>
               <Cover src={r.cover ?? r.lib?.coverUrl} alt={r.title} className="tiny" />

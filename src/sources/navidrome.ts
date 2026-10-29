@@ -3,6 +3,9 @@ import { getJson, http, qs, trimSlash } from '../lib/http';
 import type { Album, Artist, HistoryEntry, MusicSource, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
 
 /** Navidrome (or any Subsonic-compatible server) via the Subsonic REST API. */
+
+/** OpenSubsonic `explicitStatus`: 'explicit', 'clean', or '' when the file doesn't say. */
+const rating = (v: unknown) => (v === 'explicit' || v === 'clean' ? v : undefined);
 export class NavidromeSource implements MusicSource {
   private ndToken?: string;
   constructor(public config: SourceConfig) {}
@@ -60,6 +63,7 @@ export class NavidromeSource implements MusicSource {
     year: a.year,
     coverUrl: this.cover(a.coverArt),
     trackCount: a.songCount,
+    explicit: rating(a.explicitStatus),
     addedAt: a.created ? Date.parse(a.created) : undefined,
   });
 
@@ -85,6 +89,7 @@ export class NavidromeSource implements MusicSource {
     coverUrl: this.cover(s.coverArt),
     streamUrl: this.url('stream', { id: s.id }),
     starred: !!s.starred,
+    explicit: rating(s.explicitStatus),
   });
 
   /** Build a playable track from just an id (e.g. a SubWave like — same Navidrome library). */

@@ -5,7 +5,7 @@ import type { SearchResults } from '../sources/types';
 import { enabledSources } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
-import { AlbumCard, Cover, Empty, SourceDots, Spinner, TrackList } from '../components/common';
+import { AlbumCard, ArtistCard, Cover, Empty, Spinner, TrackList } from '../components/common';
 import { BookCard } from './Books';
 import { PodcastCard } from './Podcasts';
 
@@ -61,13 +61,7 @@ export function Search({ initial }: { initial?: string }) {
         <section>
           <h2>Artists</h2>
           <div className="row-scroll">
-            {res.artists.map((a) => (
-              <button key={`${a.sourceId}:${a.id}`} className="card" onClick={() => go({ view: 'artist', artist: a })}>
-                <Cover src={a.coverUrl} alt={a.name} round />
-                <div className="card-title center">{a.name}</div>
-                <div className="card-sub center"><SourceDots sourceIds={(a.refs ?? [a]).map((r) => r.sourceId)} /></div>
-              </button>
-            ))}
+            {res.artists.map((a) => <ArtistCard key={`${a.sourceId}:${a.id}`} artist={a} onOpen={(artist) => go({ view: 'artist', artist })} />)}
           </div>
         </section>
       )}

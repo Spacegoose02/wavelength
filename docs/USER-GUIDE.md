@@ -495,6 +495,20 @@ with their note:
 
 Admins and people with Autodownload skip the queue: their **Get** downloads straight away.
 
+### Kid-safe music
+
+On a **Kid** profile, Wavelength hides anything marked explicit and anything an admin hid from kids: in
+albums, artists, search, playlists, favorites, Discover, Release Radar and Deezer browsing. The player won't
+play it either, even from a shared playlist. Explicit and clean songs and albums carry an **E** or **C**
+badge for everyone; that comes from your files' tags (Navidrome reads them) or from Deezer.
+
+**Admins** get a **Kids** button on every song row, album and artist: **Hide this … from kids**, or **OK for
+kids** for something marked explicit that's fine. It applies on every kid's device. **Settings → Users →
+Kid-safe music** lists everything flagged, with **Remove**.
+
+Flags match by artist and title, so a song is hidden however a kid reaches it. A kid who knows their
+Navidrome password could still use another app to reach the full library.
+
 ### Sharing with each other
 
 **Share** sends something to one person on your Hub, or to **Everyone**, with an optional note. It's on

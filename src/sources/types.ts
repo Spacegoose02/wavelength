@@ -34,6 +34,8 @@ export interface Track {
   trackNumber?: number;
   discNumber?: number;
   coverUrl?: string;
+  /** From the server's tags (OpenSubsonic `explicitStatus`) or Deezer. */
+  explicit?: 'explicit' | 'clean';
   streamUrl?: string;
   /** Radio: JSON/Icecast endpoint polled for the current song. */
   nowPlayingUrl?: string;
@@ -94,6 +96,7 @@ export interface Album {
   artistId?: string;
   year?: number;
   coverUrl?: string;
+  explicit?: 'explicit' | 'clean';
   trackCount?: number;
   /** When it was added to the library (ms epoch). */
   addedAt?: number;

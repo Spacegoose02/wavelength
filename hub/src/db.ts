@@ -144,6 +144,21 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (share_id, user_id)
   );
   `,
+  `
+  -- Kid-safe flags set by an admin: a song, album or artist that kids don't get ('block'), or something marked
+  -- explicit that is fine for them after all ('allow'). Matched by name on each device, since every device
+  -- reaches the music through its own logins. See routes/flags.ts.
+  CREATE TABLE content_flags (
+    id         INTEGER PRIMARY KEY,
+    kind       TEXT NOT NULL CHECK (kind IN ('track', 'album', 'artist')),
+    artist     TEXT NOT NULL,
+    title      TEXT NOT NULL DEFAULT '',     -- song or album title; '' for an artist
+    verdict    TEXT NOT NULL CHECK (verdict IN ('block', 'allow')),
+    set_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX content_flags_key ON content_flags(kind, artist COLLATE NOCASE, title COLLATE NOCASE);
+  `,
 ];
 
 export function openDb(file: string): Db {

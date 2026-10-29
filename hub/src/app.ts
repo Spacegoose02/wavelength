@@ -7,6 +7,7 @@ import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { authRoutes } from './routes/auth.ts';
 import { meRoutes } from './routes/me.ts';
+import { flagRoutes } from './routes/flags.ts';
 import { proxyRoutes } from './routes/proxy.ts';
 import { requestRoutes } from './routes/requests.ts';
 import { serviceRoutes } from './routes/services.ts';
@@ -88,5 +89,6 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
   proxyRoutes(app, ctx);
   requestRoutes(app, ctx);
   shareRoutes(app, ctx);
+  flagRoutes(app, ctx);
   return app;
 }

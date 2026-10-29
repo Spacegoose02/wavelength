@@ -13,7 +13,7 @@ export const PERMISSIONS = [
   'requests.create',
   'requests.approve', // Phase 3
   'downloads.run', // Phase 3: download without approval
-  'library.edit', // Phase 5: tag editor
+  'library.edit', // kid-safe flags; Phase 5: tag editor
   'server.view', // Phase 6: server page
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];

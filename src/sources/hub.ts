@@ -161,6 +161,18 @@ export interface HubShare {
 }
 export type HubShareInput = { to: number | null; kind: ShareKind; title: string; subtitle?: string; cover?: string; note?: string; payload: SharePayload };
 
+/** A kid-safe flag: `block` hides it from kids, `allow` lets something explicit through. */
+export interface HubFlag {
+  id: number;
+  kind: 'track' | 'album' | 'artist';
+  artist: string;
+  /** Song or album title; '' for an artist. */
+  title: string;
+  verdict: 'block' | 'allow';
+  setBy: string | null;
+  createdAt: number;
+}
+
 /** What an admin sees: which secrets are set, never their values. */
 export interface HubAdminService {
   id: number;
@@ -256,6 +268,8 @@ export class HubClient {
   hideShare = (id: number) => this.call('POST', `/api/shares/${id}/hide`, {});
   unshare = (id: number) => this.call('DELETE', `/api/shares/${id}`);
 
+  flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
+
   // ---- admin (the Hub refuses these unless the user holds the permission) ----
   users = () => this.call<{ users: HubAdminUser[] }>('GET', '/api/admin/users');
   createUser = (b: { username: string; role: HubRole; displayName?: string; password?: string; ssoSubject?: string; autodownload?: boolean }) =>
@@ -277,5 +291,7 @@ export class HubClient {
   rejectRequest = (id: number, reason?: string) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/reject`, { reason });
   haveRequest = (id: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/have`, {});
   deleteRequest = (id: number) => this.call('DELETE', `/api/admin/requests/${id}`);
+  setFlag = (b: { kind: HubFlag['kind']; artist: string; title?: string; verdict: HubFlag['verdict'] }) => this.call<{ flag: HubFlag }>('POST', '/api/admin/flags', b);
+  deleteFlag = (id: number) => this.call('DELETE', `/api/admin/flags/${id}`);
   audit = (limit = 50) => this.call<{ entries: HubAuditEntry[] }>('GET', `/api/admin/audit?limit=${limit}`);
 }
