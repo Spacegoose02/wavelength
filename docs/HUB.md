@@ -364,6 +364,11 @@ with a 4xx status.
 | `DELETE /api/admin/artwork/:id` | `library.edit` | back to the server's own picture |
 | `GET /api/admin/server` | `server.view` | the server page: version, uptime, disks, yt-dlp version, counts |
 | `GET /api/admin/backup` | `server.view` | a copy of the database (`wavelength-hub-YYYY-MM-DD.db`), audited |
+| `POST /api/admin/restore[?force=1]` | `server.view` | body: a backup (`application/vnd.sqlite3`, 256 MB at most). Checked, staged, then the Hub restarts to swap it in (see "Backups"); `409` when its server logins were sealed with another secret key, unless `force=1` |
+| `POST /api/admin/invites` | `users.manage` | `{ role, displayName?, autodownload?, days? (1–30, default 7) }` → `{ id, url, code, expiresAt }`; the code is only shown here |
+| `GET /api/admin/invites`, `DELETE /api/admin/invites/:id` | `users.manage` | open invites and ones used in the last 30 days / cancel an unused one |
+| `GET`, `POST /invite/:code` | anyone with the link | the invite page: pick a username and password; each link works once |
+| `POST /auth/invite` | anyone with the link | `{ code (or the whole link), username, password, displayName?, deviceName, platform }` → a session, like `/auth/login` |
 | `GET /api/admin/library` | `server.view` | rescans: `{ navidrome: { url, username } \| null, scanning, lastScanAt, lastError, scanQueued }` |
 | `PUT /api/admin/library/navidrome`, `DELETE …` | `keys.manage` | the Navidrome admin login the Hub scans with (`{ url, username, password? }`, checked first, kept sealed) / remove |
 | `POST /api/admin/library/scan` | `server.view` | start a Navidrome scan now |
@@ -403,8 +408,17 @@ A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`
 ## Backups
 
 **Settings → Server → Download backup** (admins) saves a copy of the database. Keep `secret.key` from the
-data folder next to it. To restore, stop the Hub, put the backup in the data folder as `hub.db` (deleting any
-`hub.db-wal` and `hub.db-shm`), and start it again.
+data folder next to it.
+
+**Restore a backup…** on the same page sends a backup back. The Hub checks it (a Hub database, not damaged,
+not from a newer Hub, with at least one admin, and server logins that open with this Hub's `secret.key`;
+it asks before going on if they don't), stages it as `hub.db.restore`, and exits with code 75 so Docker
+starts it again (`restart: unless-stopped` or `on-failure` both do). On start it swaps the backup in and
+keeps the database it replaced as `hub.db.before-restore-<time>`. Devices signed in after the backup was
+made have to sign in again.
+
+By hand: stop the Hub, put the backup in the data folder as `hub.db` (deleting any `hub.db-wal` and
+`hub.db-shm`), and start it again.
 
 The backup doesn't hold the cover art pictures: those are files in the data folder's `artwork` folder.
 

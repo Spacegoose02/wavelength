@@ -13,6 +13,7 @@ import { navidromeRoutes } from './routes/navidrome.ts';
 import { relayRoutes } from './routes/relay.ts';
 import { mineRoutes } from './routes/mine.ts';
 import { importRoutes } from './routes/imports.ts';
+import { inviteRoutes } from './routes/invites.ts';
 import { tagRoutes } from './routes/tags.ts';
 import { flagRoutes } from './routes/flags.ts';
 import { kidRoutes } from './routes/kids.ts';
@@ -42,9 +43,11 @@ export interface Ctx {
   limits: { login: RateLimiter; pairing: RateLimiter; poll: RateLimiter };
   ytdlp: YtdlpRunner;
   library: Library;
+  /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
+  restart: () => void;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -55,11 +58,15 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
       poll: new RateLimiter(120, 60_000), // per IP
     },
     ytdlp: new YtdlpRunner(config.ytdlpBin, config.musicDir),
+    restart: opts.restart ?? (() => undefined),
   } as Omit<Ctx, 'library'> as Ctx;
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   if (opts.watchLibrary ?? true) ctx.library.start();
   app.addHook('onClose', async () => ctx.library.stop());
   app.decorate('hubLibrary', ctx.library);
+
+  // database backups, for restore (routes/server.ts); the route sets how big
+  app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
 
   // HTML forms post url-encoded bodies
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string', bodyLimit: 16 * 1024 }, (_req, body, done) => {
@@ -104,6 +111,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   authRoutes(app, ctx);
   meRoutes(app, ctx);
   adminRoutes(app, ctx);
+  inviteRoutes(app, ctx);
   serviceRoutes(app, ctx);
   proxyRoutes(app, ctx);
   requestRoutes(app, ctx);

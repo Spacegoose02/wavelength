@@ -5,7 +5,7 @@ import { loadHubServices } from '../lib/hubServices';
 import { recheckLibrary, runExplicitCheck, stopExplicitCheck, useExplicitCheck } from '../lib/explicitCheck';
 import { loadFlags, setFlag, useFlags, useRatings } from '../lib/kids';
 import { today } from '../lib/kidTime';
-import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubPairing, type HubRole, type KidRules } from '../sources/hub';
+import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 
 /** Settings → Account (sign in to a Wavelength Hub) and Settings → Users (Hub admins). See docs/HUB.md. */
@@ -84,8 +84,9 @@ export function SignedOut() {
   const [draft, setDraft] = useState(url);
   const [health, setHealth] = useState<HubHealth>();
   const [err, setErr] = useState('');
-  const [mode, setMode] = useState<'code' | 'password' | null>(null);
+  const [mode, setMode] = useState<'code' | 'password' | 'invite' | null>(null);
   const [form, setForm] = useState({ username: '', password: '', displayName: '' });
+  const [invite, setInvite] = useState('');
   const client = useMemo(() => new HubClient(url), [url]);
 
   const connect = async (e?: FormEvent) => {
@@ -93,10 +94,18 @@ export function SignedOut() {
     setErr('');
     setHealth(undefined);
     setMode(null);
+    // an invite link pasted as the address: connect to its Hub and fill the invite in
+    const inv = /^(.*?)\/invite\/([\w-]+)/.exec(draft.trim());
+    const address = inv ? inv[1] : draft;
     try {
-      const h = await new HubClient(draft).health();
+      const h = await new HubClient(address).health();
       if (h.ok !== true) throw new Error("That address answered, but it isn't a Wavelength Hub");
-      setUrl(draft.trim().replace(/\/+$/, ''));
+      setUrl(address.trim().replace(/\/+$/, ''));
+      if (inv) {
+        setDraft(inv[1]);
+        setInvite(inv[2]);
+        setMode('invite');
+      }
       setHealth(h);
     } catch (e) {
       setErr(`Couldn't reach a Hub there: ${errText(e)}`);
@@ -110,7 +119,11 @@ export function SignedOut() {
     e.preventDefault();
     setErr('');
     try {
-      signedIn(health?.setupNeeded ? await client.setup({ ...form, ...thisDevice() }) : await client.login({ ...form, ...thisDevice() }));
+      signedIn(
+        health?.setupNeeded ? await client.setup({ ...form, ...thisDevice() })
+        : mode === 'invite' ? await client.acceptInvite({ ...form, code: invite.trim(), ...thisDevice() })
+        : await client.login({ ...form, ...thisDevice() }),
+      );
     } catch (e) {
       setErr(errText(e));
     }
@@ -149,6 +162,7 @@ export function SignedOut() {
           <div className="row gap wrap">
             <button className={`btn ${mode === 'code' ? 'primary' : ''}`} onClick={() => setMode('code')}>Sign in with a code{health.sso ? ' (single sign-on)' : ''}</button>
             <button className={`btn ${mode === 'password' ? 'primary' : ''}`} onClick={() => setMode('password')}>Sign in with a password</button>
+            <button className={`btn ${mode === 'invite' ? 'primary' : ''}`} onClick={() => setMode('invite')}>I have an invite</button>
           </div>
           {mode === 'code' && <Pairing client={client} onDone={() => setMode(null)} />}
           {mode === 'password' && (
@@ -158,6 +172,18 @@ export function SignedOut() {
                 <label>Password<input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required autoComplete="current-password" /></label>
               </div>
               <div className="row gap" style={{ marginTop: 12 }}><button className="btn primary">Sign in</button></div>
+            </form>
+          )}
+          {mode === 'invite' && (
+            <form onSubmit={submit}>
+              <p className="muted small">Paste the invite link you were sent, then pick your username and password.</p>
+              <div className="editor-grid">
+                <label className="span2">Invite link<input value={invite} onChange={(e) => setInvite(e.target.value)} required placeholder={`${url}/invite/…`} /></label>
+                <label>Your name<input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} /></label>
+                <label>Username<input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required autoComplete="username" /></label>
+                <label className="span2">Password (at least 10 characters)<input type="password" minLength={10} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required autoComplete="new-password" /></label>
+              </div>
+              <div className="row gap" style={{ marginTop: 12 }}><button className="btn primary">Make my account</button></div>
             </form>
           )}
         </div>
@@ -413,6 +439,8 @@ export function UsersTab() {
         </form>
       </section>
 
+      <Invites onUsed={load} />
+
       <section>
         <h2>Signed-in devices</h2>
         {devices.map((d) => (
@@ -441,6 +469,93 @@ export function UsersTab() {
         </section>
       )}
     </>
+  );
+}
+
+/** Invite links: pick a role, send the link, and they choose their own username and password. */
+function Invites({ onUsed }: { onUsed(): void }) {
+  const c = hubClient();
+  const [list, setList] = useState<HubInvite[]>([]);
+  const [made, setMade] = useState<string>();
+  const [form, setForm] = useState({ role: 'member' as HubRole, displayName: '', autodownload: false, days: 7 });
+  const [err, setErr] = useState('');
+  const load = () => c?.invites().then((r) => setList(r.invites)).catch((e) => setErr(errText(e)));
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!c) return null;
+
+  const make = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      const r = await c.createInvite({ ...form, displayName: form.displayName || undefined });
+      setMade(r.url);
+      setErr('');
+      load();
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+  const open = list.filter((i) => !i.usedAt);
+  const used = list.filter((i) => i.usedAt);
+
+  return (
+    <section>
+      <h2>Invite someone</h2>
+      <p className="muted small">
+        Make a link and send it however you like. They open it, pick their own username and password, and get the role you chose.
+        Each link works once. In the app they can paste it under Settings → Account → I have an invite.
+      </p>
+      {err && <div className="errors">{err}</div>}
+      <form className="editor" onSubmit={make}>
+        <div className="editor-grid">
+          <label>Role
+            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as HubRole })}>
+              {(Object.keys(ROLE_LABELS) as HubRole[]).map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+            </select>
+          </label>
+          <label>Their name (optional)<input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} /></label>
+          <label>Link works for
+            <select value={form.days} onChange={(e) => setForm({ ...form, days: Number(e.target.value) })}>
+              {[1, 3, 7, 14, 30].map((d) => <option key={d} value={d}>{d} day{d === 1 ? '' : 's'}</option>)}
+            </select>
+          </label>
+          {form.role === 'member' && (
+            <label className="check">
+              <span className="switch"><input type="checkbox" checked={form.autodownload} onChange={(e) => setForm({ ...form, autodownload: e.target.checked })} /><span /></span>
+              <small>Autodownload</small>
+            </label>
+          )}
+        </div>
+        <div className="row gap"><button className="btn primary">Make invite link</button></div>
+      </form>
+      {made && (
+        <div className="editor invite-made">
+          <p className="small">Send this link. It's only shown now.</p>
+          <div className="row gap wrap">
+            <input style={{ flex: 1, minWidth: 240 }} readOnly value={made} onFocus={(e) => e.target.select()} aria-label="Invite link" />
+            <button className="btn small" onClick={() => navigator.clipboard?.writeText(made).catch(() => undefined)}>Copy</button>
+            <button className="btn small ghost" onClick={() => setMade(undefined)}>Done</button>
+          </div>
+          <Qr text={made} />
+        </div>
+      )}
+      {open.map((i) => (
+        <div key={i.id} className="source-row">
+          <div className="track-main">
+            <div className="track-title">{i.displayName || 'Invite'} <span className="muted small">· {ROLE_LABELS[i.role]}{i.autodownload ? ', Autodownload' : ''}</span></div>
+            <div className="track-sub">made by {i.createdBy ?? '—'} {when(i.createdAt)} · works until {when(i.expiresAt)}</div>
+          </div>
+          <button className="btn small ghost" onClick={() => c.cancelInvite(i.id).then(load, (e) => setErr(errText(e)))}>Cancel</button>
+        </div>
+      ))}
+      {used.length > 0 && (
+        <p className="muted small">
+          Joined: {used.map((i) => `${i.usedBy ?? 'someone'} (${ROLE_LABELS[i.role]}, ${new Date(i.usedAt!).toLocaleDateString()})`).join(', ')}
+          {' '}<button className="btn small ghost" onClick={() => { load(); onUsed(); }}>Refresh</button>
+        </p>
+      )}
+    </section>
   );
 }
 

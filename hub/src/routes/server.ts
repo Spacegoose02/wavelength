@@ -1,8 +1,11 @@
-import { accessSync, constants, existsSync, readFileSync, rmSync, statfsSync, statSync } from 'node:fs';
+import { accessSync, constants, existsSync, readFileSync, renameSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
+import { unseal } from '../crypto.ts';
+import { SCHEMA_VERSION } from '../db.ts';
 import { clientIp, HttpError, need, str } from '../http.ts';
 import { getScanSettings, navidrome, saveScanSettings } from '../library.ts';
 import { run } from '../ytdlp.ts';
@@ -34,7 +37,7 @@ async function ytdlpVersion(bin: string) {
  * The admin server page (docs/USERS-AND-ADMIN.md Phase 6): how the Hub is doing, and a backup of its
  * database. Admins only (`server.view`).
  */
-export function serverRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
+export function serverRoutes(app: FastifyInstance, { db, config, library, restart }: Ctx) {
   const dbFile = join(config.dataDir, 'hub.db');
   const count = (sql: string, ...args: (string | number)[]) => (db.prepare(sql).get(...args) as { n: number }).n;
 
@@ -140,4 +143,69 @@ export function serverRoutes(app: FastifyInstance, { db, config, library }: Ctx)
       .header('cache-control', 'no-store')
       .send(bytes);
   });
+
+  /**
+   * Restore a backup from GET /api/admin/backup: the file is checked, staged next to the database, and the
+   * Hub restarts to swap it in (db.ts applyPendingRestore). The current database is kept beside it.
+   * `?force=1` restores even when the backup's server logins were sealed with a different secret key.
+   */
+  app.post<{ Querystring: { force?: string } }>('/api/admin/restore', { bodyLimit: 256 * 1024 * 1024 }, async (req) => {
+    const { user } = need(req, 'server.view');
+    const body = req.body;
+    if (!Buffer.isBuffer(body) || body.subarray(0, 16).toString('latin1') !== 'SQLite format 3\0') {
+      throw new HttpError(400, 'That isn’t a Wavelength Hub backup. Choose the .db file from Download backup');
+    }
+    const tmp = `${dbFile}.restore-check`;
+    writeFileSync(tmp, body);
+    let summary: { users: number; admins: number; version: number; keyMismatch: boolean };
+    try {
+      summary = checkBackup(tmp, config.secretKey);
+    } catch (e) {
+      rmSync(tmp, { force: true });
+      throw e;
+    }
+    if (summary.keyMismatch && req.query.force !== '1') {
+      rmSync(tmp, { force: true });
+      throw new HttpError(409, 'This backup’s server logins were locked with a different secret key, so they wouldn’t open on this Hub. Restore anyway and add them again, or start the Hub with the old secret.key first');
+    }
+    renameSync(tmp, `${dbFile}.restore`);
+    audit(db, { actorId: user.id, action: 'hub.restore_staged', detail: { bytes: body.length, users: summary.users, schema: summary.version }, ip: clientIp(req) });
+    setTimeout(restart, 300);
+    return { ok: true, restarting: true, ...summary };
+  });
+}
+
+/** Is this file a backup this Hub can take? Throws a 400 saying why not. */
+function checkBackup(file: string, key: Buffer) {
+  let b: DatabaseSync;
+  try {
+    b = new DatabaseSync(file, { readOnly: true });
+  } catch {
+    throw new HttpError(400, 'That backup can’t be opened');
+  }
+  try {
+    const ok = (b.prepare('PRAGMA quick_check').get() as { quick_check: string }).quick_check;
+    if (ok !== 'ok') throw new HttpError(400, 'That backup is damaged');
+    const version = (b.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+    const has = (t: string) => !!b.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(t);
+    if (!version || !has('users')) throw new HttpError(400, 'That isn’t a Wavelength Hub backup');
+    if (version > SCHEMA_VERSION) throw new HttpError(400, 'That backup is from a newer Hub. Update this Hub first');
+    const users = (b.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number }).n;
+    const admins = (b.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND disabled = 0").get() as { n: number }).n;
+    if (!admins) throw new HttpError(400, 'That backup has no admin account, so nobody could manage the Hub after restoring it');
+    let keyMismatch = false;
+    if (has('services')) {
+      for (const r of b.prepare('SELECT id, secrets FROM services WHERE secrets IS NOT NULL').all() as { id: number; secrets: string }[]) {
+        try {
+          unseal(key, r.secrets, `service:${r.id}`);
+        } catch {
+          keyMismatch = true;
+          break;
+        }
+      }
+    }
+    return { users, admins, version, keyMismatch };
+  } finally {
+    b.close();
+  }
 }

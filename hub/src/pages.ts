@@ -104,3 +104,20 @@ export function ssoConfirmPage(o: { code: string; device: { name: string; platfo
      </form>`,
   );
 }
+
+const ROLE_TEXT: Record<string, string> = { admin: 'an admin', member: 'a member', kid: 'a kid profile' };
+
+/** Opened from an invite link: pick a username and password. */
+export function invitePage(o: { code: string; role: string; displayName: string; username?: string; error?: string }) {
+  return page(
+    'Join',
+    `<p>You're invited to this Wavelength Hub as ${esc(ROLE_TEXT[o.role] ?? o.role)}. Pick a username and password to make your account.</p>
+     ${o.error ? `<p class="err">${esc(o.error)}</p>` : ''}
+     <form method="post" action="/invite/${esc(o.code)}">
+       <label>Your name</label><input name="displayName" value="${esc(o.displayName)}" maxlength="60">
+       <label>Username</label><input name="username" value="${esc(o.username ?? '')}" autocomplete="username" required pattern="[a-zA-Z0-9][a-zA-Z0-9._\\-]{0,31}">
+       <label>Password (at least 10 characters)</label><input name="password" type="password" autocomplete="new-password" required minlength="10">
+       <div class="row"><button>Make my account</button></div>
+     </form>`,
+  );
+}

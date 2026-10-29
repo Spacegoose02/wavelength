@@ -1,3 +1,4 @@
+import { existsSync, renameSync, rmSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 export type Db = DatabaseSync;
@@ -257,7 +258,46 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX tag_edits_batch ON tag_edits(batch);
   `,
+  `
+  -- Invite links: an admin picks the role, the person picks their own username and password.
+  -- See routes/invites.ts.
+  CREATE TABLE invites (
+    id           INTEGER PRIMARY KEY,
+    code_hash    TEXT NOT NULL UNIQUE,         -- sha256 of the code; the code itself is only in the link
+    role         TEXT NOT NULL CHECK (role IN ('admin', 'member', 'kid')),
+    display_name TEXT NOT NULL DEFAULT '',     -- a suggestion, the person can change it
+    autodownload INTEGER NOT NULL DEFAULT 0,
+    created_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at   INTEGER NOT NULL,
+    expires_at   INTEGER NOT NULL,
+    used_at      INTEGER,
+    used_by      INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  `,
 ];
+
+/** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
+export const SCHEMA_VERSION = MIGRATIONS.length;
+
+/**
+ * A restore staged by POST /api/admin/restore (routes/server.ts) is swapped in here, before the database
+ * is opened. The database it replaces is kept next to it as `hub.db.before-restore-<time>`.
+ */
+export function applyPendingRestore(file: string): string | null {
+  const staged = `${file}.restore`;
+  if (!existsSync(staged)) return null;
+  const kept = `${file}.before-restore-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  if (existsSync(file)) {
+    // fold the write-ahead log in first, so the kept copy is whole on its own
+    const old = new DatabaseSync(file);
+    old.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    old.close();
+    renameSync(file, kept);
+  }
+  for (const x of ['-wal', '-shm']) rmSync(file + x, { force: true });
+  renameSync(staged, file);
+  return kept;
+}
 
 export function openDb(file: string): Db {
   const db = new DatabaseSync(file);

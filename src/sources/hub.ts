@@ -306,6 +306,18 @@ export interface HubAdminService {
 /** Secrets to save: a value sets it, '' or null clears it, a missing key keeps it. */
 export type HubServiceInput = Partial<{ kind: HubServiceKind; name: string; url: string; access: HubAccess; config: Record<string, string | number | null>; secrets: Record<string, string | null> }>;
 
+export interface HubInvite {
+  id: number;
+  role: HubRole;
+  displayName: string;
+  autodownload: boolean;
+  createdBy: string | null;
+  createdAt: number;
+  expiresAt: number;
+  usedAt: number | null;
+  usedBy: string | null;
+}
+
 /** An error the Hub answered with (as opposed to "couldn't reach it"). */
 export class HubError extends Error {
   status: number;
@@ -398,6 +410,17 @@ export class HubClient {
     const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'wavelength-hub.db';
     return { name, blob: await res.blob() };
   }
+  /** Put a backup back. The Hub checks it and restarts to swap it in; HubError 409 = locked with another secret key. */
+  async restore(file: Blob, force = false): Promise<{ users: number; admins: number; keyMismatch: boolean }> {
+    const res = await http(`${this.url}/api/admin/restore${force ? '?force=1' : ''}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${this.token}`, 'content-type': 'application/vnd.sqlite3' },
+      body: new Uint8Array(await file.arrayBuffer()),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string; users: number; admins: number; keyMismatch: boolean };
+    if (!res.ok) throw new HubError(res.status, data.error || `${res.status} error`);
+    return data;
+  }
   ratings = () => this.call<{ ratings: HubRating[] }>('GET', '/api/ratings');
   artwork = () => this.call<{ artwork: HubArtwork[] }>('GET', '/api/artwork');
   kidStatus = (day: string) => this.call<{ kid: boolean; rules: KidRules; usedSeconds: number; pinSet: boolean }>('GET', `/api/me/kid?day=${day}`);
@@ -411,6 +434,12 @@ export class HubClient {
   updateUser = (id: number, b: Partial<{ displayName: string; role: HubRole; password: string | null; ssoSubject: string | null; autodownload: boolean; disabled: boolean }>) =>
     this.call<{ user: HubAdminUser }>('PATCH', `/api/admin/users/${id}`, b);
   deleteUser = (id: number) => this.call('DELETE', `/api/admin/users/${id}`);
+  invites = () => this.call<{ invites: HubInvite[] }>('GET', '/api/admin/invites');
+  createInvite = (b: { role: HubRole; displayName?: string; autodownload?: boolean; days?: number }) =>
+    this.call<{ id: number; url: string; code: string; expiresAt: number }>('POST', '/api/admin/invites', b);
+  cancelInvite = (id: number) => this.call('DELETE', `/api/admin/invites/${id}`);
+  /** Make an account from an invite link (or its code) and sign this device in. */
+  acceptInvite = (b: { code: string; username: string; password: string; displayName?: string; deviceName: string; platform: string }) => this.call<HubSession>('POST', '/auth/invite', b);
   devices = () => this.call<{ devices: (HubDevice & { username?: string; displayName?: string })[] }>('GET', '/api/admin/devices');
   signOutDevice = (id: number) => this.call('DELETE', `/api/admin/devices/${id}`);
   adminServices = () => this.call<{ services: HubAdminService[] }>('GET', '/api/admin/services');

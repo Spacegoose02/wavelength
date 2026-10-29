@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { HubAdminService, HubAdminUser, HubLibraryStatus, HubListening, HubServerStatus, HubTagEdit } from '../sources/hub';
+import { HubError, type HubAdminService, type HubAdminUser, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit } from '../sources/hub';
 import { hubClient } from '../store/hub';
 
 const gb = (n: number) => (n >= 1e12 ? `${(n / 1e12).toFixed(1)} TB` : n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.max(0, Math.round(n / 1e6))} MB`);
@@ -290,6 +290,32 @@ export function ServerTab() {
     }
   };
 
+  const restore = async (file: File) => {
+    const c = hubClient()!;
+    if (!confirm(`Restore ${file.name}? Everything the Hub keeps goes back to how it was in that backup, and the Hub restarts. The current database is kept next to it on the server.`)) return;
+    setBackup('Checking the backup…');
+    try {
+      let r;
+      try {
+        r = await c.restore(file);
+      } catch (e) {
+        if (!(e instanceof HubError && e.status === 409) || !confirm(`${e.message}.\n\nRestore anyway?`)) throw e;
+        r = await c.restore(file, true);
+      }
+      setBackup(`Restoring ${r.users} people… waiting for the Hub to restart`);
+      // Docker starts it again; wait until it answers
+      for (let i = 0; i < 60; i++) {
+        await new Promise((done) => setTimeout(done, 2000));
+        if (await c.health().then(() => true, () => false)) break;
+      }
+      setBackup(r.keyMismatch ? 'Restored. Add the server logins again under Settings → Servers' : 'Restored');
+      // this device may not be in the backup: if so it needs signing in again
+      await c.me().then(load, () => setBackup('Restored. This device wasn’t in the backup, so sign in again under Settings → Account'));
+    } catch (e) {
+      setBackup(`Restore failed: ${(e as Error).message ?? e}`);
+    }
+  };
+
   if (err) return <div className="errors">{err}</div>;
   if (!s) return <p className="muted">Loading…</p>;
   const rows: [string, React.ReactNode][] = [
@@ -339,9 +365,24 @@ export function ServerTab() {
         <p className="muted small">
           A copy of everything the Hub keeps: people, devices, settings, requests, shares, kid rules and server logins. The logins in it
           stay encrypted with the Hub's secret key (<code>secret.key</code> in its data folder), which isn't in the backup, so keep a
-          copy of that file somewhere safe too. To restore, stop the Hub, put the backup in its data folder as <code>hub.db</code>, and start it.
+          copy of that file somewhere safe too.
         </p>
-        <div className="row gap"><button className="btn" onClick={download}>Download backup</button>{backup && <span className="small">{backup}</span>}</div>
+        <p className="muted small">
+          Restoring puts the Hub back to a backup and restarts it (Docker starts it again). The database it replaces is kept in the
+          data folder as <code>hub.db.before-restore-…</code>. Devices signed in after the backup was made need signing in again.
+        </p>
+        <div className="row gap">
+          <button className="btn" onClick={download}>Download backup</button>
+          <label className="btn ghost">
+            Restore a backup…
+            <input type="file" accept=".db,.sqlite,.sqlite3,application/vnd.sqlite3" hidden onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) restore(f);
+            }} />
+          </label>
+          {backup && <span className="small">{backup}</span>}
+        </div>
       </section>
     </>
   );

@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Invite links** (admins): **Settings → Users → Invite someone** makes a one-time link (and QR code) for a
+  role. The person opens it, or pastes it in the app under **Settings → Account → I have an invite**, and picks
+  their own username and password.
+- **Restore a backup** from **Settings → Server**: the Hub checks the file, restarts and swaps it in, and
+  keeps the database it replaced.
+- **Hub:** migration 12 (`invites`), `/api/admin/invites`, `/invite/:code`, `/auth/invite`,
+  `POST /api/admin/restore`. The Hub exits with code 75 to restart after a restore.
 - **Tag editor** (admins): **Edit tags** on a Navidrome album fixes its tags in the files, by hand or from a
   Deezer / MusicBrainz match, with **Undo** (and **Settings → Server → Tag edits** for older saves). Navidrome
   rescans afterwards.
