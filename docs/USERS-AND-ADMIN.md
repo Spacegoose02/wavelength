@@ -430,7 +430,8 @@ serves the app's web build at `/` (`hub/src/web.ts`), with a few no-CORS public 
 checks it and restarts to swap it in) are done too, and so is Rewind (`hub/src/rewind.ts`,
 `src/views/Rewind.tsx`), and remote control and handoff between a person's own devices
 (`hub/src/routes/remote.ts`, `src/lib/remote.ts`, `src/components/Devices.tsx`; long polling rather than a
-WebSocket, so it works through any proxy). Still open: Docker control, listen together.
+WebSocket, so it works through any proxy), and listen together (`hub/src/routes/together.ts`,
+`src/lib/together.ts`, `src/components/Together.tsx`). Still open: Docker control.
 
 Server controls page, optional Docker control via socket proxy, remote control/handoff, listen together,
 Rewind, invites, backups. **Cards closed:** admin server page, Docker control.

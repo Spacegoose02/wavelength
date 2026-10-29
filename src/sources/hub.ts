@@ -306,6 +306,21 @@ export interface HubAdminService {
 /** Secrets to save: a value sets it, '' or null clears it, a missing key keeps it. */
 export type HubServiceInput = Partial<{ kind: HubServiceKind; name: string; url: string; access: HubAccess; config: Record<string, string | number | null>; secrets: Record<string, string | null> }>;
 
+export interface HubParty {
+  id: string;
+  name: string;
+  host: string;
+  isHost: boolean;
+  guestsAdd: boolean;
+  guestsControl: boolean;
+  version: number;
+  /** The Hub's clock when it answered, to line positions up. */
+  now: number;
+  state: { queue: Track[]; index: number; position: number; duration: number; playing: boolean; at: number };
+  members: { name: string; device: string; host: boolean }[];
+}
+export interface HubPartyRequest { id: number; action: 'add' | 'playNext' | 'next' | 'prev' | 'toggle' | 'seek' | 'jump'; tracks?: Track[]; value?: number; index?: number; from: string; at: number }
+
 export interface HubRemoteState { queue: Track[]; index: number; position: number; duration: number; playing: boolean; volume: number; at: number }
 export interface HubRemoteDevice { id: number; name: string; platform: string; current: boolean; listening: boolean; state: HubRemoteState | null }
 export interface HubRemoteCommand {
@@ -505,6 +520,15 @@ export class HubClient {
   remoteLeave = () => this.call('DELETE', '/api/me/remote');
   remoteDevices = () => this.call<{ devices: HubRemoteDevice[] }>('GET', '/api/me/remote/devices');
   remoteCommand = (deviceId: number, c: Omit<HubRemoteCommand, 'id' | 'from' | 'at'>) => this.call('POST', '/api/me/remote/command', { deviceId, ...c });
+  // listen together (lib/together.ts)
+  parties = () => this.call<{ parties: { id: string; name: string; host: string; members: number; joined: boolean; isHost: boolean }[] }>('GET', '/api/together');
+  startParty = (b: { name?: string; guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('POST', '/api/together', b);
+  joinParty = (id: string) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/join`, {});
+  leaveParty = (id: string) => this.call('POST', `/api/together/${encodeURIComponent(id)}/leave`, {});
+  setParty = (id: string, b: { guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('PATCH', `/api/together/${encodeURIComponent(id)}`, b);
+  partyState = (id: string, s: Omit<HubParty['state'], 'at'>) => this.call('PUT', `/api/together/${encodeURIComponent(id)}/state`, s);
+  partyRequest = (id: string, r: { action: HubPartyRequest['action']; tracks?: Track[]; value?: number; index?: number }) => this.call('POST', `/api/together/${encodeURIComponent(id)}/request`, r);
+  partyWait = (id: string, version: number) => this.call<{ party: HubParty | null; requests: HubPartyRequest[] }>('GET', `/api/together/${encodeURIComponent(id)}/wait?version=${version}`);
   rewindPeriods = () => this.call<{ periods: { year: number; month: number; plays: number }[] }>('GET', `/api/me/rewind/periods?tz=${new Date().getTimezoneOffset()}`);
   rewind = (year: number, month?: number) =>
     this.call<HubRewind>('GET', `/api/me/rewind?${new URLSearchParams({ year: String(year), ...(month && { month: String(month) }), tz: String(new Date().getTimezoneOffset()) })}`);

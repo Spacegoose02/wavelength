@@ -7,6 +7,7 @@ import { NowPlayingStage } from './Scenes';
 import { AddToPlaylist } from './AddToPlaylist';
 import { EqButton } from './Equalizer';
 import { DevicesButton } from './Devices';
+import { TogetherButton } from './Together';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
 export function NowPlaying() {
@@ -33,6 +34,7 @@ export function NowPlaying() {
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} label="Add to playlist" />}
             <EqButton className="chip" />
             <DevicesButton className="chip" />
+            <TogetherButton className="chip" />
           </div>
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && (

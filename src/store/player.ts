@@ -60,6 +60,16 @@ const sourceOf = (t: Track) => {
   return cfg ? sourceFor(cfg) : undefined;
 };
 
+/**
+ * While this device is a guest in a listening party (lib/together.ts), the person's own queue and transport
+ * actions go to the host instead. Returns true when it took the action.
+ */
+export type PlayerIntercept = (op: 'enqueue' | 'playNext' | 'next' | 'prev' | 'toggle' | 'seek' | 'ended', arg?: Track[] | number) => boolean;
+let intercept: PlayerIntercept | undefined;
+export const setPlayerIntercept = (fn?: PlayerIntercept) => {
+  intercept = fn;
+};
+
 export const usePlayer = create<PlayerState>()((set, get) => ({
   queue: [],
   index: -1,
@@ -88,6 +98,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     loadCurrent(startAt);
   },
   enqueue(all) {
+    if (intercept?.('enqueue', all)) return;
     const tracks = kidSafe(all);
     if (!tracks.length) return;
     const wasEmpty = get().queue.length === 0;
@@ -95,6 +106,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     if (wasEmpty) loadCurrent();
   },
   playNext(all) {
+    if (intercept?.('playNext', all)) return;
     const tracks = kidSafe(all);
     if (!tracks.length) return;
     if (!get().queue.length) return get().playTracks(tracks);
@@ -116,10 +128,12 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
   toggle() {
     if (!get().current()) return;
+    if (intercept?.('toggle')) return;
     if (engine.el.paused) engine.play();
     else engine.pause();
   },
   next() {
+    if (intercept?.('next')) return;
     const { index, queue, repeat } = get();
     if (index + 1 < queue.length) set({ index: index + 1 });
     else if (repeat === 'all' && queue.length) set({ index: 0 });
@@ -130,6 +144,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     loadCurrent();
   },
   prev() {
+    if (intercept?.('prev')) return;
     if (engine.el.currentTime > 4) return engine.seek(0);
     const { index } = get();
     if (index > 0) {
@@ -137,7 +152,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       loadCurrent();
     } else engine.seek(0);
   },
-  seek: (t) => engine.seek(t),
+  seek: (t) => void (intercept?.('seek', t) || engine.seek(t)),
   setVolume(v) {
     engine.setVolume(v);
     set({ volume: v });
@@ -258,6 +273,7 @@ engine.on('waiting', () => usePlayer.setState({ buffering: true }));
 engine.on('pause', () => usePlayer.setState({ playing: false }));
 engine.on('error', (_, el) => usePlayer.setState({ error: `Playback failed (code ${el.error?.code ?? '?'})`, buffering: false, playing: false }));
 engine.on('ended', () => {
+  if (intercept?.('ended')) return;
   const st = usePlayer.getState();
   if (st.repeat === 'one') {
     engine.seek(0);

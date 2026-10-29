@@ -411,6 +411,14 @@ there** moves what you're playing to that device, picking up at the same spot, a
 here** does the opposite. Only your own devices show up. To keep a device out of the list, turn off
 **Settings → Account → Let my other devices see and control this one** on it.
 
+## Listen together
+
+With a Hub, the **party** button by the volume (and on Now Playing) starts a listening party: everyone who
+joins hears the same song at the same moment on their own device, wherever they are. Start one, and others
+see it under the same button with **Join**. As the host you play music as usual. Guests' **+ Queue** and
+**Next** on any song add it to the party (you can turn that off), and you can let guests skip and pause too.
+**Leave** or **End party** when you're done.
+
 ## Rewind
 
 **History → Rewind** (with a Hub) is your year in music, or any month of it: minutes listened, plays, top
