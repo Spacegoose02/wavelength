@@ -220,6 +220,27 @@ const MIGRATIONS: string[] = [
   );
   CREATE UNIQUE INDEX artwork_key ON artwork(kind, artist COLLATE NOCASE, album COLLATE NOCASE);
   `,
+  `
+  -- Each person's own Wavelength playlists and play history, so they follow them to every device and stay
+  -- apart on a shared one. A deleted playlist stays as a tombstone so other devices drop it too. Tracks are
+  -- the app's JSON, without per-device stream links where the app can rebuild them. See routes/mine.ts.
+  CREATE TABLE user_playlists (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    id         TEXT NOT NULL,                -- made by the app (a UUID)
+    name       TEXT NOT NULL,
+    tracks     TEXT NOT NULL,                -- JSON array
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, id)
+  );
+  CREATE TABLE play_history (
+    user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    played_at INTEGER NOT NULL,
+    track     TEXT NOT NULL,                 -- JSON
+    PRIMARY KEY (user_id, played_at)
+  );
+  `,
 ];
 
 export function openDb(file: string): Db {

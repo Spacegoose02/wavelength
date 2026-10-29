@@ -1,4 +1,5 @@
 import { http, trimSlash } from '../lib/http';
+import type { Track } from './types';
 
 /**
  * The Wavelength Hub API (hub/, docs/HUB.md). The Hub owns accounts, roles and admin-only rules;
@@ -90,6 +91,16 @@ export interface HubService {
   hubAdmin?: boolean;
   /** Navidrome through the Hub's relay at `/nd/<id>`: the login is for the Hub, the real one stays there. */
   relay?: boolean;
+}
+
+/** One of this person's Wavelength playlists, as kept on the Hub. `deleted` ones are tombstones. */
+export interface HubPlaylist {
+  id: string;
+  name: string;
+  tracks: Track[];
+  createdAt: number;
+  updatedAt: number;
+  deleted?: boolean;
 }
 
 /** A yt-dlp download the Hub is running. */
@@ -396,6 +407,11 @@ export class HubClient {
   createNavidromeAccount = (id: number, userId: number) => this.call<{ service: HubAdminService }>('POST', `/api/admin/services/${id}/users/${userId}/navidrome-account`, {});
   playing = (b: { title: string; artist?: string; album?: string; source?: string } | { stopped: true }) => this.call('POST', '/api/me/playing', b);
   listening = () => this.call<{ listening: HubListening[] }>('GET', '/api/admin/listening');
+  // this person's own Wavelength playlists and play history (lib/librarySync.ts)
+  myPlaylists = () => this.call<{ playlists: HubPlaylist[] }>('GET', '/api/me/playlists');
+  putMyPlaylists = (playlists: HubPlaylist[]) => this.call<{ playlists: HubPlaylist[] }>('PUT', '/api/me/playlists', { playlists });
+  myHistory = () => this.call<{ history: { playedAt: number; track: Track }[] }>('GET', '/api/me/history');
+  addMyHistory = (plays: { playedAt: number; track: Track }[]) => this.call('POST', '/api/me/history', { plays });
   removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);
   allRequests = (status?: string) => this.call<{ requests: HubRequest[] }>('GET', `/api/admin/requests${status ? `?status=${status}` : ''}`);
   approveRequest = (id: number, bitrate?: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/approve`, { bitrate });

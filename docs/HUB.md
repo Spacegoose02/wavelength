@@ -237,6 +237,20 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
   removes everything that came from the Hub. ARLs and share logins typed into a device before are wiped
   from it once the Hub runs that downloader (and for anyone signed in without Autodownload).
 
+## Your playlists and history
+
+Wavelength's own playlists (Playlists in the sidebar) and its play history belong to the person, not the
+device. They're kept on the Hub per profile (`hub/src/routes/mine.ts`, migration 10) and follow the person
+to every device they sign in on (`src/lib/librarySync.ts`). On a shared device each profile keeps its own
+copy, so whoever signs in sees only theirs. Playlists sync whole and the newest change to each one wins; a
+deleted playlist is kept as a tombstone so the other devices drop it too. The Hub keeps the newest 1000
+plays per person. Navidrome stream and cover links carry a device's login, so they're left out and each
+device rebuilds them; tracks from servers added by hand on one device only play where that server is set up.
+The first time a device signs in after this update, the playlists already on it become that person's.
+
+Navidrome's own playlists, favorites and play counts are separate: they're per person once everyone has
+their own Navidrome account (Server logins above).
+
 ## Cover art
 
 Admins can change the picture of any album or artist for the whole household. The picture is kept on the
@@ -297,6 +311,8 @@ with a 4xx status.
 | `POST /api/me/sso-link` | signed in, SSO on | `{ url, expiresIn }`: one-time link to attach a tinyauth identity |
 | `DELETE /api/me/sso` | signed in, with a Hub password | unlink single sign-on |
 | `GET /api/me/prefs` | signed in | `{ prefs: { key: { value, updatedAt } } }` |
+| `GET /api/me/playlists`, `PUT …` | signed in | your own Wavelength playlists (`{ playlists: [{ id, name, tracks, createdAt, updatedAt, deleted? }] }`); a PUT keeps each one only if it's newer and answers with them all |
+| `GET /api/me/history`, `POST …` | signed in | your play history, newest first (`?limit=`, up to 1000) / add plays `{ plays: [{ playedAt, track }] }` |
 | `PUT /api/me/prefs` | signed in | `{ changes: { key: { value, updatedAt } } }` → `{ applied, stale, prefs }`. Newest `updatedAt` wins per key. |
 | `GET/POST /api/admin/users` | `users.manage` | list / create `{ username, role, password?, ssoSubject?, displayName?, autodownload? }` |
 | `PATCH/DELETE /api/admin/users/:id` | `users.manage` | change `{ displayName, role, password, ssoSubject, autodownload, disabled }` / delete |

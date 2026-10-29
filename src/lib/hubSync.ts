@@ -2,6 +2,7 @@ import { HubError, type HubPrefs } from '../sources/hub';
 import { hubClient, STAMPS_KEY, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { applyHubServices, loadHubServices } from './hubServices';
+import { startLibrarySync, syncLibrary } from './librarySync';
 
 /**
  * Sync settings to the signed-in Hub profile so they follow the person to every device.
@@ -9,7 +10,7 @@ import { applyHubServices, loadHubServices } from './hubServices';
  * Each setting is its own key, last-writer-wins on the time it was changed, so changing the skin on the
  * TV and the EQ on the phone never overwrite each other. Changes made offline are kept (with their
  * timestamps) and sent when the Hub is reachable again. Server logins come from the Hub separately
- * (hubServices.ts); Navidrome logins and anything device-specific stay on the device.
+ * (hubServices.ts), and playlists and play history from librarySync.ts.
  */
 const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'raccoon', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'versions'] as const;
 type SyncedKey = (typeof SYNCED)[number];
@@ -94,7 +95,7 @@ export function syncNow(): Promise<void> {
   if (busy) return busy;
   busy = (async () => {
     try {
-      await Promise.all([pull(), loadHubServices()]);
+      await Promise.all([pull(), loadHubServices(), syncLibrary()]);
     } catch (e) {
       if (e instanceof HubError) {
         if (e.status === 401) await useHub.getState().refresh();
@@ -113,6 +114,8 @@ let started = false;
 export function startHubSync() {
   if (started) return;
   started = true;
+  // before the sign-in sync below, so a new profile's playlists are in place first
+  startLibrarySync();
 
   useSettings.subscribe((state, prev) => {
     if (applying || !useHub.getState().token) return;
