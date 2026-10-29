@@ -3,6 +3,7 @@ import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import type { Db } from '../db.ts';
 import { clientIp, HttpError, need, signedIn, str, type Auth } from '../http.ts';
+import { deemixJobIds } from '../library.ts';
 import { hubDeemix, hubYtSettings, isDeezerLink } from './proxy.ts';
 
 /**
@@ -31,13 +32,17 @@ export interface MusicRequest {
   decidedBy: string | null;
   createdAt: number;
   decidedAt: number | null;
+  /** The download finished. */
+  downloadedAt: number | null;
+  /** In the library: Navidrome scanned it in ("your song is ready"). */
+  readyAt: number | null;
   seen: boolean;
 }
 
 interface Row {
   id: number; user_id: number; username: string; display_name: string; link: string; kind: string; title: string; artist: string;
   cover: string | null; note: string | null; status: RequestStatus; reason: string | null; via: string | null; decider: string | null;
-  created_at: number; decided_at: number | null; seen: number;
+  created_at: number; decided_at: number | null; downloaded_at: number | null; ready_at: number | null; seen: number;
 }
 
 const SELECT = `SELECT r.*, u.username, u.display_name, d.display_name AS decider
@@ -46,7 +51,7 @@ const SELECT = `SELECT r.*, u.username, u.display_name, d.display_name AS decide
 const toRequest = (r: Row): MusicRequest => ({
   id: r.id, userId: r.user_id, username: r.username, displayName: r.display_name, link: r.link, kind: r.kind,
   title: r.title, artist: r.artist, cover: r.cover, note: r.note, status: r.status, reason: r.reason, via: r.via,
-  decidedBy: r.decider, createdAt: r.created_at, decidedAt: r.decided_at, seen: !!r.seen,
+  decidedBy: r.decider, createdAt: r.created_at, decidedAt: r.decided_at, downloadedAt: r.downloaded_at, readyAt: r.ready_at, seen: !!r.seen,
 });
 
 const getRequest = (db: Db, id: number) => {
@@ -56,32 +61,37 @@ const getRequest = (db: Db, id: number) => {
 
 const KINDS = ['track', 'album', 'playlist', 'artist', 'video'];
 
-export function requestRoutes(app: FastifyInstance, { db, config, ytdlp }: Ctx) {
+export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library }: Ctx) {
   const key = config.secretKey;
 
-  /** Hand an approved request to deemix or yt-dlp. Returns how, or throws with what went wrong. */
-  async function download(r: MusicRequest, bitrate?: number): Promise<string> {
+  /**
+   * Hand an approved request to deemix or yt-dlp. Returns how, and which download to follow (library.ts),
+   * or throws with what went wrong.
+   */
+  async function download(r: MusicRequest, bitrate?: number): Promise<{ via: string; job: string | null }> {
+    library.activity();
     if (isDeezerLink(r.link)) {
       const { s, client } = hubDeemix(db, key);
-      await client.addToQueue(r.link, bitrate ?? (Number(s.config.bitrate) || 9));
-      return 'deemix';
+      const answer = await client.addToQueue(r.link, bitrate ?? (Number(s.config.bitrate) || 9));
+      const ids = deemixJobIds(answer);
+      return { via: 'deemix', job: ids.length ? JSON.stringify(ids) : null };
     }
     // the job shows in the requester's own yt-dlp list
-    ytdlp.start({ id: r.userId, username: r.username }, { url: r.link, title: r.title, channel: r.artist }, hubYtSettings(db, key));
-    return 'yt-dlp';
+    const job = ytdlp.start({ id: r.userId, username: r.username }, { url: r.link, title: r.title, channel: r.artist }, hubYtSettings(db, key));
+    return { via: 'yt-dlp', job: `yt:${job.jobId}` };
   }
 
   /** Approve: download it, then record how it went. A failed download is kept as 'failed' with the reason. */
   async function approve(r: MusicRequest, by: Auth['user'], ip: string, bitrate?: number): Promise<MusicRequest> {
-    let status: RequestStatus = 'approved', via: string | null = null, reason: string | null = null;
+    let status: RequestStatus = 'approved', via: string | null = null, job: string | null = null, reason: string | null = null;
     try {
-      via = await download(r, bitrate);
+      ({ via, job } = await download(r, bitrate));
     } catch (e) {
       status = 'failed';
       reason = (e as Error).message.slice(0, 300);
     }
-    db.prepare('UPDATE requests SET status = ?, via = ?, reason = ?, decided_by = ?, decided_at = ?, seen = ? WHERE id = ?')
-      .run(status, via, reason, by.id, Date.now(), by.id === r.userId ? 1 : 0, r.id);
+    db.prepare('UPDATE requests SET status = ?, via = ?, job = ?, downloaded_at = NULL, ready_at = NULL, reason = ?, decided_by = ?, decided_at = ?, seen = ? WHERE id = ?')
+      .run(status, via, job, reason, by.id, Date.now(), by.id === r.userId ? 1 : 0, r.id);
     audit(db, { actorId: by.id, action: status === 'approved' ? 'request.approved' : 'request.failed', target: `${r.artist} – ${r.title}`, detail: { for: r.username, via, reason }, ip });
     return getRequest(db, r.id)!;
   }

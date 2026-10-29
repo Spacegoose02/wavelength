@@ -355,14 +355,17 @@ Everything else in the users/admin column depends on this.
 Exit criteria: two people sign in on different devices, each keeps their own settings, and a member's
 token gets `403` from every admin route.
 
-### Phase 2 — Keys and admin-only enforcement · ~2–3 weeks · **in progress**
+### Phase 2 — Keys and admin-only enforcement · ~2–3 weeks · **done**
 
 Done: the keys vault ([HUB.md → Server logins](HUB.md#server-logins)): Plex, Audiobookshelf, SUB/WAVE,
 deemix and yt-dlp logins are kept on the Hub, encrypted, and handed to each device by role, Access and
 Autodownload, with per-person Plex/ABS logins. SUB/WAVE admin, deemix and yt-dlp now run through the Hub
 (`hub/src/routes/proxy.ts`), so no device holds the SUB/WAVE admin login, the ARL or a share login, and yt-dlp
-downloads straight into `/music` from any device (part of Phase 3's server-side downloads). Still open:
-Navidrome user provisioning, active users view.
+downloads straight into `/music` from any device (part of Phase 3's server-side downloads). **Own Navidrome
+profiles** (`hub/src/routes/navidrome.ts`): a `navidrome` server on the Hub keeps the admin login (Hub-only)
+and each person's own login; **Make account** creates the Navidrome user through Navidrome's API, and
+devices get only their own login. **Listening now** (`hub/src/routes/listening.ts`, `src/lib/listening.ts`):
+devices report what they play; admins see it in Settings → Server. Phase 2 is done.
 
 Keys vault, link keys to profiles, Navidrome user provisioning, ABS account assignment, Plex keys,
 SUB/WAVE admin proxy (admin controls for admins only), active users view. **Cards closed:** keys under
@@ -376,8 +379,10 @@ without Autodownload see **Request** instead of Get in Downloads, Discover and R
 link yt-dlp understands; admins get **Inbox → To approve** with Approve (the Hub sends Deezer links to
 deemix and everything else to yt-dlp), Already have, Reject with a reason, and Retry for a failed download.
 People with Autodownload skip the queue. **Sharing** between people and the **Inbox** (§6.8,
-`hub/src/routes/shares.ts`). Still open: slskd source, a Navidrome rescan when an approved download
-finishes, "your song is ready" with a play button, push notifications.
+`hub/src/routes/shares.ts`). **From download to library** (`hub/src/library.ts`): the Hub follows each
+approved request's deemix or yt-dlp download, asks Navidrome to scan (with an admin login kept on the Hub)
+once downloads finish, and marks the request ready, so the requester sees **Ready** with **Play** in the
+Inbox. Still open: slskd source, push notifications.
 
 Request button + approval queue, server-side deemix/yt-dlp runner, slskd source, notifications,
 auto-download settings, sharing. **Cards closed:** request music, per-user autodownload, sharing (connect to

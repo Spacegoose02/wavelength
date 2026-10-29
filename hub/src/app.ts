@@ -7,7 +7,9 @@ import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { artworkRoutes } from './routes/artwork.ts';
 import { authRoutes } from './routes/auth.ts';
+import { listeningRoutes } from './routes/listening.ts';
 import { meRoutes } from './routes/me.ts';
+import { navidromeRoutes } from './routes/navidrome.ts';
 import { flagRoutes } from './routes/flags.ts';
 import { kidRoutes } from './routes/kids.ts';
 import { proxyRoutes } from './routes/proxy.ts';
@@ -18,12 +20,14 @@ import { serviceRoutes } from './routes/services.ts';
 import { shareRoutes } from './routes/shares.ts';
 import { webFetchRoutes } from './routes/webfetch.ts';
 import { getUser } from './users.ts';
+import { Library } from './library.ts';
 import { webRoutes } from './web.ts';
 import { YtdlpRunner } from './ytdlp.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
     hubRoutes: { method: string; url: string }[];
+    hubLibrary: Library;
   }
 }
 
@@ -33,9 +37,10 @@ export interface Ctx {
   config: Config;
   limits: { login: RateLimiter; pairing: RateLimiter; poll: RateLimiter };
   ytdlp: YtdlpRunner;
+  library: Library;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -46,7 +51,11 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
       poll: new RateLimiter(120, 60_000), // per IP
     },
     ytdlp: new YtdlpRunner(config.ytdlpBin, config.musicDir),
-  };
+  } as Omit<Ctx, 'library'> as Ctx;
+  ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
+  if (opts.watchLibrary ?? true) ctx.library.start();
+  app.addHook('onClose', async () => ctx.library.stop());
+  app.decorate('hubLibrary', ctx.library);
 
   // HTML forms post url-encoded bodies
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string', bodyLimit: 16 * 1024 }, (_req, body, done) => {
@@ -99,6 +108,8 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
   kidRoutes(app, ctx);
   ratingRoutes(app, ctx);
   artworkRoutes(app, ctx);
+  listeningRoutes(app, ctx);
+  navidromeRoutes(app, ctx);
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
   webRoutes(app, config.webDir);

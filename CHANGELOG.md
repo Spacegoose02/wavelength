@@ -6,8 +6,19 @@
   picture, or paste an image link. It's kept on the Hub and shows on every device and in the browser, in song
   lists, the player and Now Playing too. **Use the server's picture** undoes it. Your music files aren't
   changed.
-- **Hub:** migration 8 (`artwork`), the `/api/artwork`, `/api/art/:file` and `/api/admin/artwork` routes, and
+- **Hub:** migration 9 (`artwork`), the `/api/artwork`, `/api/art/:file` and `/api/admin/artwork` routes, and
   `WAVELENGTH_FANART_KEY`. Pictures are stored in the data folder under `artwork/`.
+- **Everyone gets their own Navidrome account.** Admins add Navidrome and its admin login under **Settings →
+  Server → Navidrome accounts**, then **Make account** (or **Use their login**) per person. Their devices get
+  their own Navidrome login when they sign in; the admin login never leaves the Hub.
+- **Listening now** in Settings → Server: who's playing what, on which device.
+- **Hub:** `navidrome` server kind, `/api/admin/services/:id/users/:userId/navidrome-account`,
+  `/api/me/playing`, `/api/admin/listening`.
+- **"Your song is ready."** Approved requests now go *Downloading* → *Adding to your library* → *Ready*, and
+  a ready one lights up the Inbox with a **Play** button that finds it in your library.
+- **Navidrome rescans after downloads.** Add a Navidrome admin login under **Settings → Server → Library
+  updates** and the Hub starts a scan as soon as downloads finish (also **Scan now**).
+- **Hub:** migration 8 (request download tracking), `/api/admin/library` routes.
 - **Wavelength in a browser.** Open your Hub's address in any browser to use Wavelength there. It goes
   straight to signing in to that Hub. Deezer, the charts and Release Radar work through the Hub; offline
   downloads still need the app. The Hub's Docker image now includes the web build (build it from the repo

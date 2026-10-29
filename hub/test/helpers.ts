@@ -21,7 +21,7 @@ export function makeHub(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {
     sso: { enabled: false, trustedProxies: [], proxySecret: '', autoCreate: false, admins: [], adminGroup: '', ...sso },
     ...extra,
   };
-  return { app: buildApp(db, config), db, config };
+  return { app: buildApp(db, config, { watchLibrary: false }), db, config };
 }
 
 export async function json(app: FastifyInstance, method: string, url: string, opts: { token?: string; body?: unknown; headers?: Record<string, string> } = {}) {

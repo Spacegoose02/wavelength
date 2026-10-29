@@ -72,8 +72,8 @@ export interface HubAuditEntry {
   ip: string | null;
 }
 
-/** A server login kept by the Hub (hub/src/services.ts). Navidrome stays a per-person login on each device. */
-export type HubServiceKind = 'plex' | 'audiobookshelf' | 'subwave' | 'deemix' | 'ytdlp';
+/** A server login kept by the Hub (hub/src/services.ts). Navidrome comes with this person's own login. */
+export type HubServiceKind = 'plex' | 'audiobookshelf' | 'subwave' | 'navidrome' | 'deemix' | 'ytdlp';
 export type HubAccess = 'everyone' | 'admins' | 'chosen';
 type Config = Record<string, string | number>;
 
@@ -120,6 +120,10 @@ export interface HubRequest {
   decidedBy: string | null;
   createdAt: number;
   decidedAt: number | null;
+  /** The download finished. */
+  downloadedAt: number | null;
+  /** In the library (Navidrome scanned it in): "your song is ready". */
+  readyAt: number | null;
   seen: boolean;
 }
 export type HubRequestInput = { link: string; kind: string; title: string; artist: string; cover?: string; note?: string };
@@ -226,6 +230,30 @@ export interface HubServerStatus {
   counts: { users: number; admins: number; kids: number; devices: number; activeToday: number; pendingRequests: number; services: number; flags: number; ratedAlbums: number };
 }
 
+/** Someone playing something right now (GET /api/admin/listening). */
+export interface HubListening {
+  userId: number;
+  displayName: string;
+  role: string;
+  deviceId: number;
+  deviceName: string;
+  platform: string;
+  title: string;
+  artist: string;
+  album: string;
+  source: string;
+  at: number;
+}
+
+/** Rescans after downloads (GET /api/admin/library). */
+export interface HubLibraryStatus {
+  navidrome: { url: string; username: string } | null;
+  scanning: boolean;
+  lastScanAt: number | null;
+  lastError: string | null;
+  scanQueued: boolean;
+}
+
 /** A kid's bedtime ('HH:MM', device time) and daily listening limit; null = none. */
 export interface KidRules {
   bedtimeFrom: string | null;
@@ -330,6 +358,10 @@ export class HubClient {
 
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
   server = () => this.call<HubServerStatus>('GET', '/api/admin/server');
+  library = () => this.call<HubLibraryStatus>('GET', '/api/admin/library');
+  setScanLogin = (b: { url: string; username: string; password?: string }) => this.call<HubLibraryStatus>('PUT', '/api/admin/library/navidrome', b);
+  removeScanLogin = () => this.call<HubLibraryStatus>('DELETE', '/api/admin/library/navidrome');
+  scanLibrary = () => this.call<HubLibraryStatus>('POST', '/api/admin/library/scan', {});
   /** A copy of the Hub's database, as a file to save. */
   async backup(): Promise<{ name: string; blob: Blob }> {
     const res = await http(`${this.url}/api/admin/backup`, { headers: { authorization: `Bearer ${this.token}` } });
@@ -358,6 +390,10 @@ export class HubClient {
   deleteService = (id: number) => this.call('DELETE', `/api/admin/services/${id}`);
   setServiceUser = (id: number, userId: number, secrets?: Record<string, string | null>) =>
     this.call<{ service: HubAdminService }>('PUT', `/api/admin/services/${id}/users/${userId}`, { secrets });
+  /** Make a Navidrome account for someone with the admin login the Hub keeps, saved as their own login. */
+  createNavidromeAccount = (id: number, userId: number) => this.call<{ service: HubAdminService }>('POST', `/api/admin/services/${id}/users/${userId}/navidrome-account`, {});
+  playing = (b: { title: string; artist?: string; album?: string; source?: string } | { stopped: true }) => this.call('POST', '/api/me/playing', b);
+  listening = () => this.call<{ listening: HubListening[] }>('GET', '/api/admin/listening');
   removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);
   allRequests = (status?: string) => this.call<{ requests: HubRequest[] }>('GET', `/api/admin/requests${status ? `?status=${status}` : ''}`);
   approveRequest = (id: number, bitrate?: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/approve`, { bitrate });

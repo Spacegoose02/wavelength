@@ -110,7 +110,7 @@ test('one deemix per Hub, bad input refused', async () => {
   const { app, tokens } = await withServices();
   const again = await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body: { kind: 'deemix', url: 'http://other:6595' } });
   assert.equal(again.status, 409);
-  for (const body of [{ kind: 'navidrome', url: 'http://nd:4533' }, { kind: 'plex', url: 'ftp://x' }, { kind: 'plex', url: 'http://p', secrets: { arl: 'x' } }, { kind: 'plex', url: 'http://p', access: 'nobody' }]) {
+  for (const body of [{ kind: 'spotify', url: 'http://sp' }, { kind: 'plex', url: 'ftp://x' }, { kind: 'plex', url: 'http://p', secrets: { arl: 'x' } }, { kind: 'plex', url: 'http://p', access: 'nobody' }]) {
     assert.equal((await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body })).status, 400, JSON.stringify(body));
   }
 });

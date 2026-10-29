@@ -178,7 +178,7 @@ function SourcesTab() {
       <section>
         <h2>Sources</h2>
         <p className="muted small">When the same album is on several servers, the source listed first wins. Use the arrows to reorder.</p>
-        {signedIn && <p className="muted small">Plex, Audiobookshelf and SUB/WAVE logins can be kept on your Hub, so signed-in devices get them without typing them in. Navidrome logins stay on each device.{canKeys ? ' Use Move to Hub on a server that is only on this device.' : ''}</p>}
+        {signedIn && <p className="muted small">Plex, Audiobookshelf and SUB/WAVE logins can be kept on your Hub, so signed-in devices get them without typing them in. Admins give people their own Navidrome login under Settings → Server.{canKeys ? ' Use Move to Hub on a server that is only on this device.' : ''}</p>}
         {err && <div className="errors">{err}</div>}
         {sources.map((s, i) => (
           <div key={s.id}>
