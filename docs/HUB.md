@@ -502,6 +502,8 @@ A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`
   pairing on your behalf.
 - Every sign-in, failed sign-in and admin change is written to the audit log (never passwords).
 - Only allow a pairing you just started yourself: the confirmation page names the device for that reason.
+- In the app, the device token and server logins are kept in the OS keychain (Windows Credential Manager,
+  Android Keystore), not in the app's own storage. A Wavelength opened in a browser keeps them in the browser.
 
 ## Backups
 

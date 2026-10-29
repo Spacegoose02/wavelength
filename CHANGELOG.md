@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Logins in the OS keychain:** on Windows and Android, your Hub sign-in, server passwords and tokens, the
+  deemix ARL and the share password are kept in Windows Credential Manager or the Android Keystore instead of
+  the app's own storage. Existing ones move there on first start; nothing to do.
 - **Edit artist** (Hub admins): rename an artist, or merge two spellings, in every song on all their albums,
   and set a genre for all of them. Every change is listed before saving, and it can be undone.
 - **Tag suggestions:** the artist, album artist and genre boxes in the tag editors suggest names already in
