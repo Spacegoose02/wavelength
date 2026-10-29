@@ -6,6 +6,7 @@ import { norm, sourceFor } from '../sources/registry';
 import { useCatalog } from '../store/catalog';
 import type { Track } from '../sources/types';
 import { hubClient, useHub } from '../store/hub';
+import { useHubRuns } from '../lib/hubServices';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { enabledSources } from '../store/settings';
@@ -247,6 +248,7 @@ function Approve() {
   const [filter, setFilter] = useState<'pending' | ''>('pending');
   const { data, error, reload } = useLoad(async () => (await hubClient()!.allRequests(filter || undefined)).requests, [filter]);
   const [busy, setBusy] = useState<number>();
+  const slskd = useHubRuns('slskd');
 
   const act = async (r: HubRequest, fn: () => Promise<unknown>) => {
     setBusy(r.id);
@@ -277,6 +279,9 @@ function Approve() {
                   <button className="btn small primary" disabled={busy === r.id} onClick={() => act(r, () => hubClient()!.approveRequest(r.id))}>
                     {busy === r.id ? '…' : r.status === 'failed' ? 'Retry' : 'Approve'}
                   </button>
+                )}
+                {(r.status === 'pending' || r.status === 'failed') && slskd && (
+                  <button className="btn small" title="Pick a folder on Soulseek for this request" onClick={() => useUi.getState().go({ view: 'downloads', soulseek: { q: `${r.artist} ${r.title}`.trim(), requestId: r.id } })}>Soulseek…</button>
                 )}
                 {r.status === 'pending' && <>
                   <button className="btn small" disabled={busy === r.id} onClick={() => act(r, () => hubClient()!.haveRequest(r.id))}>Already have</button>

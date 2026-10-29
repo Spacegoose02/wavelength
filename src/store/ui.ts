@@ -28,7 +28,7 @@ export type Route =
   | { view: 'library' }
   | { view: 'offline' }
   | { view: 'offlineCollection'; id: string }
-  | { view: 'downloads' }
+  | { view: 'downloads'; soulseek?: { q: string; requestId?: number } }
   | { view: 'inbox' }
   | { view: 'settings'; tab?: SettingsTab };
 

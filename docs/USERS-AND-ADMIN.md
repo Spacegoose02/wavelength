@@ -384,11 +384,12 @@ People with Autodownload skip the queue. **Sharing** between people and the **In
 `hub/src/routes/shares.ts`). **From download to library** (`hub/src/library.ts`): the Hub follows each
 approved request's deemix or yt-dlp download, asks Navidrome to scan (with an admin login kept on the Hub)
 once downloads finish, and marks the request ready, so the requester sees **Ready** with **Play** in the
-Inbox. Still open: slskd source, push notifications.
+Inbox. **Soulseek** through slskd (`hub/src/slskd.ts`): a Soulseek tab in Downloads and **Soulseek…** on
+requests in the Inbox; the API key stays on the Hub. Still open: push notifications.
 
 Request button + approval queue, server-side deemix/yt-dlp runner, slskd source, notifications,
-auto-download settings, sharing. **Cards closed:** request music, per-user autodownload, sharing (connect to
-slskd still open).
+auto-download settings, sharing. **Cards closed:** request music, per-user autodownload, sharing, connect to
+slskd.
 
 ### Phase 4 — Kids and content rating · ~2–3 weeks · **done**
 

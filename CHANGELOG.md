@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Soulseek** (with a Hub and slskd): a **Soulseek** tab in Downloads searches the network and shows results
+  by folder, best first, with format, size and whether there's a wait; **Download** gets the album. Admins can
+  fill a request from Soulseek with **Soulseek…** in the Inbox. Set up under **Settings → Downloads**.
+- **Hub:** service kind `slskd`, `/api/slskd/*`, and `slskd` on request approvals.
 - **Logins in the OS keychain:** on Windows and Android, your Hub sign-in, server passwords and tokens, the
   deemix ARL and the share password are kept in Windows Credential Manager or the Android Keystore instead of
   the app's own storage. Existing ones move there on first start; nothing to do.

@@ -4,6 +4,7 @@ import { seal, unseal } from './crypto.ts';
 import { HttpError } from './http.ts';
 import { hubDeemix } from './routes/proxy.ts';
 import { serviceForHub, serviceIdOfKind } from './services.ts';
+import { hubSlskd, transferDone, transferOk } from './slskd.ts';
 import type { YtdlpRunner, YtJob } from './ytdlp.ts';
 
 /**
@@ -114,6 +115,9 @@ export class Library {
   private lastAttempt = 0;
   /** deemix queue items already seen finished; undefined until the first look (so old ones don't count). */
   private deemixDone?: Set<string>;
+  /** The same for slskd transfers. */
+  private slskdDone?: Set<string>;
+  private lastSlskd = 0;
 
   constructor(db: Db, key: Buffer, ytdlp: YtdlpRunner) {
     this.db = db;
@@ -198,8 +202,52 @@ export class Library {
     else this.db.prepare("UPDATE requests SET status = 'failed', reason = ?, seen = 0 WHERE id = ?").run(`The download failed${why ? `: ${why}` : ''}`.slice(0, 300), id);
   }
 
-  /** Look at the deemix queue: finished request downloads, and any new finished download (for a scan). */
+  /** Look at the download queues for finished downloads. */
   async tick() {
+    await this.deemixTick();
+    await this.slskdTick();
+  }
+
+  /** Someone started a Soulseek download: follow slskd's transfers for a while. */
+  slskdActivity() {
+    this.lastSlskd = Date.now();
+    // a download that finishes before the next look still counts (at worst one scan too many)
+    this.slskdDone ??= new Set();
+  }
+
+  /** slskd: requests whose files all arrived (or failed), and any new finished download (for a scan). */
+  async slskdTick() {
+    const watched = this.db
+      .prepare("SELECT id, via, job, link, decided_at FROM requests WHERE status = 'approved' AND via = 'slskd' AND downloaded_at IS NULL AND decided_at > ?")
+      .all(Date.now() - FOLLOW_MS) as unknown as Watched[];
+    if (!watched.length && Date.now() - this.lastSlskd > ACTIVE_MS) return;
+    let all;
+    try {
+      all = await hubSlskd(this.db, this.key).client.transfers();
+    } catch {
+      return;
+    }
+    for (const r of watched) {
+      let job: { username?: string; files?: string[] } = {};
+      try {
+        job = JSON.parse(r.job ?? '{}');
+      } catch {
+        /* not JSON */
+      }
+      const mine = all.filter((t) => t.username === job.username && job.files?.includes(t.filename));
+      if (!mine.length || !mine.every((t) => transferDone(t.state))) continue;
+      const ok = mine.filter((t) => transferOk(t.state)).length;
+      if (ok) this.finish(r.id, true);
+      else this.finish(r.id, false, `Soulseek: ${mine[0].state.replace('Completed, ', '').toLowerCase()}`);
+    }
+    const finished = new Set(all.filter((t) => transferOk(t.state)).map((t) => t.id));
+    const isNew = this.slskdDone ? [...finished].some((u) => !this.slskdDone!.has(u)) : false;
+    this.slskdDone = finished;
+    if (isNew && !this.scanTimer && !this.scanning) this.downloaded();
+  }
+
+  /** Look at the deemix queue: finished request downloads, and any new finished download (for a scan). */
+  async deemixTick() {
     const watched = this.db
       .prepare("SELECT id, via, job, link, decided_at FROM requests WHERE status = 'approved' AND via = 'deemix' AND downloaded_at IS NULL AND decided_at > ?")
       .all(Date.now() - FOLLOW_MS) as unknown as Watched[];

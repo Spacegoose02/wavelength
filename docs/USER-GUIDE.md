@@ -601,8 +601,20 @@ with their note:
   the music folder. If the download can't start it shows *Download failed* with the reason and **Retry**.
 - **Already have**: nothing to download; they're told it's in the library.
 - **Reject**: asks for a reason, which they see.
+- **Soulseek…** (when your Hub has slskd): searches Soulseek for it; **Use this** on a folder downloads that
+  and approves the request. It shows *Ready* once the files are in and Navidrome has scanned.
 
 Admins and people with Autodownload skip the queue: their **Get** downloads straight away.
+
+### Soulseek
+
+With slskd added to your Hub (**Settings → Downloads → Soulseek**, admins: slskd's address and an API key),
+**Downloads** gets a **Soulseek** tab for admins and people with Autodownload. Search for an artist and album;
+results come in over a few seconds, grouped by folder (usually one album each), with the best matches from
+people with a free slot first. Each shows how many songs, the format (FLAC or MP3 and its bitrate), the size
+and whether you'd have to wait. Tap a folder to see its songs, **Download** to get it. **In slskd** below shows
+how downloads are going. slskd saves into its own downloads folder, so point that at a folder inside your
+music library (e.g. `/music/slskd`) and Navidrome picks the music up.
 
 ### Kid profiles
 

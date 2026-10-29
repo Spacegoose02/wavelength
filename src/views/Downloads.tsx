@@ -14,13 +14,15 @@ import { useCan } from '../store/hub';
 import { Spinner, fmtTime } from '../components/common';
 import { IconDownload, IconRefresh } from '../components/Icons';
 import { isAndroid } from '../lib/platform';
+import { SoulseekTab } from './SoulseekTab';
 import { BrowseBar, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, type Browse, type SendStatus } from './DeezerBrowse';
 
-type Tab = 'deezer' | 'ytdlp';
+type Tab = 'deezer' | 'ytdlp' | 'slskd';
 
-export function Downloads() {
+export function Downloads({ soulseek }: { soulseek?: { q: string; requestId?: number } } = {}) {
   const sources = useSettings((s) => s.sources);
-  const [tab, setTab] = useState<Tab>('deezer');
+  const [tab, setTab] = useState<Tab>(soulseek ? 'slskd' : 'deezer');
+  const hubSl = useHubRuns('slskd');
   const [q, setQ] = useState('');
   // signed in to a Hub: only admins and people with Autodownload get the download logins
   const canDownload = useCan('downloads.run');
@@ -49,11 +51,14 @@ export function Downloads() {
       <div className="tabs">
         <button className={tab === 'deezer' ? 'on' : ''} onClick={() => setTab('deezer')}>Deezer <small>via deemix</small></button>
         {ytHere && <button className={tab === 'ytdlp' ? 'on' : ''} onClick={() => setTab('ytdlp')}>YouTube &amp; more <small>via yt-dlp</small></button>}
+        {hubSl && <button className={tab === 'slskd' ? 'on' : ''} onClick={() => setTab('slskd')}>Soulseek <small>via slskd</small></button>}
       </div>
+      {tab === 'slskd' ? <SoulseekTab initial={soulseek?.q} requestId={soulseek?.requestId} /> : <>
       <input className="search-big" autoFocus
         placeholder={tab === 'deezer' ? 'Search Deezer to download into your library…' : 'Search YouTube, or paste a YouTube / SoundCloud / Bandcamp URL…'}
         value={q} onChange={(e) => setQ(e.target.value)} />
       {tab === 'deezer' ? <DeezerTab q={q} onFallback={ytHere ? () => setTab('ytdlp') : undefined} /> : <YtTab q={q} />}
+      </>}
       </>}
     </div>
   );

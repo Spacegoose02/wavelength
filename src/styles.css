@@ -1664,3 +1664,8 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .device-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
 .device-now { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .device-row .vol { width: 90px; }
+
+/* Downloads → Soulseek (views/SoulseekTab.tsx) */
+.slskd-folder .track-main { cursor: pointer; }
+.slskd-files { margin: 0 0 8px 18px; padding: 0 12px 8px 22px; font-size: 13px; columns: 2 260px; }
+.slskd-files li { break-inside: avoid; padding: 1px 0; }
