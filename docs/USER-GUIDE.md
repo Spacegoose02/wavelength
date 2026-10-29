@@ -428,6 +428,13 @@ busiest day and longest streak, and when you listen most. **Play your top songs*
 from every device you're signed in on, not radio, audiobooks or podcasts, and starts from the history your
 Hub already has.
 
+## Containers (Hub admins)
+
+If your Hub is set up for it, **Settings → Server → Containers** lists the household's other services, like
+Navidrome and slskd, and whether each is running. **Start**, **Stop** and **Restart** do what they say, and
+**Logs** shows what the container printed lately, handy when something stops working. Only the containers the
+Hub was told about show up. Setting it up is in `docs/HUB.md`, "Docker control".
+
 ## Settings tabs
 
 Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** and **Server** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and

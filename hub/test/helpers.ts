@@ -19,6 +19,8 @@ export function makeHub(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {
     ytdlpBin: 'yt-dlp',
     webDir: '',
     fanartKey: '',
+    dockerUrl: '',
+    dockerContainers: [],
     sso: { enabled: false, trustedProxies: [], proxySecret: '', autoCreate: false, admins: [], adminGroup: '', ...sso },
     ...extra,
   };

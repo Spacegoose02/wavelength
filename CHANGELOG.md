@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Containers** (Hub admins, optional): **Settings → Server → Containers** starts, stops and restarts the
+  household's other services and shows their logs, through a Docker socket proxy and only for the containers
+  you name.
+- **Hub:** `WAVELENGTH_DOCKER_URL`, `WAVELENGTH_DOCKER_CONTAINERS`, `/api/admin/docker/*`.
 - **Listen together** (with a Hub): start a party from the new button by the volume; everyone who joins
   hears the same song at the same moment on their own device. Guests can add songs, and skip and pause if
   the host allows it.

@@ -259,6 +259,15 @@ export interface HubServerStatus {
   counts: { users: number; admins: number; kids: number; devices: number; activeToday: number; pendingRequests: number; services: number; flags: number; ratedAlbums: number };
 }
 
+/** A container admins may control (GET /api/admin/docker). `state` is Docker's, or 'missing'. */
+export interface HubContainer {
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+  created: number | null;
+}
+
 /** Someone playing something right now (GET /api/admin/listening). */
 export interface HubListening {
   userId: number;
@@ -452,6 +461,10 @@ export class HubClient {
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
   server = () => this.call<HubServerStatus>('GET', '/api/admin/server');
   library = () => this.call<HubLibraryStatus>('GET', '/api/admin/library');
+  containers = () => this.call<{ enabled: boolean; containers: HubContainer[] }>('GET', '/api/admin/docker');
+  container = (name: string, action: 'start' | 'stop' | 'restart') =>
+    this.call<{ name: string; state: string; status: string }>('POST', `/api/admin/docker/${encodeURIComponent(name)}/${action}`, {});
+  containerLogs = (name: string, lines = 200) => this.call<{ name: string; logs: string }>('GET', `/api/admin/docker/${encodeURIComponent(name)}/logs?lines=${lines}`);
   setScanLogin = (b: { url: string; username: string; password?: string }) => this.call<HubLibraryStatus>('PUT', '/api/admin/library/navidrome', b);
   removeScanLogin = () => this.call<HubLibraryStatus>('DELETE', '/api/admin/library/navidrome');
   scanLibrary = () => this.call<HubLibraryStatus>('POST', '/api/admin/library/scan', {});

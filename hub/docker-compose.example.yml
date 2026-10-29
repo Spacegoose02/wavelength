@@ -16,3 +16,16 @@ services:
     volumes:
       - ./wavelength-hub:/data
       - /path/to/music:/music # yt-dlp downloads go into a folder inside it
+  # Optional: start, stop and restart other containers from Settings → Server. See docs/HUB.md "Docker control".
+  # Then add to wavelength-hub's environment:
+  #   WAVELENGTH_DOCKER_URL: http://docker-socket-proxy:2375
+  #   WAVELENGTH_DOCKER_CONTAINERS: navidrome
+  # docker-socket-proxy:
+  #   image: tecnativa/docker-socket-proxy:latest
+  #   container_name: docker-socket-proxy
+  #   restart: unless-stopped
+  #   environment:
+  #     CONTAINERS: "1"
+  #     POST: "1"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro

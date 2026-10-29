@@ -16,7 +16,7 @@ function hubAt(dir: string) {
   const db = openDb(join(dir, 'hub.db'));
   const config = {
     version: 'test', port: 0, host: '127.0.0.1', dataDir: dir, publicUrl: 'https://hub.test', secretKey: KEY, musicDir: '', navidromeMusicDir: '/music',
-    ytdlpBin: 'yt-dlp', webDir: '', fanartKey: '', sso: { enabled: false, trustedProxies: [], proxySecret: '', autoCreate: false, admins: [], adminGroup: '' },
+    ytdlpBin: 'yt-dlp', webDir: '', fanartKey: '', dockerUrl: '', dockerContainers: [], sso: { enabled: false, trustedProxies: [], proxySecret: '', autoCreate: false, admins: [], adminGroup: '' },
   } as Config;
   let restarts = 0;
   const app = buildApp(db, config, { watchLibrary: false, restart: () => restarts++ });

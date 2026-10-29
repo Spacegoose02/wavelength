@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { HubError, type HubAdminService, type HubAdminUser, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit } from '../sources/hub';
+import { HubError, type HubAdminService, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit } from '../sources/hub';
 import { hubClient } from '../store/hub';
 
 const gb = (n: number) => (n >= 1e12 ? `${(n / 1e12).toFixed(1)} TB` : n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.max(0, Math.round(n / 1e6))} MB`);
@@ -223,7 +223,88 @@ function LibraryScan() {
   );
 }
 
-/** Settings → Server (Hub admins): how the Hub is doing, and a backup of its database. */
+/**
+ * Containers (hub/src/routes/docker.ts): start, stop or restart the household's services and read their
+ * logs, when the Hub is set up with a Docker socket proxy. Only the containers named in its settings show.
+ */
+function Containers() {
+  const c = hubClient();
+  const [st, setSt] = useState<{ enabled: boolean; containers: HubContainer[] }>();
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState('');
+  const [logs, setLogs] = useState<{ name: string; text: string }>();
+  const load = () => c?.containers().then((r) => { setSt(r); setMsg(''); }).catch((e) => { setSt((x) => x ?? { enabled: true, containers: [] }); setMsg(errText(e)); });
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!st) return null;
+
+  const act = async (name: string, action: 'start' | 'stop' | 'restart') => {
+    if (action !== 'start' && !confirm(`${action === 'stop' ? 'Stop' : 'Restart'} ${name}?`)) return;
+    setBusy(name);
+    setMsg(`${action === 'start' ? 'Starting' : action === 'stop' ? 'Stopping' : 'Restarting'} ${name}…`);
+    try {
+      await c!.container(name, action);
+      setMsg('');
+    } catch (e) {
+      setMsg(errText(e));
+    } finally {
+      setBusy('');
+      load();
+    }
+  };
+  const showLogs = async (name: string) => {
+    if (logs?.name === name) return setLogs(undefined);
+    setLogs({ name, text: 'Loading…' });
+    try {
+      const r = await c!.containerLogs(name);
+      setLogs({ name, text: r.logs.trim() || '(no output)' });
+    } catch (e) {
+      setLogs({ name, text: errText(e) });
+    }
+  };
+
+  return (
+    <section>
+      <h2>Containers</h2>
+      {!st.enabled ? (
+        <p className="muted small">
+          The Hub can start, stop and restart the household's other services (Navidrome, slskd, …) and show their logs. To turn this on,
+          give it a Docker socket proxy and the names of the containers it may touch. See <code>docs/HUB.md</code>, "Docker control".
+        </p>
+      ) : (
+        <>
+          <p className="muted small">Only the containers named in the Hub's settings show here. Everything you do here goes in the activity log.</p>
+          {msg && <p className="small">{msg}</p>}
+          {st.containers.map((k) => (
+            <div key={k.name}>
+              <div className="source-row">
+                <div className="track-main">
+                  <div className="track-title">{k.name} <span className={`small ${k.state === 'running' ? 'muted' : 'kid-blocked'}`}>· {k.state}</span></div>
+                  <div className="track-sub">{k.status}{k.image ? ` · ${k.image}` : ''}</div>
+                </div>
+                {k.state !== 'missing' && (
+                  <div className="row gap">
+                    {k.state === 'running'
+                      ? <>
+                          <button className="btn small" disabled={!!busy} onClick={() => act(k.name, 'restart')}>Restart</button>
+                          <button className="btn small ghost" disabled={!!busy} onClick={() => act(k.name, 'stop')}>Stop</button>
+                        </>
+                      : <button className="btn small primary" disabled={!!busy} onClick={() => act(k.name, 'start')}>Start</button>}
+                    <button className="btn small ghost" onClick={() => showLogs(k.name)}>{logs?.name === k.name ? 'Hide logs' : 'Logs'}</button>
+                  </div>
+                )}
+              </div>
+              {logs?.name === k.name && <pre className="container-logs">{logs.text}</pre>}
+            </div>
+          ))}
+          <div className="row gap" style={{ marginTop: 10 }}><button className="btn small ghost" onClick={load}>Refresh</button></div>
+        </>
+      )}
+    </section>
+  );
+}
+
 /** Tag editor saves (views/TagEditor.tsx), newest first, each with Undo. */
 function TagEdits() {
   const c = hubClient();
@@ -263,6 +344,7 @@ function TagEdits() {
   );
 }
 
+/** Settings → Server (Hub admins): how the Hub is doing, and a backup of its database. */
 export function ServerTab() {
   const [s, setS] = useState<HubServerStatus>();
   const [err, setErr] = useState('');
@@ -357,6 +439,7 @@ export function ServerTab() {
         <div className="row gap" style={{ marginTop: 10 }}><button className="btn small ghost" onClick={load}>Refresh</button></div>
       </section>
       <ListeningNow />
+      <Containers />
       <NavidromeAccounts />
       <LibraryScan />
       <TagEdits />

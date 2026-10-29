@@ -420,7 +420,7 @@ Tag editor with MusicBrainz/Deezer match, undo log; playlist import from
 Spotify/Deezer/YouTube Music/CSV/M3U with "request missing". **Cards closed:** tag editor,
 import playlists.
 
-### Phase 6 — Admin server page, device control and extras · ~2–3 weeks + ongoing · **in progress**
+### Phase 6 — Admin server page, device control and extras · ~2–3 weeks + ongoing · **done**
 
 Done: **Settings → Server** (`hub/src/routes/server.ts`, `src/views/ServerTab.tsx`): version, uptime, disk
 space, music folder writable, yt-dlp version, household counts, and a database backup download. The Hub also
@@ -431,7 +431,9 @@ checks it and restarts to swap it in) are done too, and so is Rewind (`hub/src/r
 `src/views/Rewind.tsx`), and remote control and handoff between a person's own devices
 (`hub/src/routes/remote.ts`, `src/lib/remote.ts`, `src/components/Devices.tsx`; long polling rather than a
 WebSocket, so it works through any proxy), and listen together (`hub/src/routes/together.ts`,
-`src/lib/together.ts`, `src/components/Together.tsx`). Still open: Docker control.
+`src/lib/together.ts`, `src/components/Together.tsx`). Docker control is done as well (`hub/src/routes/docker.ts`,
+Settings → Server → Containers): off by default, through a socket proxy, and only for the containers named in
+`WAVELENGTH_DOCKER_CONTAINERS`.
 
 Server controls page, optional Docker control via socket proxy, remote control/handoff, listen together,
 Rewind, invites, backups. **Cards closed:** admin server page, Docker control.
@@ -476,7 +478,7 @@ Answered by the owner on 2026-10-29.
 | 5 | What "autodownload" means | Users **request** by default; an admin-set per-user **Autodownload** switch lets a user download without approval (§6.3). |
 | 6 | "Mixtape match" | **Dropped.** The tag editor keeps normal MusicBrainz/Deezer matching. |
 | 7 | Kids filtering | **Flags inside the app**: automatic (explicit) plus admin manual flags; no separate Kids library (§6.5). |
-| 8 | Docker socket control | Open. Default stays **off**; revisit in Phase 6. |
+| 8 | Docker socket control | **Done, off by default.** Through a socket proxy, for named containers only: start, stop, restart, logs (docs/HUB.md "Docker control"). |
 
 ## 10. Risks and open questions
 
