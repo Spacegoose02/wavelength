@@ -66,10 +66,11 @@ No web fonts — the app must work offline and stay small.
 
 ## Skins
 
-The brand is the Neon synth default, but the app is skinnable by design (37 skins: Winamp, Plexamp,
+The brand is the Neon synth default, but the app is skinnable by design (52 skins: Winamp, Plexamp,
 Windows 95, MS-DOS, Game Boy Color, C64, Green/Amber CRT, Vaporwave, Synthwave sunset, Arcade, '70s,
 iPod Classic, Aqua, Walkman, the Omarchy palettes, Dracula, Monokai, Solarized Dark/Light, OLED black, High contrast, Sakura,
-Cyberpunk and the neon set: Outrun, Laser grid, Acid rave, Miami nights, Blacklight UV and Electric). Skins change colour and chrome, never layout.
+Cyberpunk and the neon set: Outrun, Acid rave, Miami nights, Blacklight UV and Electric; the laser set: Laser grid, Laser show, Red laser, Green laser, Laser harp and Laser tag;
+the nuclear set: Reactor core, Meltdown, Radiation hazard, Fallout shelter and Uranium glass; and the holiday skins). Skins change colour and chrome, never layout.
 Album art always keeps its real colours.
 
 ## Screenshots
