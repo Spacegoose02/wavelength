@@ -11,7 +11,7 @@ import { applyHubServices, loadHubServices } from './hubServices';
  * timestamps) and sent when the Hub is reachable again. Server logins come from the Hub separately
  * (hubServices.ts); Navidrome logins and anything device-specific stay on the device.
  */
-const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts'] as const;
+const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'raccoon', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts'] as const;
 type SyncedKey = (typeof SYNCED)[number];
 const prefKey = (k: SyncedKey) => `settings.${k}`;
 

@@ -1058,6 +1058,9 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .skin-card.walkman .skin-preview { background:#cfd2d6; } .skin-card.walkman .skin-preview span:nth-child(1) { flex:1; background:#2d5fa8; } .skin-card.walkman .skin-preview span:nth-child(2) { flex:1; background:#e8681a; } .skin-card.walkman .skin-preview span:nth-child(3) { flex:1; background:#1d2430; }
 
 /* Now Playing stage: tap the artwork to cycle visualizer scenes (components/Scenes.tsx) */
+.np-stage-wrap { position: relative; }
+.np-raccoon-switch { position: absolute; top: 10px; right: 10px; padding: 5px 12px; border: 0; border-radius: 999px; background: rgb(0 0 0 / 0.55); color: #fff; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; opacity: 0.75; transition: opacity 0.15s; }
+.np-raccoon-switch:hover, .np-raccoon-switch:focus-visible { opacity: 1; }
 .np-stage { position: relative; display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; border-radius: var(--radius-lg); }
 .np-stage .np-art { width: 100%; }
 .np-stage.scene { aspect-ratio: 1; }
@@ -1065,7 +1068,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .np-stage-hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgb(0 0 0 / 0.6); color: #fff; font-size: 13px; font-weight: 600; pointer-events: none; animation: np-hint 1.6s ease forwards; white-space: nowrap; }
 @keyframes np-hint { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 @media (max-width: 760px) {
-  .np-stage { width: min(78vw, 360px); justify-self: center; }
+  .np-stage-wrap { width: min(78vw, 360px); justify-self: center; }
 }
 /* ============ 0.7 skins ============ */
 /* Dracula */
@@ -1409,14 +1412,22 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .skin-card.july4 .skin-preview { background:radial-gradient(circle at 25% 30%,#ffd166 0 2px,transparent 3px),radial-gradient(circle at 70% 25%,#5aa9ff 0 2px,transparent 3px),#0a1230; } .skin-card.july4 .skin-preview span { flex:1; background:repeating-linear-gradient(to top,#e63946 0 6px,#ffffff 6px 12px); }
 .skin-card.valentine .skin-preview { background:linear-gradient(180deg,#ffe4ec,#ffc2d4); } .skin-card.valentine .skin-preview span { flex:1; background:linear-gradient(to top,#9d1543,#e0245e 60%,#ff8fab); border-radius:10px 10px 0 0; }
 
-/* ============ Now Playing: DJ raccoon (components/RaccoonDJ.tsx) ============ */
+/* Settings → Playback: raccoon picker */
+.raccoon-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.raccoon-pick { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: var(--radius-lg); background: var(--panel); border: 2px solid transparent; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.raccoon-pick.on { border-color: var(--accent); }
+.raccoon-pick svg { width: 100%; aspect-ratio: 1; border-radius: var(--radius); background: rgb(0 0 0 / 0.35); margin-bottom: 4px; }
+.raccoon-pick small { font-size: 12px; }
+
+/* ============ Now Playing: raccoons (components/raccoon/) ============ */
 /* fur stays raccoon-coloured on every skin; clothes and lights follow the skin */
 .raccoon .fur-dark { fill: #26262c; stroke: #26262c; }
 .raccoon .fur-dark-soft { fill: #4a4a53; }
 .raccoon .fur-mid { fill: #8a8a95; stroke: #8a8a95; }
 .raccoon .fur-light { fill: #ececf1; }
-.raccoon .hoodie { fill: var(--accent); }
-.raccoon .hoodie-shade { fill: rgb(0 0 0 / 0.28); }
+.raccoon .hand { fill: #8a8a95; }
+.raccoon .top { fill: var(--accent); }
+.raccoon .top-shade { fill: rgb(0 0 0 / 0.28); }
 .raccoon .sleeve { stroke: var(--accent); }
 .raccoon .strings { stroke: var(--accent-ink, #fff); }
 .raccoon .phones { stroke: var(--viz-high); }
@@ -1429,12 +1440,84 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .raccoon .led-0 { fill: var(--viz-low); }
 .raccoon .led-1 { fill: var(--viz-mid); }
 .raccoon .led-2 { fill: var(--viz-high); }
-.raccoon .hat { display: none; }
+/* country */
+.raccoon .fence { fill: #7a5634; }
+.raccoon .fence-dark { fill: #5a3d22; }
+.raccoon .porch { fill: #6b4626; }
+.raccoon .porch-line { stroke: #4e321a; }
+.raccoon .legs { fill: #3d5f93; }
+.raccoon .boot { fill: #5b3a1e; }
+.raccoon .bandana { fill: var(--viz-high); }
+.raccoon .cowboy { fill: #9a6a3a; }
+.raccoon .cowboy-dark { stroke: #6e4a26; }
+.raccoon .hat-band { fill: var(--accent); }
+.raccoon .neck { fill: #4a2e17; }
+.raccoon .wood { fill: #c98a4b; }
+.raccoon .wood-edge { stroke: #6e4220; }
+/* rapper */
+.raccoon .speaker-box { fill: #17171b; stroke: #2a2a30; stroke-width: 2; }
+.raccoon .cone-rim { fill: #0d0d10; }
+.raccoon .cone { fill: #2a2a30; }
+.raccoon .cone-cap { fill: var(--viz-mid); }
+.raccoon .stage { fill: #1c1c22; }
+.raccoon-rapper .legs { fill: #2f4a7a; }
+.raccoon .sneaker { fill: #f2f2f5; }
+.raccoon .sneaker-stripe { stroke: var(--accent); }
+.raccoon .chain { stroke: #e8c15a; }
+.raccoon .medallion { fill: #f5cf5a; stroke: #b8901e; stroke-width: 2; }
+.raccoon .medallion-mark { fill: #a57c14; }
+.raccoon .cap { fill: var(--viz-high); }
+.raccoon .cap-brim { fill: var(--viz-mid); }
+.raccoon .cap-logo { fill: var(--accent); }
+.raccoon .shade-glint { stroke: var(--viz-high); }
+/* rocker */
+.raccoon .amp { fill: #141417; stroke: #2e2e34; stroke-width: 2; }
+.raccoon .amp-logo { fill: var(--viz-high); }
+.raccoon .grille { fill: #24242a; stroke: #33333a; stroke-width: 1; }
+.raccoon-rocker .legs { fill: #1b1b20; }
+.raccoon .boot-black { fill: #0f0f12; }
+.raccoon .leather { fill: #1d1d22; }
+.raccoon-rocker .sleeve { stroke: #1d1d22; }
+.raccoon .mohawk { fill: var(--viz-high); }
+.raccoon .mohawk-tip { stroke: var(--viz-peak, #fff); }
+.raccoon .fretboard { fill: #222226; }
+.raccoon .axe { fill: var(--viz-mid); stroke: #111; stroke-width: 2; }
+
+/* holiday hats replace the raccoon's own headwear */
+.raccoon .hat, .raccoon .outfit { display: none; }
 :root[data-skin='halloween'] .raccoon .hat-witch,
 :root[data-skin='thanksgiving'] .raccoon .hat-pilgrim,
 :root[data-skin='christmas'] .raccoon .hat-santa,
 :root[data-skin='july4'] .raccoon .hat-sam,
 :root[data-skin='valentine'] .raccoon .hat-hearts { display: inline; }
+:root[data-skin-group='holidays'] .raccoon .own-hat { display: none; }
+
+/* skin-group outfits (App.tsx sets data-skin-group): each one's parts are in components/raccoon/parts.tsx */
+:root[data-skin-group='nuclear'] .raccoon .outfit-nuclear,
+:root[data-skin-group='lasers'] .raccoon .outfit-lasers,
+:root[data-skin-group='neon'] .raccoon .outfit-neon,
+:root[data-skin-group='retro'] .raccoon .outfit-retro,
+:root[data-skin-group='editor'] .raccoon .outfit-editor { display: inline; }
+:root[data-skin-group='nuclear'] .raccoon .own-hat,
+:root:is([data-skin-group='nuclear'], [data-skin-group='lasers'], [data-skin-group='retro'], [data-skin-group='editor']) .raccoon .own-eyewear { display: none; }
+/* Nuclear: yellow hazmat suit, hood and respirator, black rubber gloves and boots */
+.raccoon .hazmat { fill: #f4c20d; }
+:root[data-skin='meltdown'] .raccoon .hazmat { fill: #ff8a1f; }
+:root[data-skin='uranium'] .raccoon .hazmat, :root[data-skin='isotope'] .raccoon .hazmat { fill: #b6e83a; }
+:root[data-skin-group='nuclear'] .raccoon .sleeve { stroke: #f4c20d; }
+:root[data-skin='meltdown'] .raccoon .sleeve { stroke: #ff8a1f; }
+:root:is([data-skin='uranium'], [data-skin='isotope']) .raccoon .sleeve { stroke: #b6e83a; }
+:root[data-skin-group='nuclear'] .raccoon .legs { fill: #e0b10a; }
+:root[data-skin-group='nuclear'] .raccoon :is(.hand, .boot, .boot-black, .sneaker) { fill: #1b1b1f; }
+:root[data-skin-group='nuclear'] .raccoon .thumb { fill: #3a3a40; }
+/* Lasers: a visor with a glowing beam; Neon: glow sticks */
+.raccoon .visor-strap { stroke: #1b1b22; }
+.raccoon .visor-beam { fill: var(--viz-high); }
+.raccoon .visor-rim { stroke: var(--viz-mid); }
+.raccoon .glow-a { stroke: var(--viz-high); }
+.raccoon .glow-b { stroke: var(--viz-mid); }
+/* Editor palettes: thick-rimmed coder glasses */
+.raccoon .coder-frame { stroke: var(--viz-low); }
 
 /* ============ Radio: editing "Your stations" and ordering favorites ============ */
 .station-hero.editing { cursor: grab; grid-template-columns: 1fr; }
