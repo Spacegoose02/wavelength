@@ -1,0 +1,158 @@
+# Builds the Windows installer/exe and the signed Android APK from any branch, tag or commit, without
+# creating a release. The files are attached to the workflow run as artifacts (kept 14 days).
+#
+# Run by hand: Actions → Test builds → Run workflow, pick the branch (or type a ref, e.g. a PR's
+# branch name or a commit SHA). See "Test builds" in docs/RELEASING.md.
+#
+# The version is left as it is in the repo, so the APK has the same versionCode as the last release
+# and installs over it; the next real release (higher version) installs over the test build.
+# Uses the same signing secrets as release.yml.
+name: Test builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit to build (leave empty to use the branch picked above)
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  REF: ${{ inputs.ref || github.ref }}
+  RELEASE_CERT_SHA256: 22530aa081ae26e241d328bd4e97dfe919f2a86c995e9e4e4dcb96610c985a31
+  NDK_VERSION: 28.2.13676358
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      # Keep the runner's user folder out of paths Rust embeds in the binary (see docs/RELEASING.md)
+      CARGO_HOME: C:\cargo-home
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run tauri build
+
+      - name: Name artifact
+        shell: bash
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wavelength-windows-${{ env.SHORT_SHA }}
+          retention-days: 14
+          path: |
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+            src-tauri/target/release/Wavelength.exe
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Check signing secrets
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KS" ] || [ -z "$KS_PASS" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASS" ]; then
+            echo "::error::Android signing secrets are missing. See the header of .github/workflows/release.yml and docs/RELEASING.md."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+        with:
+          # The default list includes the legacy 'tools' package, which newer
+          # cmdline-tools no longer provide (sdkmanager fails with exit code 1).
+          packages: platform-tools
+
+      - name: Install NDK
+        run: |
+          sdkmanager --install "ndk;${NDK_VERSION}"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Write signing config
+        working-directory: src-tauri/gen/android
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KS" | base64 -d > wavelength-release.jks
+          {
+            echo "storeFile=wavelength-release.jks"
+            echo "storePassword=$KS_PASS"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASS"
+          } > keystore.properties
+
+      - name: Build
+        run: npx tauri android build --apk --target aarch64 --target armv7
+
+      - name: Verify signature
+        run: |
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+          APK="Wavelength-test-${SHORT_SHA}-android.apk"
+          cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk "$APK"
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          CERTS="$("$APKSIGNER" verify --print-certs "$APK")"
+          echo "$CERTS"
+          if ! echo "$CERTS" | grep -qi "SHA-256 digest: ${RELEASE_CERT_SHA256}"; then
+            echo "::error::APK is not signed with the release certificate (${RELEASE_CERT_SHA256})."
+            exit 1
+          fi
+
+      - name: Remove signing files
+        if: always()
+        working-directory: src-tauri/gen/android
+        run: rm -f wavelength-release.jks keystore.properties
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wavelength-android-${{ env.SHORT_SHA }}
+          retention-days: 14
+          path: Wavelength-test-*-android.apk
