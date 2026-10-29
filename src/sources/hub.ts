@@ -72,8 +72,8 @@ export interface HubAuditEntry {
   ip: string | null;
 }
 
-/** A server login kept by the Hub (hub/src/services.ts). Navidrome stays a per-person login on each device. */
-export type HubServiceKind = 'plex' | 'audiobookshelf' | 'subwave' | 'deemix' | 'ytdlp';
+/** A server login kept by the Hub (hub/src/services.ts). Navidrome comes with this person's own login. */
+export type HubServiceKind = 'plex' | 'audiobookshelf' | 'subwave' | 'navidrome' | 'deemix' | 'ytdlp';
 export type HubAccess = 'everyone' | 'admins' | 'chosen';
 type Config = Record<string, string | number>;
 
@@ -207,6 +207,21 @@ export interface HubServerStatus {
   music: { dir: string; exists: boolean; writable: boolean; disk: { free: number; total: number } | null } | null;
   ytdlp: string | null;
   counts: { users: number; admins: number; kids: number; devices: number; activeToday: number; pendingRequests: number; services: number; flags: number; ratedAlbums: number };
+}
+
+/** Someone playing something right now (GET /api/admin/listening). */
+export interface HubListening {
+  userId: number;
+  displayName: string;
+  role: string;
+  deviceId: number;
+  deviceName: string;
+  platform: string;
+  title: string;
+  artist: string;
+  album: string;
+  source: string;
+  at: number;
 }
 
 /** Rescans after downloads (GET /api/admin/library). */
@@ -353,6 +368,10 @@ export class HubClient {
   deleteService = (id: number) => this.call('DELETE', `/api/admin/services/${id}`);
   setServiceUser = (id: number, userId: number, secrets?: Record<string, string | null>) =>
     this.call<{ service: HubAdminService }>('PUT', `/api/admin/services/${id}/users/${userId}`, { secrets });
+  /** Make a Navidrome account for someone with the admin login the Hub keeps, saved as their own login. */
+  createNavidromeAccount = (id: number, userId: number) => this.call<{ service: HubAdminService }>('POST', `/api/admin/services/${id}/users/${userId}/navidrome-account`, {});
+  playing = (b: { title: string; artist?: string; album?: string; source?: string } | { stopped: true }) => this.call('POST', '/api/me/playing', b);
+  listening = () => this.call<{ listening: HubListening[] }>('GET', '/api/admin/listening');
   removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);
   allRequests = (status?: string) => this.call<{ requests: HubRequest[] }>('GET', `/api/admin/requests${status ? `?status=${status}` : ''}`);
   approveRequest = (id: number, bitrate?: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/approve`, { bitrate });

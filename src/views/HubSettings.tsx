@@ -254,7 +254,7 @@ function SignedIn() {
 
       <div className="editor">
         <h3>Settings sync</h3>
-        <p className="muted small">Your theme, equalizer, Now Playing scene, radio stations and Discover chart picks follow you to every device you sign in on. Plex, Audiobookshelf, SUB/WAVE and download logins kept on the Hub arrive too (Settings → Sources and Downloads). Navidrome logins stay on each device.</p>
+        <p className="muted small">Your theme, equalizer, Now Playing scene, radio stations and Discover chart picks follow you to every device you sign in on. Plex, Audiobookshelf, SUB/WAVE, your own Navidrome login and download logins kept on the Hub arrive too (Settings → Sources and Downloads).</p>
         <div className="row gap">
           <button className="btn" onClick={async () => {
             setMsg('Syncing…');

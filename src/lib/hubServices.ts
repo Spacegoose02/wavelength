@@ -7,12 +7,14 @@ import { useSettings } from '../store/settings';
 /**
  * Server logins kept by the signed-in Wavelength Hub (docs/HUB.md "Server logins").
  *
- * The Hub decides which servers and logins each person gets: Plex, Audiobookshelf and SUB/WAVE show up
- * in Sources marked as from the Hub; deemix and the yt-dlp folder login only reach people allowed to
- * download (admins, and members with Autodownload). Navidrome logins stay on each device.
+ * The Hub decides which servers and logins each person gets: Plex, Audiobookshelf, SUB/WAVE and their own
+ * Navidrome account show up in Sources marked as from the Hub; deemix and the yt-dlp folder login only
+ * reach people allowed to download (admins, and members with Autodownload).
  */
 
-export const HUB_SOURCE_KINDS: SourceKind[] = ['plex', 'audiobookshelf', 'subwave'];
+export const HUB_SOURCE_KINDS: SourceKind[] = ['plex', 'audiobookshelf', 'subwave', 'navidrome'];
+/** Servers an admin can move to the Hub from Settings → Sources (Navidrome is set up under Settings → Server). */
+const HUB_KEEPS: SourceKind[] = ['plex', 'audiobookshelf', 'subwave'];
 const isSourceKind = (k: HubServiceKind): k is SourceKind & HubServiceKind => (HUB_SOURCE_KINDS as string[]).includes(k);
 
 /** Ask the Hub what this device may use now. Throws when the Hub can't be reached. */
@@ -83,8 +85,8 @@ export function applyHubServices(next: HubService[], prev: HubService[]) {
   if (!same) useSettings.setState({ sources, deemix, ytdlp });
 }
 
-/** The Hub keeps this kind of login for the household (Navidrome logins stay on each device). */
-export const hubKeeps = (kind: SourceKind) => HUB_SOURCE_KINDS.includes(kind);
+/** An admin can move this kind of login to the Hub from Settings → Sources. */
+export const hubKeeps = (kind: SourceKind) => HUB_KEEPS.includes(kind);
 
 /**
  * Hub fields for a source being saved from Settings → Sources. For a server already on the Hub an empty

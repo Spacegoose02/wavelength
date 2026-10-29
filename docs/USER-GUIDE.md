@@ -416,6 +416,15 @@ Wavelength itself, already pointed at that Hub: sign in and go. Offline download
 need the app; everything else works. See [HUB.md → In a browser](HUB.md#in-a-browser) for what your music
 servers need.
 
+**Own Navidrome accounts (admins):** under **Settings → Server → Navidrome accounts**, add your Navidrome
+address and its admin login once. Then **Make account** gives anyone their own Navidrome account (named
+after their Hub username, with a long random password), or **Use their login** saves one they already have.
+Their devices get it in Settings → Sources when they sign in, so favorites, play counts and playlists are
+each person's own. The admin login stays on the Hub; it also starts the scans after downloads.
+
+**Listening now (admins):** **Settings → Server** lists who is playing what, on which device. Devices report
+it every minute while playing; the Hub only keeps it in memory.
+
 **Settings → Server** (admins) shows how the Hub is doing: version, how long it's been running, free space
 on the music and data disks (and whether the music folder is writable), yt-dlp's version, how many people
 and devices there are and how many requests are waiting. **Download backup** saves a copy of the Hub's
@@ -433,7 +442,7 @@ the skin on another never overwrite each other. Changes made with no connection 
 
 Server logins your admin keeps on the Hub arrive too: Plex, Audiobookshelf and SUB/WAVE show up in
 Settings → Sources marked **from your Hub**, and people allowed to download can use the Hub's deemix and
-yt-dlp from Downloads (on Android too). Navidrome logins and downloaded music stay on each device. **Downloaded music always
+yt-dlp from Downloads (on Android too). Your own Navidrome login arrives too once an admin has set one up for you; downloaded music stays on each device. **Downloaded music always
 plays**, signed in or not, with or without the Hub.
 
 ### Server logins on the Hub (admins)

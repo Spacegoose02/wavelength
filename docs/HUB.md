@@ -191,8 +191,8 @@ that token; disabling a user signs out all their devices at once.
 ## Server logins
 
 The Hub keeps the household's server logins so they don't have to be typed into, or stored on, every
-device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**. **Navidrome logins stay on
-each device** (everyone signs in to Navidrome as themselves).
+device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, and each person's own
+**Navidrome** login (Settings → Server → Navidrome accounts; the Navidrome admin login stays on the Hub).
 
 - **Adding them:** in the app, an admin uses **Move to Hub** on a server in Settings → Sources, or on deemix /
   yt-dlp in Settings → Downloads. New Plex, Audiobookshelf and SUB/WAVE servers an admin adds while signed in
@@ -290,6 +290,9 @@ with a 4xx status.
 | `GET /api/admin/library` | `server.view` | rescans: `{ navidrome: { url, username } \| null, scanning, lastScanAt, lastError, scanQueued }` |
 | `PUT /api/admin/library/navidrome`, `DELETE …` | `keys.manage` | the Navidrome admin login the Hub scans with (`{ url, username, password? }`, checked first, kept sealed) / remove |
 | `POST /api/admin/library/scan` | `server.view` | start a Navidrome scan now |
+| `POST /api/admin/services/:id/users/:userId/navidrome-account` | `keys.manage` | make a Navidrome account (their Hub username, random password) with the Navidrome server's admin login, saved as their own login |
+| `POST /api/me/playing` | signed in | what this device is playing (`{ title, artist?, album?, source? }`, or `{ stopped: true }`); memory only |
+| `GET /api/admin/listening` | `users.manage` | who is playing what right now, per device |
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed or RadioWave Monitor (https only, nothing else) |
 | `GET /*` | — | the app's web build (`WAVELENGTH_WEB_DIR`); unknown paths get `index.html` |
 | `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |
