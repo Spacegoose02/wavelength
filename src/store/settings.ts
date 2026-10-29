@@ -114,6 +114,9 @@ interface SettingsState {
   setRaccoon(r: RaccoonKind): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
+  /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
+  updates: { auto: boolean; prerelease: boolean };
+  setUpdates(u: Partial<SettingsState['updates']>): void;
   /** Pass undefined to put a genre back on the defaults. */
   setDiscoverCharts(g: Genre, charts: ChartSource[] | undefined): void;
   setYtdlp(d: Partial<SettingsState['ytdlp']>): void;
@@ -149,6 +152,8 @@ export const useSettings = create<SettingsState>()(
       setRaccoon: (raccoon) => set({ raccoon }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
+      updates: { auto: true, prerelease: false },
+      setUpdates: (u) => set((st) => ({ updates: { ...st.updates, ...u } })),
       setDiscoverCharts: (g, charts) =>
         set((st) => {
           const discoverCharts = { ...st.discoverCharts };
@@ -209,7 +214,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp } };
+        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates } };
       },
     },
   ),

@@ -28,9 +28,10 @@ class MainActivity : TauriActivity() {
     requestLocalNetworkAccess()
   }
 
-  /** Hook up the native media session (steering wheel / Bluetooth / lock screen controls). */
+  /** Hook up the native media session (steering wheel / Bluetooth / lock screen controls) and in-app updates. */
   override fun onWebViewCreate(webView: android.webkit.WebView) {
     MediaBridge.attach(this, webView)
+    UpdateBridge.attach(this, webView)
   }
 
   /**

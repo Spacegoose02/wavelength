@@ -29,6 +29,23 @@ on GitHub, so creating the release in the web UI is enough:
   **Actions → Release builds → Run workflow**, enter the tag (e.g. `v0.7.0`). Existing assets with the
   same name are replaced.
 
+## In-app updates
+
+Since in-app updates, installed apps find new releases on their own (Settings → Updates, see
+[USER-GUIDE.md](USER-GUIDE.md#updates)). That relies on the release looking the way the workflow makes it:
+
+- Tag `vX.Y.Z` (plain numbers; the app compares it with its own version) and **published**, not a draft.
+- The file names stay as they are: `Wavelength_X.Y.Z_x64-setup.exe`, `Wavelength.exe` and
+  `Wavelength-X.Y.Z-android.apk`. The app looks for `_x64-setup.exe`, `Wavelength.exe` and `-android.apk`.
+- Apps only offer a release once its file for them is attached, so nobody gets an update in the 15–25 minutes
+  before the builds finish.
+- **Pre-releases** are only offered to people who ticked **Include pre-releases**. Untick pre-release on the
+  release and everyone gets it on their next check.
+- The APK must be signed with the release key (the workflow checks this). Android rejects an update signed with
+  another key, so a test APK from option A can't be pushed through the updater.
+- The version that introduced the updater (and anything older) has to be installed by hand once. Say so in
+  that release's notes.
+
 ## Test builds (before a release)
 
 Two ways to get an installer and APK to try out before shipping. Both use the signing secrets below,
@@ -142,6 +159,7 @@ Use these if Actions is unavailable, or to test a release build locally.
 - …
 
 ## Install
+- **Already have Wavelength?** Settings → Updates → **Install update** (or the bar at the top).
 - **Windows:** download `Wavelength_X.Y.Z_x64-setup.exe` and run it (installs over older versions).
 - **Android (phone, tablet, TV):** download `Wavelength-X.Y.Z-android.apk`, allow installs from your
   file manager, open it. Installs over older versions and keeps your settings.

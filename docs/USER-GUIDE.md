@@ -3,7 +3,7 @@
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations** and
-**profiles with a Wavelength Hub** (signing in, settings sync, managing people). For how they're built, see the
+**profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -366,7 +366,7 @@ vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day
 ## Settings tabs
 
 Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
-yt-dlp), **Themes** and **Discover** (charts). Links elsewhere open the right tab: **Edit charts** on
+yt-dlp), **Themes**, **Discover** (charts) and **Updates**. Links elsewhere open the right tab: **Edit charts** on
 Discover opens Discover, and the Settings link in Downloads opens Downloads.
 
 > **Developer notes.** `src/views/Settings.tsx`, one component per tab. The route can name a tab:
@@ -482,3 +482,47 @@ The Hub refuses every one of these actions from a non-admin, so hiding the tab i
 > everything when no Hub is signed in), `src/lib/hubSync.ts` (settings sync: per-key last-writer-wins with
 > change times in `tonearm.hubStamps`, pushed 2 s after a change). Add a setting to sync by adding its
 > `useSettings` key to `SYNCED`. The Hub side is documented in [HUB.md](HUB.md).
+
+## Updates
+
+The Windows and Android apps check GitHub for a newer Wavelength on launch and every 6 hours. When there is
+one, a bar appears at the top of the page: **Install update**, **What's new** (opens **Settings → Updates**
+with the release notes) or **✕** to hide it until the next launch.
+
+**Settings → Updates** shows the version you're on, when it last checked, and the newer release if there is
+one. **Check now** checks straight away.
+
+- **Windows (installed with the setup exe):** **Install update** downloads the new setup exe and runs it with
+  just a progress bar. It closes Wavelength, installs over it and opens it again.
+- **Windows (portable `Wavelength.exe`):** the new `Wavelength.exe` replaces the old one in the same folder
+  and restarts. The folder has to be writable (not `C:\Program Files`).
+- **Android, Android TV:** the APK downloads, then Android's own install prompt appears; tap **Install** (or
+  **Update**). The first time, Android asks you to allow **Install unknown apps** for Wavelength: the button
+  says **Allow installs from Wavelength** and opens that switch; turn it on, come back and tap **Install
+  update** again. Your settings, downloads and sign-ins are kept.
+
+Options:
+
+- **Check for updates automatically** (on by default). Off: only **Check now** checks.
+- **Include pre-releases** (off by default). Pre-releases are test builds published before a release; turn
+  this on to get them early.
+
+Nothing is installed without you pressing **Install update**. A release published in the last half hour may
+not show yet: its files are still being built.
+
+**The first update-capable version has to be installed by hand** (download it from the
+[releases page](https://github.com/Spacegoose02/wavelength/releases) as before). Older versions don't know
+how to check. Every version after that can update itself.
+
+> **Developer notes.** `src/lib/updates.ts` (store `useUpdates`, `pickUpdate`, `startUpdateChecks`, called in
+> `App.tsx`), `src/components/Updates.tsx` (banner and the Updates tab), `src-tauri/src/update.rs` and
+> `src-tauri/gen/android/.../UpdateBridge.kt`. The options are `updates` in the settings store (per device, not
+> synced through the Hub). Releases come from the GitHub API through Rust (`update_releases`; GitHub wants a
+> User-Agent). The newest non-draft release with a plain `vX.Y.Z` tag that's newer than the app's version and
+> has a file for this install wins: `_x64-setup.exe` for installed Windows, `Wavelength.exe` for portable
+> (decided by whether `uninstall.exe` sits next to the exe), `-android.apk` on Android. Downloads only accept
+> URLs under this repo's `releases/download/`, go to `<app cache>/updates/`, and are cleared on the next launch.
+> Windows runs the NSIS installer with `/P /R` (passive, restart afterwards). Android checks
+> `canRequestPackageInstalls()` before downloading (granting it can restart the app) and opens the APK through
+> the existing `FileProvider` with `ACTION_VIEW`; Android itself refuses an APK signed with another key. Dev
+> builds (`npm run tauri dev`) never check.

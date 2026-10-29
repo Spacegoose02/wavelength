@@ -28,7 +28,7 @@ export type Route =
   | { view: 'settings'; tab?: SettingsTab };
 
 /** The tabs of the Settings page (views/Settings.tsx). */
-export type SettingsTab = 'account' | 'users' | 'sources' | 'playback' | 'downloads' | 'themes' | 'discover';
+export type SettingsTab = 'account' | 'users' | 'sources' | 'playback' | 'downloads' | 'themes' | 'discover' | 'updates';
 
 interface UiState {
   route: Route;

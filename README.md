@@ -65,6 +65,8 @@ Grab the files from the [latest release](../../releases/latest):
 
 Then open **Settings → Sources** and add your servers. Each source has a **Test connection** button.
 
+After that, Wavelength tells you when a new version is out and installs it for you (**Settings → Updates**).
+
 ## Build it yourself
 
 ```bash
