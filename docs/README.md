@@ -16,6 +16,8 @@ around in an afternoon, fix bugs without archaeology, and add features in the ho
    (Deezer artist/album/playlist browsing, choosing Discover charts).
 7. **[RELEASING.md](RELEASING.md)** — ship a new version.
 8. **[BRAND.md](BRAND.md)** — the look and the voice.
+9. **[USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)** — proposal: user profiles, roles, admin-only features,
+   the Wavelength Hub server, and the phased roadmap for the planned board cards.
 
 ## The 60-second tour
 
