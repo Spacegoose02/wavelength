@@ -1,0 +1,18 @@
+# Wavelength Hub next to Navidrome. On Unraid use unraid/wavelength-hub.xml instead. See docs/HUB.md.
+services:
+  wavelength-hub:
+    image: ghcr.io/spacegoose02/wavelength-hub:latest
+    container_name: wavelength-hub
+    restart: unless-stopped
+    ports:
+      - "7780:7780"
+    environment:
+      WAVELENGTH_PUBLIC_URL: https://hub.example.com
+      WAVELENGTH_SSO: "true"
+      WAVELENGTH_PROXY_SECRET: change-me-to-a-long-random-value
+      WAVELENGTH_ADMINS: alex
+      PUID: "1000"
+      PGID: "1000"
+    volumes:
+      - ./wavelength-hub:/data
+      - /path/to/music:/music # used from Phase 3 (downloads, tag editing)

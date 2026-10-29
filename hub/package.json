@@ -1,0 +1,22 @@
+{
+  "name": "wavelength-hub",
+  "private": true,
+  "description": "Wavelength Hub: accounts, roles and admin-only controls for Wavelength",
+  "license": "MIT",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/main.ts",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/main.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.ts",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "fastify": "^5.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -315,7 +315,11 @@ Phase 6  Server page + extras ───┘ (needs 2; grows each phase)
 | Sleep timer, synced lyrics (extras) | S–M |
 | Device-level PIN lock for SUB/WAVE admin and Downloads (stopgap, labelled as such) | S |
 
-### Phase 1 — Hub foundation · ~3–4 weeks · **recommended first**
+### Phase 1 — Hub foundation · ~3–4 weeks · **in progress**
+
+Server side done (see [HUB.md](HUB.md)): items 1, 2, 3, 6 (as API) and the server half of 5. Next: the
+app side (item 4 and the app half of 5), then an admin Users screen in the app. Passwords use scrypt
+(built into Node) rather than argon2id, to keep the image free of native modules.
 
 Everything else in the users/admin column depends on this.
 
