@@ -88,6 +88,8 @@ export interface HubService {
   ownLogin: boolean;
   /** SUB/WAVE: admin controls work through the Hub (the admin login itself stays there). */
   hubAdmin?: boolean;
+  /** Navidrome through the Hub's relay at `/nd/<id>`: the login is for the Hub, the real one stays there. */
+  relay?: boolean;
 }
 
 /** A yt-dlp download the Hub is running. */

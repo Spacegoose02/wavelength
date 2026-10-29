@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth.ts';
 import { listeningRoutes } from './routes/listening.ts';
 import { meRoutes } from './routes/me.ts';
 import { navidromeRoutes } from './routes/navidrome.ts';
+import { relayRoutes } from './routes/relay.ts';
 import { flagRoutes } from './routes/flags.ts';
 import { kidRoutes } from './routes/kids.ts';
 import { proxyRoutes } from './routes/proxy.ts';
@@ -110,6 +111,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   artworkRoutes(app, ctx);
   listeningRoutes(app, ctx);
   navidromeRoutes(app, ctx);
+  relayRoutes(app, ctx);
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
   webRoutes(app, config.webDir);
