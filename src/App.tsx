@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
+import { startHubSync } from './lib/hubSync';
 import { useSettings } from './store/settings';
 import { useUi, type Route } from './store/ui';
 import { usePlayer } from './store/player';
@@ -116,6 +117,7 @@ export default function App() {
 
   useEffect(() => {
     useCatalog.getState().load();
+    startHubSync();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back

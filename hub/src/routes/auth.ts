@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { DUMMY_HASH, hashPassword, hmac, normalizeUserCode, safeEqual, verifyPassword } from '../crypto.ts';
+import { DUMMY_HASH, hashPassword, hmac, newToken, normalizeUserCode, safeEqual, sha256, verifyPassword } from '../crypto.ts';
 import { tx } from '../db.ts';
 import { createDevice, revokeDevice } from '../devices.ts';
 import { clientIp, html, HttpError, signedIn, str } from '../http.ts';
-import { linkPage, message, setupPage, ssoConfirmPage } from '../pages.ts';
+import { linkPage, message, setupPage, ssoConfirmPage, ssoConnectPage, ssoLinkConfirmPage } from '../pages.ts';
 import { decidePairing, pendingPairing, pollPairing, POLL_INTERVAL_S, startPairing } from '../pairing.ts';
 import { permissionsFor } from '../roles.ts';
 import { isSsoAdmin, ssoIdentity, type SsoIdentity } from '../sso.ts';
@@ -176,22 +176,43 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
   /** Approve with tinyauth. Only this path sits behind tinyauth in the proxy (docs/HUB.md). */
   const csrfFor = (pairingId: number, userId: number) => hmac(config.secretKey, `sso-link:${pairingId}:${userId}`);
 
-  function ssoContext(req: FastifyRequest) {
+  function ssoIdentityOr401(req: FastifyRequest): SsoIdentity {
     const id = ssoIdentity(req, config.sso);
     if (!id) throw new HttpError(401, config.sso.enabled ? 'Single sign-on did not identify you. Check the proxy setup in docs/HUB.md.' : 'Single sign-on is not turned on for this Hub.');
+    return id;
+  }
+
+  function ssoContext(req: FastifyRequest) {
+    const id = ssoIdentityOr401(req);
     const u = ssoUser(id, clientIp(req));
-    if (!u) throw new HttpError(403, `There's no Wavelength account for “${id.username}” yet. Ask your admin to add you.`);
+    if (!u) {
+      if (getUserBySso(db, id.username)) throw new HttpError(403, 'Your Wavelength account is turned off. Ask your admin.');
+      throw new NotLinked(id);
+    }
     return u;
   }
 
+  /** Link an SSO identity to an account, refusing if either side is already linked elsewhere. */
+  function linkSso(u: User, id: SsoIdentity, ip: string, method: string) {
+    tx(db, () => {
+      const other = getUserBySso(db, id.username);
+      if (other && other.id !== u.id) throw new HttpError(409, `Single sign-on “${id.username}” is already linked to another Wavelength account.`);
+      const fresh = getUser(db, u.id)!;
+      if (fresh.ssoSubject && fresh.ssoSubject !== id.username) throw new HttpError(409, `${fresh.displayName} is already linked to single sign-on “${fresh.ssoSubject}”. Unlink it in the app first.`);
+      updateUser(db, u.id, { ssoSubject: id.username });
+    });
+    audit(db, { actorId: u.id, action: 'user.sso_linked', target: u.username, detail: { ssoSubject: id.username, method }, ip });
+  }
+
   app.get('/auth/sso/link', async (req, reply) => {
+    const code = normalizeUserCode(str(req.query, 'code', 20));
     try {
       const u = ssoContext(req);
-      const code = normalizeUserCode(str(req.query, 'code', 20));
       const p = pendingPairing(db, code);
       if (!p) return html(reply, linkPage({ code, sso: true, error: 'That code is wrong or has expired' }), 400);
       return html(reply, ssoConfirmPage({ code, device: { name: p.deviceName, platform: p.platform }, who: u.displayName, csrf: csrfFor(p.id, u.id) }));
     } catch (e) {
+      if (e instanceof NotLinked) return html(reply, ssoConnectPage({ who: e.id.username, code }));
       if (e instanceof HttpError) return html(reply, message('Sign-in problem', e.message, true), e.statusCode);
       throw e;
     }
@@ -208,8 +229,99 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
       audit(db, { actorId: u.id, action: approve ? 'device.approved' : 'device.denied', target: p.deviceName, detail: { method: 'sso' }, ip: clientIp(req) });
       return html(reply, approve ? message('Signed in', `${p.deviceName} is signed in as ${u.displayName}. You can close this page.`) : message('Denied', `${p.deviceName} was not signed in.`));
     } catch (e) {
+      if (e instanceof NotLinked) return html(reply, ssoConnectPage({ who: e.id.username, code: normalizeUserCode(str(req.body, 'code', 20)) }), 403);
       if (e instanceof HttpError) return html(reply, message('Sign-in problem', e.message, true), e.statusCode);
       throw e;
     }
   });
+
+  // ---- linking single sign-on to an existing (password) account ----
+
+  /** From the app's Account screen: a one-time link to open in a browser where tinyauth signs you in. */
+  app.post('/api/me/sso-link', async (req) => {
+    const { user } = signedIn(req);
+    if (!config.sso.enabled) throw new HttpError(409, 'Single sign-on is not turned on for this Hub');
+    db.prepare('DELETE FROM sso_links WHERE expires_at < ? OR user_id = ?').run(Date.now(), user.id);
+    const link = newToken('wll_');
+    db.prepare('INSERT INTO sso_links (code_hash, user_id, expires_at) VALUES (?, ?, ?)').run(sha256(link), user.id, Date.now() + SSO_LINK_TTL_MS);
+    return { url: `${config.publicUrl}/auth/sso/connect?link=${encodeURIComponent(link)}`, expiresIn: SSO_LINK_TTL_MS / 1000 };
+  });
+
+  /** Unlink single sign-on. Only for accounts that can still sign in with a password afterwards. */
+  app.delete('/api/me/sso', async (req) => {
+    const { user } = signedIn(req);
+    if (!user.ssoSubject) return { user };
+    if (!user.hasPassword) throw new HttpError(400, 'Your account has no Hub password, so unlinking single sign-on would lock you out. Ask your admin to set a password first');
+    const u = updateUser(db, user.id, { ssoSubject: null });
+    audit(db, { actorId: user.id, action: 'user.sso_unlinked', target: user.username, detail: { ssoSubject: user.ssoSubject }, ip: clientIp(req) });
+    return { user: u };
+  });
+
+  const linkOwner = (link: string) =>
+    db.prepare('SELECT user_id FROM sso_links WHERE code_hash = ? AND expires_at > ?').get(sha256(link), Date.now()) as { user_id: number } | undefined;
+  const linkCsrf = (link: string, subject: string) => hmac(config.secretKey, `sso-connect:${sha256(link)}:${subject}`);
+
+  app.get('/auth/sso/connect', async (req, reply) => {
+    try {
+      const id = ssoIdentityOr401(req);
+      const link = str(req.query, 'link', 100);
+      const owner = link && linkOwner(link);
+      if (!owner) throw new HttpError(400, 'This link has expired or was already used. Start again from the app: Settings → Account.');
+      const u = getUser(db, owner.user_id)!;
+      return html(reply, ssoLinkConfirmPage({ who: id.username, account: u.displayName, link, csrf: linkCsrf(link, id.username) }));
+    } catch (e) {
+      if (e instanceof HttpError) return html(reply, message('Link problem', e.message, true), e.statusCode);
+      throw e;
+    }
+  });
+
+  /**
+   * Two ways in: `link` + `csrf` (opened from the app while signed in), or `username` + `password`
+   * (tinyauth knows you but no account is linked yet). Either way the identity comes from tinyauth.
+   */
+  app.post('/auth/sso/connect', async (req, reply) => {
+    const code = normalizeUserCode(str(req.body, 'code', 20));
+    let id: SsoIdentity | undefined;
+    try {
+      id = ssoIdentityOr401(req);
+      const ip = clientIp(req);
+      const link = str(req.body, 'link', 100);
+      let u: User;
+      if (link) {
+        if (!safeEqual(str(req.body, 'csrf', 100), linkCsrf(link, id.username))) throw new HttpError(403, 'This page is out of date. Open the link again');
+        if (str(req.body, 'decision', 10) !== 'link') return html(reply, message('Not linked', 'Nothing was changed.'));
+        const owner = tx(db, () => {
+          const o = linkOwner(link);
+          db.prepare('DELETE FROM sso_links WHERE code_hash = ?').run(sha256(link));
+          return o;
+        });
+        if (!owner) throw new HttpError(400, 'This link has expired or was already used. Start again from the app: Settings → Account.');
+        u = getUser(db, owner.user_id)!;
+        if (u.disabled) throw new HttpError(403, 'Your Wavelength account is turned off. Ask your admin.');
+        linkSso(u, id, ip, 'app');
+      } else {
+        u = await checkPassword(req, str(req.body, 'username', 64), str(req.body, 'password', 200));
+        linkSso(u, id, ip, 'password');
+      }
+      // carry on signing in the device that sent them here, if any
+      const p = code ? pendingPairing(db, code) : undefined;
+      if (p) return html(reply, ssoConfirmPage({ code, device: { name: p.deviceName, platform: p.platform }, who: u.displayName, csrf: csrfFor(p.id, u.id) }));
+      return html(reply, message('Linked', `Single sign-on “${id.username}” is now linked to ${u.displayName}. You can close this page.`));
+    } catch (e) {
+      if (e instanceof HttpError && id && !str(req.body, 'link', 100) && e.statusCode === 401) return html(reply, ssoConnectPage({ who: id.username, code, error: e.message }), 401);
+      if (e instanceof HttpError) return html(reply, message('Link problem', e.message, true), e.statusCode);
+      throw e;
+    }
+  });
+}
+
+const SSO_LINK_TTL_MS = 10 * 60_000;
+
+/** tinyauth identified the person, but no Wavelength account is linked to that identity. */
+class NotLinked extends Error {
+  id: SsoIdentity;
+  constructor(id: SsoIdentity) {
+    super('not linked');
+    this.id = id;
+  }
 }

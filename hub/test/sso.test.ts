@@ -29,8 +29,10 @@ test('SSO maps tinyauth users, groups and refuses strangers', async () => {
   const { app, tokens } = await seeded({ enabled: true, trustedProxies: ['127.0.0.1'], proxySecret: SECRET, adminGroup: 'wl-admins' });
   // unknown, no auto-create
   const stranger = await pairViaSso(app, proxied('stranger'));
-  assert.equal(stranger.confirm.statusCode, 403);
+  assert.equal(stranger.confirm.statusCode, 200);
+  assert.match(stranger.confirm.body, /isn't linked to a Wavelength account/);
   assert.match(stranger.confirm.body, /Ask your admin/);
+  assert.notEqual(stranger.token.status, 200);
 
   // admin links an existing user to an SSO name
   await json(app, 'POST', '/api/admin/users', { token: tokens.admin, body: { username: 'sam', role: 'member', ssoSubject: 'Sam' } });
@@ -70,4 +72,65 @@ test('SSO stays off unless turned on', async () => {
   const { app } = await seeded();
   const r = await app.inject({ method: 'GET', url: '/auth/sso/link?code=XXXX-XXXX', headers: { 'remote-user': 'boss' } });
   assert.equal(r.statusCode, 401);
+});
+
+test('someone tinyauth knows can link their existing password account, then finish pairing', async () => {
+  const { app } = await seeded({ enabled: true, trustedProxies: ['127.0.0.1'], proxySecret: SECRET });
+  const start = await json(app, 'POST', '/auth/device', { body: { deviceName: 'Phone' } });
+  const page = await app.inject({ method: 'GET', url: `/auth/sso/link?code=${start.body.userCode}`, headers: proxied('mia.sso') });
+  assert.match(page.body, /action="\/auth\/sso\/connect"/);
+
+  const wrong = await form(app, '/auth/sso/connect', { code: start.body.userCode, username: 'mia', password: 'nope' }, proxied('mia.sso'));
+  assert.equal(wrong.status, 401);
+  // without tinyauth's headers nothing can be linked
+  assert.equal((await form(app, '/auth/sso/connect', { username: 'mia', password: 'mia-password-123' })).status, 401);
+
+  const linked = await form(app, '/auth/sso/connect', { code: start.body.userCode, username: 'mia', password: 'mia-password-123' }, proxied('mia.sso'));
+  assert.equal(linked.status, 200);
+  const csrf = /name="csrf" value="([^"]+)"/.exec(linked.body)?.[1] ?? '';
+  assert.ok(csrf, 'goes straight on to approving the device');
+  await form(app, '/auth/sso/link', { code: start.body.userCode, csrf, decision: 'approve' }, proxied('mia.sso'));
+  const done = await json(app, 'POST', '/auth/device/token', { body: { deviceCode: start.body.deviceCode } });
+  assert.equal(done.body.user.username, 'mia');
+  assert.equal(done.body.user.ssoSubject, 'mia.sso');
+
+  // next time single sign-on alone is enough
+  const again = await pairViaSso(app, proxied('mia.sso'));
+  assert.equal(again.token.body.user.username, 'mia');
+  // and the same identity can't be linked to a second account
+  const kit = await form(app, '/auth/sso/connect', { username: 'kit', password: 'kit-password-123' }, proxied('mia.sso'));
+  assert.equal(kit.status, 409);
+});
+
+test('linking from the app with a one-time link, and unlinking', async () => {
+  const { app, tokens } = await seeded({ enabled: true, trustedProxies: ['127.0.0.1'], proxySecret: SECRET });
+  const r = await json(app, 'POST', '/api/me/sso-link', { token: tokens.member });
+  assert.equal(r.status, 200);
+  const url = new URL(r.body.url);
+  assert.equal(url.pathname, '/auth/sso/connect');
+  const link = url.searchParams.get('link')!;
+
+  const page = await app.inject({ method: 'GET', url: `/auth/sso/connect?link=${encodeURIComponent(link)}`, headers: proxied('mia-sso') });
+  assert.equal(page.statusCode, 200);
+  const csrf = /name="csrf" value="([^"]+)"/.exec(page.body)?.[1] ?? '';
+  // a forged form (no csrf) does nothing
+  assert.equal((await form(app, '/auth/sso/connect', { link, csrf: 'x', decision: 'link' }, proxied('mia-sso'))).status, 403);
+  // the csrf is tied to the identity that opened the page
+  assert.equal((await form(app, '/auth/sso/connect', { link, csrf, decision: 'link' }, proxied('someone-else'))).status, 403);
+
+  const ok = await form(app, '/auth/sso/connect', { link, csrf, decision: 'link' }, proxied('mia-sso'));
+  assert.equal(ok.status, 200);
+  assert.equal((await json(app, 'GET', '/api/me', { token: tokens.member })).body.user.ssoSubject, 'mia-sso');
+  // links work once
+  assert.equal((await form(app, '/auth/sso/connect', { link, csrf, decision: 'link' }, proxied('mia-sso'))).status, 400);
+
+  const un = await json(app, 'DELETE', '/api/me/sso', { token: tokens.member });
+  assert.equal(un.body.user.ssoSubject, null);
+});
+
+test('an SSO-only account cannot unlink itself into a lockout', async () => {
+  const { app, tokens } = await seeded({ enabled: true, trustedProxies: ['127.0.0.1'], proxySecret: SECRET });
+  await json(app, 'POST', '/api/admin/users', { token: tokens.admin, body: { username: 'sam', role: 'member', ssoSubject: 'sam' } });
+  const sam = await pairViaSso(app, proxied('sam'));
+  assert.equal((await json(app, 'DELETE', '/api/me/sso', { token: sam.token.body.token })).status, 400);
 });

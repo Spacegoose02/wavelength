@@ -62,6 +62,36 @@ export function linkPage(o: { code: string; device?: { name: string; platform: s
   );
 }
 
+/** tinyauth knows the person but no Wavelength account is linked to them yet: link one with its password. */
+export function ssoConnectPage(o: { who: string; code: string; error?: string }) {
+  return page(
+    'Link your account',
+    `<p>You're signed in to single sign-on as <b>${esc(o.who)}</b>, but that isn't linked to a Wavelength account yet.</p>
+     ${o.error ? `<p class="err">${esc(o.error)}</p>` : ''}
+     <p>If you already have a Wavelength account, sign in with its Hub password once to link them. After that, single sign-on is enough.</p>
+     <form method="post" action="/auth/sso/connect">
+       <input type="hidden" name="code" value="${esc(o.code)}">
+       <label>Wavelength username</label><input name="username" autocomplete="username" required>
+       <label>Hub password</label><input name="password" type="password" autocomplete="current-password" required>
+       <div class="row"><button>Link my account</button></div>
+     </form>
+     <p class="or">No account? Ask your admin to add you.</p>`,
+  );
+}
+
+/** Opened from the app's Account screen: attach this tinyauth identity to the signed-in account. */
+export function ssoLinkConfirmPage(o: { who: string; account: string; link: string; csrf: string }) {
+  return page(
+    'Link single sign-on',
+    `<div class="device">Link single sign-on <b>${esc(o.who)}</b> to the Wavelength account <b>${esc(o.account)}</b>?</div>
+     <p>You'll be able to sign in to Wavelength with single sign-on from now on. Your Hub password keeps working too.</p>
+     <form method="post" action="/auth/sso/connect">
+       <input type="hidden" name="link" value="${esc(o.link)}"><input type="hidden" name="csrf" value="${esc(o.csrf)}">
+       <div class="row"><button class="ghost" name="decision" value="cancel">Cancel</button><button name="decision" value="link">Link</button></div>
+     </form>`,
+  );
+}
+
 /** SSO confirmation: the person is already signed in through tinyauth. */
 export function ssoConfirmPage(o: { code: string; device: { name: string; platform: string }; who: string; csrf: string }) {
   return page(

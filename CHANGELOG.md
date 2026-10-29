@@ -17,8 +17,15 @@
   Unraid template: user accounts with roles (admin, member, kid), sign-in with a Hub password or tinyauth
   single sign-on (through Nginx Proxy Manager), TV-style pairing codes for devices, per-device sign-out,
   synced preferences and an audit log. Admin-only routes are refused for members and kids on the server, not
-  just hidden. The app doesn't use it yet. See [docs/HUB.md](docs/HUB.md) and the roadmap in
+  just hidden. See [docs/HUB.md](docs/HUB.md) and the roadmap in
   [docs/USERS-AND-ADMIN.md](docs/USERS-AND-ADMIN.md).
+- **Sign in to a Wavelength Hub** (Settings → Account): connect, set up a new Hub, sign in with a code and QR
+  code (approve it from your phone with tinyauth or your Hub password) or with a password. Your theme, EQ, Now
+  Playing scene, radio stations and Discover chart picks then follow you to every device; downloaded music
+  keeps playing offline. Link your tinyauth account to a password account (from the app or the browser),
+  change your password, and sign out lost devices. Admins get **Settings → Users**: add people, roles,
+  Autodownload, passwords, tinyauth usernames, turn accounts off, sign devices out, and recent activity. See the
+  [user guide](docs/USER-GUIDE.md#profiles-with-a-wavelength-hub).
 
 ## 0.8.0
 - **Fix: Dracula, Monokai, Solarized, OLED black, High contrast, Sakura and Cyberpunk didn't work on Windows.**
