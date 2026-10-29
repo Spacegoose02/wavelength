@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openDb, SCHEMA_VERSION } from '../src/db.ts';
+import { openDb } from '../src/db.ts';
 import { json, seeded } from './helpers.ts';
 
 const song = (title: string, artist: string, album = 'LP', duration = 180) => ({ id: title, sourceId: 'nd', kind: 'track', title, artist, album, duration });
@@ -56,7 +56,8 @@ test('history already on the Hub is carried into Rewind when it upgrades', () =>
   const file = join(mkdtempSync(join(tmpdir(), 'wl-rewind-')), 'hub.db');
   const db = openDb(file);
   // back to how a Hub before Rewind left it
-  db.exec(`DROP TABLE plays; PRAGMA user_version = ${SCHEMA_VERSION - 1}`);
+  // (migration 13 added plays; later migrations are undone too, so they run again)
+  db.exec("DROP TABLE plays; DROP TABLE trash; PRAGMA user_version = 12");
   db.prepare("INSERT INTO users (id, username, display_name, role, created_at, updated_at) VALUES (1, 'a', 'a', 'member', 0, 0)").run();
   db.prepare('INSERT INTO play_history VALUES (1, 5, ?)').run(JSON.stringify(song('Song', 'Band')));
   db.prepare('INSERT INTO play_history VALUES (1, 6, ?)').run(JSON.stringify({ ...song('Live', 'FM'), kind: 'radio' }));

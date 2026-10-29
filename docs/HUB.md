@@ -329,6 +329,20 @@ It needs the music mounted read-write at `/music` (as for yt-dlp) and a Navidrom
 If Navidrome sees the music somewhere other than `/music`, set `WAVELENGTH_NAVIDROME_MUSIC_DIR` to that path.
 Code: `hub/src/tags.ts`, `hub/src/routes/tags.ts`, `src/views/TagEditor.tsx`.
 
+**Edit artist** (on artist pages, `src/views/ArtistTagEditor.tsx`) loads the songs of all the artist's Navidrome
+albums at once and renames the artist in their Artist and Album artist tags, also inside credits like "A feat.
+B" if asked, with an optional genre; it saves through the same `PUT /api/admin/tags`, so it's undone the same
+way. The editors suggest artist and genre names from Navidrome (`GET /api/admin/tags/values`).
+
+## Deleting albums
+
+**Delete album** (admins, on Navidrome albums) moves the album's files into `.wavelength-trash/<id>/` in the
+music folder, keeping their paths: the album's whole folder when it holds nothing else (cover included),
+otherwise just its songs. Empty folders left behind are removed. Navidrome skips hidden folders, and the Hub
+puts a `.ndignore` there too. **Settings → Server → Deleted albums** puts an album back where it was, or removes
+it at once; otherwise it's removed for good after 30 days. Every delete, restore and removal is audited.
+Code: `hub/src/routes/trash.ts` (migration 14, `trash`).
+
 ## Cover art
 
 Admins can change the picture of any album or artist for the whole household. The picture is kept on the
@@ -461,6 +475,11 @@ with a 4xx status.
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
 | `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }] }` writes tags (only those given) → `{ batch, changed, failed }` |
 | `GET /api/admin/tags/history`, `POST /api/admin/tags/undo/:batch` | `library.edit` | saved edits / put a save's files back |
+| `GET /api/admin/tags/albums?ids=a,b` | `library.edit` | up to 200 Navidrome albums' files and tags at once, each with `albumId` (for Edit artist) → `{ songs, missing }` |
+| `GET /api/admin/tags/values` | `library.edit` | `{ artists, genres }`: names in Navidrome and in recent edits, for suggestions |
+| `DELETE /api/admin/library/album/:id` | `library.edit` | move a Navidrome album's files to the trash → `{ batch, label, files, failed }` |
+| `GET /api/admin/trash` | `library.edit` | deleted albums of the last 60 days: `{ albums: [{ batch, label, at, files, by, restoredAt, purgedAt, purgeAt }] }` |
+| `POST /api/admin/trash/:batch/restore`, `DELETE /api/admin/trash/:batch` | `library.edit` | put a deleted album back / remove it for good now |
 | `POST /api/import/youtube` | signed in | `{ url }` of a YouTube / YouTube Music playlist → `{ tracks: [{ title, artist, duration? }] }`, read with the Hub's yt-dlp (titles only, nothing downloaded) |
 | `GET /*` | — | the app's web build (`WAVELENGTH_WEB_DIR`); unknown paths get `index.html` |
 | `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |

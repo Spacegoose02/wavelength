@@ -29,13 +29,16 @@ function readTagsBody(v: unknown): Tags {
 
 export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
   const file = (path: string) => libraryFile(config.musicDir, config.navidromeMusicDir, path);
+  const admin = async () => {
+    const s = getScanSettings(db, config.secretKey);
+    if (!s) throw new HttpError(409, 'Add the Navidrome admin login under Settings → Server first');
+    return navidromeAdmin(s.url, s.username, s.password);
+  };
 
   /** An album's songs (Navidrome album id), with the tags in their files. */
   app.get<{ Params: { id: string } }>('/api/admin/tags/album/:id', async (req) => {
     need(req, 'library.edit');
-    const s = getScanSettings(db, config.secretKey);
-    if (!s) throw new HttpError(409, 'Add the Navidrome admin login under Settings → Server first');
-    const nd = await navidromeAdmin(s.url, s.username, s.password);
+    const nd = await admin();
     const songs = await nd.albumSongs(req.params.id.slice(0, 100));
     if (!songs.length) throw new HttpError(404, 'Navidrome has no songs for that album');
     const out = [];
@@ -46,6 +49,57 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
     return { songs: out };
   });
 
+  /**
+   * Several albums' songs at once (Navidrome album ids, `?ids=a,b`), for editing an artist across all their
+   * albums. Each song says which album it's on.
+   */
+  app.get<{ Querystring: { ids?: string } }>('/api/admin/tags/albums', async (req) => {
+    need(req, 'library.edit');
+    const ids = [...new Set((req.query.ids ?? '').split(',').map((x) => x.trim().slice(0, 100)).filter(Boolean))];
+    if (!ids.length || ids.length > 200) throw new HttpError(400, 'Send 1 to 200 album ids');
+    const nd = await admin();
+    const out: { id: string; albumId: string; path: string; tags: Tags }[] = [];
+    const missing: string[] = [];
+    for (const albumId of ids) {
+      const songs = await nd.albumSongs(albumId);
+      const files = songs.map((song) => {
+        try {
+          return { song, f: file(String(song.path ?? '')) };
+        } catch {
+          missing.push(String(song.path ?? song.title ?? ''));
+          return null;
+        }
+      }).filter((x) => !!x);
+      // a few at a time: ffprobe per file
+      for (let i = 0; i < files.length; i += 8) {
+        const part = await Promise.all(files.slice(i, i + 8).map(async ({ song, f }) => ({ id: String(song.id), albumId, path: relPath(config.musicDir, f), tags: await readTags(f) })));
+        out.push(...part);
+      }
+      if (out.length > 5000) throw new HttpError(400, 'That’s more than 5000 songs; edit fewer albums at once');
+    }
+    return { songs: out, missing };
+  });
+
+  /** Artist and genre names already in the library (and in recent edits), for the editor's suggestions. */
+  let names: { at: number; artists: string[]; genres: string[] } | undefined;
+  app.get('/api/admin/tags/values', async (req) => {
+    need(req, 'library.edit');
+    if (!names || Date.now() - names.at > 5 * 60_000) {
+      const got = getScanSettings(db, config.secretKey) ? await (await admin()).names().catch(() => ({ artists: [], genres: [] })) : { artists: [], genres: [] };
+      names = { at: Date.now(), ...got };
+    }
+    // names saved since Navidrome last scanned
+    const artists = new Set(names.artists), genres = new Set(names.genres);
+    for (const r of db.prepare('SELECT after FROM tag_edits WHERE undone_at IS NULL ORDER BY id DESC LIMIT 2000').all() as { after: string }[]) {
+      const t = JSON.parse(r.after) as Tags;
+      if (t.artist) artists.add(t.artist);
+      if (t.albumArtist) artists.add(t.albumArtist);
+      if (t.genre) genres.add(t.genre);
+    }
+    const sorted = (x: Set<string>) => [...x].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    return { artists: sorted(artists), genres: sorted(genres) };
+  });
+
   app.get<{ Querystring: { artist?: string; album?: string } }>('/api/admin/tags/match', async (req) => {
     need(req, 'library.edit');
     const artist = (req.query.artist ?? '').trim().slice(0, 200), album = (req.query.album ?? '').trim().slice(0, 200);
@@ -54,11 +108,11 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
   });
 
   /** `{ label, changes: [{ path, tags }] }`: one Save. Only the tags given change. */
-  app.put('/api/admin/tags', async (req) => {
+  app.put('/api/admin/tags', { bodyLimit: 8 * 1024 * 1024 }, async (req) => {
     const { user } = need(req, 'library.edit');
     const body = req.body as { changes?: unknown } | null;
     const changes = body?.changes;
-    if (!Array.isArray(changes) || !changes.length || changes.length > 500) throw new HttpError(400, 'Send 1 to 500 changes');
+    if (!Array.isArray(changes) || !changes.length || changes.length > 5000) throw new HttpError(400, 'Send 1 to 5000 changes');
     const label = str(body, 'label', 200) || 'Tags';
     const plan = changes.map((c: Record<string, unknown>) => {
       const path = typeof c?.path === 'string' ? c.path : '';

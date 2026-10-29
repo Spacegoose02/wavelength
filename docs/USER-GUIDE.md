@@ -653,7 +653,22 @@ or press **Find on Deezer and MusicBrainz** and **Use this** on the right match 
 check it and **Save**. Your Hub writes the tags into the files (the audio isn't touched) and Navidrome rescans
 a minute later. **Undo** puts them back; older saves can be undone under **Settings → Server → Tag edits**.
 
+The artist, album artist and genre boxes suggest the names already in your library as you type, so you can
+pick the existing spelling instead of making a new one.
+
+**Edit artist**, on an artist's page, changes an artist in every song on all their albums. **Credited as** is
+how the files name them now, **Change to** is the new name. To merge two spellings ("Beatles" and "The
+Beatles"), open one and change it to the other. It can also set one genre for all their songs. With **Also
+where they're credited with others** on, "Artist feat. Someone" and "Someone & Artist" change too. Every song
+that will change is listed first, by album; untick an album to leave it alone. **Undo** works as for albums.
+
 Your Hub needs your music at `/music`, read-write, and the Navidrome admin login (Settings → Server).
+
+### Deleting an album (admins)
+
+**Delete album** on a Navidrome album's page removes it from your server. The files aren't deleted straight
+away: they move to a hidden folder in your music library that Navidrome skips, and **Settings → Server →
+Deleted albums** has **Put back** for 30 days. After that, or with **Remove now**, they're gone for good.
 
 ### Changing cover art (admins)
 

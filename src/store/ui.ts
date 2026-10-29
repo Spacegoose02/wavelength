@@ -22,6 +22,7 @@ export type Route =
   | { view: 'discover' }
   | { view: 'import' }
   | { view: 'tags'; album: Album }
+  | { view: 'artistTags'; artist: Artist }
   | { view: 'favorites' }
   | { view: 'recent' }
   | { view: 'library' }

@@ -19,6 +19,7 @@ import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 import { ArtworkButton } from '../components/ArtworkButton';
+import { hubClient } from '../store/hub';
 import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
@@ -185,6 +186,7 @@ function useSourceCfg() {
 
 export function ArtistView({ artist }: { artist: Artist }) {
   const cfgOf = useSourceCfg();
+  const canEditTags = useCan('library.edit');
   const [albums, setAlbums] = useState<Album[] | null>(null);
   useEffect(() => {
     let alive = true;
@@ -218,6 +220,9 @@ export function ArtistView({ artist }: { artist: Artist }) {
             <ShareButton what={() => shareOfArtist(artist.name, artistArt(artist))} />
             <KidFlagButton kind="artist" artist={artist.name} />
             <ArtworkButton kind="artist" artist={artist.name} current={artistArt(artist)} />
+            {canEditTags && (artist.refs ?? [artist]).some((r) => cfgOf(r.sourceId)?.kind === 'navidrome') && (
+              <button className="btn" title="Rename this artist, or merge two spellings, in all their songs' tags" onClick={() => useUi.getState().go({ view: 'artistTags', artist })}>Edit artist</button>
+            )}
           </div>
         </div>
       </header>
@@ -301,6 +306,7 @@ export function AlbumView({ album }: { album: Album }) {
             {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && (
               <button className="btn" title="Fix this album's tags in its files" onClick={() => useUi.getState().go({ view: 'tags', album: { ...ref, refs: [ref] } })}>Edit tags</button>
             )}
+            {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && <DeleteAlbumButton album={ref} />}
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
                 cover={art} tracks={tracks} />
@@ -322,4 +328,34 @@ export function AlbumView({ album }: { album: Album }) {
       {!tracks && !error ? <Spinner /> : tracks && <TrackList tracks={tracks} />}
     </div>
   );
+}
+
+/**
+ * Admins: delete an album from the server (hub/src/routes/trash.ts). Its files go to the Hub's trash and can be
+ * put back under Settings → Server → Deleted albums for 30 days.
+ */
+function DeleteAlbumButton({ album }: { album: Album }) {
+  const [busy, setBusy] = useState(false);
+  const del = async () => {
+    if (!confirm(`Delete ${album.title} by ${album.artist} from your server?\n\nIts files go to the Hub's trash. You can put it back under Settings → Server → Deleted albums for 30 days.`)) return;
+    setBusy(true);
+    try {
+      const r = await hubClient()!.deleteAlbum(album.id);
+      // gone from this device's library now; Navidrome forgets it on its rescan
+      useCatalog.setState((s) => ({
+        albums: s.albums.flatMap((a) => {
+          const refs = (a.refs ?? [a]).filter((x) => !(x.sourceId === album.sourceId && x.id === album.id));
+          return refs.length === (a.refs ?? [a]).length ? [a] : refs.length ? [{ ...a, ...refs[0], refs }] : [];
+        }),
+        recent: s.recent.filter((a) => !(a.sourceId === album.sourceId && a.id === album.id)),
+      }));
+      alert(`Deleted ${r.label} (${r.files} song${r.files === 1 ? '' : 's'})${r.failed.length ? `. ${r.failed.length} couldn't be moved: ${r.failed[0]}` : ''}`);
+      useUi.getState().back();
+    } catch (e) {
+      alert(String((e as Error).message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <button className="btn ghost danger" disabled={busy} onClick={del}>{busy ? 'Deleting…' : 'Delete album'}</button>;
 }

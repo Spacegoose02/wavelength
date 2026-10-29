@@ -14,6 +14,7 @@ import { relayRoutes } from './routes/relay.ts';
 import { remoteRoutes } from './routes/remote.ts';
 import { togetherRoutes } from './routes/together.ts';
 import { dockerRoutes } from './routes/docker.ts';
+import { trashRoutes } from './routes/trash.ts';
 import { mineRoutes } from './routes/mine.ts';
 import { importRoutes } from './routes/imports.ts';
 import { inviteRoutes } from './routes/invites.ts';
@@ -127,6 +128,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   remoteRoutes(app, ctx);
   togetherRoutes(app, ctx);
   dockerRoutes(app, ctx);
+  trashRoutes(app, ctx);
   navidromeRoutes(app, ctx);
   relayRoutes(app, ctx);
   mineRoutes(app, ctx);

@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Edit artist** (Hub admins): rename an artist, or merge two spellings, in every song on all their albums,
+  and set a genre for all of them. Every change is listed before saving, and it can be undone.
+- **Tag suggestions:** the artist, album artist and genre boxes in the tag editors suggest names already in
+  your library.
+- **Delete album** (Hub admins): the files go to a hidden trash folder and can be put back from **Settings →
+  Server → Deleted albums** for 30 days.
+- **Hub:** migration 14 (`trash`), `/api/admin/tags/albums`, `/api/admin/tags/values`,
+  `DELETE /api/admin/library/album/:id`, `/api/admin/trash/*`.
 - **Containers** (Hub admins, optional): **Settings → Server → Containers** starts, stops and restarts the
   household's other services and shows their logs, through a Docker socket proxy and only for the containers
   you name.
