@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Everyone gets their own Navidrome account.** Admins add Navidrome and its admin login under **Settings →
+  Server → Navidrome accounts**, then **Make account** (or **Use their login**) per person. Their devices get
+  their own Navidrome login when they sign in; the admin login never leaves the Hub.
+- **Listening now** in Settings → Server: who's playing what, on which device.
+- **Hub:** `navidrome` server kind, `/api/admin/services/:id/users/:userId/navidrome-account`,
+  `/api/me/playing`, `/api/admin/listening`.
 - **"Your song is ready."** Approved requests now go *Downloading* → *Adding to your library* → *Ready*, and
   a ready one lights up the Inbox with a **Play** button that finds it in your library.
 - **Navidrome rescans after downloads.** Add a Navidrome admin login under **Settings → Server → Library

@@ -3,6 +3,7 @@ import type { Db } from './db.ts';
 import { seal, unseal } from './crypto.ts';
 import { HttpError } from './http.ts';
 import { hubDeemix } from './routes/proxy.ts';
+import { serviceForHub, serviceIdOfKind } from './services.ts';
 import type { YtdlpRunner, YtJob } from './ytdlp.ts';
 
 /**
@@ -38,9 +39,14 @@ export interface LibraryStatus {
   scanQueued: boolean;
 }
 
+/** The scan login saved under Library updates, else the admin login of the Navidrome server kept on the Hub. */
 export function getScanSettings(db: Db, key: Buffer): ScanSettings | null {
   const row = db.prepare('SELECT value FROM hub_settings WHERE key = ?').get(SETTINGS_KEY) as { value: string } | undefined;
-  if (!row) return null;
+  if (!row) {
+    const id = serviceIdOfKind(db, 'navidrome');
+    const s = id === undefined ? undefined : serviceForHub(db, key, id);
+    return s?.secrets.adminUsername && s.secrets.adminPassword ? { url: s.url, username: s.secrets.adminUsername, password: s.secrets.adminPassword } : null;
+  }
   try {
     const v = JSON.parse(row.value) as { url: string; username: string; password: string };
     return { url: v.url, username: v.username, password: unseal(key, v.password, AAD) };

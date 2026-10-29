@@ -5,8 +5,8 @@ import { tx } from './db.ts';
 import { HttpError } from './http.ts';
 
 /**
- * Server logins the Hub keeps for the household: Plex, Audiobookshelf, SUB/WAVE, deemix and yt-dlp.
- * Navidrome stays a per-person login on each device. Secrets are sealed at rest and handed to a device
+ * Server logins the Hub keeps for the household: Plex, Audiobookshelf, SUB/WAVE, deemix and yt-dlp, and
+ * each person's own Navidrome login (made with the Navidrome admin login, which stays on the Hub). Secrets are sealed at rest and handed to a device
  * only when its user may use them (servicesFor); admin and download logins never leave the Hub, which
  * makes those calls itself (routes/proxy.ts). The admin view never includes a secret, only which
  * fields are set. See docs/HUB.md "Server logins".
@@ -30,6 +30,9 @@ export const KINDS = {
   audiobookshelf: { secrets: ['token'], own: ['token'], config: [] },
   subwave: { secrets: ['username', 'password', 'token'], own: [], config: ['streamUrl', 'apiUrl', 'nowPlayingUrl'], hubOnly: ['username', 'password'] },
   deemix: { secrets: ['arl'], own: [], config: ['bitrate'], hubOnly: ['arl'], download: true },
+  // Each person gets their own Navidrome login (made by the Hub with the admin login, or entered by an
+  // admin); the admin login only creates accounts and starts scans, and never leaves the Hub.
+  navidrome: { secrets: ['adminUsername', 'adminPassword', 'username', 'password'], own: ['username', 'password'], config: [], hubOnly: ['adminUsername', 'adminPassword'] },
   // runs inside the Hub container and saves into its music folder, so there's no share login
   ytdlp: { secrets: [], own: [], config: ['folder', 'format'], download: true },
 } satisfies Record<string, KindSpec>;
@@ -252,6 +255,8 @@ export function servicesFor(db: Db, key: Buffer, { user, permissions }: Auth): D
       : r.access === 'everyone' || user.role === 'admin' || (r.access === 'chosen' && !!mine);
     if (!allowed) continue;
     const own = open(key, mine?.secrets ?? null, aadUser(r.id, user.id)).fields;
+    // Navidrome is per person: no own login yet, nothing to hand over
+    if (r.kind === 'navidrome' && !(own.username && own.password)) continue;
     const secrets = { ...open(key, r.secrets, aadShared(r.id)).fields, ...own };
     const hubAdmin = r.kind === 'subwave' ? permissions.includes('subwave.control') && !!secrets.username && !!secrets.password : undefined;
     for (const f of s.hubOnly ?? []) delete secrets[f];
