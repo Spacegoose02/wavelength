@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import qrcode from 'qrcode-generator';
 import { syncNow } from '../lib/hubSync';
 import { loadHubServices } from '../lib/hubServices';
-import { loadFlags, setFlag, useFlags } from '../lib/kids';
+import { recheckLibrary, runExplicitCheck, stopExplicitCheck, useExplicitCheck } from '../lib/explicitCheck';
+import { loadFlags, setFlag, useFlags, useRatings } from '../lib/kids';
 import { today } from '../lib/kidTime';
 import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubPairing, type HubRole, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
@@ -536,6 +537,7 @@ function KidSafeList() {
         <b> Hidden</b>. <b>OK for kids</b> lets something explicit through. Use the <b>Kids</b> button on any song,
         album or artist to add to this list.
       </p>
+      <LibraryCheck />
       {!flags.length && <p className="muted">Nothing flagged yet.</p>}
       {flags.map((f) => (
         <div key={f.id} className="source-row">
@@ -548,6 +550,51 @@ function KidSafeList() {
         </div>
       ))}
     </section>
+  );
+}
+
+/**
+ * Library check: look every album up on Deezer and keep on the Hub which albums and songs are explicit (for
+ * files without the tag, and Plex). The files aren't changed.
+ */
+function LibraryCheck() {
+  const check = useExplicitCheck();
+  const ratings = useRatings((s) => s.ratings);
+  const albums = ratings.filter((r) => r.kind === 'album');
+  const explicit = albums.filter((r) => r.rating === 'explicit');
+  const withClean = explicit.filter((r) => r.cleanLink).length;
+  const unknown = albums.filter((r) => r.rating === 'unknown').length;
+  const go = (f: () => Promise<void>) => f().catch((e) => useExplicitCheck.setState({ error: errText(e) }));
+  return (
+    <div className="editor">
+      <h3>Library check</h3>
+      <p className="muted small">
+        Looks each album up on Deezer to find which albums and songs are explicit, and whether Deezer has a clean
+        version. Your files aren't changed. Albums already checked are skipped, so you can stop and carry on later.
+      </p>
+      {albums.length > 0 && (
+        <p className="small">
+          Checked {albums.length} album{albums.length === 1 ? '' : 's'}: {explicit.length} explicit
+          {withClean ? ` (${withClean} with a clean version on Deezer)` : ''}{unknown ? `, ${unknown} not found on Deezer` : ''}.
+        </p>
+      )}
+      {check.running && (
+        <>
+          <div className="progress"><i style={{ width: `${check.total ? Math.round((check.done / check.total) * 100) : 0}%` }} /></div>
+          <p className="small">Checking {check.done} of {check.total} · {check.explicit} explicit so far</p>
+        </>
+      )}
+      {!check.running && check.total > 0 && check.done < check.total && !check.error && <p className="small">Stopped after {check.done} of {check.total}.</p>}
+      {check.error && <div className="errors">{check.error}</div>}
+      <div className="row">
+        {check.running
+          ? <button className="btn" onClick={stopExplicitCheck}>Stop</button>
+          : <button className="btn primary" onClick={() => go(runExplicitCheck)}>{albums.length ? 'Check new albums' : 'Check my library'}</button>}
+        {!check.running && albums.length > 0 && (
+          <button className="btn ghost" onClick={() => confirm('Forget the results and check every album again?') && go(recheckLibrary)}>Check everything again</button>
+        )}
+      </div>
+    </div>
   );
 }
 

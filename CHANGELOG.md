@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Library check for explicit music.** **Settings → Users → Kid-safe music → Check my library** looks each
+  album up on Deezer and records on the Hub which albums and songs are explicit, so kid profiles and the
+  **E** / **C** badges work for files without the explicit tag, and for Plex. Your files aren't changed. It
+  skips albums already checked, so it can be stopped and run again for new albums.
+- **Get clean version.** An explicit album whose clean version is on Deezer gets a **Get clean version** button
+  (**Request clean version** without Autodownload).
+- New downloads: tick **Explicit lyrics** under deemix **Settings → Tags** so deemix writes the tag.
+- **Hub:** migration 7 (`ratings`) and the `/api/ratings`, `/api/admin/ratings` routes.
 - **Kid profiles.** Kids get a shorter menu with bigger buttons (Home, Search, Discover, Albums, Artists,
   Favorites, Radio, Audiobooks, **Ask for music**, Inbox and **Me**), and no Settings.
 - **Bedtime and a daily listening limit** per kid, set by an admin under **Settings → Users → Kid profiles**.

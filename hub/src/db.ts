@@ -181,6 +181,22 @@ const MIGRATIONS: string[] = [
     value TEXT NOT NULL
   );
   `,
+  `
+  -- Explicit / clean ratings found by looking the library up on Deezer (for files without the tag, and for
+  -- Plex, which doesn't report it). One row per checked album ('unknown' when Deezer didn't have it), plus a
+  -- row for each explicit song. Matched by name on each device. See routes/ratings.ts.
+  CREATE TABLE ratings (
+    id          INTEGER PRIMARY KEY,
+    kind        TEXT NOT NULL CHECK (kind IN ('album', 'track')),
+    artist      TEXT NOT NULL,
+    album       TEXT NOT NULL,
+    title       TEXT NOT NULL DEFAULT '',     -- song title; '' for an album
+    rating      TEXT NOT NULL CHECK (rating IN ('explicit', 'clean', 'unknown')),
+    clean_link  TEXT,                         -- explicit albums: the clean version on Deezer
+    checked_at  INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX ratings_key ON ratings(kind, artist COLLATE NOCASE, album COLLATE NOCASE, title COLLATE NOCASE);
+  `,
 ];
 
 export function openDb(file: string): Db {

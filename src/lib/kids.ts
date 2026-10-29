@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { DeezerResult } from '../sources/deemix';
-import type { HubFlag } from '../sources/hub';
+import type { HubFlag, HubRating } from '../sources/hub';
 import { norm } from '../sources/registry';
 import type { Album, Artist, Track } from '../sources/types';
 import { hubClient, useHub } from '../store/hub';
@@ -21,14 +21,20 @@ interface FlagsState {
 
 export const useFlags = create<FlagsState>()(persist(() => ({ flags: [] as HubFlag[] }), { name: 'tonearm.kidFlags' }));
 
-/** Fetch the Hub's flags (kept on the device, so a kid profile stays filtered offline). */
+/** Explicit / clean ratings the library check found on Deezer (src/lib/explicitCheck.ts). */
+export const useRatings = create<{ ratings: HubRating[] }>()(persist(() => ({ ratings: [] as HubRating[] }), { name: 'tonearm.ratings' }));
+
+/** Fetch the Hub's flags and ratings (kept on the device, so a kid profile stays filtered offline). */
 export async function loadFlags() {
   const c = hubClient();
   if (!c) return;
   try {
-    useFlags.setState({ flags: (await c.flags()).flags });
+    // ratings: an older Hub doesn't have them yet
+    const [f, r] = await Promise.all([c.flags(), c.ratings().catch(() => undefined)]);
+    useFlags.setState({ flags: f.flags });
+    if (r) useRatings.setState({ ratings: r.ratings });
   } catch {
-    /* offline: keep the last list */
+    /* offline: keep the last lists */
   }
 }
 
@@ -56,6 +62,37 @@ function verdicts() {
   return index;
 }
 
+let ratedFrom: HubRating[] | undefined;
+let rated = new Map<string, HubRating>();
+function ratingIndex() {
+  const { ratings } = useRatings.getState();
+  if (ratings !== ratedFrom) {
+    ratedFrom = ratings;
+    rated = new Map(ratings.map((r) => [r.kind === 'album' ? key('album', r.artist, r.album) : `${key('album', r.artist, r.album)}|${cleanTitle(r.title)}`, r]));
+  }
+  return rated;
+}
+
+/** The library check's rating for an album, if it was checked. */
+export const albumRating = (artist = '', album = '') => ratingIndex().get(key('album', artist, album));
+
+/**
+ * Explicit or clean: the file's own tag first, then the library check. A song on a checked explicit album
+ * that isn't in its explicit list is clean.
+ */
+export function explicitOfTrack(t: Pick<Track, 'artist' | 'album' | 'title' | 'explicit'>): 'explicit' | 'clean' | undefined {
+  if (t.explicit) return t.explicit;
+  const idx = ratingIndex();
+  if (idx.get(`${key('album', t.artist, t.album)}|${cleanTitle(t.title)}`)) return 'explicit';
+  const a = idx.get(key('album', t.artist, t.album));
+  return a?.rating === 'explicit' || a?.rating === 'clean' ? 'clean' : undefined;
+}
+export function explicitOfAlbum(a: Pick<Album, 'artist' | 'title' | 'explicit'>): 'explicit' | 'clean' | undefined {
+  if (a.explicit) return a.explicit;
+  const r = albumRating(a.artist, a.title)?.rating;
+  return r === 'explicit' || r === 'clean' ? r : undefined;
+}
+
 /** Most specific flag wins: song, then album, then artist. */
 function verdictFor(artist?: string, album?: string, title?: string): HubFlag['verdict'] | undefined {
   const v = verdicts();
@@ -80,8 +117,8 @@ export function notForKids(i: { artist?: string; album?: string; title?: string;
   return !!i.explicit;
 }
 
-export const trackNotForKids = (t: Track) => t.kind === 'track' && notForKids({ artist: t.artist, album: t.album, title: t.title, explicit: t.explicit === 'explicit' });
-export const albumNotForKids = (a: Album) => notForKids({ artist: a.artist, album: a.title, explicit: a.explicit === 'explicit' });
+export const trackNotForKids = (t: Track) => t.kind === 'track' && notForKids({ artist: t.artist, album: t.album, title: t.title, explicit: explicitOfTrack(t) === 'explicit' });
+export const albumNotForKids = (a: Album) => notForKids({ artist: a.artist, album: a.title, explicit: explicitOfAlbum(a) === 'explicit' });
 export const artistNotForKids = (a: Artist) => notForKids({ artist: a.name });
 export const deezerNotForKids = (r: DeezerResult) =>
   notForKids({ artist: r.type === 'artist' ? r.title : r.artist, album: r.type === 'album' ? r.title : r.album, title: r.type === 'track' ? r.title : undefined, explicit: r.explicit });
@@ -93,7 +130,8 @@ export const deezerNotForKids = (r: DeezerResult) =>
 export function useHidden(): Hidden {
   const kid = useIsKid();
   const flags = useFlags((s) => s.flags);
-  return kid ? kidFilters(flags) : GROWN_UP;
+  const ratings = useRatings((s) => s.ratings);
+  return kid ? kidFilters(flags, ratings) : GROWN_UP;
 }
 interface Hidden {
   track(t: Track): boolean;
@@ -105,10 +143,12 @@ const no = () => false;
 const GROWN_UP: Hidden = { track: no, album: no, artist: no, deezer: no };
 // a new object only when the flags change, so it can sit in a dependency list
 let kidFor: HubFlag[] | undefined;
+let kidRatings: HubRating[] | undefined;
 let kidObj = GROWN_UP;
-function kidFilters(flags: HubFlag[]) {
-  if (flags !== kidFor) {
+function kidFilters(flags: HubFlag[], ratings: HubRating[]) {
+  if (flags !== kidFor || ratings !== kidRatings) {
     kidFor = flags;
+    kidRatings = ratings;
     kidObj = { track: trackNotForKids, album: albumNotForKids, artist: artistNotForKids, deezer: deezerNotForKids };
   }
   return kidObj;

@@ -173,6 +173,24 @@ export interface HubFlag {
   createdAt: number;
 }
 
+/** Explicit / clean, found by looking the library up on Deezer. `title` is '' for an album row. */
+export interface HubRating {
+  kind: 'album' | 'track';
+  artist: string;
+  album: string;
+  title: string;
+  rating: 'explicit' | 'clean' | 'unknown';
+  cleanLink: string | null;
+  checkedAt: number;
+}
+export interface HubAlbumRating {
+  artist: string;
+  album: string;
+  rating: HubRating['rating'];
+  cleanLink?: string;
+  explicitTracks?: string[];
+}
+
 /** A kid's bedtime ('HH:MM', device time) and daily listening limit; null = none. */
 export interface KidRules {
   bedtimeFrom: string | null;
@@ -276,6 +294,7 @@ export class HubClient {
   unshare = (id: number) => this.call('DELETE', `/api/shares/${id}`);
 
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
+  ratings = () => this.call<{ ratings: HubRating[] }>('GET', '/api/ratings');
   kidStatus = (day: string) => this.call<{ kid: boolean; rules: KidRules; usedSeconds: number; pinSet: boolean }>('GET', `/api/me/kid?day=${day}`);
   listened = (day: string, seconds: number) => this.call<{ usedSeconds: number }>('POST', '/api/me/listened', { day, seconds });
   kidUnlock = (pin: string) => this.call<{ ok: true }>('POST', '/api/kid/unlock', { pin });
@@ -301,6 +320,8 @@ export class HubClient {
   rejectRequest = (id: number, reason?: string) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/reject`, { reason });
   haveRequest = (id: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/have`, {});
   deleteRequest = (id: number) => this.call('DELETE', `/api/admin/requests/${id}`);
+  saveRatings = (albums: HubAlbumRating[]) => this.call<{ saved: number }>('POST', '/api/admin/ratings', { albums });
+  clearRatings = () => this.call('DELETE', '/api/admin/ratings');
   setFlag = (b: { kind: HubFlag['kind']; artist: string; title?: string; verdict: HubFlag['verdict'] }) => this.call<{ flag: HubFlag }>('POST', '/api/admin/flags', b);
   deleteFlag = (id: number) => this.call('DELETE', `/api/admin/flags/${id}`);
   adminKids = (day: string) => this.call<{ pinSet: boolean; kids: { userId: number; displayName: string; rules: KidRules; usedSeconds: number }[] }>('GET', `/api/admin/kids?day=${day}`);
