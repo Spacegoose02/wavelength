@@ -29,7 +29,47 @@ on GitHub, so creating the release in the web UI is enough:
   **Actions → Release builds → Run workflow**, enter the tag (e.g. `v0.7.0`). Existing assets with the
   same name are replaced.
 
-### One-time setup: signing secrets
+## Test builds (before a release)
+
+Two ways to get an installer and APK to try out before shipping. Both use the signing secrets below,
+so the test APK installs over the released app and keeps its settings.
+
+### Option A: Actions artifacts (no release, works on unmerged branches)
+
+`.github/workflows/test-build.yml` builds any branch, tag or commit and attaches the files to the run.
+Nothing is published and the version isn't changed.
+
+1. **Actions → Test builds → Run workflow.**
+2. Pick the branch in **Use workflow from** (e.g. `main`, or a PR's branch), or type a branch, tag or
+   commit SHA in **ref**. **Run workflow.**
+3. When the run is green (about 15–25 minutes), open it and download from **Artifacts** at the bottom:
+   - `wavelength-windows-<sha>`: the setup exe and the portable `Wavelength.exe`
+   - `wavelength-android-<sha>`: `Wavelength-test-<sha>-android.apk`
+4. The downloads are zip files; unzip, then install as usual. Artifacts are deleted after 14 days.
+
+Notes:
+- The workflow file must exist on the branch you build. Branches made before it was added: type the
+  branch name in **ref** and run it from `main`.
+- The APK keeps the repo's version (same Android `versionCode` as the last release), so it installs over
+  that release, and the next real release installs over the test build.
+- Downloading artifacts needs a GitHub login with access to the repo, so this is for you, not testers
+  without an account. Use option B to share with others.
+
+### Option B: GitHub pre-release (shareable link)
+
+The normal release workflow also runs for pre-releases.
+
+1. **Releases → Draft a new release**, create the tag `vX.Y.Z` on `main` (or another branch in
+   **Target**), tick **Set as a pre-release**, **Publish**.
+2. The exe and APK are attached as for a normal release. Pre-releases aren't shown as "Latest".
+3. When it's good, edit the release, untick **pre-release** and tick **Set as the latest release**.
+
+Notes:
+- The tag must be plain `vX.Y.Z`; suffixes like `v0.9.0-beta.1` are rejected (the version feeds the
+  Android `versionCode`). A pre-release uses up that version number: if testing finds bugs, fix them
+  and publish `vX.Y.(Z+1)` rather than reusing the tag.
+
+## One-time setup: signing secrets
 
 Add these under **Settings → Secrets and variables → Actions → New repository secret**, using the
 values from your local `src-tauri/gen/android/keystore.properties`:
