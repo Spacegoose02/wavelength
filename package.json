@@ -3,7 +3,7 @@
   "private": true,
   "description": "Wavelength — one player for every self-hosted audio source",
   "license": "MIT",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
