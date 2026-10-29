@@ -334,6 +334,28 @@ albums at once and renames the artist in their Artist and Album artist tags, als
 B" if asked, with an optional genre; it saves through the same `PUT /api/admin/tags`, so it's undone the same
 way. The editors suggest artist and genre names from Navidrome (`GET /api/admin/tags/values`).
 
+## Soulseek
+
+The Hub can search and download from Soulseek through [slskd](https://github.com/slskd/slskd)
+(`hub/src/slskd.ts`, `hub/src/routes/slskd.ts`). An admin adds it under **Settings → Downloads → Soulseek**
+with slskd's address (as the Hub reaches it) and an API key from slskd's config:
+
+```yaml
+# slskd.yml
+web:
+  authentication:
+    api_keys:
+      wavelength:
+        key: <a long random value>   # openssl rand -hex 24
+directories:
+  downloads: /music/slskd             # inside the music library Navidrome reads
+```
+
+The key stays on the Hub. Searches come back grouped into folders (one per album, usually) and ranked: the
+words searched for, a free upload slot, speed, lossless, more songs. Downloads go to slskd's downloads folder;
+the Hub follows slskd's transfers and asks Navidrome to scan when a download finishes, and an approved
+request (Inbox → **Soulseek…** → **Use this**) shows *Ready* once its files are in.
+
 ## Deleting albums
 
 **Delete album** (admins, on Navidrome albums) moves the album's files into `.wavelength-trash/<id>/` in the
@@ -436,7 +458,12 @@ with a 4xx status.
 | `GET /api/requests/counts` | signed in | `{ unseen, pending }`: your decided requests you haven't looked at, and (with `requests.approve`) how many wait |
 | `POST /api/requests/seen`, `DELETE /api/requests/:id` | signed in | mark yours as seen / cancel one still waiting |
 | `GET /api/admin/requests?status=` | `requests.approve` | everyone's requests, waiting ones first |
-| `POST /api/admin/requests/:id/approve` | `requests.approve` | `{ bitrate? }`: the Hub downloads it (Deezer links with deemix, anything else with yt-dlp); `failed` with the reason if that didn't work, and approving again retries |
+| `POST /api/admin/requests/:id/approve` | `requests.approve` | `{ bitrate? }`: the Hub downloads it (Deezer links with deemix, anything else with yt-dlp), or `{ slskd: { username, files: [{ filename, size }] } }` downloads a Soulseek folder for it; `failed` with the reason if that didn't work, and approving again retries |
+| `POST /api/slskd/test` | `downloads.run` | `{ message }`: whether slskd is signed in to Soulseek |
+| `POST /api/slskd/searches` | `downloads.run` | `{ query }` → `{ id }` |
+| `GET /api/slskd/searches/:id` | `downloads.run` | `{ done, responses, folders: [{ username, folder, name, files, size, format, lossless, bitRate, freeSlot, speed, queue }] }`, best first |
+| `POST /api/slskd/downloads` | `downloads.run` | `{ username, files: [{ filename, size }], label? }`, audited |
+| `GET /api/slskd/downloads` | `downloads.run` | slskd's downloads by folder: `{ downloads: [{ username, name, files, done, failed, progress, state }] }` |
 | `POST /api/admin/requests/:id/reject`, `/have`, `DELETE …/:id` | `requests.approve` | reject `{ reason? }` / "already in the library" / remove |
 | `GET /api/people` | signed in | who you can share with: `{ people: [{ id, username, displayName, kid }] }` |
 | `POST /api/shares` | signed in | `{ to: userId \| null (everyone), kind, title, subtitle?, cover?, note?, payload }`; `kind` is playlist, album, track, artist, station or favorites; `payload` is `{ tracks: [{ title, artist, album?, duration?, coverUrl? }] }`, `{ station: { name, streamUrl, … } }` or `{ artist }` (512 KB at most) |

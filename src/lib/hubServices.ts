@@ -143,11 +143,11 @@ export async function saveDownloaderToHub(kind: 'deemix' | 'ytdlp') {
 }
 
 /** The signed-in Hub runs this downloader for us (admins, and members with Autodownload). */
-export function hubRuns(kind: 'deemix' | 'ytdlp'): boolean {
+export function hubRuns(kind: 'deemix' | 'ytdlp' | 'slskd'): boolean {
   const { token, services } = useHub.getState();
   return !!token && services.some((s) => s.kind === kind);
 }
-export const useHubRuns = (kind: 'deemix' | 'ytdlp') => useHub((s) => !!s.token && s.services.some((x) => x.kind === kind));
+export const useHubRuns = (kind: 'deemix' | 'ytdlp' | 'slskd') => useHub((s) => !!s.token && s.services.some((x) => x.kind === kind));
 
 export interface DeemixLike {
   addToQueue(link: string, bitrate?: number): Promise<unknown>;

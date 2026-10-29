@@ -371,7 +371,72 @@ function DownloadsTab() {
           <HubDownloader kind="ytdlp" onMsg={setYtTest} />
         </div>
       </section>}
+
+      {signedIn && <SlskdSettings />}
     </>
+  );
+}
+
+/**
+ * Soulseek through slskd, run by the Hub (hub/src/slskd.ts): admins give it slskd's address and API key, which
+ * stays on the Hub. slskd should save into a folder inside the music library so Navidrome finds the downloads.
+ */
+function SlskdSettings() {
+  const canKeys = useHub((s) => s.permissions.includes('keys.manage'));
+  const svc = useHub((s) => s.services.find((x) => x.kind === 'slskd'));
+  const [url, setUrl] = useState(svc?.url ?? '');
+  const [apiKey, setApiKey] = useState('');
+  const [msg, setMsg] = useState('');
+  if (!canKeys && !svc) return null;
+  const save = async () => {
+    setMsg('Saving…');
+    try {
+      const c = hubClient()!;
+      const body = { name: 'slskd', url: url.trim(), ...(apiKey && { secrets: { apiKey } }) };
+      if (svc) await c.updateService(svc.id, body);
+      else await c.createService({ kind: 'slskd', ...body });
+      await loadHubServices();
+      setApiKey('');
+      setMsg(`Saved. ${(await c.slskdTest()).message}`);
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    }
+  };
+  return (
+    <section>
+      <h2>Soulseek <small className="muted">via slskd</small></h2>
+      <div className="editor">
+        <p className="muted small">
+          Find albums people share on Soulseek, often in FLAC, from the <b>Soulseek</b> tab in Downloads and from requests in the Inbox.
+          Your Hub talks to slskd for you; its API key stays on the Hub. Set slskd to save downloads into a folder inside your music
+          library (e.g. <code>/music/slskd</code>), so Navidrome picks them up.
+        </p>
+        {canKeys ? (
+          <div className="editor-grid">
+            <label>slskd address (as the Hub reaches it)<input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="http://192.168.1.10:5030" /></label>
+            <label>API key<input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={svc ? 'Kept on the Hub; type a new one to replace it' : 'From slskd.yml, web → authentication → api_keys'} autoComplete="new-password" /></label>
+          </div>
+        ) : <p className="small">Set up on your Hub. Admins and people with Autodownload can use it.</p>}
+        <div className="row gap">
+          {canKeys && <button className="btn primary" onClick={save} disabled={!url.trim() || (!svc && !apiKey)}>{svc ? 'Save' : 'Add to Hub'}</button>}
+          {svc && <button className="btn" onClick={async () => {
+            setMsg('Testing…');
+            try {
+              setMsg((await hubClient()!.slskdTest()).message);
+            } catch (e) {
+              setMsg(String((e as Error).message ?? e));
+            }
+          }}>Test slskd</button>}
+          {canKeys && svc && <button className="btn ghost" onClick={async () => {
+            if (!confirm('Remove slskd from your Hub?')) return;
+            await hubClient()!.deleteService(svc.id).catch(() => undefined);
+            await loadHubServices();
+            setMsg('Removed');
+          }}>Remove</button>}
+          {msg && <span className="small">{msg}</span>}
+        </div>
+      </div>
+    </section>
   );
 }
 

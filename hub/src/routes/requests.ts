@@ -4,7 +4,9 @@ import { audit } from '../audit.ts';
 import type { Db } from '../db.ts';
 import { clientIp, HttpError, need, signedIn, str, type Auth } from '../http.ts';
 import { deemixJobIds } from '../library.ts';
+import { hubSlskd } from '../slskd.ts';
 import { hubDeemix, hubYtSettings, isDeezerLink } from './proxy.ts';
+import { readFiles } from './slskd.ts';
 
 /**
  * Music requests (docs/USERS-AND-ADMIN.md §6.3). Anyone with `requests.create` asks for a song, album,
@@ -68,8 +70,14 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
    * Hand an approved request to deemix or yt-dlp. Returns how, and which download to follow (library.ts),
    * or throws with what went wrong.
    */
-  async function download(r: MusicRequest, bitrate?: number): Promise<{ via: string; job: string | null }> {
+  async function download(r: MusicRequest, bitrate?: number, slskd?: { username: string; files: { filename: string; size: number }[] }): Promise<{ via: string; job: string | null }> {
     library.activity();
+    // an admin picked a folder on Soulseek for it
+    if (slskd) {
+      await hubSlskd(db, key).client.download(slskd.username, slskd.files);
+      library.slskdActivity();
+      return { via: 'slskd', job: JSON.stringify({ username: slskd.username, files: slskd.files.map((f) => f.filename) }) };
+    }
     if (isDeezerLink(r.link)) {
       const { s, client } = hubDeemix(db, key);
       const answer = await client.addToQueue(r.link, bitrate ?? (Number(s.config.bitrate) || 9));
@@ -82,10 +90,10 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
   }
 
   /** Approve: download it, then record how it went. A failed download is kept as 'failed' with the reason. */
-  async function approve(r: MusicRequest, by: Auth['user'], ip: string, bitrate?: number): Promise<MusicRequest> {
+  async function approve(r: MusicRequest, by: Auth['user'], ip: string, bitrate?: number, slskd?: Parameters<typeof download>[2]): Promise<MusicRequest> {
     let status: RequestStatus = 'approved', via: string | null = null, job: string | null = null, reason: string | null = null;
     try {
-      ({ via, job } = await download(r, bitrate));
+      ({ via, job } = await download(r, bitrate, slskd));
     } catch (e) {
       status = 'failed';
       reason = (e as Error).message.slice(0, 300);
@@ -167,12 +175,17 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     return r;
   };
 
-  /** Download it. `{ bitrate? }` for Deezer: 9 FLAC, 3 MP3 320, 1 MP3 128. Also retries a failed one. */
+  /**
+   * Download it. `{ bitrate? }` for Deezer: 9 FLAC, 3 MP3 320, 1 MP3 128. `{ slskd: { username, files } }`
+   * downloads a folder picked on Soulseek instead. Also retries a failed one.
+   */
   app.post<{ Params: { id: string } }>('/api/admin/requests/:id/approve', async (req) => {
     const { user } = need(req, 'requests.approve');
     const r = decided(Number(req.params.id));
-    const bitrate = (req.body as { bitrate?: unknown } | null)?.bitrate;
-    return { request: await approve(r, user, clientIp(req), typeof bitrate === 'number' && [1, 3, 9].includes(bitrate) ? bitrate : undefined) };
+    const b = (req.body ?? {}) as { bitrate?: unknown; slskd?: { username?: unknown; files?: unknown } };
+    const slskd = b.slskd ? { username: str(b.slskd, 'username', 100), files: readFiles(b.slskd.files) } : undefined;
+    if (slskd && !slskd.username) throw new HttpError(400, 'Whose files?');
+    return { request: await approve(r, user, clientIp(req), typeof b.bitrate === 'number' && [1, 3, 9].includes(b.bitrate) ? b.bitrate : undefined, slskd) };
   });
 
   app.post<{ Params: { id: string } }>('/api/admin/requests/:id/reject', async (req) => {

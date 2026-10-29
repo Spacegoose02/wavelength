@@ -74,7 +74,23 @@ export interface HubAuditEntry {
 }
 
 /** A server login kept by the Hub (hub/src/services.ts). Navidrome comes with this person's own login. */
-export type HubServiceKind = 'plex' | 'audiobookshelf' | 'subwave' | 'navidrome' | 'deemix' | 'ytdlp';
+export type HubServiceKind = 'plex' | 'audiobookshelf' | 'subwave' | 'navidrome' | 'deemix' | 'ytdlp' | 'slskd';
+
+/** A folder someone shares on Soulseek (hub/src/slskd.ts): usually an album. */
+export interface SlskdFolder {
+  username: string;
+  folder: string;
+  name: string;
+  files: { filename: string; name: string; size: number; bitRate?: number; length?: number }[];
+  size: number;
+  format: string;
+  lossless: boolean;
+  bitRate: number | null;
+  freeSlot: boolean;
+  speed: number;
+  queue: number;
+}
+export interface SlskdDownload { username: string; folder: string; name: string; files: number; done: number; failed: number; progress: number; state: string }
 export type HubAccess = 'everyone' | 'admins' | 'chosen';
 type Config = Record<string, string | number>;
 
@@ -557,7 +573,14 @@ export class HubClient {
   addMyHistory = (plays: { playedAt: number; track: Track }[]) => this.call('POST', '/api/me/history', { plays });
   removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);
   allRequests = (status?: string) => this.call<{ requests: HubRequest[] }>('GET', `/api/admin/requests${status ? `?status=${status}` : ''}`);
-  approveRequest = (id: number, bitrate?: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/approve`, { bitrate });
+  approveRequest = (id: number, bitrate?: number, slskd?: { username: string; files: { filename: string; size: number }[] }) =>
+    this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/approve`, { bitrate, slskd });
+
+  slskdTest = () => this.call<{ message: string }>('POST', '/api/slskd/test', {});
+  slskdSearch = (query: string) => this.call<{ id: string }>('POST', '/api/slskd/searches', { query });
+  slskdResults = (id: string) => this.call<{ done: boolean; responses: number; folders: SlskdFolder[] }>('GET', `/api/slskd/searches/${encodeURIComponent(id)}`);
+  slskdDownload = (f: Pick<SlskdFolder, 'username' | 'files' | 'name'>) => this.call<{ ok: true; files: number }>('POST', '/api/slskd/downloads', { username: f.username, files: f.files, label: f.name });
+  slskdDownloads = () => this.call<{ downloads: SlskdDownload[] }>('GET', '/api/slskd/downloads');
   rejectRequest = (id: number, reason?: string) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/reject`, { reason });
   haveRequest = (id: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/have`, {});
   deleteRequest = (id: number) => this.call('DELETE', `/api/admin/requests/${id}`);

@@ -36,6 +36,8 @@ export const KINDS = {
   navidrome: { secrets: ['adminUsername', 'adminPassword', 'username', 'password'], own: ['username', 'password'], config: ['relay'], hubOnly: ['adminUsername', 'adminPassword'] },
   // runs inside the Hub container and saves into its music folder, so there's no share login
   ytdlp: { secrets: [], own: [], config: ['folder', 'format'], download: true },
+  // Soulseek through slskd's API (slskd.ts); it saves into its own downloads folder, inside the library
+  slskd: { secrets: ['apiKey'], own: [], config: [], hubOnly: ['apiKey'], download: true },
 } satisfies Record<string, KindSpec>;
 export type ServiceKind = keyof typeof KINDS;
 const spec = (k: ServiceKind): KindSpec => KINDS[k];
