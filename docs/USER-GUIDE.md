@@ -428,6 +428,11 @@ changes: Wavelength works on its own, as before.
 - **Sign in with a password** signs in with your Hub username and password directly.
 - On a brand-new Hub, the Account tab offers **Set up this Hub** instead: that creates the first admin (you).
 
+Once you're signed in, your settings, your Wavelength playlists and your play history follow you to every
+device, and stay yours on a shared one: when someone else signs in there, they see their own playlists and
+history, and yours come back when you sign in again. The playlists already on a device become the first
+person's to sign in on it.
+
 **In a browser:** open your Hub's address (e.g. `https://hub.example.com`) in any browser and you get
 Wavelength itself, already pointed at that Hub: sign in and go. Offline downloads and yt-dlp on the device
 need the app; everything else works. See [HUB.md → In a browser](HUB.md#in-a-browser) for what your music

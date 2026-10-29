@@ -337,8 +337,8 @@ Phase 6  Server page + extras ───┘ (needs 2; grows each phase)
 
 Done: the Hub server ([HUB.md](HUB.md)), and in the app Settings → Account (sign in with a code/QR or a
 password, devices, settings sync, linking tinyauth to a password account) and Settings → Users (item 6).
-Still open: moving the device token and server logins into the OS keychain (item 4), and syncing local
-playlists and history (only settings sync so far). Passwords use scrypt
+Playlists and play history sync per person too (`hub/src/routes/mine.ts`, `src/lib/librarySync.ts`).
+Still open: moving the device token and server logins into the OS keychain (item 4). Passwords use scrypt
 (built into Node) rather than argon2id, to keep the image free of native modules.
 
 Everything else in the users/admin column depends on this.

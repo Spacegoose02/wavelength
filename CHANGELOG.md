@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Your playlists are yours.** Wavelength playlists and play history are now kept per person on the Hub:
+  they follow you to every device, and on a shared device everyone sees only their own. Playlists already on
+  a device become the first person's to sign in there.
+- **Hub:** migration 10 (`user_playlists`, `play_history`) and `/api/me/playlists`, `/api/me/history`.
 - **Kids' Navidrome password stays on the Hub.** Kids' devices reach Navidrome through the Hub with a login of
   their own (per device, so signing a device out ends it). The Hub swaps in the real login, refuses account
   changes, and won't stream a kid anything explicit or flagged, even to another app. **Send everyone through
