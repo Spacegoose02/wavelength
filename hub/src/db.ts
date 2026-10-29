@@ -97,6 +97,53 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (service_id, user_id)
   );
   `,
+  `
+  -- Music people asked for. An admin approves (the Hub downloads it), rejects, or marks it as already in
+  -- the library. See routes/requests.ts.
+  CREATE TABLE requests (
+    id          INTEGER PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    link        TEXT NOT NULL,                   -- Deezer link, or any link yt-dlp understands
+    kind        TEXT NOT NULL,                   -- track, album, playlist, artist, video
+    title       TEXT NOT NULL,
+    artist      TEXT NOT NULL,
+    cover       TEXT,
+    note        TEXT,
+    status      TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected', 'have', 'failed')),
+    reason      TEXT,                            -- why it was rejected, or what failed
+    via         TEXT,                            -- deemix / yt-dlp, once approved
+    decided_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at  INTEGER NOT NULL,
+    decided_at  INTEGER,
+    seen        INTEGER NOT NULL DEFAULT 1       -- 0 = the requester hasn't seen the decision yet
+  );
+  CREATE INDEX requests_user ON requests(user_id, created_at);
+  CREATE INDEX requests_status ON requests(status, created_at);
+
+  -- Things people share with each other: a playlist, album, song, artist, station or a favorites list,
+  -- stored as a snapshot so it plays on the other person's sources. See routes/shares.ts.
+  CREATE TABLE shares (
+    id          INTEGER PRIMARY KEY,
+    from_user   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    to_user     INTEGER REFERENCES users(id) ON DELETE CASCADE,   -- null = everyone in the household
+    kind        TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    subtitle    TEXT,
+    cover       TEXT,
+    note        TEXT,
+    payload     TEXT NOT NULL,                   -- JSON: the tracks / station / album
+    created_at  INTEGER NOT NULL
+  );
+  CREATE INDEX shares_to ON shares(to_user, created_at);
+
+  -- Who has opened (or dismissed) which share.
+  CREATE TABLE share_seen (
+    share_id INTEGER NOT NULL REFERENCES shares(id) ON DELETE CASCADE,
+    user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    hidden   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (share_id, user_id)
+  );
+  `,
 ];
 
 export function openDb(file: string): Db {
