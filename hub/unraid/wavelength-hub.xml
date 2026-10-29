@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<!-- Unraid template. Install: Docker → Add Container → Template → paste this file's URL, or copy it to
-     /boot/config/plugins/dockerMan/templates-user/my-wavelength-hub.xml. See docs/HUB.md. -->
+<!-- Unraid template. Install: copy it to /boot/config/plugins/dockerMan/templates-user/my-wavelength-hub.xml,
+     then Docker → Add Container → Template → wavelength-hub. See docs/HUB.md. -->
 <Container version="2">
   <Name>wavelength-hub</Name>
   <Repository>ghcr.io/spacegoose02/wavelength-hub:latest</Repository>
