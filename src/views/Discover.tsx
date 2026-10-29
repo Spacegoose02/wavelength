@@ -156,8 +156,7 @@ export function Discover() {
         <h1>Discover</h1>
         <button className="btn small" onClick={() => setNonce(nonce + 1)}><IconRefresh /> Refresh</button>
         <button className="btn small ghost" onClick={() => {
-          useUi.getState().go({ view: 'settings' });
-          window.setTimeout(() => document.getElementById('discover-charts')?.scrollIntoView({ behavior: 'smooth' }), 80);
+          useUi.getState().go({ view: 'settings', tab: 'discover' });
         }} title="Pick which charts each genre uses">Edit charts</button>
       </header>
       <div className="chips">

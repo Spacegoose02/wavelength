@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Deemix } from '../sources/deemix';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid } from '../lib/platform';
@@ -6,7 +6,9 @@ import { Equalizer } from '../components/Equalizer';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
-import { SKINS, useSettings } from '../store/settings';
+import { SKIN_GROUPS, SKINS, useSettings, type Skin } from '../store/settings';
+import { useUi, type SettingsTab } from '../store/ui';
+import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
 
 /** Settings → Discover charts: tick which charts feed each genre's tabs and Mix. */
@@ -136,16 +138,11 @@ function SourceEditor({ initial, onDone }: { initial: SourceConfig; onDone(): vo
   );
 }
 
-export function Settings() {
-  const { sources, removeSource, moveSource, upsertSource, skin, setSkin, deemix, setDeemix, ytdlp, setYtdlp } = useSettings();
+function SourcesTab() {
+  const { sources, removeSource, moveSource, upsertSource } = useSettings();
   const [editing, setEditing] = useState<SourceConfig | null>(null);
-  const [dmTest, setDmTest] = useState<string>();
-  const [ytTest, setYtTest] = useState<string>();
-
   return (
-    <div className="page narrow">
-      <header className="page-head"><h1>Settings</h1></header>
-
+    <>
       <section>
         <h2>Sources</h2>
         <p className="muted small">When the same album is on several servers, the source listed first wins. Use the arrows to reorder.</p>
@@ -178,7 +175,16 @@ export function Settings() {
           </div>
         )}
       </section>
+    </>
+  );
+}
 
+function DownloadsTab() {
+  const { deemix, setDeemix, ytdlp, setYtdlp } = useSettings();
+  const [dmTest, setDmTest] = useState<string>();
+  const [ytTest, setYtTest] = useState<string>();
+  return (
+    <>
       <section>
         <h2>deemix</h2>
         <div className="editor">
@@ -250,25 +256,123 @@ export function Settings() {
           </div>
         </div>
       </section>}
+    </>
+  );
+}
 
-      <DiscoverCharts />
+const SEASONAL_SKINS = new Set<Skin>(SEASONS.map((s) => s.skin));
 
-      <section id="equalizer">
-        <h2>Equalizer</h2>
-        <Equalizer />
+/** Settings → Themes: grouped skin picker with search, live preview on hover/focus, Seasonal and Random daily. */
+function ThemesTab() {
+  const { skin, setSkin, seasonal, randomDaily, setThemeMode } = useSettings();
+  const setPreview = useUi((s) => s.setPreviewSkin);
+  const [q, setQ] = useState('');
+  // never leave a hover preview stuck on screen after leaving the tab
+  useEffect(() => () => setPreview(undefined), [setPreview]);
+  const now = new Date();
+  const season = seasonFor(now);
+  const shown = activeSkin({ skin, seasonal, randomDaily }, now);
+  const label = (id: Skin) => SKINS.find((s) => s.id === id)?.label ?? id;
+  const needle = q.trim().toLowerCase();
+  const matches = SKINS.filter((s) => !needle || s.label.toLowerCase().includes(needle) || s.group.toLowerCase().includes(needle) || s.id.includes(needle));
+
+  return (
+    <>
+      <section>
+        <h2>Theme</h2>
+        <div className="editor">
+          <label className="check">
+            <input type="checkbox" checked={seasonal} onChange={(e) => setThemeMode({ seasonal: e.target.checked })} />
+            <span><b>Seasonal</b> — switch to the holiday theme in the weeks around Valentine's Day, July 4th, Halloween, Thanksgiving and Christmas, then back to your pick.</span>
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={randomDaily} onChange={(e) => setThemeMode({ randomDaily: e.target.checked })} />
+            <span><b>Random daily</b> — a different theme every day (holiday themes left out).</span>
+          </label>
+          <p className="muted small">
+            {shown === skin
+              ? <>Showing <b>{label(skin)}</b>.</>
+              : <>Showing <b>{label(shown)}</b> today{seasonal && season ? ` for ${season.label}` : ''}. Your pick, <b>{label(skin)}</b>, comes back {seasonal && season ? 'after the holiday' : 'when you turn Random daily off'}.</>}
+            {' '}Point at (or focus) a card to preview it; tap it to choose.
+          </p>
+        </div>
       </section>
 
       <section>
-        <h2>Skin</h2>
-        <div className="skins">
-          {SKINS.map(({ id: k, label }) => (
-            <button key={k} className={`skin-card ${k} ${skin === k ? 'on' : ''}`} onClick={() => setSkin(k)}>
-              <div className="skin-preview"><span /><span /><span /></div>
-              {label}
-            </button>
-          ))}
-        </div>
+        <input className="filter wide" placeholder="Search themes…" value={q} onChange={(e) => setQ(e.target.value)} />
+        {SKIN_GROUPS.map((group) => {
+          const list = matches.filter((s) => s.group === group);
+          if (!list.length) return null;
+          return (
+            <div key={group} className="skin-group">
+              <h3>{group}</h3>
+              {group === 'Holidays' && (
+                <p className="muted small">{SEASONS.map((s) => `${s.label}: ${s.window}`).join(' · ')}. Turn on Seasonal above to have these switch on by themselves.</p>
+              )}
+              <div className="skins">
+                {list.map(({ id: k, label }) => (
+                  <button
+                    key={k}
+                    className={`skin-card ${k} ${skin === k ? 'on' : ''}`}
+                    onMouseEnter={() => setPreview(k)}
+                    onMouseLeave={() => setPreview(undefined)}
+                    onFocus={() => setPreview(k)}
+                    onBlur={() => setPreview(undefined)}
+                    onClick={() => {
+                      setSkin(k);
+                      setPreview(undefined);
+                      // picking a skin by hand means "show me this one": daily shuffle would hide it
+                      if (randomDaily) setThemeMode({ randomDaily: false });
+                    }}
+                  >
+                    <div className="skin-preview"><span /><span /><span /></div>
+                    {label}
+                    {SEASONAL_SKINS.has(k) && season?.skin === k ? <small className="muted">in season</small> : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {!matches.length && <p className="muted">No theme matches “{q}”.</p>}
       </section>
+    </>
+  );
+}
+
+const TABS: { id: SettingsTab; label: string }[] = [
+  { id: 'sources', label: 'Sources' },
+  { id: 'playback', label: 'Playback' },
+  { id: 'downloads', label: 'Downloads' },
+  { id: 'themes', label: 'Themes' },
+  { id: 'discover', label: 'Discover' },
+];
+
+export function Settings({ tab: initial }: { tab?: SettingsTab }) {
+  const [tab, setTab] = useState<SettingsTab>(initial ?? 'sources');
+  useEffect(() => {
+    if (initial) setTab(initial);
+  }, [initial]);
+
+  return (
+    <div className="page narrow">
+      <header className="page-head"><h1>Settings</h1></header>
+      <div className="tabs" role="tablist">
+        {TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab === 'sources' && <SourcesTab />}
+      {tab === 'playback' && (
+        <section id="equalizer">
+          <h2>Equalizer</h2>
+          <Equalizer />
+        </section>
+      )}
+      {tab === 'downloads' && <DownloadsTab />}
+      {tab === 'themes' && <ThemesTab />}
+      {tab === 'discover' && <DiscoverCharts />}
     </div>
   );
 }

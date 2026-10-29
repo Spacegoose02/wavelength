@@ -32,11 +32,11 @@ admin-only controls. It's a control plane only: audio never goes through it. See
 | `main.tsx` | Boot: enables TV remote navigation and the Android media bridge, renders `<App/>`. |
 | `App.tsx` | Layout (sidebar or phone tab bar), keyboard shortcuts, back-button handling, the `View` router switch. |
 | `views/` | One file per page. Pages read stores and call source adapters; they don't fetch directly. |
-| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Scenes` (Now Playing visualizers), `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar`, `Visualizer`, `ErrorBoundary`. |
+| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Scenes` (Now Playing visualizers), `RaccoonDJ` (the SVG DJ raccoon scene), `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar`, `Visualizer`, `ErrorBoundary`. |
 | `store/` | Global state (zustand). See §4. |
 | `sources/` | Adapters for each backend + chart/radio/download helpers. See [SOURCES.md](SOURCES.md). |
 | `player/engine.ts` | The audio engine. See §3. |
-| `lib/` | `http.ts` (fetch through Rust), `match.ts` (find "the same song" across servers), `platform.ts` (Android/phone detection), `tvNav.ts` (D-pad), `nativeMedia.ts` (Android media session bridge). |
+| `lib/` | `http.ts` (fetch through Rust), `match.ts` (find "the same song" across servers), `platform.ts` (Android/phone detection), `tvNav.ts` (D-pad), `nativeMedia.ts` (Android media session bridge), `seasons.ts` (Seasonal holiday windows, Random daily, `activeSkin`). |
 | `styles.css` | All CSS. Skins are blocks of CSS variables on `:root[data-skin='…']`. |
 
 ### Routing
@@ -121,7 +121,7 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 
 | Store / key | Contents | Persisted as |
 |---|---|---|
-| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations, skin, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`), equalizer (`eq`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
+| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations and their order, hidden/ordered server stations (`hiddenStations`, `stationOrder`), skin plus `seasonal`/`randomDaily`, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`), equalizer (`eq`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
 | `store/library.ts` | Mixed-source playlists, local play history | `tonearm.library` |
 | `store/offline.ts` | Downloaded tracks (path, size), covers, downloaded collections | `tonearm.offline` (files in `<app data>/offline/`) |
 | `store/catalog.ts` | Merged albums/artists/books/podcasts loaded at start | memory |
@@ -168,4 +168,6 @@ Tauri generates this project once; we edit it by hand and commit it.
   `html.tv` adds big focus rings. Hover-only controls also appear on `:focus-within`.
 - **Skins**: `data-skin` on `<html>`; each skin overrides the CSS variables (`--bg`, `--panel`, `--accent`,
   `--lcd-*`, `--viz-*`, `--bevel` …) and optionally a few component rules. The list lives in `SKINS`
-  (`store/settings.ts`).
+  (`store/settings.ts`), each with a `group` for Settings → Themes. The skin on screen is not always the saved
+  one: `App.tsx` shows `useUi.previewSkin` (a hover preview) or else `activeSkin()` from `lib/seasons.ts`,
+  which applies Seasonal and Random daily from the device's local date.

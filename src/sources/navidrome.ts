@@ -163,6 +163,11 @@ export class NavidromeSource implements MusicSource {
     }));
   }
 
+  async deleteStation(id: string) {
+    // Navidrome answers non-admins with a Subsonic error 50 ("not authorized"), which `call` throws
+    await this.call('deleteInternetRadioStation', { id });
+  }
+
   async getHistory(): Promise<HistoryEntry[]> {
     const songs: any[] = await this.native(`/api/song?${qs({ _start: 0, _end: 150, _sort: 'play_date', _order: 'DESC' })}`);
     return songs

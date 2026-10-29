@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Album, Artist, Podcast, ServerPlaylist } from '../sources/types';
+import type { Skin } from './settings';
 
 export type Route =
   | { view: 'home' }
@@ -24,13 +25,19 @@ export type Route =
   | { view: 'offline' }
   | { view: 'offlineCollection'; id: string }
   | { view: 'downloads' }
-  | { view: 'settings' };
+  | { view: 'settings'; tab?: SettingsTab };
+
+/** The tabs of the Settings page (views/Settings.tsx). */
+export type SettingsTab = 'sources' | 'playback' | 'downloads' | 'themes' | 'discover';
 
 interface UiState {
   route: Route;
   history: Route[];
   nowPlayingOpen: boolean;
   queueOpen: boolean;
+  /** Settings → Themes: the skin under the pointer / D-pad focus, shown until it leaves. Not saved. */
+  previewSkin?: Skin;
+  setPreviewSkin(s?: Skin): void;
   go(r: Route): void;
   back(): void;
   setNowPlaying(open: boolean): void;
@@ -42,6 +49,8 @@ export const useUi = create<UiState>()((set) => ({
   history: [],
   nowPlayingOpen: false,
   queueOpen: false,
+  previewSkin: undefined,
+  setPreviewSkin: (previewSkin) => set({ previewSkin }),
   go: (route) => {
     // a history entry per page so the Android back button / mouse back walk back through pages
     window.history.pushState(null, '');

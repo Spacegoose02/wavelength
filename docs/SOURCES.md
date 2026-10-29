@@ -80,7 +80,7 @@ can't prove it updated recently (21 days by default; RadioWave 35, iHeart R&B Hi
 | ~~Shazam~~ | — | — | Removed |
 | Beatport, Traxsource | — | — | Cloudflare / 403 — apps can't read them. Don't scrape around bot checks. |
 
-**Which charts a genre uses** is the user's choice: Settings → Discover charts stores `discoverCharts` (genre → ids)
+**Which charts a genre uses** is the user's choice: Settings → Discover stores `discoverCharts` (genre → ids)
 in the settings store. `sourcesFor(genre, custom)` returns that pick, or the built-in `BY_GENRE` list. `chartsFor(genre)`
 is what the picker offers: everything, except Billboard/Apple under genres they don't publish (`BILLBOARD`, `APPLE`).
 

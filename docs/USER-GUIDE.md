@@ -1,14 +1,15 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers**, the **equalizer** and **skins**. For how they're built, see the
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the DJ raccoon), the **equalizer**,
+**skins and the Themes tab** (holiday themes, Seasonal and Random daily) and **editing your radio stations**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
 
 ## Browse Deezer by artist, album and playlist
 
-**Where:** Downloads → **Deezer** tab. You need a deemix server URL in Settings → deemix.
+**Where:** Downloads → **Deezer** tab. You need a deemix server URL in Settings → Downloads → deemix.
 
 Before this, the Deezer tab only listed albums and songs that matched your search. Now you can open
 an artist, an album or a playlist and browse the way you would in a streaming app, then send exactly
@@ -148,6 +149,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
+| DJ raccoon | A raccoon DJ behind two decks (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -160,13 +162,36 @@ spectrum under the title does the same.
 > `Draw` function that gets a `Frame` (frequency bins, waveform, bass/mid/treble levels, a `beat` flag,
 > the skin's `--viz-*` colours and the cover image) and draws on one square canvas every animation frame.
 > To add one, write a `Draw`, add its id to `NpScene` (`store/settings.ts`), and add it to `SCENES` and `DRAW`.
+> The audio reading (analyser → `freq`, `wave`, `bass`/`mid`/`treble`, `beat`, `transient`, or the calm
+> made-up signal) is `createAudioReader()` in `src/player/analysis.ts`, shared by every scene.
+
+### DJ raccoon
+
+The last visualizer is a raccoon DJ. His fur is always raccoon grey, but his hoodie, headphones, record
+labels and the deck lights take your skin's colours, so every skin dresses him differently. Holiday skins
+give him a hat: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an
+Uncle Sam hat for July 4th and heart boppers for Valentine's Day.
+
+<img src="screenshots/raccoon-dj.png" alt="The DJ raccoon in five skins: Neon synth, Christmas (Santa hat), July 4th (Uncle Sam hat), Thanksgiving (pilgrim hat) and Valentine's Day (heart boppers)" width="100%">
+
+- **Playing:** his head bobs on each beat, his right hand scratches the record on sharp hits (claps,
+  snares), his left hand rides the mixer, the mixer meters follow the bass, mids and highs, and the records spin.
+- **Paused:** he sways slowly, blinks, yawns now and then and adjusts his headphones.
+- **Streams the app can't read** (no CORS, see above): he sways gently to a made-up rhythm instead.
+
+> **Developer notes.** `src/components/RaccoonDJ.tsx`. Unlike the other scenes he's an inline SVG, not a
+> canvas drawing, so the drawing stays editable. Every frame writes `transform`/`opacity` straight onto
+> named parts (`data-part="head"`, `arm-r`, …), with no React re-render. Colours are CSS in `styles.css`
+> (`.raccoon .hoodie { fill: var(--accent) }`, …). Hats are all in the SVG and hidden; one rule per holiday
+> skin shows the right one (`:root[data-skin='halloween'] .raccoon .hat-witch`). To give a new skin a
+> hat, add a `<g className="hat hat-…">` and a matching rule.
 ## Equalizer
 
 A 10-band equalizer with presets. There are three ways to open it:
 
 - **Desktop:** the **EQ** button in the player bar, next to the queue button.
 - **Now Playing** (phone and desktop): the **EQ** chip under the song title.
-- **Settings → Equalizer**.
+- **Settings → Playback**.
 
 <img src="screenshots/equalizer.png" alt="Equalizer pop-over with the Bass boost preset" width="60%">
 
@@ -195,11 +220,34 @@ also show the idle visualiser animation.
 > The curve comes from `BiquadFilterNode.getFrequencyResponse` on a throwaway `OfflineAudioContext`. To
 > add a preset, add an entry to `EQ_PRESETS` (10 gains, low to high).
 
-## Skins
+## Skins and themes
 
-**Settings → Skin** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
+**Settings → Themes** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
 device and applies straight away. The visualizers and the LCD follow the skin's colours too.
 Every skin works on Windows, Android phones and tablets, and Android TV.
+
+<img src="screenshots/themes.png" alt="Settings, Themes tab: Seasonal and Random daily switches, a search box, and the Holidays group with Halloween marked in season" width="80%">
+
+- **Groups.** Skins are grouped as Classic, Retro, Neon, Editor palettes, Holidays and Accessibility.
+- **Search.** Type in the box to filter by name or group (for example "neon" or "light").
+- **Live preview.** Point at a card (or move to it with the D-pad on TV) and the whole app shows that skin
+  until you move away. Tap it to keep it.
+- **Seasonal.** In the weeks around each holiday, the app switches to that holiday's skin by itself, then
+  goes back to your pick afterwards. Your pick isn't changed. The windows are:
+
+  | Holiday skin | When Seasonal shows it |
+  | --- | --- |
+  | Valentine's Day (rose and blush, a light skin) | Feb 7 – Feb 14 |
+  | July 4th (navy, red and white, with fireworks) | Jun 28 – Jul 5 |
+  | Halloween (pumpkin orange and witchy purple) | Oct 15 – Oct 31 |
+  | Thanksgiving (harvest gold, cranberry, warm wood) | 10 days before US Thanksgiving to the day after |
+  | Christmas (pine green, berry red, gold, a little snow) | Dec 1 – Dec 26 |
+
+- **Random daily.** A different skin every day (holiday skins are left out). Picking a card by hand
+  turns Random daily off. If Seasonal is on too, a holiday wins.
+- The note under the switches says which skin you're seeing today and why.
+
+You can also pick a holiday skin by hand at any time of year.
 
 <img src="screenshots/neon-skins.png" alt="Skin picker with the neon skins, Blacklight UV selected" width="80%">
 
@@ -217,10 +265,49 @@ Synthwave sunset and Cyberpunk:
 
 **Other skins worth knowing.** **OLED black** uses true black so OLED phone screens switch those pixels off,
 which saves battery. **High contrast** is yellow on black with thick outlines and strong focus rings, for low
-vision or bright sunlight. **Sakura** and **Solarized Light** are light skins.
+vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day** are light skins.
 
 > **Developer notes.** A skin is a `:root[data-skin='…']` block of CSS variables in `src/styles.css` plus a
-> `.skin-card.<id> .skin-preview` rule for its picker card, and an entry in `SKINS` (`store/settings.ts`).
-> Recipe: [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skin). Skin rules must sit at the top level of
-> `styles.css`; one inside a `@media (max-width: 760px)` block only applies at phone width, which is what
-> broke seven skins on Windows in 0.7.0.
+> `.skin-card.<id> .skin-preview` rule for its picker card, and an entry in `SKINS` (`store/settings.ts`)
+> with its `group` (one of `SKIN_GROUPS`). Recipe: [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skin). Skin rules
+> must sit at the top level of `styles.css`; one inside a `@media (max-width: 760px)` block only applies at
+> phone width, which is what broke seven skins on Windows in 0.7.0.
+>
+> The saved `skin` is what the user picked. What's on screen is worked out in `App.tsx`:
+> `useUi.previewSkin` (hover preview, never saved) if set, else `activeSkin()` from `src/lib/seasons.ts`,
+> which applies Seasonal (`seasonal`, holiday windows in `SEASONS`) and Random daily (`randomDaily`,
+> a hash of the local date). `App` re-checks every 10 minutes while either mode is on, so it rolls over at
+> midnight. Everything uses the device's local date; nothing needs a server.
+
+## Settings tabs
+
+Settings is split into tabs: **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
+yt-dlp), **Themes** and **Discover** (charts). Links elsewhere open the right tab: **Edit charts** on
+Discover opens Discover, and the Settings link in Downloads opens Downloads.
+
+> **Developer notes.** `src/views/Settings.tsx`, one component per tab. The route can name a tab:
+> `go({ view: 'settings', tab: 'themes' })` (`SettingsTab` in `store/ui.ts`).
+
+## Editing your radio stations
+
+**Radio → Your stations** lists the stations on your Navidrome and SUB/WAVE servers. Tap **Edit** next to
+the heading to change them:
+
+<img src="screenshots/radio-edit.png" alt="Radio, Your stations in edit mode: move arrows, Hide and Delete on each station, and a hidden station with a Show button" width="80%">
+
+- **Reorder** with the ◀ ▶ arrows, or drag a station onto another on desktop.
+- **Hide** removes a station from the row on this device only. Hidden stations are listed under the row
+  while editing, each with **Show** to bring it back.
+- **Delete** (Navidrome stations only) removes the station from the Navidrome server for everyone. Navidrome
+  only lets admin accounts do this; if your account isn't an admin you'll get an error, and you can hide it instead.
+- Tap **Done** when you're finished.
+
+Your **Favorites** (stations you hearted, and streams you added by URL) have ▲ ▼ arrows to reorder them,
+and the heart removes one.
+
+> **Developer notes.** `src/views/Radio.tsx`. Hidden stations and the order are `hiddenStations` and
+> `stationOrder` in the settings store, keyed `<sourceId>:<stationId>` because ids are only unique per
+> server. Stations the order doesn't know yet go at the end. Delete calls `deleteStation` on the source
+> (`deleteInternetRadioStation` in `sources/navidrome.ts`); Navidrome enforces the admin check. When the
+> Wavelength Hub arrives (see [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)) the hidden list and order are
+> meant to sync per user; today they're per device.

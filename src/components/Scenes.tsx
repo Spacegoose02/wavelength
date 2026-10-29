@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { engine } from '../player/engine';
-import { usePlayer } from '../store/player';
+import { createAudioReader } from '../player/analysis';
 import { useSettings, type NpScene } from '../store/settings';
 import { Cover } from './common';
+import { RaccoonDJ } from './RaccoonDJ';
 
 /**
  * Now Playing "scenes": tap the artwork to cycle through full-size visualizers that react to the
- * music. Every scene draws on one square canvas from the same analyser data (see `engine.ts`);
+ * music. Every canvas scene draws on one square canvas from the same analyser data (see `player/analysis.ts`);
  * streams without CORS give no data, so scenes then run on a gentle synthetic signal instead.
  */
 export const SCENES: { id: NpScene; label: string }[] = [
@@ -16,6 +16,7 @@ export const SCENES: { id: NpScene; label: string }[] = [
   { id: 'stars', label: 'Starfield' },
   { id: 'mirror', label: 'Mirror spectrum' },
   { id: 'rings', label: 'Pulse rings' },
+  { id: 'raccoon', label: 'DJ raccoon' },
 ];
 
 interface Frame {
@@ -191,9 +192,9 @@ const pulseRings: Draw = (g, f) => {
   drawArt(g, f, cx, cy, size * 0.15 * (1 + f.bass * 0.15));
 };
 
-const DRAW: Record<Exclude<NpScene, 'art'>, Draw> = { radial, scope, stars: starfield, mirror, rings: pulseRings };
+const DRAW: Record<Exclude<NpScene, 'art' | 'raccoon'>, Draw> = { radial, scope, stars: starfield, mirror, rings: pulseRings };
 
-function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art'>; art?: string }) {
+function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'>; art?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -206,12 +207,7 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art'>; art?: str
       img = new Image();
       img.src = art;
     }
-    let bytes = new Uint8Array(256);
-    let waveBytes = new Uint8Array(512);
-    let freq = new Float32Array(256);
-    let wave = new Float32Array(512);
-    let avgBass = 0;
-    let lastBeat = 0;
+    const read = createAudioReader();
     let t = 0;
     let raf = 0;
 
@@ -226,44 +222,7 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art'>; art?: str
       }
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       t += 1 / 60;
-
-      const analyser = engine.analyser();
-      const playing = usePlayer.getState().playing;
-      if (analyser && playing) {
-        if (bytes.length !== analyser.frequencyBinCount) {
-          bytes = new Uint8Array(analyser.frequencyBinCount);
-          freq = new Float32Array(bytes.length);
-        }
-        if (waveBytes.length !== analyser.fftSize) {
-          waveBytes = new Uint8Array(analyser.fftSize);
-          wave = new Float32Array(waveBytes.length);
-        }
-        analyser.getByteFrequencyData(bytes);
-        analyser.getByteTimeDomainData(waveBytes);
-        for (let i = 0; i < bytes.length; i++) freq[i] = bytes[i] / 255;
-        for (let i = 0; i < waveBytes.length; i++) wave[i] = (waveBytes[i] - 128) / 128;
-      } else {
-        // no readable audio (CORS-less stream) or paused: a calm synthetic signal
-        const energy = playing ? 0.45 : 0.08;
-        for (let i = 0; i < freq.length; i++) {
-          const x = i / freq.length;
-          freq[i] = energy * (1 - x) * (0.6 + 0.4 * Math.sin(t * 3 + i * 0.3) * Math.sin(t * 1.3 + i * 0.07));
-        }
-        for (let i = 0; i < wave.length; i++) wave[i] = energy * 0.5 * Math.sin(i * 0.05 + t * 6) * Math.sin(i * 0.011 + t);
-      }
-
-      const band = (a: number, b: number) => {
-        const lo = Math.floor(a * freq.length);
-        const hi = Math.max(lo + 1, Math.floor(b * freq.length));
-        let s = 0;
-        for (let i = lo; i < hi; i++) s += freq[i];
-        return s / (hi - lo);
-      };
-      const bass = band(0, 0.06);
-      // at most ~4 beats a second, so one kick doesn't fire on several frames in a row
-      const beat = bass > 0.35 && bass > avgBass * 1.25 && t - lastBeat > 0.25;
-      if (beat) lastBeat = t;
-      avgBass = avgBass * 0.93 + bass * 0.07;
+      const { freq, wave, bass, mid, treble, beat } = read(t);
 
       const css = getComputedStyle(canvas);
       const v = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
@@ -273,8 +232,8 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art'>; art?: str
         freq,
         wave,
         bass,
-        mid: band(0.06, 0.3),
-        treble: band(0.3, 0.8),
+        mid,
+        treble,
         beat,
         colors: { low: v('--viz-low', '#22d3ee'), mid: v('--viz-mid', '#3dff9a'), high: v('--viz-high', '#ff4fd8'), peak: v('--viz-peak', '#ffffff') },
         art: img,
@@ -310,7 +269,7 @@ export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
 
   return (
     <button className={`np-stage ${scene === 'art' ? '' : 'scene'}`} onClick={next} title={`${label}: tap for the next visualizer`} aria-label={`Visualizer: ${label}. Tap for the next one.`}>
-      {scene === 'art' ? <Cover key={art} src={art} alt={alt} className="np-art" /> : <SceneCanvas scene={scene} art={art} />}
+      {scene === 'art' ? <Cover key={art} src={art} alt={alt} className="np-art" /> : scene === 'raccoon' ? <RaccoonDJ /> : <SceneCanvas scene={scene} art={art} />}
       {hint && <span className="np-stage-hint">{hint}</span>}
     </button>
   );

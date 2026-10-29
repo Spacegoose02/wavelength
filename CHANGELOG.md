@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- **Settings has tabs**: Sources, Playback, Downloads, Themes and Discover. **Edit charts** on Discover and
+  the Settings link in Downloads open the right tab.
+- **Themes tab**: skins grouped (Classic, Retro, Neon, Editor palettes, Holidays, Accessibility), a search box,
+  and a live preview: point at (or D-pad to) a card and the whole app shows it until you move away.
+  **Random daily** picks a different skin every day. See the [user guide](docs/USER-GUIDE.md#skins-and-themes).
+- **5 holiday skins**: Halloween, Thanksgiving, Christmas, July 4th and Valentine's Day (light). **Seasonal**
+  mode switches to each one in the weeks around the holiday and back to your pick afterwards.
+- **DJ raccoon** visualizer in Now Playing: he wears your skin's colours (and a hat on holiday skins), bobs on
+  the beat, scratches on sharp hits and yawns when paused. See the [user guide](docs/USER-GUIDE.md#dj-raccoon).
+- **Edit your radio stations**: Radio → Your stations → **Edit** to reorder (arrows or drag), hide stations on
+  this device, or delete a Navidrome station from the server (Navidrome admin accounts only). Favorites can
+  be reordered too. See the [user guide](docs/USER-GUIDE.md#editing-your-radio-stations).
 - **Wavelength Hub (Phase 1, server side).** A new optional server, `hub/`, shipped as a Docker image with an
   Unraid template: user accounts with roles (admin, member, kid), sign-in with a Hub password or tinyauth
   single sign-on (through Nginx Proxy Manager), TV-style pairing codes for devices, per-device sign-out,
