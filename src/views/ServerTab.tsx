@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { HubError, type HubAdminService, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit } from '../sources/hub';
+import { HubError, type HubAdminService, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit, type HubTrashAlbum } from '../sources/hub';
 import { hubClient } from '../store/hub';
 
 const gb = (n: number) => (n >= 1e12 ? `${(n / 1e12).toFixed(1)} TB` : n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.max(0, Math.round(n / 1e6))} MB`);
@@ -344,6 +344,51 @@ function TagEdits() {
   );
 }
 
+/** Albums deleted from album pages (hub/src/routes/trash.ts): put back, or remove for good before the 30 days are up. */
+function DeletedAlbums() {
+  const c = hubClient();
+  const [list, setList] = useState<HubTrashAlbum[]>();
+  const [msg, setMsg] = useState('');
+  const load = () => c?.trash().then((r) => setList(r.albums)).catch(() => setList([]));
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!list?.length) return null;
+  const act = async (f: () => Promise<unknown>, done: string) => {
+    setMsg('…');
+    try {
+      await f();
+      setMsg(done);
+    } catch (e) {
+      setMsg(errText(e));
+    }
+    load();
+  };
+  return (
+    <section>
+      <h2>Deleted albums</h2>
+      <p className="muted small">Albums deleted with <b>Delete album</b> wait in a hidden folder in your music library for 30 days, then they're removed for good.</p>
+      {msg && <p className="small">{msg}</p>}
+      {list.map((a) => {
+        const waiting = !a.restoredAt && !a.purgedAt;
+        return (
+          <div key={a.batch} className="source-row">
+            <div className="track-main">
+              <div className="track-title">{a.label}</div>
+              <div className="track-sub">
+                {a.files} song{a.files === 1 ? '' : 's'} · deleted by {a.by ?? 'someone'} {since(a.at)} ago
+                {a.restoredAt ? ' · put back' : a.purgedAt ? ' · removed for good' : ` · removed for good in ${Math.max(1, Math.ceil((a.purgeAt - Date.now()) / 86_400_000))} days`}
+              </div>
+            </div>
+            {waiting && <button className="btn small" onClick={() => act(() => c!.restoreAlbum(a.batch), `Put back ${a.label}. Navidrome shows it again after its rescan`)}>Put back</button>}
+            {waiting && <button className="btn small ghost" onClick={() => confirm(`Remove ${a.label} for good? This can't be undone.`) && act(() => c!.purgeAlbum(a.batch), `Removed ${a.label}`)}>Remove now</button>}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
 /** Settings → Server (Hub admins): how the Hub is doing, and a backup of its database. */
 export function ServerTab() {
   const [s, setS] = useState<HubServerStatus>();
@@ -443,6 +488,7 @@ export function ServerTab() {
       <NavidromeAccounts />
       <LibraryScan />
       <TagEdits />
+      <DeletedAlbums />
       <section>
         <h2>Backup</h2>
         <p className="muted small">

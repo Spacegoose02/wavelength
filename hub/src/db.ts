@@ -292,6 +292,23 @@ const MIGRATIONS: string[] = [
       COALESCE(json_extract(track, '$.album'), ''), COALESCE(CAST(json_extract(track, '$.duration') AS INTEGER), 0), track
     FROM play_history WHERE COALESCE(json_extract(track, '$.kind'), 'track') = 'track';
   `,
+  `
+  -- Albums an admin deleted: their files wait in a hidden folder in the music library (trash.ts) and can be
+  -- put back until they're purged after 30 days. One row per moved file or folder.
+  CREATE TABLE trash (
+    id          INTEGER PRIMARY KEY,
+    batch       TEXT NOT NULL,
+    label       TEXT NOT NULL,
+    path        TEXT NOT NULL,             -- where it was, relative to the music folder
+    trash_path  TEXT NOT NULL,             -- where it is now, relative to the music folder
+    files       INTEGER NOT NULL,          -- music files in it
+    user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    at          INTEGER NOT NULL,
+    restored_at INTEGER,
+    purged_at   INTEGER
+  );
+  CREATE INDEX trash_batch ON trash(batch);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

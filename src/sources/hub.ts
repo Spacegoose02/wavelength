@@ -107,6 +107,8 @@ export interface HubTagMatch {
   cover?: string;
   tracks: { title: string; artist: string; track: number; disc: number }[];
 }
+/** An album an admin deleted (GET /api/admin/trash): in the trash until `purgeAt`, unless restored or purged. */
+export interface HubTrashAlbum { batch: string; label: string; at: number; files: number; by: string | null; restoredAt: number | null; purgedAt: number | null; purgeAt: number }
 export interface HubTagEdit { batch: string; label: string; at: number; files: number; undoneAt: number | null; by: string | null }
 
 /** One of this person's Wavelength playlists, as kept on the Hub. `deleted` ones are tombstones. */
@@ -524,6 +526,13 @@ export class HubClient {
   tagAlbum = (albumId: string) => this.call<{ songs: HubTagSong[] }>('GET', `/api/admin/tags/album/${encodeURIComponent(albumId)}`);
   tagMatches = (artist: string, album: string) => this.call<{ candidates: HubTagMatch[] }>('GET', `/api/admin/tags/match?${new URLSearchParams({ artist, album })}`);
   saveTags = (label: string, changes: { path: string; tags: HubTags }[]) => this.call<{ batch: string | null; changed: string[]; failed: { path: string; error: string }[] }>('PUT', '/api/admin/tags', { label, changes });
+  /** Several albums' songs (Navidrome album ids), each with `albumId`; `missing` = files the Hub can't find. */
+  tagAlbums = (albumIds: string[]) => this.call<{ songs: (HubTagSong & { albumId: string })[]; missing: string[] }>('GET', `/api/admin/tags/albums?ids=${albumIds.map(encodeURIComponent).join(',')}`);
+  tagValues = () => this.call<{ artists: string[]; genres: string[] }>('GET', '/api/admin/tags/values');
+  deleteAlbum = (albumId: string) => this.call<{ batch: string; label: string; files: number; failed: string[] }>('DELETE', `/api/admin/library/album/${encodeURIComponent(albumId)}`);
+  trash = () => this.call<{ albums: HubTrashAlbum[] }>('GET', '/api/admin/trash');
+  restoreAlbum = (batch: string) => this.call<{ files: number; failed: string[] }>('POST', `/api/admin/trash/${encodeURIComponent(batch)}/restore`, {});
+  purgeAlbum = (batch: string) => this.call('DELETE', `/api/admin/trash/${encodeURIComponent(batch)}`);
   tagHistory = () => this.call<{ edits: HubTagEdit[] }>('GET', '/api/admin/tags/history');
   undoTags = (batch: string) => this.call<{ undone: number; failed: { path: string; error: string }[] }>('POST', `/api/admin/tags/undo/${encodeURIComponent(batch)}`);
   importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });

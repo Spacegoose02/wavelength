@@ -30,6 +30,19 @@ export async function navidromeAdmin(url: string, username: string, password: st
       const list = (await r.json().catch(() => [])) as any[];
       return (Array.isArray(list) ? list : []).filter((x) => x && (x.albumId ?? x.album_id ?? albumId) === albumId);
     },
+    /** Artist and genre names in the library, for the tag editor's suggestions. */
+    async names(): Promise<{ artists: string[]; genres: string[] }> {
+      const list = async (path: string) => {
+        const r = await call(path, { headers: { 'x-nd-authorization': `Bearer ${session.token}` } });
+        const v = r.ok ? ((await r.json().catch(() => [])) as unknown) : [];
+        return (Array.isArray(v) ? v : []).map((x) => String((x as { name?: unknown })?.name ?? '')).filter(Boolean);
+      };
+      const [artists, genres] = await Promise.all([
+        list(`/api/artist?${new URLSearchParams({ _start: '0', _end: '20000', _sort: 'name', _order: 'ASC' })}`),
+        list(`/api/genre?${new URLSearchParams({ _start: '0', _end: '2000', _sort: 'name', _order: 'ASC' })}`),
+      ]);
+      return { artists, genres };
+    },
     async createUser(u: { userName: string; name: string; password: string }) {
       const r = await call('/api/user', {
         method: 'POST',

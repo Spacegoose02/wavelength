@@ -5,6 +5,7 @@ import type { Album } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useUi } from '../store/ui';
 import { Cover, Spinner } from '../components/common';
+import { forgetTagValues, TagLists, tagList } from '../components/TagLists';
 
 /**
  * The tag editor (hub/src/routes/tags.ts): an album's tags as they are in its files, a lookup on Deezer and
@@ -98,6 +99,7 @@ export function TagEditor({ album }: { album: Album }) {
         return { path: x.path, tags };
       }));
       setLastBatch(r.batch);
+      forgetTagValues();
       setMsg(`Saved ${r.changed.length} file${r.changed.length === 1 ? '' : 's'}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. Navidrome rescans in a minute to show them`);
       await load();
     } catch (e) {
@@ -132,12 +134,13 @@ export function TagEditor({ album }: { album: Album }) {
         Changes are written into the music files on your server by the Hub. The audio isn’t touched, and each Save can be
         undone here or under Settings → Server → Tag edits.
       </p>
+      <TagLists />
       {!rows ? <Spinner /> : !rows.length ? <div className="errors">{msg}</div> : (
         <>
           <section className="editor">
             <div className="editor-grid">
               {ALBUM_KEYS.map(([k, label]) => (
-                <label key={k}>{label}<input value={albumValue(k)} placeholder={rows.some((r) => r.edit[k]) && !albumValue(k) ? 'differs per song' : ''} onChange={(e) => setAll(k, e.target.value)} /></label>
+                <label key={k}>{label}<input list={tagList(k)} value={albumValue(k)} placeholder={rows.some((r) => r.edit[k]) && !albumValue(k) ? 'differs per song' : ''} onChange={(e) => setAll(k, e.target.value)} /></label>
               ))}
             </div>
             <div className="row gap">
@@ -171,7 +174,7 @@ export function TagEditor({ album }: { album: Album }) {
             {rows.map((r, i) => (
               <div key={r.path} className={`tag-row ${changed.includes(r) ? 'changed' : ''}`} role="row" title={r.path}>
                 {SONG_KEYS.map(([k, label]) => (
-                  <input key={k} aria-label={`${label}, ${r.tags.title ?? r.path}`} value={r.edit[k] ?? ''} onChange={(e) => setOne(i, k, e.target.value)} />
+                  <input key={k} list={tagList(k)} aria-label={`${label}, ${r.tags.title ?? r.path}`} value={r.edit[k] ?? ''} onChange={(e) => setOne(i, k, e.target.value)} />
                 ))}
               </div>
             ))}

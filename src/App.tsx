@@ -27,6 +27,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Discover } from './views/Discover';
 import { ImportPlaylist } from './views/ImportPlaylist';
 import { TagEditor } from './views/TagEditor';
+import { ArtistTagEditor } from './views/ArtistTagEditor';
 import { Favorites } from './views/Favorites';
 import { RecentlyAdded } from './views/RecentlyAdded';
 import { LibraryHub, MobileNav } from './components/MobileNav';
@@ -84,6 +85,7 @@ function View({ route }: { route: Route }) {
     case 'discover': return <Discover />;
     case 'import': return <ImportPlaylist />;
     case 'tags': return <TagEditor key={route.album.id} album={route.album} />;
+    case 'artistTags': return <ArtistTagEditor key={route.artist.name} artist={route.artist} />;
     case 'favorites': return <Favorites />;
     case 'recent': return <RecentlyAdded />;
     case 'library': return <LibraryHub />;
