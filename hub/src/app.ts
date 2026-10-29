@@ -7,6 +7,7 @@ import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { authRoutes } from './routes/auth.ts';
 import { meRoutes } from './routes/me.ts';
+import { serviceRoutes } from './routes/services.ts';
 import { getUser } from './users.ts';
 
 declare module 'fastify' {
@@ -77,5 +78,6 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
   authRoutes(app, ctx);
   meRoutes(app, ctx);
   adminRoutes(app, ctx);
+  serviceRoutes(app, ctx);
   return app;
 }

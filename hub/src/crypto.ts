@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes, randomInt, scrypt, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createHmac, hkdfSync, randomBytes, randomInt, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
 const scryptAsync = promisify(scrypt) as (pw: string, salt: Buffer, len: number, opts: object) => Promise<Buffer>;
@@ -47,3 +47,27 @@ export const normalizeUserCode = (s: string) => {
   const c = s.toUpperCase().replace(/[^A-Z0-9]/g, '');
   return c.length === 8 ? `${c.slice(0, 4)}-${c.slice(4)}` : c;
 };
+
+// ---- service keys at rest (docs/HUB.md "Server logins") ----
+
+/** A separate key for sealing, so the pairing-form HMAC key and the encryption key never coincide. */
+const sealKey = (secretKey: Buffer) => Buffer.from(hkdfSync('sha256', secretKey, Buffer.alloc(0), 'wavelength service keys v1', 32));
+
+/** AES-256-GCM. `v1.<iv>.<tag>.<ciphertext>` (base64url). `aad` ties the value to its row. */
+export function seal(secretKey: Buffer, plaintext: string, aad: string): string {
+  const iv = randomBytes(12);
+  const c = createCipheriv('aes-256-gcm', sealKey(secretKey), iv);
+  c.setAAD(Buffer.from(aad));
+  const ct = Buffer.concat([c.update(plaintext, 'utf8'), c.final()]);
+  return ['v1', iv, c.getAuthTag(), ct].map((x) => (typeof x === 'string' ? x : x.toString('base64url'))).join('.');
+}
+
+/** Throws if the value was changed, moved to another row, or sealed with a different secret key. */
+export function unseal(secretKey: Buffer, sealed: string, aad: string): string {
+  const [v, iv, tag, ct] = sealed.split('.');
+  if (v !== 'v1') throw new Error('Unknown sealed format');
+  const d = createDecipheriv('aes-256-gcm', sealKey(secretKey), Buffer.from(iv, 'base64url'));
+  d.setAAD(Buffer.from(aad));
+  d.setAuthTag(Buffer.from(tag, 'base64url'));
+  return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8');
+}

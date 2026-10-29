@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Server logins on your Hub.** Admins can keep Plex, Audiobookshelf, SUB/WAVE, deemix and yt-dlp logins on
+  the Wavelength Hub (Settings → Sources / Downloads → **Move to Hub**), so signed-in devices get them without
+  typing them in. Pick who can use each server (everyone, admins only, or chosen people) and give someone
+  their own Plex or Audiobookshelf login. Members and kids never get the SUB/WAVE admin login, and download
+  logins only go to admins and people with Autodownload. Logins are encrypted on the Hub. Navidrome logins stay
+  on each device. See [HUB.md](docs/HUB.md#server-logins).
+
 ## 0.9.0
 - **Settings has tabs**: Sources, Playback, Downloads, Themes and Discover. **Edit charts** on Discover and
   the Settings link in Downloads open the right tab.
