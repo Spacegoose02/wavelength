@@ -8,6 +8,8 @@ import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from
 import { useCatalog } from '../store/catalog';
 import { SKIN_GROUPS, SKINS, useSettings, type Skin } from '../store/settings';
 import { useUi, type SettingsTab } from '../store/ui';
+import { useHub } from '../store/hub';
+import { AccountTab, UsersTab } from './HubSettings';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
 
@@ -340,7 +342,9 @@ function ThemesTab() {
   );
 }
 
-const TABS: { id: SettingsTab; label: string }[] = [
+const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
+  { id: 'account', label: 'Account' },
+  { id: 'users', label: 'Users', admin: true },
   { id: 'sources', label: 'Sources' },
   { id: 'playback', label: 'Playback' },
   { id: 'downloads', label: 'Downloads' },
@@ -350,6 +354,9 @@ const TABS: { id: SettingsTab; label: string }[] = [
 
 export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   const [tab, setTab] = useState<SettingsTab>(initial ?? 'sources');
+  // Users is for Hub admins only (the Hub refuses its calls from anyone else anyway)
+  const isAdmin = useHub((s) => !!s.token && s.permissions.includes('users.manage'));
+  const tabs = TABS.filter((t) => !t.admin || isAdmin);
   useEffect(() => {
     if (initial) setTab(initial);
   }, [initial]);
@@ -358,11 +365,13 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
     <div className="page narrow">
       <header className="page-head"><h1>Settings</h1></header>
       <div className="tabs" role="tablist">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
       </div>
 
+      {tab === 'account' && <AccountTab />}
+      {tab === 'users' && isAdmin && <UsersTab />}
       {tab === 'sources' && <SourcesTab />}
       {tab === 'playback' && (
         <section id="equalizer">

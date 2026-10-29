@@ -6,8 +6,9 @@ rest; the Hub only decides *who* is signed in and *what they're allowed to do*. 
 comes next: [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md).
 
 > **Status: Phase 1.** Accounts, roles (admin, member, kid), sign-in (Hub password, tinyauth single
-> sign-on, device pairing codes), devices, synced preferences and the audit log work. The app's
-> "Sign in to a Wavelength Hub" screen is the next step; service keys, SUB/WAVE admin through the Hub,
+> sign-on, device pairing codes), linking tinyauth to a password account, devices, synced settings and the
+> audit log work, and the app has Settings → Account and Settings → Users (see the
+> [user guide](USER-GUIDE.md#profiles-with-a-wavelength-hub)). Service keys, SUB/WAVE admin through the Hub,
 > requests and kids filtering follow in later phases.
 
 - [Install on Unraid](#install-on-unraid)
@@ -146,6 +147,19 @@ You open `https://hub.example.com/link` on any phone or computer, type the code 
 sign in there, with tinyauth or a Hub password. You see "Sign in *Living room TV* as *you*?" and allow it.
 The app was polling the Hub and now receives its own **device token**. Codes last 10 minutes and work once.
 
+**Linking tinyauth to a password account**: someone with a Hub password can attach their tinyauth identity,
+so single sign-on works for them from then on:
+
+- from the app (Settings → Account → Link single sign-on): the app gets a one-time link
+  (`POST /api/me/sso-link`, 10 minutes, single use) to `/auth/sso/connect`; opened in a browser, tinyauth
+  identifies them and they press **Link**;
+- from the browser: when tinyauth knows someone but no account is linked, `/auth/sso/link` asks for their
+  Wavelength username and Hub password once (`POST /auth/sso/connect`), links them and continues the pairing.
+
+An identity can only be linked to one account, and an account to one identity. Unlinking
+(`DELETE /api/me/sso`) is refused for accounts without a Hub password, so nobody locks themselves out.
+Admins can also set or clear anyone's tinyauth username in Settings → Users.
+
 **Direct password sign-in**: the app can also send a Hub username and password straight to
 `POST /auth/login`, handy for kids' accounts.
 
@@ -182,6 +196,8 @@ with a 4xx status.
 | `PATCH /api/me` | signed in | `{ displayName }` |
 | `PUT /api/me/password` | signed in, Hub-password users | `{ currentPassword, newPassword }` |
 | `GET /api/me/devices`, `DELETE /api/me/devices/:id` | signed in | your devices |
+| `POST /api/me/sso-link` | signed in, SSO on | `{ url, expiresIn }`: one-time link to attach a tinyauth identity |
+| `DELETE /api/me/sso` | signed in, with a Hub password | unlink single sign-on |
 | `GET /api/me/prefs` | signed in | `{ prefs: { key: { value, updatedAt } } }` |
 | `PUT /api/me/prefs` | signed in | `{ changes: { key: { value, updatedAt } } }` → `{ applied, stale, prefs }`. Newest `updatedAt` wins per key. |
 | `GET/POST /api/admin/users` | `users.manage` | list / create `{ username, role, password?, ssoSubject?, displayName?, autodownload? }` |
@@ -189,7 +205,8 @@ with a 4xx status.
 | `GET /api/admin/devices`, `DELETE /api/admin/devices/:id` | `users.manage` | every signed-in device / sign one out |
 | `GET /api/admin/audit?limit=&before=` | `audit.view` | newest first |
 
-A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`.
+A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`,
+`/auth/sso/connect` (the last two sit behind tinyauth).
 
 ## Security notes
 

@@ -2,7 +2,8 @@
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the DJ raccoon), the **equalizer**,
-**skins and the Themes tab** (holiday themes, Seasonal and Random daily) and **editing your radio stations**. For how they're built, see the
+**skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations** and
+**profiles with a Wavelength Hub** (signing in, settings sync, managing people). For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -281,7 +282,7 @@ vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day
 
 ## Settings tabs
 
-Settings is split into tabs: **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
+Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
 yt-dlp), **Themes** and **Discover** (charts). Links elsewhere open the right tab: **Edit charts** on
 Discover opens Discover, and the Settings link in Downloads opens Downloads.
 
@@ -311,3 +312,72 @@ and the heart removes one.
 > (`deleteInternetRadioStation` in `sources/navidrome.ts`); Navidrome enforces the admin check. When the
 > Wavelength Hub arrives (see [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)) the hidden list and order are
 > meant to sync per user; today they're per device.
+
+## Profiles with a Wavelength Hub
+
+If your household runs a [Wavelength Hub](HUB.md), everyone gets their own profile. Without one, nothing
+changes: Wavelength works on its own, as before.
+
+### Signing in
+
+**Settings → Account**: type the Hub's address (e.g. `https://hub.example.com`) and press **Connect**.
+
+- **Sign in with a code** is the easy way, and the only comfortable one on a TV. Wavelength shows a code and
+  a QR code. Scan it with your phone (or open the address shown and type the code), sign in there with single
+  sign-on (tinyauth) or your Hub password, and press **Allow**. The TV signs itself in a moment later.
+- **Sign in with a password** signs in with your Hub username and password directly.
+- On a brand-new Hub, the Account tab offers **Set up this Hub** instead: that creates the first admin (you).
+
+<p align="center"><img src="screenshots/hub-sign-in.png" alt="Signing in with a code and QR code" width="80%"></p>
+
+### What follows you between devices
+
+Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **Now Playing scene**,
+**radio stations** (favorites, hidden and order) and **Discover chart picks** sync to your profile. Change the
+skin on the TV and your phone has it next time it checks in (at start, when the window gets focus, and every
+few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and
+the skin on another never overwrite each other. Changes made with no connection are kept and sent later.
+
+Server logins (Sources), download settings and downloaded music stay on each device. **Downloaded music always
+plays**, signed in or not, with or without the Hub.
+
+<p align="center"><img src="screenshots/hub-account.png" alt="Settings → Account when signed in" width="80%"></p>
+
+### Linking single sign-on to your account
+
+If you've been signing in with a Hub password and want to use tinyauth instead, link the two once. Either:
+
+- **From the app:** Settings → Account → **Link single sign-on**. Open the link it shows (or scan its QR code)
+  in a browser, sign in to tinyauth, press **Link**, then press **Done** in the app.
+- **From the browser:** start **Sign in with a code** and choose single sign-on. If tinyauth knows you but no
+  Wavelength account is linked yet, the page asks for your Wavelength username and Hub password once, links
+  them, and carries on signing in the device.
+
+After that, single sign-on is enough; your Hub password keeps working too. **Unlink** is in the same place
+(only if you have a Hub password, so you can't lock yourself out).
+
+### Your devices
+
+Settings → Account lists every device signed in to your profile. **Sign out** next to one (a lost phone, an old
+TV) and it's signed out at once.
+
+### Managing people (admins)
+
+Admins get a **Users** tab:
+
+- **Add someone**: username, display name, role, and a Hub password and/or their tinyauth username.
+- **Role**: Admin, Member or Kid. Changes apply straight away, no re-login.
+- **Autodownload** (members only): lets them download without your approval once requests arrive. Kids can never have it.
+- **Set password**, **SSO** (link or unlink their tinyauth username), **Turn off** (signs out all their devices), **Delete**.
+- **Signed-in devices**: everyone's devices, with **Sign out**.
+- **Activity**: recent sign-ins and admin changes.
+
+The Hub refuses every one of these actions from a non-admin, so hiding the tab isn't what protects them.
+
+<p align="center"><img src="screenshots/hub-users.png" alt="Settings → Users" width="80%"></p>
+
+> **Developer notes.** `src/views/HubSettings.tsx` (Account and Users tabs), `src/sources/hub.ts` (typed API
+> client), `src/store/hub.ts` (signed-in profile, persisted as `tonearm.hub`; `useCan(perm)` is true for
+> everything when no Hub is signed in), `src/lib/hubSync.ts` (settings sync: per-key last-writer-wins with
+> change times in `tonearm.hubStamps`, pushed 2 s after a change). Add a setting to sync by adding its
+> `useSettings` key to `SYNCED`. The Hub side is documented in [HUB.md](HUB.md).

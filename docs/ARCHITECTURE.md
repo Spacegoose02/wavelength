@@ -129,6 +129,8 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 | `store/ui.ts` | Current route, history, overlays | memory |
 | `store/serverPlaylists.ts` | Navidrome/Plex playlists | memory |
 | `store/downloads.ts` | yt-dlp job progress | memory |
+| `store/hub.ts` | Wavelength Hub address, device token, signed-in profile and permissions | `tonearm.hub` |
+| `lib/hubSync.ts` | When each synced setting last changed here, and which are waiting to upload | `tonearm.hubStamps` |
 | misc | `tonearm.plexClientId`, `tonearm.releaseRadar` (daily cache), `tonearm.swName` | localStorage |
 
 > ⚠️ **Credentials are stored in plain localStorage.** Fine for a personal device; moving them to the OS

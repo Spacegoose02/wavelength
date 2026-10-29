@@ -64,6 +64,15 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX audit_at ON audit(at);
   `,
+  `
+  -- One-time links a signed-in user opens in a browser to attach their tinyauth identity to their account.
+  CREATE TABLE sso_links (
+    id         INTEGER PRIMARY KEY,
+    code_hash  TEXT NOT NULL UNIQUE,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export function openDb(file: string): Db {

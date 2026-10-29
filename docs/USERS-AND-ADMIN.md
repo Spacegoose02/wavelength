@@ -317,8 +317,10 @@ Phase 6  Server page + extras ───┘ (needs 2; grows each phase)
 
 ### Phase 1 — Hub foundation · ~3–4 weeks · **in progress**
 
-Server side done (see [HUB.md](HUB.md)): items 1, 2, 3, 6 (as API) and the server half of 5. Next: the
-app side (item 4 and the app half of 5), then an admin Users screen in the app. Passwords use scrypt
+Done: the Hub server ([HUB.md](HUB.md)), and in the app Settings → Account (sign in with a code/QR or a
+password, devices, settings sync, linking tinyauth to a password account) and Settings → Users (item 6).
+Still open: moving the device token and server logins into the OS keychain (item 4), and syncing local
+playlists and history (only settings sync so far). Passwords use scrypt
 (built into Node) rather than argon2id, to keep the image free of native modules.
 
 Everything else in the users/admin column depends on this.
