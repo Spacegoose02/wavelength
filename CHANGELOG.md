@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **Favorites shows only your Navidrome stars.** The SUB/WAVE **listener likes** tab is gone from Favorites:
+  SUB/WAVE already mirrors every listener ♥ into Navidrome stars, so those songs were showing twice. The ♥
+  button on the SUB/WAVE On-air view still works and the song still lands in Favorites. The source tabs only
+  appear when you have more than one Navidrome server.
+
 ## 0.8.0
 - **Fix: Dracula, Monokai, Solarized, OLED black, High contrast, Sakura and Cyberpunk didn't work on Windows.**
   A missing closing brace in `styles.css` (lost in a merge) put those skins, and the equalizer's styles, inside
