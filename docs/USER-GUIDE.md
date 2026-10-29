@@ -284,7 +284,7 @@ Synthwave sunset and Cyberpunk:
 
 | Skin | Look |
 | --- | --- |
-| **Reactor core** | Cherenkov blue glowing up from the bottom of the screen, like a cooling pool. |
+| **Cherenkov (reactor core)** | Cherenkov blue glowing up from the bottom of the screen, like a cooling pool. |
 | **Meltdown** | A molten core: white-hot through orange to scorched red. |
 | **Radiation hazard** | Warning yellow on black, square and bold, with hazard-tape stripes on the player bar. |
 | **Fallout shelter** | Olive drab, civil-defence yellow and rust, with a green Geiger-counter LCD. |

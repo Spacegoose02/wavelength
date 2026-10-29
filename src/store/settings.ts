@@ -70,7 +70,7 @@ export const SKINS: { id: Skin; label: string; group: SkinGroup }[] = [
   { id: 'lasergreen', label: 'Green laser', group: 'Lasers' },
   { id: 'laserharp', label: 'Laser harp', group: 'Lasers' },
   { id: 'lasertag', label: 'Laser tag', group: 'Lasers' },
-  { id: 'reactor', label: 'Reactor core', group: 'Nuclear' },
+  { id: 'reactor', label: 'Cherenkov (reactor core)', group: 'Nuclear' },
   { id: 'meltdown', label: 'Meltdown', group: 'Nuclear' },
   { id: 'hazard', label: 'Radiation hazard', group: 'Nuclear' },
   { id: 'fallout', label: 'Fallout shelter', group: 'Nuclear' },
