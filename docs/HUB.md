@@ -25,11 +25,15 @@ comes next: [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md).
 
 ## Install on Unraid
 
-1. **Docker → Add Container → Template:** paste
-   `https://raw.githubusercontent.com/Spacegoose02/wavelength/main/hub/unraid/wavelength-hub.xml`
-   (or copy that file to `/boot/config/plugins/dockerMan/templates-user/my-wavelength-hub.xml` and pick
-   it from the template list).
-2. Fill in:
+1. **Get the template.** Open Unraid's terminal (the `>_` icon, top right) and run:
+
+   ```bash
+   wget -O /boot/config/plugins/dockerMan/templates-user/my-wavelength-hub.xml \
+     https://raw.githubusercontent.com/Spacegoose02/wavelength/main/hub/unraid/wavelength-hub.xml
+   ```
+
+2. **Docker → Add Container**, open the **Template** dropdown and pick **wavelength-hub** (under user templates).
+3. Fill in:
    - **Appdata**: `/mnt/user/appdata/wavelength-hub` (the database and the secret key live here).
    - **Public URL**: the address people open in a browser, e.g. `https://hub.example.com`, the host
      you'll create in Nginx Proxy Manager.
@@ -37,7 +41,7 @@ comes next: [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md).
      (`openssl rand -hex 32`) and your tinyauth username under **SSO admins**.
    - **Music share** can stay as is; the Hub doesn't use it until Phase 3 (downloads, tag editing).
    - **PUID/PGID** default to Unraid's `99`/`100` (nobody:users); the container fixes appdata ownership on start.
-3. Apply. The log says `No accounts yet. Open …/setup` on a fresh Hub.
+4. Apply. The log says `No accounts yet. Open …/setup` on a fresh Hub.
 
 The image is `ghcr.io/spacegoose02/wavelength-hub:latest`, built by the **Hub** GitHub workflow from `main`.
 After its first publish, make the package public (GitHub → profile → Packages → wavelength-hub →
