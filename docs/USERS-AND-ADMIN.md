@@ -425,8 +425,10 @@ import playlists.
 Done: **Settings → Server** (`hub/src/routes/server.ts`, `src/views/ServerTab.tsx`): version, uptime, disk
 space, music folder writable, yt-dlp version, household counts, and a database backup download. The Hub also
 serves the app's web build at `/` (`hub/src/web.ts`), with a few no-CORS public APIs fetched through
-`/api/fetch` (`hub/src/routes/webfetch.ts`), so Wavelength works in a browser. Still open: Docker control,
-remote control/handoff, listen together, Rewind, invites, restore from the app.
+`/api/fetch` (`hub/src/routes/webfetch.ts`), so Wavelength works in a browser. Invite links
+(`hub/src/routes/invites.ts`, Settings → Users → Invite someone) and restoring a backup from the app (the Hub
+checks it and restarts to swap it in) are done too. Still open: Docker control, remote control/handoff,
+listen together, Rewind.
 
 Server controls page, optional Docker control via socket proxy, remote control/handoff, listen together,
 Rewind, invites, backups. **Cards closed:** admin server page, Docker control.

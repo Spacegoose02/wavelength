@@ -21,7 +21,7 @@ const TYPES: Record<string, string> = {
 };
 
 /** Paths the Hub itself answers; everything else under / is the app. */
-const HUB_PATHS = /^\/(api|auth|setup|link|nd)(\/|$|\?)/;
+const HUB_PATHS = /^\/(api|auth|setup|link|invite|nd)(\/|$|\?)/;
 
 /**
  * The app's web build at /, so people can use Wavelength in a browser (docs/HUB.md "In a browser").

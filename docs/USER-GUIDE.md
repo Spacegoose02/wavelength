@@ -449,6 +449,7 @@ changes: Wavelength works on its own, as before.
   a QR code. Scan it with your phone (or open the address shown and type the code), sign in there with single
   sign-on (tinyauth) or your Hub password, and press **Allow**. The TV signs itself in a moment later.
 - **Sign in with a password** signs in with your Hub username and password directly.
+- **I have an invite** makes your account from an invite link an admin sent you, and signs this device in.
 - On a brand-new Hub, the Account tab offers **Set up this Hub** instead: that creates the first admin (you).
 
 Once you're signed in, your settings, your Wavelength playlists and your play history follow you to every
@@ -476,7 +477,8 @@ it every minute while playing; the Hub only keeps it in memory.
 **Settings → Server** (admins) shows how the Hub is doing: version, how long it's been running, free space
 on the music and data disks (and whether the music folder is writable), yt-dlp's version, how many people
 and devices there are and how many requests are waiting. **Download backup** saves a copy of the Hub's
-database; keep the Hub's `secret.key` with it.
+database; keep the Hub's `secret.key` with it. **Restore a backup…** puts one back: the Hub checks it,
+restarts, and keeps the database it replaced on the server just in case.
 
 <p align="center"><img src="screenshots/hub-sign-in.png" alt="Signing in with a code and QR code" width="80%"></p>
 
@@ -534,6 +536,9 @@ TV) and it's signed out at once.
 Admins get a **Users** tab:
 
 - **Add someone**: username, display name, role, and a Hub password and/or their tinyauth username.
+- **Invite someone**: pick a role (and Autodownload for a member) and get a link and QR code to send. They
+  open it in a browser, or paste it under **Settings → Account → I have an invite** (or as the Hub address),
+  and choose their own username and password. Each link works once and stops working after the days you pick.
 - **Role**: Admin, Member or Kid. Changes apply straight away, no re-login.
 - **Autodownload** (members only): lets them download without your approval. Without it, their **Get** buttons say **Request** and you approve in the Inbox. Kids can never have it.
 - **Set password**, **SSO** (link or unlink their tinyauth username), **Turn off** (signs out all their devices), **Delete**.
