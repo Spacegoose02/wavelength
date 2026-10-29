@@ -7,55 +7,74 @@ import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
   | 'dracula' | 'monokai' | 'solarized' | 'solarizedlight' | 'oled' | 'contrast' | 'sakura' | 'cyberpunk'
-  | 'outrun' | 'lasergrid' | 'acid' | 'miami' | 'blacklight' | 'electric';
+  | 'outrun' | 'lasergrid' | 'acid' | 'miami' | 'blacklight' | 'electric'
+  | 'halloween' | 'thanksgiving' | 'christmas' | 'july4' | 'valentine';
 
 /** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
-export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings';
+export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' | 'raccoon';
 
-export const SKINS: { id: Skin; label: string }[] = [
-  { id: 'neon', label: 'Neon synth (default)' },
-  { id: 'plexamp', label: 'Midnight (Plexamp-inspired)' },
-  { id: 'winamp', label: 'Classic (Winamp-inspired)' },
-  { id: 'vaporwave', label: 'Vaporwave' },
-  { id: 'crt', label: 'Green CRT terminal' },
-  { id: 'amber', label: 'Amber CRT' },
-  { id: 'gameboy', label: 'Game Boy Color' },
-  { id: 'c64', label: 'Commodore 64' },
-  { id: 'win95', label: 'Windows 95' },
-  { id: 'dos', label: 'MS-DOS (Norton blue)' },
-  { id: 'sunset', label: 'Synthwave sunset' },
-  { id: 'arcade', label: 'Arcade cabinet' },
-  { id: 'seventies', label: "'70s groove" },
-  { id: 'ipod', label: 'iPod Classic' },
-  { id: 'aqua', label: 'Aqua (Mac OS X)' },
-  { id: 'walkman', label: 'Walkman' },
-  { id: 'tokyonight', label: 'Tokyo Night (Omarchy)' },
-  { id: 'catppuccin', label: 'Catppuccin (Omarchy)' },
-  { id: 'gruvbox', label: 'Gruvbox (Omarchy)' },
-  { id: 'nord', label: 'Nord (Omarchy)' },
-  { id: 'everforest', label: 'Everforest (Omarchy)' },
-  { id: 'kanagawa', label: 'Kanagawa (Omarchy)' },
-  { id: 'rosepine', label: 'Rosé Pine (Omarchy)' },
-  { id: 'dracula', label: 'Dracula' },
-  { id: 'monokai', label: 'Monokai' },
-  { id: 'solarized', label: 'Solarized Dark' },
-  { id: 'solarizedlight', label: 'Solarized Light' },
-  { id: 'oled', label: 'OLED black (saves battery)' },
-  { id: 'contrast', label: 'High contrast' },
-  { id: 'sakura', label: 'Sakura (light)' },
-  { id: 'cyberpunk', label: 'Cyberpunk' },
-  { id: 'outrun', label: 'Outrun (neon)' },
-  { id: 'lasergrid', label: 'Laser grid (neon)' },
-  { id: 'acid', label: 'Acid rave (neon)' },
-  { id: 'miami', label: 'Miami nights (neon)' },
-  { id: 'blacklight', label: 'Blacklight UV (neon)' },
-  { id: 'electric', label: 'Electric (neon)' },
+/** Headings in Settings → Themes, in display order. */
+export const SKIN_GROUPS = ['Classic', 'Retro', 'Neon', 'Editor palettes', 'Holidays', 'Accessibility'] as const;
+export type SkinGroup = (typeof SKIN_GROUPS)[number];
+
+export const SKINS: { id: Skin; label: string; group: SkinGroup }[] = [
+  { id: 'neon', label: 'Neon synth (default)', group: 'Classic' },
+  { id: 'plexamp', label: 'Midnight (Plexamp-inspired)', group: 'Classic' },
+  { id: 'winamp', label: 'Classic (Winamp-inspired)', group: 'Classic' },
+  { id: 'vaporwave', label: 'Vaporwave', group: 'Retro' },
+  { id: 'crt', label: 'Green CRT terminal', group: 'Retro' },
+  { id: 'amber', label: 'Amber CRT', group: 'Retro' },
+  { id: 'gameboy', label: 'Game Boy Color', group: 'Retro' },
+  { id: 'c64', label: 'Commodore 64', group: 'Retro' },
+  { id: 'win95', label: 'Windows 95', group: 'Retro' },
+  { id: 'dos', label: 'MS-DOS (Norton blue)', group: 'Retro' },
+  { id: 'sunset', label: 'Synthwave sunset', group: 'Retro' },
+  { id: 'arcade', label: 'Arcade cabinet', group: 'Retro' },
+  { id: 'seventies', label: "'70s groove", group: 'Retro' },
+  { id: 'ipod', label: 'iPod Classic', group: 'Classic' },
+  { id: 'aqua', label: 'Aqua (Mac OS X)', group: 'Classic' },
+  { id: 'walkman', label: 'Walkman', group: 'Classic' },
+  { id: 'tokyonight', label: 'Tokyo Night (Omarchy)', group: 'Editor palettes' },
+  { id: 'catppuccin', label: 'Catppuccin (Omarchy)', group: 'Editor palettes' },
+  { id: 'gruvbox', label: 'Gruvbox (Omarchy)', group: 'Editor palettes' },
+  { id: 'nord', label: 'Nord (Omarchy)', group: 'Editor palettes' },
+  { id: 'everforest', label: 'Everforest (Omarchy)', group: 'Editor palettes' },
+  { id: 'kanagawa', label: 'Kanagawa (Omarchy)', group: 'Editor palettes' },
+  { id: 'rosepine', label: 'Rosé Pine (Omarchy)', group: 'Editor palettes' },
+  { id: 'dracula', label: 'Dracula', group: 'Editor palettes' },
+  { id: 'monokai', label: 'Monokai', group: 'Editor palettes' },
+  { id: 'solarized', label: 'Solarized Dark', group: 'Editor palettes' },
+  { id: 'solarizedlight', label: 'Solarized Light', group: 'Editor palettes' },
+  { id: 'oled', label: 'OLED black (saves battery)', group: 'Accessibility' },
+  { id: 'contrast', label: 'High contrast', group: 'Accessibility' },
+  { id: 'sakura', label: 'Sakura (light)', group: 'Classic' },
+  { id: 'cyberpunk', label: 'Cyberpunk', group: 'Neon' },
+  { id: 'outrun', label: 'Outrun (neon)', group: 'Neon' },
+  { id: 'lasergrid', label: 'Laser grid (neon)', group: 'Neon' },
+  { id: 'acid', label: 'Acid rave (neon)', group: 'Neon' },
+  { id: 'miami', label: 'Miami nights (neon)', group: 'Neon' },
+  { id: 'blacklight', label: 'Blacklight UV (neon)', group: 'Neon' },
+  { id: 'electric', label: 'Electric (neon)', group: 'Neon' },
+  { id: 'halloween', label: 'Halloween', group: 'Holidays' },
+  { id: 'thanksgiving', label: 'Thanksgiving', group: 'Holidays' },
+  { id: 'christmas', label: 'Christmas', group: 'Holidays' },
+  { id: 'july4', label: 'July 4th', group: 'Holidays' },
+  { id: 'valentine', label: "Valentine's Day", group: 'Holidays' },
 ];
 
 interface SettingsState {
   sources: SourceConfig[];
   stations: Station[];
+  /** The skin the user picked. What's on screen can differ: see `activeSkin` in lib/seasons.ts. */
   skin: Skin;
+  /** Switch to the holiday skin in the weeks around each holiday, then back to `skin`. */
+  seasonal: boolean;
+  /** A different (non-holiday) skin each day. */
+  randomDaily: boolean;
+  /** Radio → Your stations: `${sourceId}:${id}` keys hidden on this device. */
+  hiddenStations: string[];
+  /** Radio → Your stations: `${sourceId}:${id}` keys in the order the user arranged them. Unknown ones go last. */
+  stationOrder: string[];
   deemix: { url: string; arl: string; bitrate: number };
   ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string };
   /** Discover: which charts each genre uses. A genre that isn't listed uses the built-in defaults. */
@@ -71,7 +90,12 @@ interface SettingsState {
   removeSource(id: string): void;
   moveSource(id: string, dir: -1 | 1): void;
   toggleStation(s: Station): void;
+  /** Move a saved (favorite) station up or down the list. */
+  moveStation(id: string, dir: -1 | 1): void;
+  setStationHidden(key: string, hidden: boolean): void;
+  setStationOrder(keys: string[]): void;
   setSkin(s: Skin): void;
+  setThemeMode(m: Partial<Pick<SettingsState, 'seasonal' | 'randomDaily'>>): void;
   setDeemix(d: Partial<SettingsState['deemix']>): void;
 }
 
@@ -81,6 +105,10 @@ export const useSettings = create<SettingsState>()(
       sources: [],
       stations: [],
       skin: 'neon',
+      seasonal: false,
+      randomDaily: false,
+      hiddenStations: [],
+      stationOrder: [],
       deemix: { url: 'http://localhost:6595', arl: '', bitrate: 9 },
       ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '' },
       discoverCharts: {},
@@ -120,7 +148,20 @@ export const useSettings = create<SettingsState>()(
             ? { stations: st.stations.filter((x) => x.id !== s.id) }
             : { stations: [...st.stations, s] },
         ),
+      moveStation: (id, dir) =>
+        set((st) => {
+          const i = st.stations.findIndex((s) => s.id === id);
+          const j = i + dir;
+          if (i < 0 || j < 0 || j >= st.stations.length) return st;
+          const stations = [...st.stations];
+          [stations[i], stations[j]] = [stations[j], stations[i]];
+          return { stations };
+        }),
+      setStationHidden: (key, hidden) =>
+        set((st) => ({ hiddenStations: hidden ? [...new Set([...st.hiddenStations, key])] : st.hiddenStations.filter((k) => k !== key) })),
+      setStationOrder: (stationOrder) => set({ stationOrder }),
       setSkin: (skin) => set({ skin }),
+      setThemeMode: (m) => set(m),
       setDeemix: (d) => set((st) => ({ deemix: { ...st.deemix, ...d } })),
     }),
     {
