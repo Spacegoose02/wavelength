@@ -3,7 +3,7 @@
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations** and
-**profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
+**searching your playlists**, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -362,6 +362,23 @@ vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day
 > which applies Seasonal (`seasonal`, holiday windows in `SEASONS`) and Random daily (`randomDaily`,
 > a hash of the local date). `App` re-checks every 10 minutes while either mode is on, so it rolls over at
 > midnight. Everything uses the device's local date; nothing needs a server.
+
+## Searching your playlists
+
+When you have lots of playlists, use the search box at the top of **Playlists**. Type part of a playlist's
+name and only the matching ones stay on the page. For Wavelength playlists it also looks inside them: type a
+song, artist or album and you get every playlist that has it, with the card showing the song that matched
+(for example *Has Dreams · Fleetwood Mac*). Navidrome and Plex playlists are matched by name only. Press
+**Esc** to clear the search.
+
+The **+ Playlist** menu works the same way: start typing in its box and the list narrows to playlists whose
+name matches, so you can click the one you want. Press **Enter** instead to make a new playlist with that name.
+
+> **Developer notes:** `playlistMatch()` in `src/views/Playlists.tsx` does the matching (case-insensitive
+> substring on the name, then the title, artist and album of a Wavelength playlist's tracks). Server
+> playlists only carry a name and track count in `useServerPlaylists`, so searching their songs would mean
+> fetching every playlist; that's left out on purpose. The **+ Playlist** filter is in
+> `src/components/AddToPlaylist.tsx`.
 
 ## Settings tabs
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { matchAll } from '../lib/match';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, type ServerPlaylist, type Track } from '../sources/types';
@@ -25,6 +25,17 @@ export function PlaylistCover({ p }: { p: Playlist }) {
   );
 }
 
+/**
+ * Does a playlist match the search? Names always count; for Wavelength playlists (whose songs are on this
+ * device) a song title, artist or album counts too, and the first matching song is returned for the card.
+ */
+export function playlistMatch(name: string, tracks: Track[] | undefined, q: string): { song?: Track } | null {
+  const f = q.trim().toLowerCase();
+  if (!f || name.toLowerCase().includes(f)) return {};
+  const song = tracks?.find((t) => t.title.toLowerCase().includes(f) || t.artist.toLowerCase().includes(f) || t.album?.toLowerCase().includes(f));
+  return song ? { song } : null;
+}
+
 function shuffleAndPlay(tracks: Track[]) {
   if (!usePlayer.getState().shuffle) usePlayer.getState().toggleShuffle();
   usePlayer.getState().playTracks(tracks, Math.floor(Math.random() * tracks.length));
@@ -36,12 +47,21 @@ export function Playlists() {
   const sources = useSettings((s) => s.sources);
   const go = useUi((s) => s.go);
   const [name, setName] = useState('');
+  const [q, setQ] = useState('');
 
   useEffect(() => {
     server.load();
   }, []);
 
   const serverSections = sources.filter((s) => s.enabled && server.bySource[s.id]);
+  const searching = q.trim().length > 0;
+  const local = useMemo(
+    () => playlists.flatMap((p) => { const m = playlistMatch(p.name, p.tracks, q); return m ? [{ p, song: m.song }] : []; }),
+    [playlists, q],
+  );
+  const remote = (id: string) => server.bySource[id].filter((p) => playlistMatch(p.name, undefined, q));
+  const total = playlists.length + serverSections.reduce((n, s) => n + server.bySource[s.id].length, 0);
+  const found = local.length + serverSections.reduce((n, s) => n + remote(s.id).length, 0);
 
   return (
     <div className="page">
@@ -60,30 +80,35 @@ export function Playlists() {
         </form>
       </header>
       <ErrorList errors={server.errors} />
+      {total > 0 && (
+        <input className="filter wide" type="search" placeholder="Search playlists by name, or by a song or artist in them…"
+          value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQ('')} />
+      )}
+      {searching && !found && <p className="muted">No playlists match “{q.trim()}”.</p>}
 
-      <section>
+      {(!searching || local.length > 0) && <section>
         <h2>Wavelength <small className="muted">mix any source · stored on this device</small></h2>
         {!playlists.length ? (
           <p className="muted">Use <b>+ Playlist</b> on any track, album, episode or station.</p>
         ) : (
           <Grid>
-            {playlists.map((p) => (
+            {local.map(({ p, song }) => (
               <button key={p.id} className="card" onClick={() => go({ view: 'playlist', id: p.id })}>
                 <PlaylistCover p={p} />
                 <div className="card-title">{p.name}</div>
-                <div className="card-sub"><SourceDots sourceIds={p.tracks.map((t) => t.sourceId)} /><span>{p.tracks.length} items</span></div>
+                <div className="card-sub"><SourceDots sourceIds={p.tracks.map((t) => t.sourceId)} /><span>{song ? `Has ${song.title} · ${song.artist}` : `${p.tracks.length} items`}</span></div>
               </button>
             ))}
           </Grid>
         )}
-      </section>
+      </section>}
 
-      {serverSections.map((cfg) => (
+      {serverSections.filter((cfg) => !searching || remote(cfg.id).length > 0).map((cfg) => (
         <section key={cfg.id}>
           <h2><i className="dot big" style={{ background: SOURCE_COLORS[cfg.kind] }} /> {cfg.name} <small className="muted">{cfg.kind === 'plex' ? 'synced with Plexamp' : 'synced with Navidrome'}</small></h2>
           {!server.bySource[cfg.id].length ? <p className="muted">No playlists on this server.</p> : (
             <Grid>
-              {server.bySource[cfg.id].map((p) => (
+              {remote(cfg.id).map((p) => (
                 <button key={p.id} className="card" onClick={() => go({ view: 'serverPlaylist', playlist: p })}>
                   <Cover src={p.coverUrl} alt={p.name} />
                   <div className="card-title">{p.name}</div>
