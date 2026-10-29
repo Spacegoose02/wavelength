@@ -129,7 +129,8 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 | misc | `tonearm.plexClientId`, `tonearm.releaseRadar` (daily cache), `tonearm.swName` | localStorage |
 
 > ⚠️ **Credentials are stored in plain localStorage.** Fine for a personal device; moving them to the OS
-> keychain (e.g. `tauri-plugin-stronghold` / Android Keystore) is on the roadmap.
+> keychain (e.g. `tauri-plugin-stronghold` / Android Keystore) is on the roadmap
+> ([USERS-AND-ADMIN.md](USERS-AND-ADMIN.md), Phase 1), along with multi-user accounts and admin-only controls.
 
 ### Why everything still says "tonearm"
 
