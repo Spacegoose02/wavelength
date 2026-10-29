@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
+- **Three more raccoons** in Now Playing: a **country** raccoon (cowboy hat, acoustic guitar, taps his boot),
+  a **rapper** raccoon (cap, shades, gold chain, raps into the mic while the speakers pump) and a **rocker**
+  raccoon (mohawk, leather jacket, flying-V, headbangs in front of the amps). Switch with the **Switch
+  raccoon** button on the raccoon visualizer or in **Settings → Playback → Now Playing visualizer**, which
+  also picks the visualizer. Both choices sync through a Wavelength Hub.
+- **Raccoons dress for your theme**: hazmat suits and respirators on Nuclear skins, laser visors on Lasers,
+  glow sticks on Neon, 8-bit shades on Retro and coder glasses on Editor palettes, on top of the holiday hats.
+  See the [user guide](docs/USER-GUIDE.md#raccoons).
 - **Server logins on your Hub.** Admins can keep Plex, Audiobookshelf, SUB/WAVE, deemix and yt-dlp logins on
   the Wavelength Hub (Settings → Sources / Downloads → **Move to Hub**), so signed-in devices get them without
   typing them in. Pick who can use each server (everyone, admins only, or chosen people) and give someone
