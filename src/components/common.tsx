@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { useSettings } from '../store/settings';
-import { SOURCE_COLORS, type Album, type Track } from '../sources/types';
+import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
+import { useHidden } from '../lib/kids';
+import { KidFlagButton } from './KidFlag';
 import { usePlayer } from '../store/player';
 import { IconMore, IconPlay } from './Icons';
 import { useIsPhone } from '../lib/platform';
@@ -41,15 +43,36 @@ export function SourceDots({ sourceIds }: { sourceIds: string[] }) {
   );
 }
 
+/** "E" for explicit, "C" for a clean version, from the server's tags or Deezer. */
+export function Rating({ explicit }: { explicit?: 'explicit' | 'clean' | boolean }) {
+  if (explicit === 'explicit' || explicit === true) return <span className="rating" title="Explicit">E</span>;
+  if (explicit === 'clean') return <span className="rating clean" title="Clean version">C</span>;
+  return null;
+}
+
 export function AlbumCard({ album, onOpen }: { album: Album; onOpen(a: Album): void }) {
+  const hidden = useHidden();
+  if (hidden.album(album)) return null;
   return (
     <button className="card" onClick={() => onOpen(album)}>
       <Cover src={album.coverUrl} alt={album.title} />
-      <div className="card-title" title={album.title}>{album.title}</div>
+      <div className="card-title" title={album.title}><Rating explicit={album.explicit} />{album.title}</div>
       <div className="card-sub">
         <SourceDots sourceIds={(album.refs ?? [album]).map((r) => r.sourceId)} />
         <span>{album.artist}{album.year ? ` · ${album.year}` : ''}</span>
       </div>
+    </button>
+  );
+}
+
+export function ArtistCard({ artist, onOpen }: { artist: Artist; onOpen(a: Artist): void }) {
+  const hidden = useHidden();
+  if (hidden.artist(artist)) return null;
+  return (
+    <button className="card" onClick={() => onOpen(artist)}>
+      <Cover src={artist.coverUrl} alt={artist.name} round />
+      <div className="card-title center">{artist.name}</div>
+      <div className="card-sub center"><SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} /></div>
     </button>
   );
 }
@@ -77,9 +100,10 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
   const playNext = usePlayer((s) => s.playNext);
   const enqueue = usePlayer((s) => s.enqueue);
   const current = usePlayer((s) => s.queue[s.index]);
+  const hidden = useHidden();
   return (
     <div className="tracklist">
-      {tracks.map((t, i) => (
+      {tracks.map((t, i) => hidden.track(t) ? null : (
         <div key={`${i}:${t.sourceId}:${t.id}`} className={`track-row ${current?.id === t.id && current.sourceId === t.sourceId ? 'active' : ''} ${openRow === i ? 'open' : ''}`}
           onDoubleClick={() => playTracks(tracks, i)}
           // phones: tap the row to play; the ⋯ button reveals the actions
@@ -90,7 +114,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <IconPlay className="hover-play" />
           </button>
           <div className="track-main">
-            <div className="track-title">{t.title}</div>
+            <div className="track-title"><Rating explicit={t.explicit} />{t.title}</div>
             <div className="track-sub">{sub ? sub(t) : <>{t.artist}{showAlbum && t.album ? ` — ${t.album}` : ''}</>}</div>
             {t.progress ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
           </div>
@@ -102,6 +126,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <button className="chip" onClick={() => enqueue([t])}>+ Queue</button>
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} />}
             <QueueOnSubwave track={t} />
+            {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} explicit={t.explicit === 'explicit'} className="chip" />}
             {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}
             {onRemove && <button className="chip" onClick={() => onRemove(i)} title="Remove from playlist">✕</button>}
           </div>

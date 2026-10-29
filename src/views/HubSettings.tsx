@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import qrcode from 'qrcode-generator';
 import { syncNow } from '../lib/hubSync';
 import { loadHubServices } from '../lib/hubServices';
+import { loadFlags, setFlag, useFlags } from '../lib/kids';
 import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubPairing, type HubRole } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 
@@ -423,6 +424,8 @@ export function UsersTab() {
         ))}
       </section>
 
+      <KidSafeList />
+
       {canAudit && (
         <section>
           <h2>Activity</h2>
@@ -434,6 +437,38 @@ export function UsersTab() {
         </section>
       )}
     </>
+  );
+}
+
+/** Kid-safe flags: what admins hid from kids, or let through although it's explicit. */
+function KidSafeList() {
+  const can = useHub((s) => s.permissions.includes('library.edit'));
+  const flags = useFlags((s) => s.flags);
+  useEffect(() => {
+    if (can) loadFlags();
+  }, [can]);
+  if (!can) return null;
+  const KIND = { track: 'Song', album: 'Album', artist: 'Artist' } as const;
+  return (
+    <section>
+      <h2>Kid-safe music</h2>
+      <p className="muted small">
+        Kid profiles never see music marked explicit (from your files' tags or Deezer), or anything listed here as
+        <b> Hidden</b>. <b>OK for kids</b> lets something explicit through. Use the <b>Kids</b> button on any song,
+        album or artist to add to this list.
+      </p>
+      {!flags.length && <p className="muted">Nothing flagged yet.</p>}
+      {flags.map((f) => (
+        <div key={f.id} className="source-row">
+          <div className="track-main">
+            <div className="track-title">{f.title || f.artist}</div>
+            <div className="track-sub">{KIND[f.kind]}{f.title ? ` · ${f.artist}` : ''}{f.setBy ? ` · by ${f.setBy}` : ''}</div>
+          </div>
+          <span className={`small ${f.verdict === 'block' ? 'kid-blocked' : 'ok'}`}>{f.verdict === 'block' ? 'Hidden from kids' : 'OK for kids'}</span>
+          <button className="btn small ghost" onClick={() => setFlag(f.kind, f.artist, f.title, null).catch((e) => alert(errText(e)))}>Remove</button>
+        </div>
+      ))}
+    </section>
   );
 }
 

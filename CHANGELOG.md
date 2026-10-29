@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Kid-safe music.** On a kid profile, anything marked explicit (from your files' tags through Navidrome, or
+  from Deezer) is hidden everywhere: albums, artists, search, playlists, favorites, Discover, Release Radar and
+  Deezer browsing, and the player won't play it. Admins get a **Kids** button on every song, album and artist
+  to hide something from kids or mark something explicit as fine, and a **Kid-safe music** list under
+  **Settings → Users**. Flags are kept on the Hub and apply on every kid's device.
+- **E** and **C** badges on explicit and clean songs and albums.
+- **Hub:** new `content_flags` table (migration 5) and `/api/flags`, `/api/admin/flags` routes.
 - **Request music.** Signed in to a Hub without Autodownload, **Get** becomes **Request** in Downloads, Discover
   and Release Radar, and you can paste a YouTube, SoundCloud or Bandcamp link too. Admins approve in the new
   **Inbox → To approve**: the Hub downloads it with deemix or yt-dlp, or they mark it as already in the library

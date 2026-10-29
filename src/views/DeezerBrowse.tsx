@@ -9,7 +9,8 @@ import { mustRequest, useMustRequest } from '../lib/inbox';
 import { getDeezerAlbum, getDeezerArtist, getDeezerPlaylist, type DeezerAlbumPage, type DeezerArtistPage, type DeezerPlaylistPage, type DeezerResult } from '../sources/deemix';
 import type { Track } from '../sources/types';
 import { usePlayer } from '../store/player';
-import { Cover, Spinner, fmtTime } from '../components/common';
+import { Cover, Rating, Spinner, fmtTime } from '../components/common';
+import { useHidden } from '../lib/kids';
 import { IconBack, IconDownload, IconPause, IconPlay } from '../components/Icons';
 
 export type Browse = { type: 'artist' | 'album' | 'playlist'; id: number; title: string };
@@ -27,7 +28,7 @@ export const statusKey = (r: DeezerResult) => `${r.type}:${r.id}`;
 
 /** A 30s Deezer clip as a playable (unsaveable) track — same shape Discover uses. */
 function previewTrack(r: DeezerResult): Track {
-  return { id: `preview:${r.preview}`, sourceId: 'preview', kind: 'track', title: r.title, artist: r.artist, album: '30-second preview', coverUrl: r.cover, streamUrl: r.preview!, duration: 30 };
+  return { id: `preview:${r.preview}`, sourceId: 'preview', kind: 'track', title: r.title, artist: r.artist, album: '30-second preview', coverUrl: r.cover, streamUrl: r.preview!, duration: 30, explicit: r.explicit ? 'explicit' : undefined };
 }
 
 function PreviewButton({ r }: { r: DeezerResult }) {
@@ -66,12 +67,15 @@ export function DzRow({ r, open, send, status, numbered }: BrowseProps & { r: De
     : r.type === 'album' || r.type === 'playlist' ? { type: r.type, id: r.id, title: r.title }
     : undefined;
   const year = r.releaseDate?.slice(0, 4);
+  const hidden = useHidden();
+  if (hidden.deezer(r)) return null;
   return (
     <div className={`station-row dz-row ${target ? 'openable' : ''}`} onClick={target ? () => open(target) : undefined}>
       {numbered ? <div className="track-num">{r.trackNumber}</div> : <Cover src={r.cover} alt={r.title} round={r.type === 'artist'} className="tiny" />}
       <div className="track-main">
         <div className="track-title">
           {target ? <button className="dz-open" onClick={(e) => { e.stopPropagation(); open(target); }}>{r.title}</button> : r.title}
+          <Rating explicit={r.explicit} />
           {!numbered && <span className="tag">{r.type === 'album' && r.recordType && r.recordType !== 'album' ? r.recordType : r.type === 'track' ? 'song' : r.type}</span>}
         </div>
         <div className="track-sub">

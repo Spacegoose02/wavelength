@@ -7,11 +7,13 @@ import { sourceFor, mergeAlbums } from '../sources/registry';
 import { stationToTrack } from '../sources/radio';
 import type { Album, Artist, Track } from '../sources/types';
 import { SOURCE_COLORS } from '../sources/types';
-import { AlbumCard, Cover, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
+import { AlbumCard, ArtistCard, Cover, Rating, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
 import { IconPlay, IconShuffle } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfArtist, shareOfTracks } from '../lib/inbox';
+import { useHidden } from '../lib/kids';
+import { KidFlagButton } from '../components/KidFlag';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 
@@ -120,13 +122,14 @@ export function Albums() {
   const sources = useSettings((s) => s.sources);
   const [filter, setFilter] = useState('');
   const [only, setOnly] = useState<string | null>(null);
+  const hidden = useHidden();
   const shown = useMemo(() => {
     const f = filter.toLowerCase();
     return albums.filter(
       (a) => (!f || a.title.toLowerCase().includes(f) || a.artist.toLowerCase().includes(f)) &&
-        (!only || (a.refs ?? [a]).some((r) => r.sourceId === only)),
+        (!only || (a.refs ?? [a]).some((r) => r.sourceId === only)) && !hidden.album(a),
     );
-  }, [albums, filter, only]);
+  }, [albums, filter, only, hidden]);
   const musicSources = sources.filter((s) => s.enabled && (s.kind === 'navidrome' || s.kind === 'plex'));
 
   return (
@@ -156,7 +159,8 @@ export function Artists() {
   const { artists } = useCatalog();
   const go = useUi((s) => s.go);
   const [filter, setFilter] = useState('');
-  const shown = artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()));
+  const hidden = useHidden();
+  const shown = artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()) && !hidden.artist(a));
   return (
     <div className="page">
       <header className="page-head">
@@ -164,13 +168,7 @@ export function Artists() {
         <input className="filter" placeholder="Filter artists…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
       <Grid>
-        {shown.slice(0, 600).map((a) => (
-          <button key={`${a.sourceId}:${a.id}`} className="card" onClick={() => go({ view: 'artist', artist: a })}>
-            <Cover src={a.coverUrl} alt={a.name} round />
-            <div className="card-title center">{a.name}</div>
-            <div className="card-sub center"><SourceDots sourceIds={(a.refs ?? [a]).map((r) => r.sourceId)} /></div>
-          </button>
-        ))}
+        {shown.slice(0, 600).map((a) => <ArtistCard key={`${a.sourceId}:${a.id}`} artist={a} onOpen={(artist) => go({ view: 'artist', artist })} />)}
       </Grid>
     </div>
   );
@@ -200,6 +198,8 @@ export function ArtistView({ artist }: { artist: Artist }) {
       alive = false;
     };
   }, [artist]);
+  const hidden = useHidden();
+  if (hidden.artist(artist)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
 
   return (
     <div className="page">
@@ -209,7 +209,10 @@ export function ArtistView({ artist }: { artist: Artist }) {
           <div className="kicker">Artist</div>
           <h1>{artist.name}</h1>
           <SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} />
-          <div className="hero-actions"><ShareButton what={() => shareOfArtist(artist.name, artist.coverUrl)} /></div>
+          <div className="hero-actions">
+            <ShareButton what={() => shareOfArtist(artist.name, artist.coverUrl)} />
+            <KidFlagButton kind="artist" artist={artist.name} />
+          </div>
         </div>
       </header>
       {!albums ? <Spinner /> : <Grid>{albums.map((a) => <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={openAlbum} />)}</Grid>}
@@ -225,6 +228,7 @@ export function AlbumView({ album }: { album: Album }) {
   const [error, setError] = useState<string>();
   const playTracks = usePlayer((s) => s.playTracks);
   const ref = refs[refIdx];
+  const hidden = useHidden();
 
   useEffect(() => {
     let alive = true;
@@ -241,13 +245,14 @@ export function AlbumView({ album }: { album: Album }) {
   }, [ref]);
 
   const total = tracks?.reduce((s, t) => s + (t.duration ?? 0), 0) ?? 0;
+  if (hidden.album(album)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
   return (
     <div className="page">
       <header className="hero">
         <Cover src={ref.coverUrl ?? album.coverUrl} alt={album.title} className="hero-art" />
         <div>
           <div className="kicker">Album{album.year ? ` · ${album.year}` : ''}</div>
-          <h1>{album.title}</h1>
+          <h1>{album.title} <Rating explicit={album.explicit} /></h1>
           <button className="link" onClick={() => {
             const artist = useCatalog.getState().artists.find((a) => (a.refs ?? [a]).some((r) => r.id === ref.artistId && r.sourceId === ref.sourceId));
             if (artist) useUi.getState().go({ view: 'artist', artist });
@@ -263,6 +268,7 @@ export function AlbumView({ album }: { album: Album }) {
             {tracks?.length ? <AddToPlaylist tracks={tracks} label="Add to playlist" className="btn" /> : null}
             {tracks?.length ? <QueueAllOnSubwave tracks={tracks} albumBlock /> : null}
             {tracks?.length ? <ShareButton what={() => shareOfTracks('album', album.title, tracks, album.artist, ref.coverUrl ?? album.coverUrl)} /> : null}
+            <KidFlagButton kind="album" artist={album.artist} title={album.title} explicit={album.explicit === 'explicit' || tracks?.some((t) => t.explicit === 'explicit')} />
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
                 cover={ref.coverUrl ?? album.coverUrl} tracks={tracks} />

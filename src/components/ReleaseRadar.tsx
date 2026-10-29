@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { deemixClient } from '../lib/hubServices';
 import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
+import { useHidden } from '../lib/kids';
 import { albumPreview, releaseRadar, type Release } from '../sources/releaseRadar';
 import { norm } from '../sources/registry';
 import { useCatalog } from '../store/catalog';
@@ -19,6 +20,7 @@ export function ReleaseRadar() {
   const albums = useCatalog((s) => s.albums);
   const deemix = useSettings((s) => s.deemix);
   const ask = useMustRequest();
+  const hidden = useHidden();
 
   useEffect(() => {
     let alive = true;
@@ -70,7 +72,7 @@ export function ReleaseRadar() {
         <p className="muted">Nothing new in the last 6 weeks from your top {data.artists} artists. Play more music (or ♥ some) and check back.</p>
       ) : (
         <div className="row-scroll">
-          {data.releases.map((r) => {
+          {data.releases.filter((r) => !hidden.album({ id: '', sourceId: '', title: r.title, artist: r.artist })).map((r) => {
             const mine = owned(r);
             return (
               <div key={r.id} className="card radar-card">

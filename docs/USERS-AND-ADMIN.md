@@ -378,7 +378,15 @@ Request button + approval queue, server-side deemix/yt-dlp runner, slskd source,
 auto-download settings, sharing. **Cards closed:** request music, per-user autodownload, sharing (connect to
 slskd still open).
 
-### Phase 4 — Kids and content rating · ~2–3 weeks
+### Phase 4 — Kids and content rating · ~2–3 weeks · **in progress**
+
+Done: kid-safe flags (`hub/src/routes/flags.ts`, `src/lib/kids.ts`). Explicit status is read from Navidrome
+(OpenSubsonic `explicitStatus`) and Deezer (`explicit_lyrics`) and shown as **E** / **C** badges. Kid profiles
+hide explicit and admin-flagged songs, albums and artists in every list, and the player drops them as a last
+line of defence. Admins flag from a **Kids** button on songs, albums and artists, with the list under
+Settings → Users. Flags match by artist and title, since ids differ between devices' logins. Still open:
+Plex explicit status, the simple big-button kid UI, bedtime and listening limits, a PIN to leave a kid
+profile, clean-version lookup and the version switch, and keeping the kid's Navidrome password off their device.
 
 Kid role and UI, automatic + manual not-safe flags, explicit/clean detection, clean-version lookup
 and version switch. **Cards closed:** kids profiles, mark not safe for kids, explicit and clean versions.

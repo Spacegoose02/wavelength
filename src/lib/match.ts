@@ -1,7 +1,7 @@
 import { norm } from '../sources/registry';
 import type { MusicSource, Track } from '../sources/types';
 
-const cleanTitle = (s: string) =>
+export const cleanTitle = (s: string) =>
   norm(s.replace(/^\d{1,3}\s*[-.]\s+/, '').replace(/\s*[([](feat|ft|with|remaster|remastered|live|explicit|clean|radio edit|\d{4} remaster)[^)\]]*[)\]]/gi, ''));
 
 /** "Drake Featuring Future & Lil Baby" → "Drake" — charts list features in the artist field. */
