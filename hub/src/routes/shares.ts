@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, signedIn, str } from '../http.ts';
+import { everyone, notify } from '../notify.ts';
 
 /**
  * Sharing between people on the Hub: a playlist, album, song, artist, radio station or a whole favorites
@@ -60,6 +61,8 @@ export function shareRoutes(app: FastifyInstance, { db }: Ctx) {
     const { lastInsertRowid } = db
       .prepare('INSERT INTO shares (from_user, to_user, kind, title, subtitle, cover, note, payload, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .run(user.id, to, kind, title, str(b, 'subtitle', 300) || null, str(b, 'cover', 1000) || null, str(b, 'note', 500) || null, payload, Date.now());
+    const a = kind === 'artist' ? 'an artist' : kind === 'favorites' ? 'their favorites' : `a ${kind === 'track' ? 'song' : kind}`;
+    notify(db, to === null ? everyone(db, user.id) : [to], 'share', `${user.displayName} shared ${a}`, title);
     audit(db, { actorId: user.id, action: 'share.sent', target: `${kind}: ${title}`, detail: { to: to ?? 'everyone' }, ip: clientIp(req) });
     const r = db.prepare(`${SELECT} WHERE s.id = ?`).get(user.id, Number(lastInsertRowid)) as unknown as Row;
     return { share: toShare(r) };

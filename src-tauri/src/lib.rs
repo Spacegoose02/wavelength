@@ -9,6 +9,8 @@ pub fn run() {
     tauri::Builder::default()
         // HTTP from Rust side: bypasses CORS on self-hosted servers (Plex, ABS, deemix, ...)
         .plugin(tauri_plugin_http::init())
+        // Inbox notifications from the Hub (src/lib/notify.ts)
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // let the player read downloaded songs; granted with the real resolved path
             // (the config glob alone doesn't match reliably on Windows)

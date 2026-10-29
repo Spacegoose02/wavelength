@@ -57,7 +57,7 @@ test('history already on the Hub is carried into Rewind when it upgrades', () =>
   const db = openDb(file);
   // back to how a Hub before Rewind left it
   // (migration 13 added plays; later migrations are undone too, so they run again)
-  db.exec("DROP TABLE plays; DROP TABLE trash; PRAGMA user_version = 12");
+  db.exec("DROP TABLE plays; DROP TABLE trash; DROP TABLE notifications; PRAGMA user_version = 12");
   db.prepare("INSERT INTO users (id, username, display_name, role, created_at, updated_at) VALUES (1, 'a', 'a', 'member', 0, 0)").run();
   db.prepare('INSERT INTO play_history VALUES (1, 5, ?)').run(JSON.stringify(song('Song', 'Band')));
   db.prepare('INSERT INTO play_history VALUES (1, 6, ?)').run(JSON.stringify({ ...song('Live', 'FM'), kind: 'radio' }));

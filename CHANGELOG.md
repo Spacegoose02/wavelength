@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Notifications** (with a Hub): a request that's ready, turned down or failed, something shared with you,
+  and (admins) a new request show up as Windows, Android or browser notifications while Wavelength isn't in
+  front. On or off per device under **Settings → Account → Notifications**.
+- **Hub:** migration 15 (`notifications`) and `GET /api/notifications`.
 - **Soulseek** (with a Hub and slskd): a **Soulseek** tab in Downloads searches the network and shows results
   by folder, best first, with format, size and whether there's a wait; **Download** gets the album. Admins can
   fill a request from Soulseek with **Soulseek…** in the Inbox. Set up under **Settings → Downloads**.

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { HubRequest, HubRequestInput, HubShareInput, SharedTrack, ShareKind } from '../sources/hub';
 import type { Station, Track } from '../sources/types';
 import { hubClient, useHub } from '../store/hub';
+import { checkNotifications } from './notify';
 
 /**
  * Requests and sharing through the Hub (docs/USERS-AND-ADMIN.md §6.3, §6.9). People without Autodownload
@@ -29,13 +30,14 @@ export async function refreshInbox() {
   try {
     const [r, s] = await Promise.all([c.requestCounts(), c.shareCounts()]);
     useInbox.setState({ decided: r.unseen, pending: r.pending, shared: s.unseen });
+    void checkNotifications();
   } catch {
     /* offline: keep the last counts */
   }
 }
 
 let timer: ReturnType<typeof setInterval> | undefined;
-/** Keep the badge fresh: now, every two minutes, and when the window comes back into focus. */
+/** Keep the badge (and system notifications, lib/notify.ts) fresh: now, every two minutes, and when the window comes back into focus. */
 export function startInboxChecks() {
   if (timer) return;
   refreshInbox();

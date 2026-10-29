@@ -280,7 +280,7 @@ Owner request: "share playlists to each other, favorites, you name it".
 | Card | Design | Needs Hub | Effort |
 |---|---|---|---|
 | **Share playlists, favorites, albums, songs, artists and stations** | A **Share** button on Wavelength and server playlists, albums, artists, radio stations, each song row and Favorites. Pick one person (from `GET /api/people`) or **Everyone**, add an optional note. The Hub stores a **snapshot** (title, artist, album, duration for each song; the stream for a station), not source ids, because the other person's Navidrome login and Plex library differ. Cover links that carry a login in the query string (Subsonic `t`/`s`, `X-Plex-Token`) are dropped before sending. The receiver's **Inbox → Shared with you** lists it with who sent it; **Play** finds each song in their own library with `lib/match.ts`, **Save as playlist** makes a Wavelength playlist of what they have, and it says how many are missing. Senders can unshare under **You shared**; admins can remove any share. | Yes | M |
-| **Inbox** | One page (with a badge in the sidebar, and a dot on the phone's Library tab) for things shared with you, answers to your requests, and (admins) the request queue. Counts come from `GET /api/requests/counts` and `GET /api/shares/counts`, checked every two minutes and when the window gets focus; Android notifications are a follow-up. | Yes | S |
+| **Inbox** | One page (with a badge in the sidebar, and a dot on the phone's Library tab) for things shared with you, answers to your requests, and (admins) the request queue. Counts come from `GET /api/requests/counts` and `GET /api/shares/counts`, checked every two minutes and when the window gets focus. The same check fetches `GET /api/notifications` and shows new ones as system notifications on Windows, Android and in the browser while Wavelength isn't in front (`src/lib/notify.ts`, `hub/src/notify.ts`). | Yes | S |
 
 Follow-ups: "Request missing" on a shared playlist (feeds §6.3), live shared playlists that stay in sync with
 the sender's (the collaborative playlists in §7), and sharing straight onto SUB/WAVE.
@@ -296,8 +296,9 @@ High value and they fit naturally on top of the Hub:
 3. **Synced lyrics** — LRCLIB (free, no key) or embedded LRC; karaoke-style highlighting in Now Playing, a
    big-text TV mode, and kids get lyrics only on clean tracks. App only. **S–M**
 4. **Request notifications and an inbox** — "your request was approved/ready", "new release from an artist you
-   follow"; Android notifications through the existing foreground service. **S** (after requests). The Inbox
-   page and badge are done (§6.8); push notifications are still open.
+   follow"; Android notifications through the existing foreground service. **S** (after requests). Done: the
+   Inbox page and badge (§6.8), and system notifications for requests and shares. Android only checks while
+   the app runs (open, or playing in the background); waking a closed app would need a push service.
 5. **Wavelength Rewind** — a yearly/monthly personal stats page (top artists, hours listened, first play of
    your favourite song), shareable as an image. Per-user history makes this possible. **M**
 6. **Invite links with QR codes** — admin creates an invite (role, services, expiry); the new user scans it on
@@ -385,7 +386,9 @@ People with Autodownload skip the queue. **Sharing** between people and the **In
 approved request's deemix or yt-dlp download, asks Navidrome to scan (with an admin login kept on the Hub)
 once downloads finish, and marks the request ready, so the requester sees **Ready** with **Play** in the
 Inbox. **Soulseek** through slskd (`hub/src/slskd.ts`): a Soulseek tab in Downloads and **Soulseek…** on
-requests in the Inbox; the API key stays on the Hub. Still open: push notifications.
+requests in the Inbox; the API key stays on the Hub. **Notifications** (`hub/src/notify.ts`): a request
+that's ready, turned down or failed, something shared with you, and (admins) a new request pop up as system
+notifications while Wavelength isn't in front.
 
 Request button + approval queue, server-side deemix/yt-dlp runner, slskd source, notifications,
 auto-download settings, sharing. **Cards closed:** request music, per-user autodownload, sharing, connect to

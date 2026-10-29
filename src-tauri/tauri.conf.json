@@ -35,5 +35,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "notification": { "icon": "ic_notification", "iconColor": "#22D3EE" }
   }
 }
