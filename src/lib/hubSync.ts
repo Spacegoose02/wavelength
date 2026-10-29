@@ -1,14 +1,15 @@
 import { HubError, type HubPrefs } from '../sources/hub';
 import { hubClient, STAMPS_KEY, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
+import { applyHubServices, loadHubServices } from './hubServices';
 
 /**
  * Sync settings to the signed-in Hub profile so they follow the person to every device.
  *
  * Each setting is its own key, last-writer-wins on the time it was changed, so changing the skin on the
  * TV and the EQ on the phone never overwrite each other. Changes made offline are kept (with their
- * timestamps) and sent when the Hub is reachable again. Server logins (sources), download settings
- * and anything device-specific stay on the device.
+ * timestamps) and sent when the Hub is reachable again. Server logins come from the Hub separately
+ * (hubServices.ts); Navidrome logins and anything device-specific stay on the device.
  */
 const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'raccoon', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts'] as const;
 type SyncedKey = (typeof SYNCED)[number];
@@ -93,7 +94,7 @@ export function syncNow(): Promise<void> {
   if (busy) return busy;
   busy = (async () => {
     try {
-      await pull();
+      await Promise.all([pull(), loadHubServices()]);
     } catch (e) {
       if (e instanceof HubError) {
         if (e.status === 401) await useHub.getState().refresh();
@@ -132,6 +133,8 @@ export function startHubSync() {
   // signing in (or switching profile) syncs straight away
   useHub.subscribe((s, p) => {
     if (s.token && s.token !== p.token) syncNow().catch(() => undefined);
+    // new logins from the Hub, or permissions changed (Autodownload on/off): update Settings
+    if (s.services !== p.services || s.permissions !== p.permissions || s.token !== p.token) applyHubServices(s.services, p.services);
   });
 
   const tick = () => {

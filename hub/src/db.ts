@@ -73,6 +73,30 @@ const MIGRATIONS: string[] = [
     expires_at INTEGER NOT NULL
   );
   `,
+  `
+  -- Server logins kept by the Hub (Plex, Audiobookshelf, SUB/WAVE, deemix, yt-dlp). Secrets are sealed
+  -- with AES-256-GCM (crypto.ts seal), never stored in the clear. See docs/HUB.md "Server logins".
+  CREATE TABLE services (
+    id         INTEGER PRIMARY KEY,
+    kind       TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    url        TEXT NOT NULL,
+    access     TEXT NOT NULL CHECK (access IN ('everyone', 'admins', 'chosen')),
+    config     TEXT NOT NULL,                    -- JSON, nothing secret
+    secrets    TEXT,                             -- sealed JSON
+    position   INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+
+  -- Who may use a 'chosen' service, and anyone's own login for a service (e.g. their Audiobookshelf key).
+  CREATE TABLE service_users (
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    secrets    TEXT,                             -- sealed JSON, null = uses the shared login
+    PRIMARY KEY (service_id, user_id)
+  );
+  `,
 ];
 
 export function openDb(file: string): Db {

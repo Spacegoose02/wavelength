@@ -421,8 +421,22 @@ skin on the TV and your phone has it next time it checks in (at start, when the 
 few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and
 the skin on another never overwrite each other. Changes made with no connection are kept and sent later.
 
-Server logins (Sources), download settings and downloaded music stay on each device. **Downloaded music always
+Server logins your admin keeps on the Hub arrive too: Plex, Audiobookshelf and SUB/WAVE show up in
+Settings → Sources marked **from your Hub**, and people allowed to download get deemix and yt-dlp set up
+in Settings → Downloads. Navidrome logins and downloaded music stay on each device. **Downloaded music always
 plays**, signed in or not, with or without the Hub.
+
+### Server logins on the Hub (admins)
+
+- **Settings → Sources → Move to Hub** puts a Plex, Audiobookshelf or SUB/WAVE server (and its login) on the
+  Hub. It keeps its place in the list and its downloads on this device. Servers you add while signed in go
+  to the Hub straight away.
+- **Edit** a Hub server to change it for everyone, and to pick **who can use it**: Everyone, Admins only, or
+  People I choose. **Own login** gives someone their own Plex token or Audiobookshelf key.
+- **Settings → Downloads → Move to Hub** does the same for deemix (with its ARL) and the yt-dlp folder and
+  network-share login. After that, change them there and press **Save to Hub**.
+- Members and kids never get the SUB/WAVE admin login. Download logins only go to admins and people with
+  **Autodownload**; everyone else sees "Your Hub admin looks after downloads".
 
 <p align="center"><img src="screenshots/hub-account.png" alt="Settings → Account when signed in" width="80%"></p>
 

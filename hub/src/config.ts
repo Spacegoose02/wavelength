@@ -10,7 +10,7 @@ export interface Config {
   dataDir: string;
   /** Public base URL people open in a browser, e.g. https://hub.example.com. Used for the pairing link. */
   publicUrl: string;
-  /** 32 random bytes. Signs pairing forms now; encrypts service keys from Phase 2. */
+  /** 32 random bytes. Signs pairing forms and (through a derived key) encrypts stored server logins. */
   secretKey: Buffer;
   sso: SsoConfig;
 }

@@ -8,7 +8,7 @@ export type Role = (typeof ROLES)[number];
 export const PERMISSIONS = [
   'users.manage', // create, edit, disable users; sign devices out
   'audit.view',
-  'keys.manage', // Phase 2: service keys vault
+  'keys.manage', // server logins kept by the Hub (services.ts)
   'subwave.control', // Phase 2: SUB/WAVE admin routes through the Hub
   'requests.create',
   'requests.approve', // Phase 3

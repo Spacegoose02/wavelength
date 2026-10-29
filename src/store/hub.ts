@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { isAndroid } from '../lib/platform';
 import { isTauri } from '../lib/http';
-import { HubClient, HubError, type HubDevice, type HubPermission, type HubSession, type HubUser } from '../sources/hub';
+import { HubClient, HubError, type HubDevice, type HubPermission, type HubService, type HubSession, type HubUser } from '../sources/hub';
 
 /**
  * Signed-in Wavelength Hub account (docs/HUB.md). Optional: with no Hub the app works exactly as before.
@@ -19,6 +19,8 @@ interface HubState {
   lastSeen?: number;
   /** Set when the last call couldn't reach the Hub (offline, server down). */
   offline: boolean;
+  /** Server logins the Hub hands this device (lib/hubServices.ts applies them to Settings). */
+  services: HubService[];
   setUrl(url: string): void;
   signedIn(s: HubSession): void;
   /** Refresh the profile and permissions; a revoked or disabled account signs out here. */
@@ -32,6 +34,7 @@ export const useHub = create<HubState>()(
       url: '',
       permissions: [],
       offline: false,
+      services: [],
       setUrl: (url) => set({ url }),
       signedIn: (s) => set({ token: s.token, user: s.user, permissions: s.permissions, device: s.device, lastSeen: Date.now(), offline: false }),
       refresh: async () => {
@@ -41,7 +44,7 @@ export const useHub = create<HubState>()(
           const me = await c.me();
           set({ user: me.user, permissions: me.permissions, device: me.device, lastSeen: Date.now(), offline: false });
         } catch (e) {
-          if (e instanceof HubError && e.status === 401) set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false });
+          if (e instanceof HubError && e.status === 401) set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false, services: [] });
           else set({ offline: true });
         }
       },
@@ -49,11 +52,11 @@ export const useHub = create<HubState>()(
         const c = hubClient();
         // tell the Hub when we can; sign out locally either way
         await c?.logout().catch(() => undefined);
-        set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false });
+        set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false, services: [] });
         localStorage.removeItem(STAMPS_KEY);
       },
     }),
-    { name: 'tonearm.hub', partialize: ({ url, token, user, permissions, device, lastSeen }) => ({ url, token, user, permissions, device, lastSeen }) },
+    { name: 'tonearm.hub', partialize: ({ url, token, user, permissions, device, lastSeen, services }) => ({ url, token, user, permissions, device, lastSeen, services }) },
   ),
 );
 

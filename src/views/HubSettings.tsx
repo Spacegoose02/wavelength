@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import qrcode from 'qrcode-generator';
 import { syncNow } from '../lib/hubSync';
-import { HubClient, HubError, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubPairing, type HubRole } from '../sources/hub';
+import { loadHubServices } from '../lib/hubServices';
+import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubPairing, type HubRole } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 
 /** Settings → Account (sign in to a Wavelength Hub) and Settings → Users (Hub admins). See docs/HUB.md. */
@@ -250,7 +251,7 @@ function SignedIn() {
 
       <div className="editor">
         <h3>Settings sync</h3>
-        <p className="muted small">Your theme, equalizer, Now Playing scene, radio stations and Discover chart picks follow you to every device you sign in on. Server logins and download settings stay on each device.</p>
+        <p className="muted small">Your theme, equalizer, Now Playing scene, radio stations and Discover chart picks follow you to every device you sign in on. Plex, Audiobookshelf, SUB/WAVE and download logins kept on the Hub arrive too (Settings → Sources and Downloads). Navidrome logins stay on each device.</p>
         <div className="row gap">
           <button className="btn" onClick={async () => {
             setMsg('Syncing…');
@@ -433,5 +434,80 @@ export function UsersTab() {
         </section>
       )}
     </>
+  );
+}
+
+const ACCESS_LABELS: Record<Access, string> = { everyone: 'Everyone', admins: 'Admins only', chosen: 'People I choose' };
+
+/**
+ * Who may use a server kept on the Hub, and personal logins (their own Plex token or Audiobookshelf key,
+ * so their progress and history are their own). Shown under the server in Settings → Sources while an
+ * admin edits it.
+ */
+export function HubAccess({ serviceId, kind }: { serviceId: number; kind: string }) {
+  const [svc, setSvc] = useState<HubAdminService>();
+  const [users, setUsers] = useState<HubAdminUser[]>([]);
+  const [err, setErr] = useState('');
+  const c = hubClient();
+  const ownable = kind === 'plex' || kind === 'audiobookshelf';
+
+  const run = async (f: () => Promise<{ service: HubAdminService } | void>) => {
+    try {
+      const r = await f();
+      if (r) setSvc(r.service);
+      setErr('');
+      await loadHubServices();
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+  useEffect(() => {
+    if (!c) return;
+    Promise.all([c.adminServices(), c.users()])
+      .then(([s, u]) => {
+        setSvc(s.services.find((x) => x.id === serviceId));
+        setUsers(u.users);
+      })
+      .catch((e) => setErr(errText(e)));
+  }, [serviceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!c || !svc) return err ? <div className="errors">{err}</div> : null;
+
+  return (
+    <div className="editor">
+      <h3>Who can use it</h3>
+      {err && <div className="errors">{err}</div>}
+      {svc.unreadable && <div className="errors">The Hub can't read the saved login (its secret key changed). Enter it again and save.</div>}
+      <label>Access
+        <select value={svc.access} onChange={(e) => run(() => c.updateService(svc.id, { access: e.target.value as Access }))}>
+          {(Object.keys(ACCESS_LABELS) as Access[]).map((a) => <option key={a} value={a}>{ACCESS_LABELS[a]}</option>)}
+        </select>
+      </label>
+      {(svc.access === 'chosen' || ownable) && users.map((u) => {
+        const entry = svc.users.find((x) => x.userId === u.id);
+        const own = !!entry?.secretsSet.length;
+        return (
+          <div key={u.id} className="source-row">
+            <div className="hub-avatar">{u.displayName.slice(0, 1).toUpperCase()}</div>
+            <div className="track-main">
+              <div className="track-title">{u.displayName}</div>
+              <div className="track-sub">{ROLE_LABELS[u.role]}{own ? ' · own login' : ''}{entry?.unreadable ? ' · login unreadable, set it again' : ''}</div>
+            </div>
+            {svc.access === 'chosen' && u.role !== 'admin' && (
+              <label className="check">
+                <span className="switch"><input type="checkbox" checked={!!entry} onChange={(e) => run(() => (e.target.checked ? c.setServiceUser(svc.id, u.id) : c.removeServiceUser(svc.id, u.id)))} /><span /></span>
+                <small>Can use</small>
+              </label>
+            )}
+            {ownable && (
+              <button className="btn small" onClick={() => {
+                const token = prompt(`${u.displayName}'s own ${kind === 'plex' ? 'Plex token' : 'Audiobookshelf API key'} (empty to use the shared one):`);
+                if (token !== null) run(() => c.setServiceUser(svc.id, u.id, { token: token.trim() || null }));
+              }}>Own login</button>
+            )}
+          </div>
+        );
+      })}
+      <p className="muted small">Admins can always use every server. With an own login, that person gets it instead of the shared one{svc.access === 'chosen' ? ', and setting one also lets them use the server' : ''}.</p>
+    </div>
   );
 }

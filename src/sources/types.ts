@@ -13,6 +13,8 @@ export interface SourceConfig {
   apiUrl?: string;
   nowPlayingUrl?: string;
   enabled: boolean;
+  /** Set when the login is kept by the signed-in Wavelength Hub (lib/hubServices.ts), not on this device. */
+  hubId?: number;
 }
 
 export type TrackKind = 'track' | 'radio' | 'book' | 'episode';

@@ -6,6 +6,7 @@ import { useSettings } from '../store/settings';
 import { useCatalog } from '../store/catalog';
 import { useDownloads } from '../store/downloads';
 import { useUi } from '../store/ui';
+import { useCan } from '../store/hub';
 import { Spinner, fmtTime } from '../components/common';
 import { IconDownload, IconRefresh } from '../components/Icons';
 import { isAndroid } from '../lib/platform';
@@ -17,6 +18,8 @@ export function Downloads() {
   const sources = useSettings((s) => s.sources);
   const [tab, setTab] = useState<Tab>('deezer');
   const [q, setQ] = useState('');
+  // signed in to a Hub: only admins and people with Autodownload get the download logins
+  const canDownload = useCan('downloads.run');
 
   const rescan = async () => {
     await Promise.all(sources.filter((s) => s.enabled).map((cfg) => sourceFor(cfg).rescan?.().catch(() => {})));
@@ -29,6 +32,7 @@ export function Downloads() {
         <h1>Downloads</h1>
         <button className="btn" onClick={rescan} title="Ask Navidrome to rescan, then reload the catalog"><IconRefresh /> Rescan library</button>
       </header>
+      {!canDownload ? <p className="muted">Your Hub admin looks after downloads. Ask them to turn on <b>Autodownload</b> for you to download music yourself.</p> : <>
       <div className="tabs">
         <button className={tab === 'deezer' ? 'on' : ''} onClick={() => setTab('deezer')}>Deezer <small>via deemix</small></button>
         {!isAndroid && <button className={tab === 'ytdlp' ? 'on' : ''} onClick={() => setTab('ytdlp')}>YouTube &amp; more <small>via yt-dlp</small></button>}
@@ -37,6 +41,7 @@ export function Downloads() {
         placeholder={tab === 'deezer' ? 'Search Deezer to download into your library…' : 'Search YouTube, or paste a YouTube / SoundCloud / Bandcamp URL…'}
         value={q} onChange={(e) => setQ(e.target.value)} />
       {tab === 'deezer' ? <DeezerTab q={q} onFallback={isAndroid ? undefined : () => setTab('ytdlp')} /> : <YtTab q={q} />}
+      </>}
     </div>
   );
 }
