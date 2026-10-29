@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0
 - **Settings has tabs**: Sources, Playback, Downloads, Themes and Discover. **Edit charts** on Discover and
   the Settings link in Downloads open the right tab.
 - **Themes tab**: skins grouped (Classic, Retro, Neon, Lasers, Nuclear, Editor palettes, Holidays, Accessibility), a search box,
