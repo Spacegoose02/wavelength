@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.12.0
 - **Invite links** (admins): **Settings → Users → Invite someone** makes a one-time link (and QR code) for a
   role. The person opens it, or pastes it in the app under **Settings → Account → I have an invite**, and picks
   their own username and password.
