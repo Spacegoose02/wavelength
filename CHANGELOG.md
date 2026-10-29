@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Search your playlists.** The Playlists page has a search box: type part of a playlist's name, or a song,
+  artist or album that's in one of your Wavelength playlists, and only the matches show (the card says which
+  song matched). Navidrome and Plex playlists are matched by name. In **+ Playlist**, the name box now finds
+  playlists as you type too; Enter still makes a new one.
 - **Change cover art** (admins). Album and artist pages get **Change cover** / **Change picture**: look the
   art up on Deezer, Apple Music and MusicBrainz's Cover Art Archive (plus fanart.tv with a key), upload a
   picture, or paste an image link. It's kept on the Hub and shows on every device and in the browser, in song

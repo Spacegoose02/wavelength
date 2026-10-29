@@ -52,9 +52,14 @@ export function AddToPlaylist({ tracks, label = 'Playlist', className = 'chip' }
     }
   };
 
+  // the name box doubles as a search: typing narrows the lists, Enter still creates a new playlist
+  const f = name.trim().toLowerCase();
+  const named = (p: { name: string }) => !f || p.name.toLowerCase().includes(f);
+  const shown = playlists.filter(named);
   const serverGroups = sources
-    .filter((s) => s.enabled && server.bySource[s.id]?.some((p) => !p.readOnly))
-    .map((s) => ({ cfg: s, lists: server.bySource[s.id].filter((p) => !p.readOnly) }));
+    .filter((s) => s.enabled)
+    .map((s) => ({ cfg: s, lists: (server.bySource[s.id] ?? []).filter((p) => !p.readOnly && named(p)) }))
+    .filter((g) => g.lists.length);
 
   return (
     <div className={`menu-wrap ${open ? 'open' : ''}`} ref={ref} onDoubleClick={(e) => e.stopPropagation()}>
@@ -70,10 +75,10 @@ export function AddToPlaylist({ tracks, label = 'Playlist', className = 'chip' }
             createPlaylist(name || 'New playlist', t);
             done('Added');
           }}>
-            <input autoFocus placeholder="New Wavelength playlist…" value={name} onChange={(e) => setName(e.target.value)} />
+            <input autoFocus placeholder="Find or create a playlist…" value={name} onChange={(e) => setName(e.target.value)} />
           </form>
-          {playlists.length > 0 && <div className="menu-group">Wavelength · any source</div>}
-          {playlists.map((p) => (
+          {shown.length > 0 && <div className="menu-group">Wavelength · any source</div>}
+          {shown.map((p) => (
             <button key={p.id} className="menu-item" onClick={() => {
               addToPlaylist(p.id, resolve());
               done('Added');
@@ -92,7 +97,9 @@ export function AddToPlaylist({ tracks, label = 'Playlist', className = 'chip' }
             </div>
           ))}
           {server.loading && <div className="menu-hint">Loading server playlists…</div>}
-          {!playlists.length && !serverGroups.length && !server.loading && <div className="menu-hint">Type a name and press Enter</div>}
+          {!shown.length && !serverGroups.length && !server.loading && (
+            <div className="menu-hint">{f ? `No playlists match. Press Enter to create “${name.trim()}”` : 'Type a name and press Enter'}</div>
+          )}
         </div>
       )}
     </div>
