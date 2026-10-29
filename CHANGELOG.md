@@ -1,9 +1,6 @@
 # Changelog
 
-## Unreleased
-- **Rewind** (History → Rewind, with a Hub): your year or month in music, with top artists, songs and
-  albums, minutes, streaks and when you listen. Play it, save it as a playlist, or share it as a picture.
-- **Hub:** migration 13 (`plays`, filled from existing history), `/api/me/rewind`, `/api/me/rewind/periods`.
+## 0.12.0
 - **Invite links** (admins): **Settings → Users → Invite someone** makes a one-time link (and QR code) for a
   role. The person opens it, or pastes it in the app under **Settings → Account → I have an invite**, and picks
   their own username and password.
