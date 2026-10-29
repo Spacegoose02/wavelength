@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { Db } from './db.ts';
 import { seal, unseal } from './crypto.ts';
 import { HttpError } from './http.ts';
+import { notifyRequester } from './notify.ts';
 import { hubDeemix } from './routes/proxy.ts';
 import { serviceForHub, serviceIdOfKind } from './services.ts';
 import { hubSlskd, transferDone, transferOk } from './slskd.ts';
@@ -186,9 +187,10 @@ export class Library {
 
   /** Requests whose download finished (before `before`) are now in the library. */
   private markReady(before = Date.now()) {
-    this.db
-      .prepare("UPDATE requests SET ready_at = ?, seen = 0 WHERE status = 'approved' AND downloaded_at IS NOT NULL AND downloaded_at <= ? AND ready_at IS NULL")
-      .run(Date.now(), before);
+    const ready = this.db
+      .prepare("UPDATE requests SET ready_at = ?, seen = 0 WHERE status = 'approved' AND downloaded_at IS NOT NULL AND downloaded_at <= ? AND ready_at IS NULL RETURNING id")
+      .all(Date.now(), before) as { id: number }[];
+    for (const r of ready) notifyRequester(this.db, r.id, 'request.ready');
   }
 
   private ytdlpFinished(job: YtJob) {
@@ -199,7 +201,10 @@ export class Library {
 
   private finish(id: number, ok: boolean, why?: string) {
     if (ok) this.db.prepare('UPDATE requests SET downloaded_at = ? WHERE id = ? AND downloaded_at IS NULL').run(Date.now(), id);
-    else this.db.prepare("UPDATE requests SET status = 'failed', reason = ?, seen = 0 WHERE id = ?").run(`The download failed${why ? `: ${why}` : ''}`.slice(0, 300), id);
+    else {
+      this.db.prepare("UPDATE requests SET status = 'failed', reason = ?, seen = 0 WHERE id = ?").run(`The download failed${why ? `: ${why}` : ''}`.slice(0, 300), id);
+      notifyRequester(this.db, id, 'request.failed');
+    }
   }
 
   /** Look at the download queues for finished downloads. */

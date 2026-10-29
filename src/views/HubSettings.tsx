@@ -3,8 +3,11 @@ import qrcode from 'qrcode-generator';
 import { syncNow } from '../lib/hubSync';
 import { loadHubServices } from '../lib/hubServices';
 import { recheckLibrary, runExplicitCheck, stopExplicitCheck, useExplicitCheck } from '../lib/explicitCheck';
+import { isTauri } from '../lib/http';
 import { loadFlags, setFlag, useFlags, useRatings } from '../lib/kids';
 import { today } from '../lib/kidTime';
+import { notifyAllowed, notifySupported } from '../lib/notify';
+import { isAndroid } from '../lib/platform';
 import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
@@ -211,6 +214,36 @@ function RemoteSetting() {
   );
 }
 
+/** System notifications for Inbox news (lib/notify.ts). */
+function NotifySetting() {
+  const on = useSettings((s) => s.notifications);
+  const approver = useHub((s) => s.permissions.includes('requests.approve'));
+  const [msg, setMsg] = useState('');
+  if (!notifySupported()) return null;
+  const toggle = async (v: boolean) => {
+    setMsg('');
+    useSettings.getState().setNotifications(v);
+    if (v && !(await notifyAllowed(true).catch(() => false))) {
+      setMsg(isTauri ? 'Notifications are turned off for Wavelength in your system settings.' : 'Your browser blocks notifications from this page. Allow them in the site settings.');
+    }
+  };
+  return (
+    <div className="editor">
+      <h3>Notifications</h3>
+      <p className="muted small">
+        When Wavelength isn't in front: a request that's ready or was turned down, something shared with you
+        {approver ? ', and new requests waiting for you' : ''}.
+        {isTauri && isAndroid ? ' On Android they come while the app is open or playing in the background.' : ''}
+      </p>
+      <label className="check">
+        <span className="switch"><input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /><span /></span>
+        Notify me on this device
+      </label>
+      {msg && <p className="small">{msg}</p>}
+    </div>
+  );
+}
+
 /** Link a tinyauth identity to this account: a one-time link opened in a browser where tinyauth signs you in. */
 function SsoLink() {
   const { user, refresh } = useHub();
@@ -315,6 +348,7 @@ function SignedIn() {
       </div>
 
       <RemoteSetting />
+      <NotifySetting />
 
       <SsoLink />
 

@@ -309,6 +309,20 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX trash_batch ON trash(batch);
   `,
+  `
+  -- What each person's devices show as a system notification (notify.ts): a request that's ready or was
+  -- turned down, something shared with them, (admins) a new request. Devices ask for the ones after the
+  -- last id they saw. Kept for 30 days.
+  CREATE TABLE notifications (
+    id         INTEGER PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    body       TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX notifications_user ON notifications(user_id, id);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

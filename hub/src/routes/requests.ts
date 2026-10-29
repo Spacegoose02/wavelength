@@ -4,6 +4,7 @@ import { audit } from '../audit.ts';
 import type { Db } from '../db.ts';
 import { clientIp, HttpError, need, signedIn, str, type Auth } from '../http.ts';
 import { deemixJobIds } from '../library.ts';
+import { approvers, notify, notifyRequester } from '../notify.ts';
 import { hubSlskd } from '../slskd.ts';
 import { hubDeemix, hubYtSettings, isDeezerLink } from './proxy.ts';
 import { readFiles } from './slskd.ts';
@@ -101,6 +102,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     db.prepare('UPDATE requests SET status = ?, via = ?, job = ?, downloaded_at = NULL, ready_at = NULL, reason = ?, decided_by = ?, decided_at = ?, seen = ? WHERE id = ?')
       .run(status, via, job, reason, by.id, Date.now(), by.id === r.userId ? 1 : 0, r.id);
     audit(db, { actorId: by.id, action: status === 'approved' ? 'request.approved' : 'request.failed', target: `${r.artist} – ${r.title}`, detail: { for: r.username, via, reason }, ip });
+    if (status === 'failed' && by.id !== r.userId) notifyRequester(db, r.id, 'request.failed');
     return getRequest(db, r.id)!;
   }
 
@@ -122,6 +124,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     audit(db, { actorId: auth.user.id, action: 'request.created', target: `${r.artist} – ${r.title}`, detail: { link, kind }, ip: clientIp(req) });
     // Autodownload (and admins): no queue
     if (auth.permissions.includes('downloads.run')) r = await approve(r, auth.user, clientIp(req));
+    else notify(db, approvers(db, auth.user.id), 'request.new', `New request from ${auth.user.displayName}`, r.artist ? `${r.title} by ${r.artist}` : r.title);
     return { request: r };
   });
 
@@ -193,6 +196,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     const r = decided(Number(req.params.id));
     const reason = str(req.body, 'reason', 300) || null;
     db.prepare("UPDATE requests SET status = 'rejected', reason = ?, decided_by = ?, decided_at = ?, seen = 0 WHERE id = ?").run(reason, user.id, Date.now(), r.id);
+    if (r.userId !== user.id) notifyRequester(db, r.id, 'request.rejected');
     audit(db, { actorId: user.id, action: 'request.rejected', target: `${r.artist} – ${r.title}`, detail: { for: r.username, reason }, ip: clientIp(req) });
     return { request: getRequest(db, r.id) };
   });
@@ -202,6 +206,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     const { user } = need(req, 'requests.approve');
     const r = decided(Number(req.params.id));
     db.prepare("UPDATE requests SET status = 'have', reason = NULL, decided_by = ?, decided_at = ?, seen = 0 WHERE id = ?").run(user.id, Date.now(), r.id);
+    if (r.userId !== user.id) notifyRequester(db, r.id, 'request.have');
     audit(db, { actorId: user.id, action: 'request.have', target: `${r.artist} – ${r.title}`, detail: { for: r.username }, ip: clientIp(req) });
     return { request: getRequest(db, r.id) };
   });

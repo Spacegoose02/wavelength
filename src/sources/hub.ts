@@ -196,6 +196,15 @@ export interface SharePayload {
   station?: { name: string; streamUrl: string; favicon?: string; homepage?: string; nowPlayingUrl?: string };
   artist?: string;
 }
+/** Something the Hub tells this person about (hub/src/notify.ts), shown as a system notification. */
+export interface HubNotice {
+  id: number;
+  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share';
+  title: string;
+  body: string;
+  createdAt: number;
+}
+
 export interface HubShare {
   id: number;
   kind: ShareKind;
@@ -472,6 +481,9 @@ export class HubClient {
   share = (b: HubShareInput) => this.call<{ share: HubShare }>('POST', '/api/shares', b);
   shares = (sent = false) => this.call<{ shares: HubShare[] }>('GET', `/api/shares${sent ? '?sent=1' : ''}`);
   shareCounts = () => this.call<{ unseen: number }>('GET', '/api/shares/counts');
+  /** Notifications after `after` (the `last` from the previous call); without it, only where to start. */
+  notifications = (after?: number) =>
+    this.call<{ notifications: HubNotice[]; last: number }>('GET', `/api/notifications${after === undefined ? '' : `?after=${after}`}`);
   sharesSeen = (ids?: number[]) => this.call('POST', '/api/shares/seen', ids ? { ids } : {});
   hideShare = (id: number) => this.call('POST', `/api/shares/${id}/hide`, {});
   unshare = (id: number) => this.call('DELETE', `/api/shares/${id}`);

@@ -590,6 +590,11 @@ panel of Downloads): *Waiting*, *Downloading*, *Adding to your library*, *Ready*
 *Not this time* (with the admin's reason) or *Download failed*. You can cancel one that's still waiting.
 When it's **Ready**, the Inbox badge lights up and **Play** finds it in your library and plays it.
 
+**Notifications:** while Wavelength is in the background, a request that's ready or was turned down, something
+shared with you, and (admins) a new request also pop up as a system notification. Turn them off for one
+device under **Settings → Account → Notifications**. On Android they come while the app is open or playing in
+the background; in a browser, allow notifications for the page when asked.
+
 **Admins:** add a Navidrome admin login under **Settings → Server → Library updates** and the Hub asks
 Navidrome to scan as soon as a download finishes (requests and your own downloads), so new music shows up
 in a minute instead of at Navidrome's next scheduled scan. **Scan now** starts one by hand.

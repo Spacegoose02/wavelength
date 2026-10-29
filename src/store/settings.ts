@@ -121,6 +121,9 @@ interface SettingsState {
   /** This device shows up under Devices on your other devices, which can control it (lib/remote.ts). Not synced. */
   remoteControl: boolean;
   setRemoteControl(v: boolean): void;
+  /** Show Inbox news from the Hub as system notifications (lib/notify.ts). Per device, not synced. */
+  notifications: boolean;
+  setNotifications(v: boolean): void;
   /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
   updates: { auto: boolean; prerelease: boolean };
   setUpdates(u: Partial<SettingsState['updates']>): void;
@@ -163,6 +166,8 @@ export const useSettings = create<SettingsState>()(
       setVersions: (versions) => set({ versions }),
       remoteControl: true,
       setRemoteControl: (remoteControl) => set({ remoteControl }),
+      notifications: true,
+      setNotifications: (notifications) => set({ notifications }),
       updates: { auto: true, prerelease: false },
       setUpdates: (u) => set((st) => ({ updates: { ...st.updates, ...u } })),
       setDiscoverCharts: (g, charts) =>
