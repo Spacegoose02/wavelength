@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.0
 - **In-app updates (Windows and Android).** Wavelength checks GitHub for a newer release on launch and every
   6 hours, shows a banner, and lists it in the new **Settings → Updates** tab with the release notes.
   **Install update** downloads the right file and installs it: on Windows the setup exe runs with a progress bar
