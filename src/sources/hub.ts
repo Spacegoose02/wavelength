@@ -411,6 +411,7 @@ export class HubClient {
   myPlaylists = () => this.call<{ playlists: HubPlaylist[] }>('GET', '/api/me/playlists');
   putMyPlaylists = (playlists: HubPlaylist[]) => this.call<{ playlists: HubPlaylist[] }>('PUT', '/api/me/playlists', { playlists });
   myHistory = () => this.call<{ history: { playedAt: number; track: Track }[] }>('GET', '/api/me/history');
+  importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });
   addMyHistory = (plays: { playedAt: number; track: Track }[]) => this.call('POST', '/api/me/history', { plays });
   removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);
   allRequests = (status?: string) => this.call<{ requests: HubRequest[] }>('GET', `/api/admin/requests${status ? `?status=${status}` : ''}`);

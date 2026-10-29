@@ -380,6 +380,29 @@ name matches, so you can click the one you want. Press **Enter** instead to make
 > fetching every playlist; that's left out on purpose. The **+ Playlist** filter is in
 > `src/components/AddToPlaylist.tsx`.
 
+## Import a playlist
+
+**Playlists → Import** brings a playlist over from somewhere else. Paste a link, or choose a file:
+
+- **Deezer** playlist or album links.
+- **Spotify** public playlist or album links. Spotify only shows its first 100 songs or so without signing
+  in, so for longer playlists export a CSV at [exportify.app](https://exportify.app) and import the file.
+- **YouTube Music** or YouTube playlist links. Your Hub reads these with its yt-dlp (nothing is downloaded),
+  so you need to be signed in to a Hub.
+- **CSV** files (Exportify, TuneMyMusic, Soundiiz or any sheet with title and artist columns), **M3U**
+  playlists, and **text** files with one *Artist - Title* per line.
+
+Wavelength looks each song up in your library and shows what it found. **Save playlist** makes a Wavelength
+playlist of the songs you have, in order (rename it first if you like). **Get missing** (or **Request
+missing**, for people who ask the admin for music) sends the rest to deemix, or to yt-dlp for songs Deezer
+doesn't have; each song also has its own **Get** / **Request** button. On a kid profile, songs that aren't
+for kids are left out.
+
+> **Developer notes:** parsing and fetching are in `src/lib/playlistImport.ts`, the page is
+> `src/views/ImportPlaylist.tsx`, and getting a missing song is shared with Discover in `src/lib/getSong.ts`.
+> YouTube goes through the Hub's `POST /api/import/youtube`; Spotify's embed page and Deezer's API go through
+> `/api/fetch` in a browser.
+
 ## Settings tabs
 
 Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** and **Server** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and

@@ -7,7 +7,7 @@ import { HttpError, signedIn } from '../http.ts';
  * apps call them directly; in a browser (docs/HUB.md "In a browser") the app asks the Hub to fetch them.
  * Only these hosts, only GET, only for signed-in people, so the Hub can't be used to reach anything else.
  */
-export const WEB_FETCH_HOSTS = new Set(['api.deezer.com', 'us.api.iheart.com', 'www.billboard.com', 'rss.applemarketingtools.com', 'www.radiowavemonitor.com']);
+export const WEB_FETCH_HOSTS = new Set(['api.deezer.com', 'us.api.iheart.com', 'www.billboard.com', 'rss.applemarketingtools.com', 'www.radiowavemonitor.com', 'open.spotify.com']);
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const TIMEOUT_MS = 20_000;

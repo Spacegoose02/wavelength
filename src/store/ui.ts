@@ -19,6 +19,7 @@ export type Route =
   | { view: 'serverPlaylist'; playlist: ServerPlaylist }
   | { view: 'subwave'; sourceId?: string }
   | { view: 'discover' }
+  | { view: 'import' }
   | { view: 'favorites' }
   | { view: 'recent' }
   | { view: 'library' }

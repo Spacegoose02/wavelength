@@ -1,4 +1,5 @@
-import { norm } from '../sources/registry';
+import { norm, sourceFor } from '../sources/registry';
+import { enabledSources } from '../store/settings';
 import type { MusicSource, Track } from '../sources/types';
 
 export const cleanTitle = (s: string) =>
@@ -23,6 +24,18 @@ export async function findTrackOnSource(src: MusicSource, t: { title: string; ar
   let hit = pick(first.tracks ?? []);
   if (!hit) hit = pick((await src.search(t.title.replace(/\(.*?\)/g, '')).catch(() => ({ tracks: [] as Track[] }))).tracks ?? []);
   return hit;
+}
+
+/** Find songs by title and artist across the music servers in use (Navidrome, then Plex, in Sources order). */
+export function findInLibrary(): (t: { title: string; artist: string }) => Promise<Track | undefined> {
+  const libs = enabledSources().filter((s) => s.kind === 'navidrome' || s.kind === 'plex').map(sourceFor);
+  return async (t) => {
+    for (const src of libs) {
+      const hit = await findTrackOnSource(src, t).catch(() => undefined);
+      if (hit) return hit;
+    }
+    return undefined;
+  };
 }
 
 /**
