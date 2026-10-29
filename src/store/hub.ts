@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { isAndroid } from '../lib/platform';
-import { isTauri } from '../lib/http';
+import { isTauri, setHubFetch } from '../lib/http';
 import { HubClient, HubError, type HubDevice, type HubPermission, type HubService, type HubSession, type HubUser } from '../sources/hub';
 
 /**
@@ -59,6 +59,12 @@ export const useHub = create<HubState>()(
     { name: 'tonearm.hub', partialize: ({ url, token, user, permissions, device, lastSeen, services }) => ({ url, token, user, permissions, device, lastSeen, services }) },
   ),
 );
+
+// in a browser, public APIs without CORS go through the Hub (lib/http.ts)
+setHubFetch(() => {
+  const { url, token } = useHub.getState();
+  return url && token ? { url, token } : undefined;
+});
 
 /** Where hubSync.ts keeps when each synced setting was last changed on this device. */
 export const STAMPS_KEY = 'tonearm.hubStamps';

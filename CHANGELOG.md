@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Wavelength in a browser.** Open your Hub's address in any browser to use Wavelength there. It goes
+  straight to signing in to that Hub. Deezer, the charts and Release Radar work through the Hub; offline
+  downloads still need the app. The Hub's Docker image now includes the web build (build it from the repo
+  root: `docker build -f hub/Dockerfile .`).
+- **Settings → Server** (admins): Hub version and uptime, free space on the music and data disks, whether the
+  music folder is writable, yt-dlp's version, household counts, and **Download backup**.
+- **Hub:** `/api/admin/server`, `/api/admin/backup`, `/api/fetch`, and `WAVELENGTH_WEB_DIR`.
 - **Library check for explicit music.** **Settings → Users → Kid-safe music → Check my library** looks each
   album up on Deezer and records on the Hub which albums and songs are explicit, so kid profiles and the
   **E** / **C** badges work for files without the explicit tag, and for Plex. Your files aren't changed. It

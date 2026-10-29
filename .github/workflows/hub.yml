@@ -1,4 +1,5 @@
-# Tests the Wavelength Hub on every change to hub/, and publishes its Docker image from main.
+# Tests the Wavelength Hub on every change to hub/, and publishes its Docker image from main. The image also
+# carries the app's web build (served at /), so app changes rebuild it too.
 #
 # Image: ghcr.io/spacegoose02/wavelength-hub (:latest and :sha-<commit>). The first time it's published,
 # make the package public (GitHub → your profile → Packages → wavelength-hub → Package settings) so
@@ -7,10 +8,10 @@ name: Hub
 
 on:
   pull_request:
-    paths: ['hub/**', '.github/workflows/hub.yml']
+    paths: ['hub/**', 'src/**', 'index.html', 'package.json', 'package-lock.json', 'vite.config.ts', '.github/workflows/hub.yml']
   push:
     branches: [main]
-    paths: ['hub/**', '.github/workflows/hub.yml']
+    paths: ['hub/**', 'src/**', 'index.html', 'package.json', 'package-lock.json', 'vite.config.ts', '.github/workflows/hub.yml']
   workflow_dispatch:
 
 permissions:
@@ -52,7 +53,8 @@ jobs:
       # Pull requests only build the image (to catch Dockerfile breakage); main also pushes it.
       - uses: docker/build-push-action@v6
         with:
-          context: hub
+          context: .
+          file: hub/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: |

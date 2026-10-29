@@ -16,6 +16,7 @@ export function makeHub(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {
     secretKey: Buffer.alloc(32, 7),
     musicDir: '',
     ytdlpBin: 'yt-dlp',
+    webDir: '',
     sso: { enabled: false, trustedProxies: [], proxySecret: '', autoCreate: false, admins: [], adminGroup: '', ...sso },
     ...extra,
   };

@@ -365,7 +365,7 @@ vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day
 
 ## Settings tabs
 
-Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
+Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** and **Server** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
 yt-dlp), **Themes**, **Discover** (charts) and **Updates**. Links elsewhere open the right tab: **Edit charts** on
 Discover opens Discover, and the Settings link in Downloads opens Downloads.
 
@@ -410,6 +410,16 @@ changes: Wavelength works on its own, as before.
   sign-on (tinyauth) or your Hub password, and press **Allow**. The TV signs itself in a moment later.
 - **Sign in with a password** signs in with your Hub username and password directly.
 - On a brand-new Hub, the Account tab offers **Set up this Hub** instead: that creates the first admin (you).
+
+**In a browser:** open your Hub's address (e.g. `https://hub.example.com`) in any browser and you get
+Wavelength itself, already pointed at that Hub: sign in and go. Offline downloads and yt-dlp on the device
+need the app; everything else works. See [HUB.md → In a browser](HUB.md#in-a-browser) for what your music
+servers need.
+
+**Settings → Server** (admins) shows how the Hub is doing: version, how long it's been running, free space
+on the music and data disks (and whether the music folder is writable), yt-dlp's version, how many people
+and devices there are and how many requests are waiting. **Download backup** saves a copy of the Hub's
+database; keep the Hub's `secret.key` with it.
 
 <p align="center"><img src="screenshots/hub-sign-in.png" alt="Signing in with a code and QR code" width="80%"></p>
 

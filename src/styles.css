@@ -1598,3 +1598,16 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .kid-panel p { font-size: 17px; }
 .kid-rules { flex-wrap: wrap; }
 .kid-rules label { display: flex; align-items: center; gap: 6px; }
+
+/* Wavelength opened in a browser from the Hub: sign in first (components/WebSignIn.tsx) */
+.web-signin { position: fixed; inset: 0; z-index: 250; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 6vh 16px 24px; background: color-mix(in srgb, var(--bg) 96%, #000); }
+.web-signin-card { display: flex; flex-direction: column; gap: 12px; width: min(620px, 100%); }
+.web-signin-card .brand { font-size: 26px; margin-bottom: 4px; }
+.web-signin-card > .btn { align-self: center; }
+
+/* Settings → Server (views/ServerTab.tsx) */
+.server-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.server-grid > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--radius); background: var(--panel); min-width: 0; }
+.server-grid > div > span { font-size: 12px; }
+.server-grid > div > b { font-weight: 600; overflow-wrap: anywhere; }
+.server-disk { display: flex; flex-direction: column; gap: 6px; font-weight: 500; }

@@ -79,7 +79,7 @@ function Pairing({ client, onDone }: { client: HubClient; onDone(): void }) {
   );
 }
 
-function SignedOut() {
+export function SignedOut() {
   const { url, setUrl, signedIn } = useHub();
   const [draft, setDraft] = useState(url);
   const [health, setHealth] = useState<HubHealth>();
