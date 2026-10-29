@@ -16,6 +16,8 @@ export interface Config {
   sso: SsoConfig;
   /** The music library folder (mounted at /music in Docker). yt-dlp saves into it. Empty = not mounted. */
   musicDir: string;
+  /** Where Navidrome sees the same music (its paths are mapped onto musicDir for the tag editor). */
+  navidromeMusicDir: string;
   /** yt-dlp command; the Docker image ships it with ffmpeg. */
   ytdlpBin: string;
   /** The app's web build, served at / so Wavelength works in a browser. Empty or missing = not served. */
@@ -65,6 +67,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     secretKey: loadSecretKey(env.WAVELENGTH_SECRET_KEY, dataDir),
     sso,
     musicDir: (env.WAVELENGTH_MUSIC_DIR ?? '').replace(/\/+$/, ''),
+    navidromeMusicDir: (env.WAVELENGTH_NAVIDROME_MUSIC_DIR || '/music').replace(/\/+$/, ''),
     ytdlpBin: env.WAVELENGTH_YTDLP || 'yt-dlp',
     // the image puts the web build next to src/
     fanartKey: (env.WAVELENGTH_FANART_KEY ?? '').trim(),

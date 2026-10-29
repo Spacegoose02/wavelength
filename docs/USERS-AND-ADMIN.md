@@ -408,11 +408,13 @@ Hub refuses to stream kids anything explicit or flagged.
 Kid role and UI, automatic + manual not-safe flags, explicit/clean detection, clean-version lookup
 and version switch. **Cards closed:** kids profiles, mark not safe for kids, explicit and clean versions.
 
-### Phase 5 — Library curation and imports · ~4–5 weeks · **in progress**
+### Phase 5 — Library curation and imports · ~4–5 weeks · **done**
 
 Done: playlist import (`src/lib/playlistImport.ts`, `src/views/ImportPlaylist.tsx`) from Deezer, Spotify,
 YouTube Music (through the Hub's yt-dlp), CSV, M3U and text, matched to the library, with "request missing".
-Still open: the tag editor.
+Tag editor (`hub/src/tags.ts`, `hub/src/routes/tags.ts`, `src/views/TagEditor.tsx`): the Hub reads and writes
+the files' tags with ffprobe / ffmpeg, matches albums on Deezer and MusicBrainz, keeps an undo log and
+rescans Navidrome afterwards.
 
 Tag editor with MusicBrainz/Deezer match, undo log; playlist import from
 Spotify/Deezer/YouTube Music/CSV/M3U with "request missing". **Cards closed:** tag editor,

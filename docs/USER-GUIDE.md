@@ -608,6 +608,16 @@ Flags match by artist and title, so a song is hidden however a kid reaches it. K
 through the Hub without ever getting the Navidrome password, and the Hub refuses to stream them anything
 explicit or flagged, so another app wouldn't get around it either.
 
+### Fixing tags (admins)
+
+On a Navidrome album's page, **Edit tags** shows the album's tags as they are in the files: album, album
+artist, year and genre for the whole album, and disc, number, title and artist per song. Type over anything,
+or press **Find on Deezer and MusicBrainz** and **Use this** on the right match to fill everything in, then
+check it and **Save**. Your Hub writes the tags into the files (the audio isn't touched) and Navidrome rescans
+a minute later. **Undo** puts them back; older saves can be undone under **Settings → Server → Tag edits**.
+
+Your Hub needs your music at `/music`, read-write, and the Navidrome admin login (Settings → Server).
+
 ### Changing cover art (admins)
 
 Admins can give any album or artist a better picture, for everyone on your Hub. Open the album or artist and

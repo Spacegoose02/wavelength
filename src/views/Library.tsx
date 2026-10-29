@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCatalog } from '../store/catalog';
+import { useCan } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { usePlayer } from '../store/player';
@@ -244,6 +245,7 @@ export function AlbumView({ album }: { album: Album }) {
   const versions = versionsOf(album);
   const both = hasBoth(versions);
   const shown = versionOf(ref);
+  const canEditTags = useCan('library.edit');
   const kid = useIsKid();
 
   useEffect(() => {
@@ -296,6 +298,9 @@ export function AlbumView({ album }: { album: Album }) {
               </div>
             )}
             <ArtworkButton kind="album" artist={album.artist} album={album.title} current={art} />
+            {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && (
+              <button className="btn" title="Fix this album's tags in its files" onClick={() => useUi.getState().go({ view: 'tags', album: { ...ref, refs: [ref] } })}>Edit tags</button>
+            )}
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
                 cover={art} tracks={tracks} />

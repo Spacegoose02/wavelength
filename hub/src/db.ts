@@ -241,6 +241,22 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (user_id, played_at)
   );
   `,
+  `
+  -- The tag editor's undo log: what each file's tags were before an edit, by batch (one Save is one batch).
+  -- See routes/tags.ts.
+  CREATE TABLE tag_edits (
+    id        INTEGER PRIMARY KEY,
+    batch     TEXT NOT NULL,
+    path      TEXT NOT NULL,               -- relative to the music folder
+    before    TEXT NOT NULL,               -- JSON: the tags that changed, as they were
+    after     TEXT NOT NULL,               -- JSON: what they became
+    label     TEXT NOT NULL,               -- "Artist – Album", for the list
+    user_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    at        INTEGER NOT NULL,
+    undone_at INTEGER
+  );
+  CREATE INDEX tag_edits_batch ON tag_edits(batch);
+  `,
 ];
 
 export function openDb(file: string): Db {

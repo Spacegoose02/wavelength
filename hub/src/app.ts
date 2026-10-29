@@ -13,6 +13,7 @@ import { navidromeRoutes } from './routes/navidrome.ts';
 import { relayRoutes } from './routes/relay.ts';
 import { mineRoutes } from './routes/mine.ts';
 import { importRoutes } from './routes/imports.ts';
+import { tagRoutes } from './routes/tags.ts';
 import { flagRoutes } from './routes/flags.ts';
 import { kidRoutes } from './routes/kids.ts';
 import { proxyRoutes } from './routes/proxy.ts';
@@ -116,6 +117,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   relayRoutes(app, ctx);
   mineRoutes(app, ctx);
   importRoutes(app, ctx);
+  tagRoutes(app, ctx);
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
   webRoutes(app, config.webDir);

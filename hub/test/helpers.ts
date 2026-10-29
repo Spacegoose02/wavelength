@@ -15,6 +15,7 @@ export function makeHub(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {
     publicUrl: 'https://hub.test',
     secretKey: Buffer.alloc(32, 7),
     musicDir: '',
+    navidromeMusicDir: '/music',
     ytdlpBin: 'yt-dlp',
     webDir: '',
     fanartKey: '',

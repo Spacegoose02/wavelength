@@ -7,7 +7,7 @@ import { serviceForHub, setServiceUser } from '../services.ts';
 import { getUser } from '../users.ts';
 
 /** Navidrome's own API (not Subsonic): sign in as the admin, then call it with the token. */
-async function navidromeAdmin(url: string, username: string, password: string) {
+export async function navidromeAdmin(url: string, username: string, password: string) {
   const base = url.replace(/\/+$/, '');
   const call = async (path: string, init: RequestInit) => {
     try {
@@ -21,6 +21,15 @@ async function navidromeAdmin(url: string, username: string, password: string) {
   if (!login.ok || !session?.token) throw new HttpError(502, 'Navidrome refused the admin login saved on the Hub');
   if (session.isAdmin === false) throw new HttpError(502, `${username} isn't a Navidrome admin, so it can't make accounts`);
   return {
+    /** An album's songs with their file paths (as Navidrome sees them). */
+    async albumSongs(albumId: string): Promise<{ id: string; path: string; title: string; artist: string; album: string; albumArtist?: string }[]> {
+      const r = await call(`/api/song?${new URLSearchParams({ album_id: albumId, _start: '0', _end: '1000', _sort: 'album', _order: 'ASC' })}`, {
+        headers: { 'x-nd-authorization': `Bearer ${session.token}` },
+      });
+      if (!r.ok) throw new HttpError(502, `Navidrome couldn't list that album (${r.status})`);
+      const list = (await r.json().catch(() => [])) as any[];
+      return (Array.isArray(list) ? list : []).filter((x) => x && (x.albumId ?? x.album_id ?? albumId) === albumId);
+    },
     async createUser(u: { userName: string; name: string; password: string }) {
       const r = await call('/api/user', {
         method: 'POST',
