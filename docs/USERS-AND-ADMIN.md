@@ -1,6 +1,6 @@
 # Users, roles and admin — design and roadmap
 
-Status: **proposal** (October 2026). Nothing here is built yet. This document decides *where* accounts,
+Status: **agreed design** (October 2026), owner decisions recorded in [§9](#9-owner-decisions). Nothing here is built yet. This document decides *where* accounts,
 roles, keys and admin-only rules live, and orders the planned board cards into phases with effort and
 dependencies. It assumes Navidrome stays the main music server.
 
@@ -12,7 +12,7 @@ dependencies. It assumes Navidrome stays the main music server.
 - [6. Feature designs (one per board card)](#6-feature-designs-one-per-board-card)
 - [7. Extra features worth adding](#7-extra-features-worth-adding)
 - [8. Phased roadmap](#8-phased-roadmap)
-- [9. Decisions needed from the owner](#9-decisions-needed-from-the-owner)
+- [9. Owner decisions](#9-owner-decisions)
 - [10. Risks and open questions](#10-risks-and-open-questions)
 
 ---
@@ -47,7 +47,7 @@ browsing and streaming. The Hub is the **control plane**, not the data plane: au
 ```
                 ┌──────────────────────────── Docker host ─────────────────────────────┐
                 │                                                                      │
- Wavelength ──▶ │  reverse proxy (Caddy / Traefik / nginx)  ──▶  tinyauth (forward auth)│
+ Wavelength ──▶ │  Nginx Proxy Manager (or Caddy/Traefik) ──▶ tinyauth (forward auth)  │
   app (any      │        │                                                             │
   device)       │        ├──▶ Wavelength Hub  (users, roles, keys vault, requests,     │
                 │        │      settings sync, admin API, job runner)                  │
@@ -75,19 +75,24 @@ browsing and streaming. The Hub is the **control plane**, not the data plane: au
 | Library, streaming, playlists, stars, scrobbles | **Navidrome** (unchanged) | Keep Navidrome, per the earlier decision. |
 | Themes, visualizers, the DJ raccoon | **App only** | Pure UI. |
 
-### Standalone mode stays
+### Standalone and offline mode stay
 
 Without a Hub, the app works exactly as it does today: one person, every setting on the device, the
 device owner is implicitly the admin. A **"Sign in to a Wavelength Hub"** option in Settings switches
-the app into Hub mode. This keeps the app useful for single-user setups and makes the Hub something
-you add, not something you must run. (Owner decision, §9.)
+the app into Hub mode. (Owner decision, §9.)
+
+The main reason to keep it is **offline downloaded music**: downloaded songs (`store/offline.ts`) must
+always play, signed in or not, with no Hub, no Navidrome and no network. In Hub mode the app caches the
+signed-in profile and its preferences, so a phone in a car or on a plane opens straight into the last
+profile and its downloads. Hub-only features (requests, admin, sync) show as unavailable until the
+Hub is reachable again, and queued changes (favorites, history, playlist edits) sync when it is.
 
 ### Hub technology
 
 - **TypeScript on Node 22** (Fastify) + **SQLite**. Same language as the app, so request/response types
   live in one `shared/` folder used by both. No extra database container.
 - Lives in this repo as `hub/` (monorepo), built by CI into `ghcr.io/spacegoose02/wavelength-hub`.
-- Config by environment variables; a `docker-compose.example.yml` with Hub + tinyauth + Navidrome + Caddy.
+- Config by environment variables; a `docker-compose.example.yml` with Hub + tinyauth + Navidrome, and Nginx Proxy Manager setup notes.
 - Secrets encrypted with AES-256-GCM using a key from `WAVELENGTH_SECRET_KEY` (or a Docker secret).
 - Realtime (active users, request notifications, listen-together) over one WebSocket per device.
 - Background jobs (downloads, scans, auto-download, imports) in an in-process queue persisted in SQLite.
@@ -100,7 +105,7 @@ you add, not something you must run. (Owner decision, §9.)
 |---|---|
 | **Admin** | Everything: manage users, keys, requests, downloads, tags, SUB/WAVE control, server page. |
 | **Member** | Listen, own playlists/favorites/settings, request music, SUB/WAVE listener features (requests, likes). |
-| **Kid** | Like Member but only the kid-safe library, no explicit tracks, requests need approval (always), no downloads, no SUB/WAVE requests unless allowed. |
+| **Kid** | Like Member but flagged music is hidden (§6.5), requests always need approval, no direct downloads, no SUB/WAVE requests unless allowed. |
 
 Roles are stored in the Hub. Permissions are checked by the Hub on every admin route (§5), and the app
 uses the same permission list only to decide what to *show*. A small fixed set of permissions
@@ -109,11 +114,14 @@ maps to the roles, so a future "moderator" role is a table row, not a rewrite.
 
 ### Sign-in options
 
-1. **tinyauth SSO (recommended primary).** tinyauth is a forward-auth service for Caddy/Traefik/nginx:
+1. **tinyauth SSO (primary).** The owner already runs tinyauth behind **Nginx Proxy Manager** for other
+   apps, so the Hub reuses it. tinyauth is a forward-auth service for Caddy/Traefik/nginx:
    after login it passes `Remote-User`, `Remote-Email`, `Remote-Name` and `Remote-Groups` headers to the
    protected app. Only the Hub's `/auth/sso/*` path is placed behind tinyauth; the Hub trusts those
    headers **only** from the configured proxy address (and a shared header secret), never from the open
-   internet.
+   internet. In Nginx Proxy Manager this is the usual tinyauth setup (an `auth_request` to tinyauth in the
+   proxy host's **Advanced** tab), applied to the `/auth/sso/` location only, not to the whole Hub host,
+   so the app's API calls (which carry Hub device tokens) are never redirected to a login page.
 2. **Local Hub accounts** (username + password, argon2id). Needed for kids without an SSO account, for
    setups without tinyauth, and as an admin break-glass login.
 3. Later, generic **OIDC** (Authelia, Authentik, Pocket ID, Keycloak) behind the same
@@ -182,8 +190,7 @@ convenience on top, not the protection.
    Example: `POST /api/admin/subwave/skip` → check `subwave.control` → Hub calls SUB/WAVE `/dj/skip`
    with HTTP Basic. This covers the card *"Users should not have admin controls on SUB/WAVE, only admin."*
 3. **Services enforce their own limits too.** Users get non-admin Navidrome accounts, so Navidrome itself
-   refuses scans, user changes or radio deletes from them. Kids' Navidrome accounts only see the kids
-   library (§6.5).
+   refuses scans, user changes or radio deletes from them.
 4. **The app hides what the role can't do** (SUB/WAVE admin tabs, Downloads, the tag editor, the Admin
    section) using the permission list from `GET /api/me`.
 5. **Audit log.** Every admin route writes who/what/when; visible on the admin server page.
@@ -222,8 +229,8 @@ a PIN. Clearly labelled as a convenience, not security.
 
 | Card | Design | Needs Hub | Effort |
 |---|---|---|---|
-| **Users request music near the preview, admin approves** | A **Request** button next to Preview/Get in Discover, Release Radar, Deezer browse and search results. For non-admins it *replaces* Get. The Hub stores the request (Deezer id/link, who, when, note). Admin gets a badge and an **Admin → Requests** queue: approve (choose bitrate/clean/explicit), reject with a reason, or "already in library" (uses `lib/match.ts`). On approve, the Hub runs the download (deemix first, slskd or yt-dlp as fallback), triggers a Navidrome scan, and notifies the requester with "Your song is ready" and a play button. Kids' requests always need approval; admins can turn on auto-approve for trusted members. | Yes | L |
-| **Per-user autodownload setting** | Interpreted as two toggles (owner to confirm, §9): (a) **Auto-download to this device** — new tracks in my favorites / chosen playlists / my approved requests are saved for offline automatically (client side, uses `store/offline.ts`, per device, synced as a preference). (b) **Auto-approve my requests** — per-user flag the admin grants. | (a) No, (b) Yes | M |
+| **Users request music near the preview, admin approves** | A **Request** button next to Preview/Get in Discover, Release Radar, Deezer browse and search results. For non-admins it *replaces* Get. The Hub stores the request (Deezer id/link, who, when, note). Admin gets a badge and an **Admin → Requests** queue: approve (choose bitrate/clean/explicit), reject with a reason, or "already in library" (uses `lib/match.ts`). On approve, the Hub runs the download (deemix first, slskd or yt-dlp as fallback), triggers a Navidrome scan, and notifies the requester with "Your song is ready" and a play button. Kids' requests always need approval; members with the Autodownload switch skip approval (next row). | Yes | L |
+| **Per-user autodownload setting** | Decided (§9): every user **requests** by default. A per-user **Autodownload** switch, set by the admin under Admin → Users, lets that user skip approval: their Get/Request button downloads straight away (the Hub still runs the download, logs it, and the admin can turn the switch off any time). Kids can't be given the switch. Enforced by the Hub: a download request from a user without the switch is stored as a request, whatever the app sends. | Yes | S–M |
 | **Connect to slskd** | `sources/slskd.ts` in the Hub: search (`POST /api/v0/searches`, poll results), download from a chosen peer, watch transfer state, move finished files into the library layout, scan Navidrome. Admin-only; appears as a third source in Downloads and as a fallback for requests. API key stays in the Hub. | Yes | M |
 
 Downloads move server-side in Hub mode: deemix already runs as a server; yt-dlp gets a server-side runner
@@ -234,7 +241,7 @@ paths stay for standalone mode.
 
 | Card | Design | Needs Hub | Effort |
 |---|---|---|---|
-| **Admin tag editor for artists, albums and songs, with matching and "mixtape match"** | Navidrome can't write tags over its API, so the Hub mounts the music folder read-write and edits files directly (ID3/Vorbis/MP4 via a tag library), then asks Navidrome to rescan. UI: open any artist/album/song → **Edit info** (admin only): title, artist, album artist, album, track/disc numbers, year, genre, cover art, explicit flag. Bulk edit for a whole album. **Match**: look the album up on MusicBrainz and Deezer, show a side-by-side diff, apply with one click (like MusicBrainz Picard). **Mixtape match**: our reading (to confirm, §9) is grouping loose singles into one album — pick songs, name the mixtape, Hub sets a shared album/album-artist ("Various Artists" or a DJ name), track numbers and a generated cover. Every edit is logged with the old values so it can be undone. | Yes | XL |
+| **Admin tag editor for artists, albums and songs, with matching** | Navidrome can't write tags over its API, so the Hub mounts the music folder read-write and edits files directly (ID3/Vorbis/MP4 via a tag library), then asks Navidrome to rescan. UI: open any artist/album/song → **Edit info** (admin only): title, artist, album artist, album, track/disc numbers, year, genre, cover art, explicit flag. Bulk edit for a whole album. **Match**: look the album up on MusicBrainz and Deezer, show a side-by-side diff, apply with one click (like MusicBrainz Picard). Every edit is logged with the old values so it can be undone. | Yes | XL |
 | **Users import / create playlists, import from Spotify, Plex and other sources** | Creating playlists already works (Navidrome/Plex two-way sync + mixed-source playlists). Import: paste a Spotify, Deezer, YouTube Music or Apple Music playlist link, or a CSV/M3U file. The Hub (or the app for public links) reads the track list, matches each song against the user's library with `lib/match.ts`, creates the playlist in the user's own Navidrome account, and lists missing songs with one **Request missing** button (feeds §6.3). Plex → Navidrome already exists as "export between servers" and gets surfaced here. Spotify needs API credentials (client credentials for public playlists, or per-user OAuth for private ones) — kept in the Hub. | Partly | L |
 
 ### 6.5 Kids and content rating
@@ -242,7 +249,7 @@ paths stay for standalone mode.
 | Card | Design | Needs Hub | Effort |
 |---|---|---|---|
 | **Kids profiles** | Role = Kid (§3). Simple, big-button UI option, no Downloads/Settings/admin, optional listening-time limit and bedtime. PIN to leave a kid profile on a shared device. | Yes | M |
-| **Mark music not safe for kids** | Admin (and optionally parents) can flag a song, album or artist as not kid-safe. Flags live in the Hub; the app hides flagged items for kids, and the Hub filters search/library results it serves. **Hard enforcement:** Navidrome supports multiple libraries with per-user access, so the recommended setup is a separate **Kids** library folder that kid Navidrome accounts are limited to; "approve for kids" copies or links a file into it. Soft flags alone can be bypassed by anyone with the kid's Navidrome password. | Yes | M |
+| **Mark music not safe for kids** | Decided (§9): **flags inside the app**, no separate Kids library. Flags come from two places: **automatic** (anything marked explicit, see next row) and **manual** — the admin can mark any song, album or artist as not kid-safe, or mark an automatically flagged item as OK for kids. Flags live in the Hub and sync to every device; the app hides flagged items for kid profiles everywhere (library, search, playlists, radio requests, Discover). Kid devices never show the kid's Navidrome password, which keeps the soft filter from being trivially bypassed; a determined kid with that password could still reach the full library through another Subsonic app, an accepted trade-off. | Yes | M |
 | **Explicit and clean versions** | Read explicit status from Deezer (`explicit_lyrics`, `explicit_content_lyrics`) when browsing and downloading, and from files/Navidrome (OpenSubsonic `explicitStatus`, `ITUNESADVISORY` tag) in the library. Show an **E** / **C** badge. On Deezer pages and in requests, offer "Get clean version" by finding the matching clean album. Per-user setting: prefer clean / prefer explicit / show both. Kids always get clean. When both versions are in the library, collapse them into one album with a version switch (extends the merge in `sources/registry.ts`). | Partly | L |
 
 ### 6.6 Look and feel (app only)
@@ -319,7 +326,7 @@ Everything else in the users/admin column depends on this.
    keychain (move existing credentials there too), sign out / switch profile.
 5. Preference sync (skin, EQ, stations, local playlists, history, Discover picks).
 6. Admin → Users: create, invite, change role, disable, see devices, sign a device out.
-7. Docs: `docs/HUB.md` (install, tinyauth + Caddy/Traefik examples), ARCHITECTURE/SOURCES updates, user guide.
+7. Docs: `docs/HUB.md` (install, tinyauth + Nginx Proxy Manager setup, Caddy/Traefik notes), ARCHITECTURE/SOURCES updates, user guide.
 
 Exit criteria: two people sign in on different devices, each keeps their own settings, and a member's
 token gets `403` from every admin route.
@@ -338,13 +345,13 @@ auto-download settings. **Cards closed:** request music, per-user autodownload, 
 
 ### Phase 4 — Kids and content rating · ~2–3 weeks
 
-Kid role and UI, Kids Navidrome library, not-safe flags, explicit/clean detection, clean-version lookup
+Kid role and UI, automatic + manual not-safe flags, explicit/clean detection, clean-version lookup
 and version switch. **Cards closed:** kids profiles, mark not safe for kids, explicit and clean versions.
 
 ### Phase 5 — Library curation and imports · ~4–5 weeks
 
-Tag editor with MusicBrainz/Deezer match and mixtape builder, undo log; playlist import from
-Spotify/Deezer/YouTube Music/CSV/M3U with "request missing". **Cards closed:** tag editor + mixtape match,
+Tag editor with MusicBrainz/Deezer match, undo log; playlist import from
+Spotify/Deezer/YouTube Music/CSV/M3U with "request missing". **Cards closed:** tag editor,
 import playlists.
 
 ### Phase 6 — Admin server page, device control and extras · ~2–3 weeks + ongoing
@@ -369,7 +376,7 @@ Rewind, invites, backups. **Cards closed:** admin server page, Docker control.
 | Kids profiles | 4 |
 | Mark music not safe for kids | 4 |
 | Explicit and non-explicit versions | 4 (badges in 0) |
-| Admin tag editor + mixtape match | 5 |
+| Admin tag editor (mixtape match dropped) | 5 |
 | Import / create playlists from Spotify/Plex/other | 5 |
 | Admin server controls page | 6 |
 | Docker for admin device control and saving data/keys | 1 (container) + 6 (control) |
@@ -378,19 +385,20 @@ Rewind, invites, backups. **Cards closed:** admin server page, Docker control.
 | Themes in their own Settings tab | 0 |
 | More visualizers / DJ raccoon | 0 |
 
-## 9. Decisions needed from the owner
+## 9. Owner decisions
 
-1. **Add the Wavelength Hub server?** Recommended: yes. Without it, admin-only can only be a PIN on each device.
-2. **Keep standalone (no-Hub) mode?** Recommended: yes, so the app keeps working for single-user setups.
-3. **Sign-in methods.** Recommended: tinyauth SSO as the main path plus local Hub accounts (kids,
-   break-glass). Is tinyauth already running in front of your other services, and which proxy (Caddy, Traefik, nginx)?
-4. **Hub needs read-write access to the music folder** (tag editing, server-side downloads, slskd). Is the
-   Hub going on the same host/NAS as Navidrome?
-5. **What "autodownload" means:** auto-save to the device for offline, auto-approve requests, or both (our reading: both, as two toggles).
-6. **What "mixtape match" means:** grouping singles into a mixtape album (our reading), or matching tags
-   against an online database, or both.
-7. **Kids filtering strength:** a separate Kids library in Navidrome (hard, recommended) or flags only (soft, simpler, bypassable).
-8. **Docker socket control:** leave off (recommended) or allow restarts through a locked-down socket proxy.
+Answered by the owner on 2026-10-29.
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Add the Wavelength Hub server? | **Yes.** |
+| 2 | Keep standalone (no-Hub) mode? | **Yes**, mainly so downloaded music always plays offline (§2). |
+| 3 | Sign-in | **tinyauth**, already used for other apps behind **Nginx Proxy Manager**. Local Hub accounts stay as the fallback (kids, break-glass). |
+| 4 | Hub with read-write access to the music folder, on the Navidrome host | **Yes.** |
+| 5 | What "autodownload" means | Users **request** by default; an admin-set per-user **Autodownload** switch lets a user download without approval (§6.3). |
+| 6 | "Mixtape match" | **Dropped.** The tag editor keeps normal MusicBrainz/Deezer matching. |
+| 7 | Kids filtering | **Flags inside the app**: automatic (explicit) plus admin manual flags; no separate Kids library (§6.5). |
+| 8 | Docker socket control | Open. Default stays **off**; revisit in Phase 6. |
 
 ## 10. Risks and open questions
 
