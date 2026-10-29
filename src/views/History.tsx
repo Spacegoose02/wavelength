@@ -3,6 +3,7 @@ import { sourceFor } from '../sources/registry';
 import type { Album, HistoryEntry } from '../sources/types';
 import { useLibrary } from '../store/library';
 import { useSettings } from '../store/settings';
+import { useHub } from '../store/hub';
 import { useUi } from '../store/ui';
 import { AlbumCard, Empty, Spinner, TrackList, timeAgo } from '../components/common';
 import { IconRefresh } from '../components/Icons';
@@ -44,6 +45,7 @@ export function History() {
     <div className="page">
       <header className="page-head">
         <h1>History</h1>
+        {useHub.getState().token && <button className="btn small" onClick={() => useUi.getState().go({ view: 'rewind' })}>Rewind</button>}
         {!isLocal && <button className="btn small" onClick={() => setNonce(nonce + 1)}><IconRefresh /> Refresh</button>}
       </header>
       <div className="tabs">

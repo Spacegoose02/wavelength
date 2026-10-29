@@ -14,6 +14,7 @@ export type Route =
   | { view: 'podcasts' }
   | { view: 'podcast'; podcast: Podcast }
   | { view: 'history' }
+  | { view: 'rewind' }
   | { view: 'playlists' }
   | { view: 'playlist'; id: string }
   | { view: 'serverPlaylist'; playlist: ServerPlaylist }

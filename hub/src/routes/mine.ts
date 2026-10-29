@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { tx } from '../db.ts';
+import { recordPlay, rewind, rewindPeriods } from '../rewind.ts';
 import { HttpError, signedIn } from '../http.ts';
 
 /**
@@ -70,11 +71,29 @@ export function mineRoutes(app: FastifyInstance, { db }: Ctx) {
       for (const p of plays as Record<string, unknown>[]) {
         const at = time(p?.playedAt);
         const json = p?.track && typeof p.track === 'object' ? JSON.stringify(p.track) : '';
-        if (at && json && json.length <= 16 * 1024) add.run(user.id, at, json);
+        if (!at || !json || json.length > 16 * 1024) continue;
+        add.run(user.id, at, json);
+        recordPlay(db, user.id, at, p.track as Record<string, unknown>, json);
       }
       db.prepare(`DELETE FROM play_history WHERE user_id = ? AND played_at < COALESCE(
         (SELECT played_at FROM play_history WHERE user_id = ? ORDER BY played_at DESC LIMIT 1 OFFSET ?), 0)`).run(user.id, user.id, KEEP_HISTORY - 1);
     });
     return { ok: true };
+  });
+
+  // ---- Rewind (rewind.ts): `tz` is the device's getTimezoneOffset(), so days and hours are its own ----
+  const tzOf = (v?: string) => Math.min(Math.max(Math.round(Number(v) || 0), -14 * 60), 14 * 60);
+
+  app.get<{ Querystring: { tz?: string } }>('/api/me/rewind/periods', async (req) => {
+    const { user } = signedIn(req);
+    return { periods: rewindPeriods(db, user.id, tzOf(req.query.tz)) };
+  });
+
+  app.get<{ Querystring: { year?: string; month?: string; tz?: string } }>('/api/me/rewind', async (req) => {
+    const { user } = signedIn(req);
+    const year = Number(req.query.year), month = req.query.month ? Number(req.query.month) : null;
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) throw new HttpError(400, 'year must be like 2026');
+    if (month !== null && (!Number.isInteger(month) || month < 1 || month > 12)) throw new HttpError(400, 'month must be 1 to 12');
+    return rewind(db, user.id, year, month, tzOf(req.query.tz));
   });
 }

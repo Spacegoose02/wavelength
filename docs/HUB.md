@@ -249,6 +249,12 @@ plays per person. Navidrome stream and cover links carry a device's login, so th
 device rebuilds them; tracks from servers added by hand on one device only play where that server is set up.
 The first time a device signs in after this update, the playlists already on it become that person's.
 
+**Rewind** (History → Rewind) adds up a person's year or month from the same plays: minutes, top artists,
+songs and albums, new artists, busiest day, longest streak, and time of day (`hub/src/rewind.ts`). Every
+song play is also kept in a `plays` table for three years (migration 13 copies the existing history in).
+Only music counts, not radio, audiobooks or podcasts; a song counts once half of it was heard, and its
+minutes are the song's length (capped at 30).
+
 Navidrome's own playlists, favorites and play counts are separate: they're per person once everyone has
 their own Navidrome account (Server logins above).
 
@@ -328,6 +334,8 @@ with a 4xx status.
 | `GET /api/me/prefs` | signed in | `{ prefs: { key: { value, updatedAt } } }` |
 | `GET /api/me/playlists`, `PUT …` | signed in | your own Wavelength playlists (`{ playlists: [{ id, name, tracks, createdAt, updatedAt, deleted? }] }`); a PUT keeps each one only if it's newer and answers with them all |
 | `GET /api/me/history`, `POST …` | signed in | your play history, newest first (`?limit=`, up to 1000) / add plays `{ plays: [{ playedAt, track }] }` |
+| `GET /api/me/rewind?year=&month=&tz=` | signed in | your Rewind for a year (or one month of it); `tz` is the device's `getTimezoneOffset()` so days and hours are local |
+| `GET /api/me/rewind/periods?tz=` | signed in | `{ periods: [{ year, month, plays }] }`, newest first |
 | `PUT /api/me/prefs` | signed in | `{ changes: { key: { value, updatedAt } } }` → `{ applied, stale, prefs }`. Newest `updatedAt` wins per key. |
 | `GET/POST /api/admin/users` | `users.manage` | list / create `{ username, role, password?, ssoSubject?, displayName?, autodownload? }` |
 | `PATCH/DELETE /api/admin/users/:id` | `users.manage` | change `{ displayName, role, password, ssoSubject, autodownload, disabled }` / delete |

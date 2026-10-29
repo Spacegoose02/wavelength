@@ -18,6 +18,7 @@ import { NowPlaying, QueuePanel } from './components/NowPlaying';
 import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart, IconInbox } from './components/Icons';
 import { Podcasts, PodcastView } from './views/Podcasts';
 import { History } from './views/History';
+import { Rewind } from './views/Rewind';
 import { PlaylistView, Playlists, ServerPlaylistView } from './views/Playlists';
 import { SubWave } from './views/SubWave';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -73,6 +74,7 @@ function View({ route }: { route: Route }) {
     case 'podcasts': return <Podcasts />;
     case 'podcast': return <PodcastView key={route.podcast.id} podcast={route.podcast} />;
     case 'history': return <History />;
+    case 'rewind': return <Rewind />;
     case 'playlists': return <Playlists />;
     case 'playlist': return <PlaylistView key={route.id} id={route.id} />;
     case 'serverPlaylist': return <ServerPlaylistView key={`${route.playlist.sourceId}:${route.playlist.id}`} playlist={route.playlist} />;

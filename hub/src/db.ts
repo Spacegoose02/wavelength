@@ -274,6 +274,24 @@ const MIGRATIONS: string[] = [
     used_by      INTEGER REFERENCES users(id) ON DELETE SET NULL
   );
   `,
+  `
+  -- Every play, kept longer than play_history (which only holds the last 1000 for the app), for Rewind.
+  -- See rewind.ts.
+  CREATE TABLE plays (
+    user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    played_at INTEGER NOT NULL,
+    title     TEXT NOT NULL,
+    artist    TEXT NOT NULL,
+    album     TEXT NOT NULL,
+    seconds   INTEGER NOT NULL,            -- the song's length; plays count once half of it was heard
+    track     TEXT NOT NULL,               -- JSON, so top songs can be played again
+    PRIMARY KEY (user_id, played_at)
+  );
+  INSERT OR IGNORE INTO plays (user_id, played_at, title, artist, album, seconds, track)
+    SELECT user_id, played_at, COALESCE(json_extract(track, '$.title'), ''), COALESCE(json_extract(track, '$.artist'), ''),
+      COALESCE(json_extract(track, '$.album'), ''), COALESCE(CAST(json_extract(track, '$.duration') AS INTEGER), 0), track
+    FROM play_history WHERE COALESCE(json_extract(track, '$.kind'), 'track') = 'track';
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
