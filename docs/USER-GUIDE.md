@@ -495,6 +495,17 @@ with their note:
 
 Admins and people with Autodownload skip the queue: their **Get** downloads straight away.
 
+### Kid profiles
+
+Someone with the **Kid** role gets a simpler Wavelength: a shorter menu with bigger buttons, **Ask for music**
+instead of Downloads, and **Me** instead of Settings. Admins set each kid's **bedtime** and **minutes a day**
+under **Settings → Users → Kid profiles**, along with one **grown-up PIN** for the household.
+
+- At bedtime, or once today's minutes are used up, the music stops and a "Time for bed" screen covers the
+  app. Minutes add up across all the kid's devices, and bedtime uses the device's clock, so it works offline.
+- **A grown-up can unlock** on that screen: the PIN gives 30 more minutes.
+- **Me** shows how long they've listened today. **Sign out** (to switch profile) needs the PIN.
+
 ### Kid-safe music
 
 On a **Kid** profile, Wavelength hides anything marked explicit and anything an admin hid from kids: in
