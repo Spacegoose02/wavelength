@@ -3,6 +3,9 @@
 Wavelength is a **Tauri 2** app: a React UI running in the system WebView, wrapped in a small Rust
 binary. The same codebase builds a Windows desktop app and an Android APK (phone, tablet, TV).
 
+An optional server, the **Wavelength Hub** (`hub/`, Node + SQLite in Docker), adds accounts, roles and
+admin-only controls. It's a control plane only: audio never goes through it. See [HUB.md](HUB.md).
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ React UI (src/) — runs in WebView2 (Windows) / Android System WebView    │

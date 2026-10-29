@@ -1,0 +1,97 @@
+import { DatabaseSync } from 'node:sqlite';
+
+export type Db = DatabaseSync;
+
+/**
+ * Schema changes, applied in order and recorded in `PRAGMA user_version`.
+ * Never edit a shipped migration: add a new one.
+ */
+const MIGRATIONS: string[] = [
+  `
+  CREATE TABLE users (
+    id            INTEGER PRIMARY KEY,
+    username      TEXT NOT NULL UNIQUE,          -- lower case
+    display_name  TEXT NOT NULL,
+    role          TEXT NOT NULL CHECK (role IN ('admin', 'member', 'kid')),
+    password_hash TEXT,                          -- null = SSO only
+    sso_subject   TEXT UNIQUE,                   -- tinyauth Remote-User, lower case
+    autodownload  INTEGER NOT NULL DEFAULT 0,    -- may download without approval (never for kids)
+    disabled      INTEGER NOT NULL DEFAULT 0,
+    created_at    INTEGER NOT NULL,
+    updated_at    INTEGER NOT NULL
+  );
+
+  CREATE TABLE devices (
+    id           INTEGER PRIMARY KEY,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name         TEXT NOT NULL,
+    platform     TEXT NOT NULL,
+    token_hash   TEXT NOT NULL UNIQUE,           -- sha256 of the device token; the token itself is never stored
+    created_at   INTEGER NOT NULL,
+    last_seen_at INTEGER NOT NULL,
+    revoked_at   INTEGER
+  );
+  CREATE INDEX devices_user ON devices(user_id);
+
+  CREATE TABLE pairings (
+    id               INTEGER PRIMARY KEY,
+    device_code_hash TEXT NOT NULL UNIQUE,
+    user_code        TEXT NOT NULL UNIQUE,
+    device_name      TEXT NOT NULL,
+    platform         TEXT NOT NULL,
+    status           TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'denied')),
+    user_id          INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    created_at       INTEGER NOT NULL,
+    expires_at       INTEGER NOT NULL
+  );
+
+  CREATE TABLE prefs (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    key        TEXT NOT NULL,
+    value      TEXT NOT NULL,                    -- JSON
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, key)
+  );
+
+  CREATE TABLE audit (
+    id       INTEGER PRIMARY KEY,
+    at       INTEGER NOT NULL,
+    actor_id INTEGER,                            -- null = system / not signed in
+    action   TEXT NOT NULL,
+    target   TEXT,
+    detail   TEXT,                               -- JSON
+    ip       TEXT
+  );
+  CREATE INDEX audit_at ON audit(at);
+  `,
+];
+
+export function openDb(file: string): Db {
+  const db = new DatabaseSync(file);
+  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+  migrate(db);
+  return db;
+}
+
+function migrate(db: Db) {
+  const { user_version: from } = db.prepare('PRAGMA user_version').get() as { user_version: number };
+  for (let v = from; v < MIGRATIONS.length; v++) {
+    tx(db, () => {
+      db.exec(MIGRATIONS[v]);
+      db.exec(`PRAGMA user_version = ${v + 1}`);
+    });
+  }
+}
+
+/** Run `fn` in a transaction. node:sqlite is synchronous, so nothing else interleaves. */
+export function tx<T>(db: Db, fn: () => T): T {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const out = fn();
+    db.exec('COMMIT');
+    return out;
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+}

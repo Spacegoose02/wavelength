@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Wavelength Hub (Phase 1, server side).** A new optional server, `hub/`, shipped as a Docker image with an
+  Unraid template: user accounts with roles (admin, member, kid), sign-in with a Hub password or tinyauth
+  single sign-on (through Nginx Proxy Manager), TV-style pairing codes for devices, per-device sign-out,
+  synced preferences and an audit log. Admin-only routes are refused for members and kids on the server, not
+  just hidden. The app doesn't use it yet. See [docs/HUB.md](docs/HUB.md) and the roadmap in
+  [docs/USERS-AND-ADMIN.md](docs/USERS-AND-ADMIN.md).
+
 ## 0.8.0
 - **Fix: Dracula, Monokai, Solarized, OLED black, High contrast, Sakura and Cyberpunk didn't work on Windows.**
   A missing closing brace in `styles.css` (lost in a merge) put those skins, and the equalizer's styles, inside
