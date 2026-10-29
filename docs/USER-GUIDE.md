@@ -492,8 +492,13 @@ The Hub refuses every one of these actions from a non-admin, so hiding the tab i
 Signed in to a Hub without **Autodownload**, the **Get** buttons in Downloads, Discover and Release Radar say
 **Request** instead. Search Deezer in **Downloads** as usual, or paste a YouTube, SoundCloud or Bandcamp link
 under **Not on Deezer?**. Your requests and their answers are in **Inbox → My requests** (and in the side
-panel of Downloads): *Waiting*, *Downloading*, *Already in the library*, *Not this time* (with the admin's
-reason) or *Download failed*. You can cancel one that's still waiting.
+panel of Downloads): *Waiting*, *Downloading*, *Adding to your library*, *Ready*, *Already in the library*,
+*Not this time* (with the admin's reason) or *Download failed*. You can cancel one that's still waiting.
+When it's **Ready**, the Inbox badge lights up and **Play** finds it in your library and plays it.
+
+**Admins:** add a Navidrome admin login under **Settings → Server → Library updates** and the Hub asks
+Navidrome to scan as soon as a download finishes (requests and your own downloads), so new music shows up
+in a minute instead of at Navidrome's next scheduled scan. **Scan now** starts one by hand.
 
 **Admins** see a number on **Inbox** when something waits. **Inbox → To approve** lists who asked for what,
 with their note:

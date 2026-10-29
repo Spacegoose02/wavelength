@@ -197,6 +197,13 @@ const MIGRATIONS: string[] = [
   );
   CREATE UNIQUE INDEX ratings_key ON ratings(kind, artist COLLATE NOCASE, album COLLATE NOCASE, title COLLATE NOCASE);
   `,
+  `
+  -- Following an approved request until it's in the library: which download it is, when that finished, and
+  -- when Navidrome had scanned it in ("your song is ready"). See library.ts.
+  ALTER TABLE requests ADD COLUMN job TEXT;              -- 'yt:<job id>', or deemix queue ids as JSON
+  ALTER TABLE requests ADD COLUMN downloaded_at INTEGER;
+  ALTER TABLE requests ADD COLUMN ready_at INTEGER;
+  `,
 ];
 
 export function openDb(file: string): Db {

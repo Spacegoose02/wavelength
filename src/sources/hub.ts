@@ -120,6 +120,10 @@ export interface HubRequest {
   decidedBy: string | null;
   createdAt: number;
   decidedAt: number | null;
+  /** The download finished. */
+  downloadedAt: number | null;
+  /** In the library (Navidrome scanned it in): "your song is ready". */
+  readyAt: number | null;
   seen: boolean;
 }
 export type HubRequestInput = { link: string; kind: string; title: string; artist: string; cover?: string; note?: string };
@@ -203,6 +207,15 @@ export interface HubServerStatus {
   music: { dir: string; exists: boolean; writable: boolean; disk: { free: number; total: number } | null } | null;
   ytdlp: string | null;
   counts: { users: number; admins: number; kids: number; devices: number; activeToday: number; pendingRequests: number; services: number; flags: number; ratedAlbums: number };
+}
+
+/** Rescans after downloads (GET /api/admin/library). */
+export interface HubLibraryStatus {
+  navidrome: { url: string; username: string } | null;
+  scanning: boolean;
+  lastScanAt: number | null;
+  lastError: string | null;
+  scanQueued: boolean;
 }
 
 /** A kid's bedtime ('HH:MM', device time) and daily listening limit; null = none. */
@@ -309,6 +322,10 @@ export class HubClient {
 
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
   server = () => this.call<HubServerStatus>('GET', '/api/admin/server');
+  library = () => this.call<HubLibraryStatus>('GET', '/api/admin/library');
+  setScanLogin = (b: { url: string; username: string; password?: string }) => this.call<HubLibraryStatus>('PUT', '/api/admin/library/navidrome', b);
+  removeScanLogin = () => this.call<HubLibraryStatus>('DELETE', '/api/admin/library/navidrome');
+  scanLibrary = () => this.call<HubLibraryStatus>('POST', '/api/admin/library/scan', {});
   /** A copy of the Hub's database, as a file to save. */
   async backup(): Promise<{ name: string; blob: Blob }> {
     const res = await http(`${this.url}/api/admin/backup`, { headers: { authorization: `Bearer ${this.token}` } });

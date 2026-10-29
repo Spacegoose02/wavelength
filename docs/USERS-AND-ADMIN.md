@@ -371,8 +371,10 @@ without Autodownload see **Request** instead of Get in Downloads, Discover and R
 link yt-dlp understands; admins get **Inbox → To approve** with Approve (the Hub sends Deezer links to
 deemix and everything else to yt-dlp), Already have, Reject with a reason, and Retry for a failed download.
 People with Autodownload skip the queue. **Sharing** between people and the **Inbox** (§6.8,
-`hub/src/routes/shares.ts`). Still open: slskd source, a Navidrome rescan when an approved download
-finishes, "your song is ready" with a play button, push notifications.
+`hub/src/routes/shares.ts`). **From download to library** (`hub/src/library.ts`): the Hub follows each
+approved request's deemix or yt-dlp download, asks Navidrome to scan (with an admin login kept on the Hub)
+once downloads finish, and marks the request ready, so the requester sees **Ready** with **Play** in the
+Inbox. Still open: slskd source, push notifications.
 
 Request button + approval queue, server-side deemix/yt-dlp runner, slskd source, notifications,
 auto-download settings, sharing. **Cards closed:** request music, per-user autodownload, sharing (connect to
