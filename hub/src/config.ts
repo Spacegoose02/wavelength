@@ -20,6 +20,8 @@ export interface Config {
   ytdlpBin: string;
   /** The app's web build, served at / so Wavelength works in a browser. Empty or missing = not served. */
   webDir: string;
+  /** fanart.tv API key: adds its artist pictures and album covers to the art picker. Empty = not used. */
+  fanartKey: string;
 }
 
 export interface SsoConfig {
@@ -65,6 +67,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     musicDir: (env.WAVELENGTH_MUSIC_DIR ?? '').replace(/\/+$/, ''),
     ytdlpBin: env.WAVELENGTH_YTDLP || 'yt-dlp',
     // the image puts the web build next to src/
+    fanartKey: (env.WAVELENGTH_FANART_KEY ?? '').trim(),
     webDir: (env.WAVELENGTH_WEB_DIR ?? fileURLToPath(new URL('../web', import.meta.url))).replace(/\/+$/, ''),
   };
 }

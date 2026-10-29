@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Change cover art** (admins). Album and artist pages get **Change cover** / **Change picture**: look the
+  art up on Deezer, Apple Music and MusicBrainz's Cover Art Archive (plus fanart.tv with a key), upload a
+  picture, or paste an image link. It's kept on the Hub and shows on every device and in the browser, in song
+  lists, the player and Now Playing too. **Use the server's picture** undoes it. Your music files aren't
+  changed.
+- **Hub:** migration 9 (`artwork`), the `/api/artwork`, `/api/art/:file` and `/api/admin/artwork` routes, and
+  `WAVELENGTH_FANART_KEY`. Pictures are stored in the data folder under `artwork/`.
 - **Everyone gets their own Navidrome account.** Admins add Navidrome and its admin login under **Settings →
   Server → Navidrome accounts**, then **Make account** (or **Use their login**) per person. Their devices get
   their own Navidrome login when they sign in; the admin login never leaves the Hub.

@@ -195,6 +195,27 @@ export interface HubAlbumRating {
   explicitTracks?: string[];
 }
 
+/** Cover art an admin picked on the Hub (docs/HUB.md "Cover art"). `url` is a path on the Hub; `album` is '' for an artist. */
+export interface HubArtwork {
+  id: number;
+  kind: 'album' | 'artist';
+  artist: string;
+  album: string;
+  url: string;
+  source: string;
+  setBy: string | null;
+  updatedAt: number;
+}
+/** A picture the Hub's lookup found. */
+export interface HubArtCandidate {
+  source: string;
+  title: string;
+  subtitle?: string;
+  thumb: string;
+  url: string;
+}
+export type HubArtworkInput = { kind: HubArtwork['kind']; artist: string; album?: string; source?: string } & ({ url: string } | { image: string });
+
 /** The admin server page (GET /api/admin/server). */
 export interface HubServerStatus {
   version: string;
@@ -349,6 +370,7 @@ export class HubClient {
     return { name, blob: await res.blob() };
   }
   ratings = () => this.call<{ ratings: HubRating[] }>('GET', '/api/ratings');
+  artwork = () => this.call<{ artwork: HubArtwork[] }>('GET', '/api/artwork');
   kidStatus = (day: string) => this.call<{ kid: boolean; rules: KidRules; usedSeconds: number; pinSet: boolean }>('GET', `/api/me/kid?day=${day}`);
   listened = (day: string, seconds: number) => this.call<{ usedSeconds: number }>('POST', '/api/me/listened', { day, seconds });
   kidUnlock = (pin: string) => this.call<{ ok: true }>('POST', '/api/kid/unlock', { pin });
@@ -380,6 +402,10 @@ export class HubClient {
   deleteRequest = (id: number) => this.call('DELETE', `/api/admin/requests/${id}`);
   saveRatings = (albums: HubAlbumRating[]) => this.call<{ saved: number }>('POST', '/api/admin/ratings', { albums });
   clearRatings = () => this.call('DELETE', '/api/admin/ratings');
+  findArt = (kind: HubArtwork['kind'], artist: string, album = '') =>
+    this.call<{ candidates: HubArtCandidate[]; failed: string[] }>('GET', `/api/admin/artwork/search?${new URLSearchParams({ kind, artist, album })}`);
+  setArtwork = (b: HubArtworkInput) => this.call<{ artwork: HubArtwork }>('PUT', '/api/admin/artwork', b);
+  deleteArtwork = (id: number) => this.call('DELETE', `/api/admin/artwork/${id}`);
   setFlag = (b: { kind: HubFlag['kind']; artist: string; title?: string; verdict: HubFlag['verdict'] }) => this.call<{ flag: HubFlag }>('POST', '/api/admin/flags', b);
   deleteFlag = (id: number) => this.call('DELETE', `/api/admin/flags/${id}`);
   adminKids = (day: string) => this.call<{ pinSet: boolean; kids: { userId: number; displayName: string; rules: KidRules; usedSeconds: number }[] }>('GET', `/api/admin/kids?day=${day}`);

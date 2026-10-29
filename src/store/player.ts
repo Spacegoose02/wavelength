@@ -1,3 +1,4 @@
+import { trackArt } from '../lib/artwork';
 import { kidSafe } from '../lib/kids';
 import { create } from 'zustand';
 import { engine } from '../player/engine';
@@ -286,7 +287,7 @@ function watchNowPlaying(t: Track) {
 
 function updateMediaSession(t: Track, live?: string, cover?: string) {
   if (!('mediaSession' in navigator)) return;
-  const art = cover ?? t.coverUrl;
+  const art = cover ?? trackArt(t);
   navigator.mediaSession.metadata = new MediaMetadata({
     title: live ?? t.title,
     artist: live ? t.title : t.artist,

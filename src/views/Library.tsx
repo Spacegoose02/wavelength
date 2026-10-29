@@ -16,6 +16,8 @@ import { explicitOfAlbum, explicitOfTrack, useHidden, useRatings } from '../lib/
 import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
+import { ArtworkButton } from '../components/ArtworkButton';
+import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -199,19 +201,21 @@ export function ArtistView({ artist }: { artist: Artist }) {
     };
   }, [artist]);
   const hidden = useHidden();
+  useArtworkList();
   if (hidden.artist(artist)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
 
   return (
     <div className="page">
       <header className="hero">
-        <Cover src={artist.coverUrl} alt={artist.name} round className="hero-art" />
+        <Cover src={artistArt(artist)} alt={artist.name} round className="hero-art" />
         <div>
           <div className="kicker">Artist</div>
           <h1>{artist.name}</h1>
           <SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} />
           <div className="hero-actions">
-            <ShareButton what={() => shareOfArtist(artist.name, artist.coverUrl)} />
+            <ShareButton what={() => shareOfArtist(artist.name, artistArt(artist))} />
             <KidFlagButton kind="artist" artist={artist.name} />
+            <ArtworkButton kind="artist" artist={artist.name} current={artistArt(artist)} />
           </div>
         </div>
       </header>
@@ -230,6 +234,8 @@ export function AlbumView({ album }: { album: Album }) {
   const ref = refs[refIdx];
   const hidden = useHidden();
   useRatings((s) => s.ratings);
+  useArtworkList();
+  const art = albumArt(album, ref.coverUrl ?? album.coverUrl);
 
   useEffect(() => {
     let alive = true;
@@ -250,7 +256,7 @@ export function AlbumView({ album }: { album: Album }) {
   return (
     <div className="page">
       <header className="hero">
-        <Cover src={ref.coverUrl ?? album.coverUrl} alt={album.title} className="hero-art" />
+        <Cover src={art} alt={album.title} className="hero-art" />
         <div>
           <div className="kicker">Album{album.year ? ` · ${album.year}` : ''}</div>
           <h1>{album.title} <Rating explicit={explicitOfAlbum(album)} /></h1>
@@ -268,12 +274,13 @@ export function AlbumView({ album }: { album: Album }) {
             }}><IconShuffle /> Shuffle</button>
             {tracks?.length ? <AddToPlaylist tracks={tracks} label="Add to playlist" className="btn" /> : null}
             {tracks?.length ? <QueueAllOnSubwave tracks={tracks} albumBlock /> : null}
-            {tracks?.length ? <ShareButton what={() => shareOfTracks('album', album.title, tracks, album.artist, ref.coverUrl ?? album.coverUrl)} /> : null}
+            {tracks?.length ? <ShareButton what={() => shareOfTracks('album', album.title, tracks, album.artist, art)} /> : null}
             <KidFlagButton kind="album" artist={album.artist} title={album.title} explicit={explicitOfAlbum(album) === 'explicit' || tracks?.some((t) => explicitOfTrack(t) === 'explicit')} />
             <CleanVersionButton artist={album.artist} album={album.title} />
+            <ArtworkButton kind="album" artist={album.artist} album={album.title} current={art} />
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
-                cover={ref.coverUrl ?? album.coverUrl} tracks={tracks} />
+                cover={art} tracks={tracks} />
             ) : null}
             {refs.length > 1 && (
               <div className="chips inline">

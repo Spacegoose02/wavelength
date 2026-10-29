@@ -153,6 +153,7 @@ Hub sees it) is an extra lock you can add.
 | `WAVELENGTH_MUSIC_DIR` | `/music` (image) | The music library. yt-dlp downloads go into a folder inside it. |
 | `WAVELENGTH_YTDLP` | `yt-dlp` | The yt-dlp command (the image includes it). |
 | `WAVELENGTH_WEB_DIR` | `/app/web` (image) | The app's web build, served at `/`. Without one, `/` goes to the sign-in page. |
+| `WAVELENGTH_FANART_KEY` | — | A [fanart.tv](https://fanart.tv/get-an-api-key/) API key (free). Adds fanart.tv artist pictures and album covers to the cover art picker. Without it the picker uses Deezer, Apple Music and the Cover Art Archive. |
 | `WAVELENGTH_SSO` | `false` | Accept tinyauth identity headers on `/auth/sso/`. |
 | `WAVELENGTH_PROXY_SECRET` | — | Value the proxy sends as `X-Wavelength-Proxy-Secret`. |
 | `WAVELENGTH_TRUSTED_PROXIES` | — | Comma-separated IPs allowed to send identity headers. SSO refuses to start unless this or the secret is set. |
@@ -224,6 +225,34 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
   removes everything that came from the Hub. ARLs and share logins typed into a device before are wiped
   from it once the Hub runs that downloader (and for anyone signed in without Autodownload).
 
+## Cover art
+
+Admins can change the picture of any album or artist for the whole household. The picture is kept on the
+Hub and shows on every device and in the browser, in place of the one Navidrome or Plex sends.
+
+- **Where:** open an album or artist in the app and press **Change cover** / **Change picture** (admins,
+  `library.edit`).
+- **Lookup:** the Hub searches **Deezer** (albums and artists), **Apple Music** (albums, up to 1200×1200),
+  **MusicBrainz's Cover Art Archive** (albums) and, with `WAVELENGTH_FANART_KEY`, **fanart.tv** (artists and
+  albums). The searches run on the Hub, so they work the same in the browser and on Android. A service that's
+  down or slow is skipped and named under the results. The artist and album boxes can be edited to search
+  for another spelling; the picture is still saved for the album you opened.
+- **Your own picture:** **Upload a picture** (JPEG, PNG or WebP, 15 MB at most), or paste any image link.
+- **Undo:** **Use the server's picture** removes the Hub's picture.
+- **Storage:** the Hub downloads the picture once and keeps it in the data folder (`/data/artwork`), so it
+  keeps working if the original link goes away. **Nothing is written to your music files or folders**, and
+  Navidrome and Plex keep their own art (other apps such as Plexamp or Feishin still show that).
+- **Matching:** like the kid-safe flags, pictures match by artist and album name on each device (ignoring
+  case, "feat." and "(Remastered)"-style suffixes), because every device reaches the music through its own
+  logins and ids differ between servers. Songs show their album's picture, in lists, the player, Now Playing
+  and the lock screen / media controls. A song on a compilation (song artist ≠ album artist) still gets the
+  album's picture when only one album has that title.
+- **On devices:** each device fetches the list at start, when the profile changes and every ten minutes, and
+  keeps it, so pictures still show offline once loaded. The images themselves (`/api/art/<file>`) load
+  without the device token, because an `<img>` can't send one: their names are 128 random bits, only listed
+  to signed-in people, and every new picture gets a new name.
+- Every change is in the audit log (`artwork.set`, `artwork.reset`).
+
 ## Roles and permissions
 
 | Role | Permissions today |
@@ -285,6 +314,11 @@ with a 4xx status.
 | `POST /api/admin/flags`, `DELETE /api/admin/flags/:id` | `library.edit` | set `{ kind: track/album/artist, artist, title?, verdict: block/allow }` (the same item again replaces its verdict) / remove |
 | `GET /api/ratings` | signed in | `{ ratings: [{ kind: album/track, artist, album, title, rating: explicit/clean/unknown, cleanLink, checkedAt }] }`: the library check's results |
 | `POST /api/admin/ratings`, `DELETE /api/admin/ratings` | `library.edit` | save `{ albums: [{ artist, album, rating, cleanLink?, explicitTracks? }] }` (up to 200; an album sent again replaces its songs) / forget them all |
+| `GET /api/artwork` | signed in | `{ artwork: [{ id, kind: album/artist, artist, album, url, source, setBy, updatedAt }] }`: the Hub's cover art (`album` is `''` for an artist, `url` is a path on the Hub) |
+| `GET /api/art/:file` | anyone | one picture (see "Cover art" for why it needs no token) |
+| `GET /api/admin/artwork/search?kind=&artist=&album=` | `library.edit` | `{ candidates: [{ source, title, subtitle?, thumb, url }], failed: [service names] }` from Deezer, Apple Music, the Cover Art Archive and fanart.tv |
+| `PUT /api/admin/artwork` | `library.edit` | `{ kind, artist, album?, url, source? }` (the Hub downloads it) or `{ kind, artist, album?, image }` (base64 upload, 15 MB at most); JPEG, PNG or WebP. The same album or artist again replaces its picture |
+| `DELETE /api/admin/artwork/:id` | `library.edit` | back to the server's own picture |
 | `GET /api/admin/server` | `server.view` | the server page: version, uptime, disks, yt-dlp version, counts |
 | `GET /api/admin/backup` | `server.view` | a copy of the database (`wavelength-hub-YYYY-MM-DD.db`), audited |
 | `GET /api/admin/library` | `server.view` | rescans: `{ navidrome: { url, username } \| null, scanning, lastScanAt, lastError, scanQueued }` |
@@ -322,7 +356,9 @@ A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`
 data folder next to it. To restore, stop the Hub, put the backup in the data folder as `hub.db` (deleting any
 `hub.db-wal` and `hub.db-shm`), and start it again.
 
-Or back up the appdata folder (`hub.db*` and `secret.key`). Keep `secret.key` with the database: it decrypts
+The backup doesn't hold the cover art pictures: those are files in the data folder's `artwork` folder.
+
+Or back up the appdata folder (`hub.db*`, `secret.key` and `artwork/`). Keep `secret.key` with the database: it decrypts
 the stored server logins. With a different key the Hub still starts, but shows those logins as unreadable
 until an admin enters them again.
 

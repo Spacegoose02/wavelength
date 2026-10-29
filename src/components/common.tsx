@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useSettings } from '../store/settings';
 import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
 import { explicitOfAlbum, explicitOfTrack, useHidden, useRatings } from '../lib/kids';
+import { albumArt, artistArt, trackArt, useArtworkList } from '../lib/artwork';
 import { KidFlagButton } from './KidFlag';
 import { usePlayer } from '../store/player';
 import { IconMore, IconPlay } from './Icons';
@@ -53,10 +54,11 @@ export function Rating({ explicit }: { explicit?: 'explicit' | 'clean' | boolean
 export function AlbumCard({ album, onOpen }: { album: Album; onOpen(a: Album): void }) {
   const hidden = useHidden();
   useRatings((s) => s.ratings);
+  useArtworkList();
   if (hidden.album(album)) return null;
   return (
     <button className="card" onClick={() => onOpen(album)}>
-      <Cover src={album.coverUrl} alt={album.title} />
+      <Cover src={albumArt(album)} alt={album.title} />
       <div className="card-title" title={album.title}><Rating explicit={explicitOfAlbum(album)} />{album.title}</div>
       <div className="card-sub">
         <SourceDots sourceIds={(album.refs ?? [album]).map((r) => r.sourceId)} />
@@ -68,10 +70,11 @@ export function AlbumCard({ album, onOpen }: { album: Album; onOpen(a: Album): v
 
 export function ArtistCard({ artist, onOpen }: { artist: Artist; onOpen(a: Artist): void }) {
   const hidden = useHidden();
+  useArtworkList();
   if (hidden.artist(artist)) return null;
   return (
     <button className="card" onClick={() => onOpen(artist)}>
-      <Cover src={artist.coverUrl} alt={artist.name} round />
+      <Cover src={artistArt(artist)} alt={artist.name} round />
       <div className="card-title center">{artist.name}</div>
       <div className="card-sub center"><SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} /></div>
     </button>
@@ -103,6 +106,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
   const current = usePlayer((s) => s.queue[s.index]);
   const hidden = useHidden();
   useRatings((s) => s.ratings);
+  useArtworkList();
   return (
     <div className="tracklist">
       {tracks.map((t, i) => hidden.track(t) ? null : (
@@ -112,7 +116,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
           onClick={phone ? (e) => !(e.target as HTMLElement).closest('button, .menu') && playTracks(tracks, i) : undefined}>
           <button className="track-num" onClick={() => playTracks(tracks, i)} title="Play">
             <span>{showCover ? '' : t.trackNumber ?? i + 1}</span>
-            {showCover && <Cover src={t.coverUrl} alt={t.title} className="tiny" />}
+            {showCover && <Cover src={trackArt(t)} alt={t.title} className="tiny" />}
             <IconPlay className="hover-play" />
           </button>
           <div className="track-main">

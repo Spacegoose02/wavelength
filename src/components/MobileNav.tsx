@@ -1,3 +1,4 @@
+import { trackArt, useArtworkList } from '../lib/artwork';
 import type { ReactNode } from 'react';
 import { usePlayer } from '../store/player';
 import { useUi, type Route } from '../store/ui';
@@ -25,6 +26,8 @@ export function MobileNav() {
   const { route, go, setNowPlaying } = useUi();
   const p = usePlayer();
   const t = p.current();
+  useArtworkList();
+  const art = p.liveCover ?? trackArt(t);
   const badge = useInbox(inboxBadge);
   const live = t?.kind === 'radio';
   return (
@@ -32,7 +35,7 @@ export function MobileNav() {
       {t && (
         <div className="mini-player" onClick={() => setNowPlaying(true)}>
           <div className="mini-progress"><i style={{ width: live ? '100%' : `${(p.position / (p.duration || 1)) * 100}%` }} /></div>
-          <Cover key={p.liveCover ?? t.coverUrl} src={p.liveCover ?? t.coverUrl} alt={t.title} className="tiny" />
+          <Cover key={art} src={art} alt={t.title} className="tiny" />
           <div className="track-main">
             <div className="track-title">{live ? p.liveTitle ?? t.title : t.title}</div>
             <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>

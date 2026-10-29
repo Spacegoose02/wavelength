@@ -17,6 +17,7 @@ export function makeHub(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {
     musicDir: '',
     ytdlpBin: 'yt-dlp',
     webDir: '',
+    fanartKey: '',
     sso: { enabled: false, trustedProxies: [], proxySecret: '', autoCreate: false, admins: [], adminGroup: '', ...sso },
     ...extra,
   };
