@@ -189,7 +189,7 @@ function YtTab({ q }: { q: string }) {
       <div>
         {!settings.outDir && (
           <div className="errors">
-            Choose where yt-dlp saves files in <button className="link" onClick={() => useUi.getState().go({ view: 'settings' })}>Settings</button> — ideally your Navidrome music folder (e.g. a network share).
+            Choose where yt-dlp saves files in <button className="link" onClick={() => useUi.getState().go({ view: 'settings', tab: 'downloads' })}>Settings</button> — ideally your Navidrome music folder (e.g. a network share).
           </div>
         )}
         {busy && <Spinner />}

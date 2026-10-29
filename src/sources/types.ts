@@ -159,6 +159,8 @@ export interface MusicSource {
   getArtistAlbums?(artistId: string): Promise<Album[]>;
   getAlbumTracks?(albumId: string): Promise<Track[]>;
   getStations?(): Promise<Station[]>;
+  /** Delete one of the server's own radio stations. Navidrome only allows this for admin accounts. */
+  deleteStation?(id: string): Promise<void>;
   getBooks?(): Promise<Book[]>;
   startBook?(bookId: string): Promise<BookPlayback>;
   syncBook?(track: Track, absoluteTime: number, listened: number): Promise<void>;

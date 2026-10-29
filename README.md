@@ -5,7 +5,7 @@
 <p align="center">
   <b>One player for every self-hosted audio source.</b><br>
   Navidrome · Plex · Audiobookshelf · SUB/WAVE · internet radio — with deemix &amp; yt-dlp downloads,<br>
-  live charts, offline playback and 37 skins. Windows, Android phones/tablets, and Android TV.
+  live charts, offline playback and 42 skins. Windows, Android phones/tablets, and Android TV.
 </p>
 
 <p align="center">
@@ -38,7 +38,7 @@ spectrum bars, the skins.
 | **SUB/WAVE station control** | On-air view, song requests, likes, queue/cancel songs, DJ controls, a paint-the-hours schedule editor, shows and stats. |
 | **Offline** | Download albums and playlists to the device and play with no connection. |
 | **Built for every screen** | Desktop, phone (tab bar + mini player), tablets/car head units, and Android TV (D-pad navigation). Native Android media session: steering-wheel, Bluetooth and lock-screen controls. |
-| **37 skins** | Neon synth (default), Winamp, Plexamp, Windows 95, MS-DOS, Game Boy Color, C64, CRTs, iPod, Aqua, Walkman, and the Omarchy palettes (Tokyo Night, Catppuccin, Gruvbox, Nord, …), Dracula, Monokai, Solarized, OLED black, High contrast, Sakura, Cyberpunk, and six neon skins (Outrun, Laser grid, Acid rave, Miami nights, Blacklight UV, Electric). |
+| **42 skins** | Neon synth (default), Winamp, Plexamp, Windows 95, MS-DOS, Game Boy Color, C64, CRTs, iPod, Aqua, Walkman, and the Omarchy palettes (Tokyo Night, Catppuccin, Gruvbox, Nord, …), Dracula, Monokai, Solarized, OLED black, High contrast, Sakura, Cyberpunk, six neon skins (Outrun, Laser grid, Acid rave, Miami nights, Blacklight UV, Electric), and holiday skins (Halloween, Thanksgiving, Christmas, July 4th, Valentine's Day) that can switch on by themselves each season. A DJ raccoon visualizer wears the skin's colours. |
 
 <p align="center">
   <img src="docs/screenshots/subwave.png" alt="SUB/WAVE on-air view" width="64%">

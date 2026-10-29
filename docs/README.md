@@ -28,8 +28,8 @@ src/                React + TypeScript UI (Vite). Almost all features live here.
   player/engine.ts  The audio engine (two <audio> elements + Web Audio visualiser)
   views/            Pages (Discover, SubWave, Playlists, Settings, …)
   components/       Shared UI (player bar, track list, buttons)
-  lib/              http, matching, platform detection, TV remote, Android media bridge
-  styles.css        All styling + all 37 skins (CSS variables per [data-skin])
+  lib/              http, matching, platform detection, TV remote, Android media bridge, seasonal themes
+  styles.css        All styling + all 42 skins (CSS variables per [data-skin])
 src-tauri/          Rust shell (Tauri 2): http plugin, yt-dlp, SMB login, offline files
   gen/android/      The Android project (Kotlin): media session, playback service, TV, permissions
 docs/               You are here. brand/ = logo & banners, screenshots/ = README and user-guide images

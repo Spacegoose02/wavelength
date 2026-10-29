@@ -1184,3 +1184,91 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .skin-card.miami .skin-preview { background:linear-gradient(180deg,#120d24,#2a2048); } .skin-card.miami .skin-preview span { flex:1; background:linear-gradient(to top,#00f5d4,#7b5cff,#ff3ea5); border-radius:8px 8px 0 0; }
 .skin-card.blacklight .skin-preview { background:radial-gradient(circle at 30% 0%,#3a1660,#0b0014 70%); } .skin-card.blacklight .skin-preview span { flex:1; background:linear-gradient(to top,#9d4dff,#ff3bf2,#f5ff3b); box-shadow:0 0 10px rgb(157 77 255 / 0.6); }
 .skin-card.electric .skin-preview { background:#050a1f; } .skin-card.electric .skin-preview span { flex:1; background:linear-gradient(to top,#3d7bff,#8fd3ff 60%,#ffffff); box-shadow:0 0 10px rgb(61 123 255 / 0.7); }
+
+/* ============ Settings → Themes ============ */
+.skin-group { margin-top: 18px; }
+.skin-group h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.skin-group > .muted { margin: -2px 0 10px; }
+.skin-card small { font-weight: 500; }
+.editor .check { align-items: flex-start; }
+.editor .check input { margin-top: 3px; }
+
+/* ============ Holiday skins (Settings → Themes → Holidays; Seasonal mode picks them automatically) ============ */
+/* Halloween: pumpkin orange and witchy purple on a midnight graveyard */
+:root[data-skin='halloween'] { --bg:#0e0a12; --bg-2:#0a070d; --panel:#1a1220; --panel-2:#26192e; --line:#3a2644; --text:#fbefe1; --muted:#b9a2b8; --accent:#ff7a1a; --accent-ink:#1a0a00; --accent-2:#9b5cff; --lcd-bg:#070409; --lcd-text:#ff9a3c; --lcd-dim:#3a1d08; --viz-low:#9b5cff; --viz-mid:#ff7a1a; --viz-high:#b6ff3b; --viz-peak:#fff1c2; --radius:10px; --radius-lg:16px; --bevel:none; --bevel-in:inset 0 0 0 1px #3a2644; color-scheme:dark; }
+:root[data-skin='halloween'] body { background: radial-gradient(700px 360px at 90% -5%, rgb(255 154 60 / 0.16), transparent 60%), radial-gradient(800px 420px at 0% 110%, rgb(155 92 255 / 0.14), transparent 60%), #0e0a12; }
+:root[data-skin='halloween'] .brand { color:#ff7a1a; text-shadow:0 0 10px rgb(255 122 26 / 0.6); }
+:root[data-skin='halloween'] .btn.primary, :root[data-skin='halloween'] .tbtn.play { background:linear-gradient(135deg,#ff7a1a,#ffb347); color:#1a0a00; box-shadow:0 0 16px rgb(255 122 26 / 0.4); }
+:root[data-skin='halloween'] .chip.on { background:#9b5cff; color:#fff; } :root[data-skin='halloween'] .tabs button.on { border-bottom-color:#ff7a1a; }
+:root[data-skin='halloween'] .nav.on svg { color:#b6ff3b; }
+/* Thanksgiving: harvest gold, cranberry and warm wood */
+:root[data-skin='thanksgiving'] { --bg:#1c130c; --bg-2:#160f09; --panel:#2a1c12; --panel-2:#382518; --line:#4d3422; --text:#fbf1e2; --muted:#c7ad8e; --accent:#e8a33d; --accent-ink:#2a1700; --accent-2:#b5283a; --lcd-bg:#120b06; --lcd-text:#f2c46b; --lcd-dim:#3d2a12; --viz-low:#b5283a; --viz-mid:#d9661f; --viz-high:#e8a33d; --viz-peak:#fff4d6; --radius:12px; --radius-lg:18px; --bevel:none; --bevel-in:inset 0 0 0 1px #4d3422; color-scheme:dark; }
+:root[data-skin='thanksgiving'] body { background: linear-gradient(180deg, rgb(232 163 61 / 0.07), transparent 40%), #1c130c; }
+:root[data-skin='thanksgiving'] .brand { color:#e8a33d; }
+:root[data-skin='thanksgiving'] .btn.primary, :root[data-skin='thanksgiving'] .tbtn.play { background:linear-gradient(135deg,#d9661f,#e8a33d); color:#2a1700; }
+:root[data-skin='thanksgiving'] .chip.on { background:#b5283a; color:#fff; } :root[data-skin='thanksgiving'] .tabs button.on { border-bottom-color:#d9661f; }
+/* Christmas: pine green, berry red, gold and a little snow */
+:root[data-skin='christmas'] { --bg:#0b1a14; --bg-2:#08140f; --panel:#11261c; --panel-2:#183326; --line:#24473a; --text:#f4fbf6; --muted:#a6c4b4; --accent:#e23d3d; --accent-ink:#ffffff; --accent-2:#f2c94c; --lcd-bg:#05100b; --lcd-text:#f2c94c; --lcd-dim:#2b3a14; --viz-low:#2fbf71; --viz-mid:#e23d3d; --viz-high:#f2c94c; --viz-peak:#ffffff; --radius:12px; --radius-lg:18px; --bevel:none; --bevel-in:inset 0 0 0 1px #24473a; color-scheme:dark; }
+:root[data-skin='christmas'] body { background: radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.10) 0 1.5px, transparent 2px) 0 0 / 90px 90px, radial-gradient(circle at 70% 80%, rgb(255 255 255 / 0.08) 0 1px, transparent 1.5px) 0 0 / 60px 60px, #0b1a14; }
+:root[data-skin='christmas'] .brand { color:#f2c94c; }
+:root[data-skin='christmas'] .btn.primary, :root[data-skin='christmas'] .tbtn.play { background:linear-gradient(135deg,#e23d3d,#b81f2e); color:#fff; box-shadow:0 0 14px rgb(226 61 61 / 0.35); }
+:root[data-skin='christmas'] .chip.on { background:#2fbf71; color:#05100b; } :root[data-skin='christmas'] .tabs button.on { border-bottom-color:#f2c94c; }
+/* July 4th: navy with red, white and fireworks */
+:root[data-skin='july4'] { --bg:#0a1230; --bg-2:#070d24; --panel:#111c44; --panel-2:#192756; --line:#26367a; --text:#f5f7ff; --muted:#a9b5e0; --accent:#e63946; --accent-ink:#ffffff; --accent-2:#5aa9ff; --lcd-bg:#050a1e; --lcd-text:#ffffff; --lcd-dim:#1c2650; --viz-low:#5aa9ff; --viz-mid:#ffffff; --viz-high:#e63946; --viz-peak:#ffd166; --radius:8px; --radius-lg:14px; --bevel:none; --bevel-in:inset 0 0 0 1px #26367a; color-scheme:dark; }
+:root[data-skin='july4'] body { background: radial-gradient(500px 260px at 85% 0%, rgb(230 57 70 / 0.14), transparent 60%), radial-gradient(500px 260px at 10% 100%, rgb(90 169 255 / 0.14), transparent 60%), #0a1230; }
+:root[data-skin='july4'] .brand { color:#fff; text-shadow:0 0 8px rgb(90 169 255 / 0.7); }
+:root[data-skin='july4'] .btn.primary, :root[data-skin='july4'] .tbtn.play { background:linear-gradient(135deg,#e63946,#c1121f); color:#fff; }
+:root[data-skin='july4'] .chip.on { background:#fff; color:#0a1230; } :root[data-skin='july4'] .tabs button.on { border-bottom-color:#e63946; }
+:root[data-skin='july4'] .progress i { background:linear-gradient(90deg,#e63946,#ffffff,#5aa9ff); }
+/* Valentine's Day: rose and blush (light) */
+:root[data-skin='valentine'] { --bg:#fff0f4; --bg-2:#ffe4ec; --panel:#ffffff; --panel-2:#ffe9f0; --line:#f6c4d4; --text:#3d0f1f; --muted:#94566c; --accent:#e0245e; --accent-ink:#ffffff; --accent-2:#ff8fab; --lcd-bg:#3d0f1f; --lcd-text:#ffb3c8; --lcd-dim:#6b2a40; --viz-low:#ff8fab; --viz-mid:#e0245e; --viz-high:#9d1543; --viz-peak:#ffffff; --radius:16px; --radius-lg:22px; --bevel:none; --bevel-in:inset 0 0 0 1px #f6c4d4; color-scheme:light; }
+:root[data-skin='valentine'] .brand { color:#e0245e; }
+:root[data-skin='valentine'] .btn.primary, :root[data-skin='valentine'] .tbtn.play { background:linear-gradient(135deg,#ff5c8a,#e0245e); color:#fff; }
+:root[data-skin='valentine'] .chip.on { background:#e0245e; color:#fff; } :root[data-skin='valentine'] .tabs button.on { border-bottom-color:#e0245e; }
+
+.skin-card.halloween .skin-preview { background:radial-gradient(circle at 80% 20%,#fff1c2 0 7px,transparent 8px),linear-gradient(180deg,#26192e,#0e0a12); } .skin-card.halloween .skin-preview span { flex:1; background:linear-gradient(to top,#9b5cff,#ff7a1a 55%,#ffb347); border-radius:6px 6px 0 0; }
+.skin-card.thanksgiving .skin-preview { background:linear-gradient(180deg,#382518,#1c130c); } .skin-card.thanksgiving .skin-preview span { flex:1; background:linear-gradient(to top,#b5283a,#d9661f 50%,#e8a33d); border-radius:6px 6px 0 0; }
+.skin-card.christmas .skin-preview { background:radial-gradient(circle,rgb(255 255 255 / 0.5) 0 1px,transparent 1.5px) 0 0 / 14px 14px,#0b1a14; } .skin-card.christmas .skin-preview span { flex:1; background:repeating-linear-gradient(135deg,#e23d3d 0 6px,#ffffff 6px 12px); border-radius:4px 4px 0 0; }
+.skin-card.july4 .skin-preview { background:radial-gradient(circle at 25% 30%,#ffd166 0 2px,transparent 3px),radial-gradient(circle at 70% 25%,#5aa9ff 0 2px,transparent 3px),#0a1230; } .skin-card.july4 .skin-preview span { flex:1; background:repeating-linear-gradient(to top,#e63946 0 6px,#ffffff 6px 12px); }
+.skin-card.valentine .skin-preview { background:linear-gradient(180deg,#ffe4ec,#ffc2d4); } .skin-card.valentine .skin-preview span { flex:1; background:linear-gradient(to top,#9d1543,#e0245e 60%,#ff8fab); border-radius:10px 10px 0 0; }
+
+/* ============ Now Playing: DJ raccoon (components/RaccoonDJ.tsx) ============ */
+/* fur stays raccoon-coloured on every skin; clothes and lights follow the skin */
+.raccoon .fur-dark { fill: #26262c; stroke: #26262c; }
+.raccoon .fur-dark-soft { fill: #4a4a53; }
+.raccoon .fur-mid { fill: #8a8a95; stroke: #8a8a95; }
+.raccoon .fur-light { fill: #ececf1; }
+.raccoon .hoodie { fill: var(--accent); }
+.raccoon .hoodie-shade { fill: rgb(0 0 0 / 0.28); }
+.raccoon .sleeve { stroke: var(--accent); }
+.raccoon .strings { stroke: var(--accent-ink, #fff); }
+.raccoon .phones { stroke: var(--viz-high); }
+.raccoon .phones-cup { fill: var(--viz-high); }
+.raccoon .phones-pad { fill: var(--viz-mid); }
+.raccoon .record-label { fill: var(--viz-mid); }
+.raccoon .spot-stop { stop-color: var(--viz-low); }
+.raccoon .desk-top { fill: #2a2a31; }
+.raccoon .desk-front { fill: #1b1b20; }
+.raccoon .led-0 { fill: var(--viz-low); }
+.raccoon .led-1 { fill: var(--viz-mid); }
+.raccoon .led-2 { fill: var(--viz-high); }
+.raccoon .hat { display: none; }
+:root[data-skin='halloween'] .raccoon .hat-witch,
+:root[data-skin='thanksgiving'] .raccoon .hat-pilgrim,
+:root[data-skin='christmas'] .raccoon .hat-santa,
+:root[data-skin='july4'] .raccoon .hat-sam,
+:root[data-skin='valentine'] .raccoon .hat-hearts { display: inline; }
+
+/* ============ Radio: editing "Your stations" and ordering favorites ============ */
+.station-hero.editing { cursor: grab; grid-template-columns: 1fr; }
+.station-hero.editing small { grid-column: 1; }
+.station-hero.dragging { opacity: 0.5; }
+.station-edit { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.station-edit .icon-btn { color: inherit; }
+.station-edit .btn { color: inherit; border-color: currentColor; }
+.btn.danger { color: #ff5a5a; }
+.hidden-stations { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.station-fav { display: flex; align-items: center; }
+.station-fav .station-row { flex: 1; min-width: 0; }
+.station-move { display: flex; }
+.station-edit .btn.danger { color: #8a0f1f; }
