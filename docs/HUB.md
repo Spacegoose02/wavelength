@@ -357,7 +357,8 @@ with a 4xx status.
 | `GET /api/admin/listening` | `users.manage` | who is playing what right now, per device |
 | `GET /nd/:id/rest/:method` | relay login | Navidrome through the Hub (Subsonic, `t`+`s` or `p`); see "Navidrome through the Hub" |
 | `POST /nd/:id/auth/login`, `GET /nd/:id/api/song` | relay login | Navidrome's own API through the Hub, for play history only |
-| `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed or RadioWave Monitor (https only, nothing else) |
+| `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
+| `POST /api/import/youtube` | signed in | `{ url }` of a YouTube / YouTube Music playlist → `{ tracks: [{ title, artist, duration? }] }`, read with the Hub's yt-dlp (titles only, nothing downloaded) |
 | `GET /*` | — | the app's web build (`WAVELENGTH_WEB_DIR`); unknown paths get `index.html` |
 | `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |
 | `POST /api/me/listened` | signed in | `{ day, seconds }` (5 minutes at most per call) → `{ usedSeconds }`, the total across devices |

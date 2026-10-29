@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Import a playlist** (Playlists → Import) from a Deezer, Spotify or YouTube Music link, or a CSV, M3U or
+  text file. Songs you have become a Wavelength playlist; **Get missing** / **Request missing** handles the rest.
+- **Hub:** `POST /api/import/youtube`; `/api/fetch` also reads Spotify's public pages.
 - **Your playlists are yours.** Wavelength playlists and play history are now kept per person on the Hub:
   they follow you to every device, and on a shared device everyone sees only their own. Playlists already on
   a device become the first person's to sign in there.

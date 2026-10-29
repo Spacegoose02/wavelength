@@ -22,6 +22,7 @@ import { PlaylistView, Playlists, ServerPlaylistView } from './views/Playlists';
 import { SubWave } from './views/SubWave';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Discover } from './views/Discover';
+import { ImportPlaylist } from './views/ImportPlaylist';
 import { Favorites } from './views/Favorites';
 import { RecentlyAdded } from './views/RecentlyAdded';
 import { LibraryHub, MobileNav } from './components/MobileNav';
@@ -76,6 +77,7 @@ function View({ route }: { route: Route }) {
     case 'serverPlaylist': return <ServerPlaylistView key={`${route.playlist.sourceId}:${route.playlist.id}`} playlist={route.playlist} />;
     case 'subwave': return <SubWave key={route.sourceId ?? ''} sourceId={route.sourceId} />;
     case 'discover': return <Discover />;
+    case 'import': return <ImportPlaylist />;
     case 'favorites': return <Favorites />;
     case 'recent': return <RecentlyAdded />;
     case 'library': return <LibraryHub />;

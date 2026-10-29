@@ -1,21 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { deemixClient, useHubRuns } from '../lib/hubServices';
-import { findTrackOnSource, pool, primaryArtist } from '../lib/match';
+import { useHubRuns } from '../lib/hubServices';
+import { findInLibrary, pool } from '../lib/match';
 import { CHART_COLORS, CHART_LABELS, CHART_SHORT, GENRES, deezerLookup, getChart, getMix, sourcesFor, type ChartEntry, type ChartSource, type Genre } from '../sources/charts';
-import { sourceFor } from '../sources/registry';
 import type { Track } from '../sources/types';
-import { useDownloads, ytSearch } from '../store/downloads';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
-import { enabledSources, useSettings } from '../store/settings';
+import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
-import { useHub } from '../store/hub';
 import { Cover, Spinner } from '../components/common';
 import { IconDownload, IconPause, IconPlay, IconRefresh } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { QueueAllOnSubwave, QueueOnSubwave } from '../components/TrackButtons';
 import { isAndroid } from '../lib/platform';
-import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
+import { useMustRequest } from '../lib/inbox';
+import { getSong, NotOnDeezer, viaYtdlp as ytdlpGet } from '../lib/getSong';
 import { useHidden } from '../lib/kids';
 import { ReleaseRadar } from '../components/ReleaseRadar';
 
@@ -26,10 +24,6 @@ type Row = ChartEntry & {
   /** false = looked it up, Deezer has no clip */
   hasPreview?: boolean;
 };
-
-async function deezerLinkFor(e: ChartEntry): Promise<string | undefined> {
-  return e.deezerLink ?? (await deezerLookup(e)).link;
-}
 
 /** A 30s preview as a playable (unsaveable) track. */
 function previewTrack(r: ChartEntry, url: string): Track {
@@ -79,11 +73,10 @@ export function Discover() {
         }
         if (id !== run.current) return;
         setRows(entries);
-        const libs = enabledSources().filter((s) => s.kind === 'navidrome' || s.kind === 'plex').map(sourceFor);
+        const find = findInLibrary();
         let done = 0;
         await pool(entries, 4, async (e, i) => {
-          let hit: Track | undefined;
-          for (const src of libs) if (!hit) hit = await findTrackOnSource(src, e).catch(() => undefined);
+          const hit = await find(e);
           if (id !== run.current) return;
           setRows((rs) => rs?.map((r, j) => (j === i ? { ...r, lib: hit ?? null } : r)));
           setChecked(++done);
@@ -114,52 +107,20 @@ export function Discover() {
   };
 
   const viaYtdlp = async (i: number) => {
-    const e = rows![i];
     patch(i, { dl: { state: 'sending' } });
     try {
-      const [hit] = await ytSearch(`${primaryArtist(e.artist)} - ${e.title} audio`);
-      if (!hit) throw new Error('No YouTube match');
-      useDownloads.getState().start(hit);
-      patch(i, { dl: { state: 'queued', via: 'yt-dlp' } });
+      patch(i, { dl: { state: 'queued', via: await ytdlpGet(rows![i]) } });
     } catch (err) {
       patch(i, { dl: { state: 'error', msg: String((err as Error).message ?? err) } });
     }
   };
 
-  /**
-   * deemix is the downloader. yt-dlp is only a backup for songs Deezer doesn't have — a deemix
-   * *failure* (not logged in, unreachable) is shown, not silently swapped for yt-dlp.
-   */
   const get = async (i: number) => {
-    const e = rows![i];
-    if (mustRequest()) {
-      // no Autodownload: ask the Hub admin for it
-      patch(i, { dl: { state: 'sending' } });
-      const link = await deezerLinkFor(e);
-      if (!link) return patch(i, { dl: { state: 'error', msg: 'Not on Deezer', notOnDeezer: true } });
-      try {
-        await requestMusic({ link, kind: 'track', title: e.title, artist: e.artist, cover: e.cover });
-        patch(i, { dl: { state: 'queued', via: 'request' } });
-      } catch (err) {
-        patch(i, { dl: { state: 'error', msg: String((err as Error).message ?? err) } });
-      }
-      return;
-    }
-    if (!deemix.url) {
-      if (ytAvailable) return viaYtdlp(i);
-      return patch(i, { dl: { state: 'error', msg: useHub.getState().token && !useHub.getState().permissions.includes('downloads.run') ? 'Ask your Hub admin for Autodownload' : 'Set your deemix URL in Settings' } });
-    }
     patch(i, { dl: { state: 'sending' } });
-    const link = await deezerLinkFor(e);
-    if (!link) {
-      if (ytAvailable) return viaYtdlp(i);
-      return patch(i, { dl: { state: 'error', msg: 'Not on Deezer', notOnDeezer: true } });
-    }
     try {
-      await deemixClient().addToQueue(link, deemix.bitrate);
-      patch(i, { dl: { state: 'queued', via: 'deemix' } });
+      patch(i, { dl: { state: 'queued', via: await getSong(rows![i]) } });
     } catch (err) {
-      patch(i, { dl: { state: 'error', msg: String((err as Error).message ?? err) } });
+      patch(i, { dl: { state: 'error', msg: String((err as Error).message ?? err), notOnDeezer: err instanceof NotOnDeezer } });
     }
   };
 

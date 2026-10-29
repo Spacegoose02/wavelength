@@ -7,6 +7,7 @@ import { usePlayer } from '../store/player';
 import { useServerPlaylists } from '../store/serverPlaylists';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
+import { useHub } from '../store/hub';
 import { Cover, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
 import { IconPlay, IconRefresh, IconShuffle } from '../components/Icons';
 import { ErrorList } from './Library';
@@ -48,6 +49,7 @@ export function Playlists() {
   const go = useUi((s) => s.go);
   const [name, setName] = useState('');
   const [q, setQ] = useState('');
+  const signedIn = useHub((s) => !!s.token);
 
   useEffect(() => {
     server.load();
@@ -69,6 +71,7 @@ export function Playlists() {
         <h1>Playlists</h1>
         {server.loading && <Spinner />}
         <button className="btn small" onClick={() => server.load()}><IconRefresh /> Sync</button>
+        <button className="btn small" onClick={() => go({ view: 'import' })}>Import</button>
         <form className="inline-form push" onSubmit={(e) => {
           e.preventDefault();
           const id = createPlaylist(name || 'New playlist');
@@ -87,7 +90,7 @@ export function Playlists() {
       {searching && !found && <p className="muted">No playlists match “{q.trim()}”.</p>}
 
       {(!searching || local.length > 0) && <section>
-        <h2>Wavelength <small className="muted">mix any source · stored on this device</small></h2>
+        <h2>Wavelength <small className="muted">mix any source · {signedIn ? 'yours on every device' : 'stored on this device'}</small></h2>
         {!playlists.length ? (
           <p className="muted">Use <b>+ Playlist</b> on any track, album, episode or station.</p>
         ) : (

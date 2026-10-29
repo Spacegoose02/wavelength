@@ -408,7 +408,11 @@ Hub refuses to stream kids anything explicit or flagged.
 Kid role and UI, automatic + manual not-safe flags, explicit/clean detection, clean-version lookup
 and version switch. **Cards closed:** kids profiles, mark not safe for kids, explicit and clean versions.
 
-### Phase 5 — Library curation and imports · ~4–5 weeks
+### Phase 5 — Library curation and imports · ~4–5 weeks · **in progress**
+
+Done: playlist import (`src/lib/playlistImport.ts`, `src/views/ImportPlaylist.tsx`) from Deezer, Spotify,
+YouTube Music (through the Hub's yt-dlp), CSV, M3U and text, matched to the library, with "request missing".
+Still open: the tag editor.
 
 Tag editor with MusicBrainz/Deezer match, undo log; playlist import from
 Spotify/Deezer/YouTube Music/CSV/M3U with "request missing". **Cards closed:** tag editor,
