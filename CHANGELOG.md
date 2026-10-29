@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.1
+- **Fixed:** 0.13.0 didn't start on Windows or Android. The notification icon setting in `tauri.conf.json`
+  made the notification plugin fail to load; the icon is now set on each notification instead.
+
 ## 0.13.0
 - **Notifications** (with a Hub): a request that's ready, turned down or failed, something shared with you,
   and (admins) a new request show up as Windows, Android or browser notifications while Wavelength isn't in

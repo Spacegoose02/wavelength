@@ -163,7 +163,7 @@ Tauri generates this project once; we edit it by hand and commit it.
 | `app/build.gradle.kts` | Release signing from `keystore.properties`; cleartext; `androidx.media` dependency. |
 | `app/proguard-wavelength.pro` | Keeps `MediaBridge$Js` and `UpdateBridge$Js` methods (called from JavaScript) from being stripped by R8. |
 | `res/drawable-xhdpi/tv_banner.png`, `res/values/themes.xml` | TV launcher banner; dark system bars / no white flash. |
-| `res/drawable/ic_notification.xml` | Small icon for Inbox notifications (tauri-plugin-notification, set in `tauri.conf.json` → `plugins.notification`). |
+| `res/drawable/ic_notification.xml` | Small icon for Inbox notifications (tauri-plugin-notification, set per notification in `src/lib/notify.ts`; never under `plugins.notification` in `tauri.conf.json`, which stops the app from starting). |
 
 ## 6. UI conventions
 

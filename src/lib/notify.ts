@@ -3,6 +3,7 @@ import { hubClient, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { isTauri } from './http';
+import { isAndroid } from './platform';
 
 /**
  * Inbox news as system notifications (docs/USERS-AND-ADMIN.md §6.8): a request that's ready or was turned
@@ -79,7 +80,10 @@ async function show(list: HubNotice[]) {
   const items = list.length > 3 ? [{ title: 'Wavelength', body: `${list.length} new things in your Inbox` }] : list;
   if (isTauri) {
     const { sendNotification } = await import('@tauri-apps/plugin-notification');
-    for (const n of items) sendNotification({ title: n.title, body: n.body });
+    // The Android icon goes on each notification: a `plugins.notification` block in tauri.conf.json
+    // stops the app from starting (the plugin's Rust side takes no config).
+    const icon = isAndroid ? { icon: 'ic_notification', iconColor: '#22D3EE' } : {};
+    for (const n of items) sendNotification({ title: n.title, body: n.body, ...icon });
     return;
   }
   for (const n of items) {
