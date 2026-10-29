@@ -14,6 +14,8 @@
 - **5 more laser skins** (Themes → Lasers, which Laser grid has moved into): Laser show (RGB beams), Red laser,
   Green laser, Laser harp (violet light strings) and Laser tag (orange vs. cyan). All ten new skins are in the
   Random daily rotation.
+- **10 more glow skins**: Laser grid in magenta, amber, green and violet (Lasers); Nuclear, Radium and Isotope
+  (Nuclear); Neon diner, Neon lime and Neon ice (Neon).
 - **DJ raccoon** visualizer in Now Playing: he wears your skin's colours (and a hat on holiday skins), bobs on
   the beat, scratches on sharp hits and yawns when paused. See the [user guide](docs/USER-GUIDE.md#dj-raccoon).
 - **Edit your radio stations**: Radio → Your stations → **Edit** to reorder (arrows or drag), hide stations on

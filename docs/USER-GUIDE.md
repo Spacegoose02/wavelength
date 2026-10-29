@@ -263,13 +263,17 @@ Synthwave sunset and Cyberpunk:
 | **Miami nights** | Flamingo pink and teal neon-sign glow on deep purple. |
 | **Blacklight UV** | Deep violet with highlighter yellow and pink, like a blacklight poster. |
 | **Electric** | Arc-welder blue and violet with a white-hot glow. |
+| **Neon diner** | Cherry red and teal, like a roadside diner sign. |
+| **Neon lime** | Electric lime and orange on charcoal. |
+| **Neon ice** | Cold white-blue tubes on navy. |
 
-<img src="screenshots/nuclear-laser-skins.png" alt="Settings, Themes tab: the Lasers and Nuclear groups, Uranium glass selected" width="80%">
+<img src="screenshots/nuclear-laser-skins.png" alt="Settings, Themes tab: the Neon, Lasers and Nuclear groups, Laser grid magenta selected" width="80%">
 
 **Laser skins.** Under **Lasers**, next to Laser grid:
 
 | Skin | Look |
 | --- | --- |
+| **Laser grid magenta / amber / green / violet** | Laser grid's glowing outlines on a black grid, in hot magenta, amber, phosphor green or ultraviolet. |
 | **Laser show** | Blue, green and magenta beams fanning up through haze; rainbow buttons and progress bar. |
 | **Red laser** | Crimson outlines and diagonal beams on black, square corners, like targeting sights. |
 | **Green laser** | A green beam cutting through fog, with lime highlights. |
@@ -285,8 +289,11 @@ Synthwave sunset and Cyberpunk:
 | **Radiation hazard** | Warning yellow on black, square and bold, with hazard-tape stripes on the player bar. |
 | **Fallout shelter** | Olive drab, civil-defence yellow and rust, with a green Geiger-counter LCD. |
 | **Uranium glass** | Vaseline-glass green fluorescing under UV, with big round corners. |
+| **Nuclear** | Toxic green and hazard yellow glow. |
+| **Radium** | Glow-in-the-dark watch-dial green on black. |
+| **Isotope** | Plutonium violet with a hazard-yellow edge on cards and the player bar. |
 
-All ten are part of the **Random daily** rotation. They aren't holiday skins, so **Seasonal** never picks them.
+All of these are part of the **Random daily** rotation. They aren't holiday skins, so **Seasonal** never picks them.
 
 **Other skins worth knowing.** **OLED black** uses true black so OLED phone screens switch those pixels off,
 which saves battery. **High contrast** is yellow on black with thick outlines and strong focus rings, for low
