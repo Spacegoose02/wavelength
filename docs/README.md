@@ -16,6 +16,10 @@ around in an afternoon, fix bugs without archaeology, and add features in the ho
    (Deezer artist/album/playlist browsing, choosing Discover charts).
 7. **[RELEASING.md](RELEASING.md)** — ship a new version.
 8. **[BRAND.md](BRAND.md)** — the look and the voice.
+9. **[USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)** — design: user profiles, roles, admin-only features,
+   the Wavelength Hub server, and the phased roadmap for the planned board cards.
+10. **[HUB.md](HUB.md)** — the Wavelength Hub server: install on Unraid, Nginx Proxy Manager + tinyauth,
+   settings, API, developing it.
 
 ## The 60-second tour
 
@@ -26,9 +30,10 @@ src/                React + TypeScript UI (Vite). Almost all features live here.
   player/engine.ts  The audio engine (two <audio> elements + Web Audio visualiser)
   views/            Pages (Discover, SubWave, Playlists, Settings, …)
   components/       Shared UI (player bar, track list, buttons)
-  lib/              http, matching, platform detection, TV remote, Android media bridge
-  styles.css        All styling + all 37 skins (CSS variables per [data-skin])
-src-tauri/          Rust shell (Tauri 2): http plugin, yt-dlp, SMB login, offline files
+  lib/              http, matching, platform detection, TV remote, Android media bridge, seasonal themes
+  styles.css        All styling + all 62 skins (CSS variables per [data-skin])
+src-tauri/          Rust shell (Tauri 2): http plugin, yt-dlp, SMB login, offline files, in-app updates
+hub/                Wavelength Hub (Node + SQLite, Docker): accounts, roles, sign-in, admin-only API
   gen/android/      The Android project (Kotlin): media session, playback service, TV, permissions
 docs/               You are here. brand/ = logo & banners, screenshots/ = README and user-guide images
 ```

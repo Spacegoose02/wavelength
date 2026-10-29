@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!-- Unraid template. Install: copy it to /boot/config/plugins/dockerMan/templates-user/my-wavelength-hub.xml,
+     then Docker → Add Container → Template → wavelength-hub. See docs/HUB.md. -->
+<Container version="2">
+  <Name>wavelength-hub</Name>
+  <Repository>ghcr.io/spacegoose02/wavelength-hub:latest</Repository>
+  <Registry>https://github.com/Spacegoose02/wavelength/pkgs/container/wavelength-hub</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Spacegoose02/wavelength/issues</Support>
+  <Project>https://github.com/Spacegoose02/wavelength</Project>
+  <Overview>Wavelength Hub: user accounts, roles (admin, member, kid), tinyauth single sign-on, device sign-in and settings sync for the Wavelength music app. Admin-only controls are enforced here, not just hidden in the app.</Overview>
+  <Category>MediaApp:Music MediaServer:Music Tools:</Category>
+  <WebUI>http://[IP]:[PORT:7780]/link</WebUI>
+  <Icon>https://raw.githubusercontent.com/Spacegoose02/wavelength/main/src-tauri/icons/128x128@2x.png</Icon>
+  <Config Name="Web port" Target="7780" Default="7780" Mode="tcp" Description="Hub port. Put Nginx Proxy Manager in front of it." Type="Port" Display="always" Required="true" Mask="false">7780</Config>
+  <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/wavelength-hub" Mode="rw" Description="Database and secret key. Back this up." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/wavelength-hub</Config>
+  <Config Name="Music share" Target="/music" Default="/mnt/user/music" Mode="rw" Description="Your music library (the folder Navidrome reads). yt-dlp downloads go into a folder inside it." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/music</Config>
+  <Config Name="Public URL" Target="WAVELENGTH_PUBLIC_URL" Default="" Mode="" Description="The address people open in a browser, e.g. https://hub.example.com (your Nginx Proxy Manager host)." Type="Variable" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="Single sign-on (tinyauth)" Target="WAVELENGTH_SSO" Default="false|true" Mode="" Description="Turn on to sign in through tinyauth. Also set the proxy secret below." Type="Variable" Display="always" Required="false" Mask="false">false</Config>
+  <Config Name="Proxy secret" Target="WAVELENGTH_PROXY_SECRET" Default="" Mode="" Description="Long random value. Nginx Proxy Manager sends it as X-Wavelength-Proxy-Secret so the Hub trusts tinyauth's headers." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Trusted proxy IPs" Target="WAVELENGTH_TRUSTED_PROXIES" Default="" Mode="" Description="Optional, comma separated: Nginx Proxy Manager's IP as the Hub sees it." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SSO admins" Target="WAVELENGTH_ADMINS" Default="" Mode="" Description="Comma separated tinyauth usernames that are always admins." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="SSO admin group" Target="WAVELENGTH_ADMIN_GROUP" Default="" Mode="" Description="Optional tinyauth group whose members are admins." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Auto-create SSO users" Target="WAVELENGTH_SSO_AUTO_CREATE" Default="false|true" Mode="" Description="Create a member account the first time someone signs in through tinyauth. Off = you add people first." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="Secret key" Target="WAVELENGTH_SECRET_KEY" Default="" Mode="" Description="Optional 32-byte key (64 hex chars). Left empty, one is generated into appdata." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User id (Unraid default 99 = nobody)" Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group id (Unraid default 100 = users)" Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
+</Container>

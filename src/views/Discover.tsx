@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import { deemixClient, useHubRuns } from '../lib/hubServices';
 import { findTrackOnSource, pool, primaryArtist } from '../lib/match';
 import { CHART_COLORS, CHART_LABELS, CHART_SHORT, GENRES, deezerLookup, getChart, getMix, sourcesFor, type ChartEntry, type ChartSource, type Genre } from '../sources/charts';
-import { Deemix } from '../sources/deemix';
 import { sourceFor } from '../sources/registry';
-import { ytdlp } from '../sources/ytdlp';
 import type { Track } from '../sources/types';
-import { useDownloads } from '../store/downloads';
+import { useDownloads, ytSearch } from '../store/downloads';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { enabledSources, useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
+import { useHub } from '../store/hub';
 import { Cover, Spinner } from '../components/common';
 import { IconDownload, IconPause, IconPlay, IconRefresh } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
@@ -94,7 +94,8 @@ export function Discover() {
 
   const patch = (i: number, p: Partial<Row>) => setRows((rs) => rs?.map((r, j) => (j === i ? { ...r, ...p } : r)));
 
-  const ytAvailable = !isAndroid && !!yt.outDir;
+  const hubYt = useHubRuns('ytdlp');
+  const ytAvailable = hubYt || (!isAndroid && !!yt.outDir);
   const nowPlayingId = usePlayer((s) => s.queue[s.index]?.id);
   const playing = usePlayer((s) => s.playing);
 
@@ -112,7 +113,7 @@ export function Discover() {
     const e = rows![i];
     patch(i, { dl: { state: 'sending' } });
     try {
-      const [hit] = await ytdlp.search(`${primaryArtist(e.artist)} - ${e.title} audio`, yt.bin);
+      const [hit] = await ytSearch(`${primaryArtist(e.artist)} - ${e.title} audio`);
       if (!hit) throw new Error('No YouTube match');
       useDownloads.getState().start(hit);
       patch(i, { dl: { state: 'queued', via: 'yt-dlp' } });
@@ -129,7 +130,7 @@ export function Discover() {
     const e = rows![i];
     if (!deemix.url) {
       if (ytAvailable) return viaYtdlp(i);
-      return patch(i, { dl: { state: 'error', msg: 'Set your deemix URL in Settings' } });
+      return patch(i, { dl: { state: 'error', msg: useHub.getState().token && !useHub.getState().permissions.includes('downloads.run') ? 'Ask your Hub admin for Autodownload' : 'Set your deemix URL in Settings' } });
     }
     patch(i, { dl: { state: 'sending' } });
     const link = await deezerLinkFor(e);
@@ -138,7 +139,7 @@ export function Discover() {
       return patch(i, { dl: { state: 'error', msg: 'Not on Deezer', notOnDeezer: true } });
     }
     try {
-      await new Deemix(deemix.url, deemix.arl).addToQueue(link, deemix.bitrate);
+      await deemixClient().addToQueue(link, deemix.bitrate);
       patch(i, { dl: { state: 'queued', via: 'deemix' } });
     } catch (err) {
       patch(i, { dl: { state: 'error', msg: String((err as Error).message ?? err) } });
@@ -156,8 +157,7 @@ export function Discover() {
         <h1>Discover</h1>
         <button className="btn small" onClick={() => setNonce(nonce + 1)}><IconRefresh /> Refresh</button>
         <button className="btn small ghost" onClick={() => {
-          useUi.getState().go({ view: 'settings' });
-          window.setTimeout(() => document.getElementById('discover-charts')?.scrollIntoView({ behavior: 'smooth' }), 80);
+          useUi.getState().go({ view: 'settings', tab: 'discover' });
         }} title="Pick which charts each genre uses">Edit charts</button>
       </header>
       <div className="chips">

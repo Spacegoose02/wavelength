@@ -29,7 +29,7 @@ All in `src/sources/charts.ts`:
      and `myId: iheart('myId')` to `FETCHERS`.
    - Deezer editorial playlist? Add to `DEEZER_PLAYLISTS` and use `deezerPlaylist('myId')`.
 3. Register it in `FETCHERS` and list it under genres in `BY_GENRE` (the defaults). It also appears in
-   Settings → Discover charts automatically. If it only serves some genres, teach `chartsFor()` that,
+   Settings → Discover automatically. If it only serves some genres, teach `chartsFor()` that,
    the way Billboard and Apple are handled.
 4. Validate against the live site before committing (titles, artists, rank 1, row count, date).
 
@@ -47,7 +47,8 @@ genre names cover it).
 
 ## Add a skin
 
-1. `src/store/settings.ts`: add the id to `Skin` and a `{ id, label }` to `SKINS`.
+1. `src/store/settings.ts`: add the id to `Skin` and a `{ id, label, group }` to `SKINS`. `group` is one of
+   `SKIN_GROUPS` and decides the heading it appears under in Settings → Themes.
 2. `src/styles.css`: a `:root[data-skin='myskin'] { … }` block defining at least
    `--bg --bg-2 --panel --panel-2 --line --text --muted --accent --accent-ink --lcd-bg --lcd-text --lcd-dim --viz-low --viz-mid --viz-high --viz-peak --bevel --bevel-in` and `color-scheme`.
 3. Optional component overrides (`.btn.primary`, `.nav.on`, `.chip.on`, `.tabs button.on`, `.deck`).
@@ -56,6 +57,42 @@ genre names cover it).
 6. Put the rules at the top level of `styles.css` (not inside a `@media` block), then check the picker card
    and the skin itself at desktop width as well as phone width. A rule stuck inside the phone media query looks
    fine on Android and does nothing on Windows.
+
+## Add a holiday skin
+
+1. Add the skin as above, with `group: 'Holidays'`.
+2. `src/lib/seasons.ts`: add the id to `HolidaySkin` and an entry to `SEASONS` with a `label`, a readable
+   `window` and `includes(date)`. Use the `between()` helper for fixed dates; see `thanksgiving()` for a
+   holiday that moves. Keep windows from overlapping: the first match wins.
+3. Give the raccoons a hat (optional): a `<g className="hat hat-myhat">` with the other hats in `Head`
+   in `components/raccoon/parts.tsx` (all four raccoons share it), and
+   `:root[data-skin='myholiday'] .raccoon .hat-myhat { display: inline; }` in the raccoon rules at the end
+   of `styles.css`.
+4. Update the window table in the [user guide](USER-GUIDE.md#skins-and-themes).
+
+## Add a Now Playing visualizer
+
+- **Canvas scene** (most of them): write a `Draw` in `components/Scenes.tsx`, add its id to `NpScene`
+  (`store/settings.ts`) and to `SCENES` and `DRAW`. It gets bass/mid/treble, beats and the skin colours.
+- **SVG or DOM scene** (like the raccoon): its own component, rendered by `NowPlayingStage` for its id.
+  Call `createAudioReader()` from `player/analysis.ts` inside a `requestAnimationFrame` loop and write
+  attributes directly instead of setting React state every frame.
+- Both must keep moving with no readable audio (paused, or a stream without CORS): the reader gives a calm
+  made-up signal with `live: false`.
+
+## Add a raccoon or a raccoon outfit
+
+- **A raccoon:** a component in `components/raccoon/` like `Country.tsx`: wrap it in `RaccoonFrame`, use
+  `Tail`, `Head` (pass its headwear as `own`, with `className="own-hat"`, or `own-eyewear` for glasses)
+  and `BodyOutfits` inside its `data-part="body"` group, and call `useRaccoonRig` with a `frame` callback
+  for its hands and props. Use `TORSO` for the top so outfits fit over it, classes `sleeve` and `hand` on
+  the arms (`Arm` does this), and CSS classes for colours. Add its id to `RaccoonKind`
+  (`store/settings.ts`), an entry to `RACCOONS` and a case in `Raccoon` (`Raccoon.tsx`), and its colours
+  to the raccoon rules at the end of `styles.css`.
+- **An outfit for a skin group:** a `<g className="outfit outfit-mygroup">` in `Head` and/or `BodyOutfits`
+  (`parts.tsx`) and a `:root[data-skin-group='mygroup'] .raccoon .outfit-mygroup` line in the "skin-group
+  outfits" rule. The group slug is the first word of the group name, lower-case (`skinGroup()` in
+  `store/settings.ts`). If it replaces headwear or glasses, hide `.own-hat` / `.own-eyewear` for that group.
 
 ## Add a native (Rust) command
 

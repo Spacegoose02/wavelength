@@ -3,6 +3,9 @@
 Wavelength is a **Tauri 2** app: a React UI running in the system WebView, wrapped in a small Rust
 binary. The same codebase builds a Windows desktop app and an Android APK (phone, tablet, TV).
 
+An optional server, the **Wavelength Hub** (`hub/`, Node + SQLite in Docker), adds accounts, roles and
+admin-only controls. It's a control plane only: audio never goes through it. See [HUB.md](HUB.md).
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ React UI (src/) — runs in WebView2 (Windows) / Android System WebView    │
@@ -29,11 +32,11 @@ binary. The same codebase builds a Windows desktop app and an Android APK (phone
 | `main.tsx` | Boot: enables TV remote navigation and the Android media bridge, renders `<App/>`. |
 | `App.tsx` | Layout (sidebar or phone tab bar), keyboard shortcuts, back-button handling, the `View` router switch. |
 | `views/` | One file per page. Pages read stores and call source adapters; they don't fetch directly. |
-| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Scenes` (Now Playing visualizers), `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar`, `Visualizer`, `ErrorBoundary`. |
+| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Scenes` (Now Playing visualizers), `raccoon/` (the SVG raccoon scenes: DJ, country, rapper and rocker, sharing one animation rig and the theme outfits), `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar`, `Visualizer`, `ErrorBoundary`. |
 | `store/` | Global state (zustand). See §4. |
 | `sources/` | Adapters for each backend + chart/radio/download helpers. See [SOURCES.md](SOURCES.md). |
 | `player/engine.ts` | The audio engine. See §3. |
-| `lib/` | `http.ts` (fetch through Rust), `match.ts` (find "the same song" across servers), `platform.ts` (Android/phone detection), `tvNav.ts` (D-pad), `nativeMedia.ts` (Android media session bridge). |
+| `lib/` | `http.ts` (fetch through Rust), `match.ts` (find "the same song" across servers), `platform.ts` (Android/phone detection), `tvNav.ts` (D-pad), `nativeMedia.ts` (Android media session bridge), `seasons.ts` (Seasonal holiday windows, Random daily, `activeSkin`). |
 | `styles.css` | All CSS. Skins are blocks of CSS variables on `:root[data-skin='…']`. |
 
 ### Routing
@@ -74,6 +77,7 @@ Small on purpose. The UI does almost everything; Rust only does what a WebView c
 | `lib.rs` | App builder: registers the http plugin, grants the asset-protocol scope for offline files at startup, registers commands. | — |
 | `ytdlp.rs` | Runs `yt-dlp` (search + download to a folder, progress events `ytdlp-progress`). Finds `yt-dlp.exe`/`ffmpeg` via winget's folders even when PATH is stale. Desktop only. | `ytdlp_version`, `ytdlp_search`, `ytdlp_download` |
 | `share.rs` | Logs into an SMB share (`\\server\share`) with `WNetAddConnection2W` so yt-dlp can write to a NAS; checks the folder is writable. Windows only (no-op elsewhere). | `connect_share` |
+| `update.rs` | In-app updates: lists GitHub releases, downloads a release file into `<app cache>/updates` (progress events `update-progress`), runs the Windows installer or swaps the portable exe. See [USER-GUIDE.md](USER-GUIDE.md#updates). | `update_target`, `update_releases`, `update_download`, `update_install` |
 | `offline.rs` | Downloads songs/covers into `<app data>/offline/…` for offline playback (temp `.part` file then rename). Deletes them. | `offline_save`, `offline_delete`, `offline_delete_file` |
 
 **Why `tauri-plugin-http`?** Self-hosted servers rarely send CORS headers, and chart sites never do.
@@ -118,7 +122,7 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 
 | Store / key | Contents | Persisted as |
 |---|---|---|
-| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations, skin, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`), equalizer (`eq`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
+| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations and their order, hidden/ordered server stations (`hiddenStations`, `stationOrder`), skin plus `seasonal`/`randomDaily`, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`), equalizer (`eq`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
 | `store/library.ts` | Mixed-source playlists, local play history | `tonearm.library` |
 | `store/offline.ts` | Downloaded tracks (path, size), covers, downloaded collections | `tonearm.offline` (files in `<app data>/offline/`) |
 | `store/catalog.ts` | Merged albums/artists/books/podcasts loaded at start | memory |
@@ -126,10 +130,13 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 | `store/ui.ts` | Current route, history, overlays | memory |
 | `store/serverPlaylists.ts` | Navidrome/Plex playlists | memory |
 | `store/downloads.ts` | yt-dlp job progress | memory |
+| `store/hub.ts` | Wavelength Hub address, device token, signed-in profile and permissions | `tonearm.hub` |
+| `lib/hubSync.ts` | When each synced setting last changed here, and which are waiting to upload | `tonearm.hubStamps` |
 | misc | `tonearm.plexClientId`, `tonearm.releaseRadar` (daily cache), `tonearm.swName` | localStorage |
 
 > ⚠️ **Credentials are stored in plain localStorage.** Fine for a personal device; moving them to the OS
-> keychain (e.g. `tauri-plugin-stronghold` / Android Keystore) is on the roadmap.
+> keychain (e.g. `tauri-plugin-stronghold` / Android Keystore) is on the roadmap
+> ([USERS-AND-ADMIN.md](USERS-AND-ADMIN.md), Phase 1), along with multi-user accounts and admin-only controls.
 
 ### Why everything still says "tonearm"
 
@@ -148,12 +155,13 @@ Tauri generates this project once; we edit it by hand and commit it.
 
 | File | Why it's customised |
 |---|---|
-| `app/src/main/AndroidManifest.xml` | Permissions: `ACCESS_LOCAL_NETWORK` (Android 17+ LAN access), `FOREGROUND_SERVICE(_MEDIA_PLAYBACK)`, `POST_NOTIFICATIONS`. Android TV: `leanback`, touchscreen not required, `android:banner`. Registers `MediaPlaybackService` and `MediaButtonReceiver`. `usesCleartextTraffic` (via gradle placeholder) for `http://` LAN servers. |
-| `MainActivity.kt` | Edge-to-edge insets (status/nav bars, cutouts) so tablets and car head units don't hide UI; runtime permission requests; attaches `MediaBridge` in `onWebViewCreate`. |
+| `app/src/main/AndroidManifest.xml` | Permissions: `ACCESS_LOCAL_NETWORK` (Android 17+ LAN access), `FOREGROUND_SERVICE(_MEDIA_PLAYBACK)`, `POST_NOTIFICATIONS`, `REQUEST_INSTALL_PACKAGES` (in-app updates). Android TV: `leanback`, touchscreen not required, `android:banner`. Registers `MediaPlaybackService` and `MediaButtonReceiver`. `usesCleartextTraffic` (via gradle placeholder) for `http://` LAN servers. |
+| `MainActivity.kt` | Edge-to-edge insets (status/nav bars, cutouts) so tablets and car head units don't hide UI; runtime permission requests; attaches `MediaBridge` and `UpdateBridge` in `onWebViewCreate`. |
+| `UpdateBridge.kt` | In-app updates: `window.WavelengthUpdater.canInstall()` / `allowInstalls()` / `install(path)` hands a downloaded APK (in the cache folder) to the system installer via the `FileProvider`. |
 | `MediaBridge.kt` | A `MediaSessionCompat` mirroring the web player. JS → native: `window.WavelengthNative.update(json)`. Native → JS: `window.__wlMedia('next')`. Loads album art for the session/notification. |
 | `MediaPlaybackService.kt` | Foreground service type `mediaPlayback` with a MediaStyle notification — keeps audio alive with the screen off and makes Android treat Wavelength as *the* media app. |
 | `app/build.gradle.kts` | Release signing from `keystore.properties`; cleartext; `androidx.media` dependency. |
-| `app/proguard-wavelength.pro` | Keeps `MediaBridge$Js` methods (called from JavaScript) from being stripped by R8. |
+| `app/proguard-wavelength.pro` | Keeps `MediaBridge$Js` and `UpdateBridge$Js` methods (called from JavaScript) from being stripped by R8. |
 | `res/drawable-xhdpi/tv_banner.png`, `res/values/themes.xml` | TV launcher banner; dark system bars / no white flash. |
 
 ## 6. UI conventions
@@ -164,4 +172,6 @@ Tauri generates this project once; we edit it by hand and commit it.
   `html.tv` adds big focus rings. Hover-only controls also appear on `:focus-within`.
 - **Skins**: `data-skin` on `<html>`; each skin overrides the CSS variables (`--bg`, `--panel`, `--accent`,
   `--lcd-*`, `--viz-*`, `--bevel` …) and optionally a few component rules. The list lives in `SKINS`
-  (`store/settings.ts`).
+  (`store/settings.ts`), each with a `group` for Settings → Themes. The skin on screen is not always the saved
+  one: `App.tsx` shows `useUi.previewSkin` (a hover preview) or else `activeSkin()` from `lib/seasons.ts`,
+  which applies Seasonal and Random daily from the device's local date.

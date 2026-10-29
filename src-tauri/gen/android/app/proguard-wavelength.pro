@@ -4,3 +4,9 @@
 }
 -keep class com.tonearm.app.MediaBridge$Js
 -keep class com.tonearm.app.MediaPlaybackService
+
+# Same for the update bridge (window.WavelengthUpdater.*)
+-keepclassmembers class com.tonearm.app.UpdateBridge$Js {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keep class com.tonearm.app.UpdateBridge$Js

@@ -1,10 +1,68 @@
 # Changelog
 
-## Unreleased
-- **Favorites shows only your Navidrome stars.** The SUB/WAVE **listener likes** tab is gone from Favorites:
-  SUB/WAVE already mirrors every listener ♥ into Navidrome stars, so those songs were showing twice. The ♥
-  button on the SUB/WAVE On-air view still works and the song still lands in Favorites. The source tabs only
-  appear when you have more than one Navidrome server.
+## 0.11.0
+- **In-app updates (Windows and Android).** Wavelength checks GitHub for a newer release on launch and every
+  6 hours, shows a banner, and lists it in the new **Settings → Updates** tab with the release notes.
+  **Install update** downloads the right file and installs it: on Windows the setup exe runs with a progress bar
+  and reopens Wavelength (the portable `Wavelength.exe` is swapped in place); on Android the APK goes to the
+  system installer (allow **Install unknown apps** for Wavelength the first time). **Include pre-releases** is
+  off by default. The first version with this has to be installed by hand; updates after it don't. See the
+  [user guide](docs/USER-GUIDE.md#updates).
+
+## 0.10.0
+- **Three more raccoons** in Now Playing: a **country** raccoon (cowboy hat, acoustic guitar, taps his boot),
+  a **rapper** raccoon (cap, shades, gold chain, raps into the mic while the speakers pump) and a **rocker**
+  raccoon (mohawk, leather jacket, flying-V, headbangs in front of the amps). Switch with the **Switch
+  raccoon** button on the raccoon visualizer or in **Settings → Playback → Now Playing visualizer**, which
+  also picks the visualizer. Both choices sync through a Wavelength Hub.
+- **Raccoons dress for your theme**: hazmat suits and respirators on Nuclear skins, laser visors on Lasers,
+  glow sticks on Neon, 8-bit shades on Retro and coder glasses on Editor palettes, on top of the holiday hats.
+  See the [user guide](docs/USER-GUIDE.md#raccoons).
+- **Server logins on your Hub.** Admins can keep Plex, Audiobookshelf, SUB/WAVE, deemix and yt-dlp logins on
+  the Wavelength Hub (Settings → Sources / Downloads → **Move to Hub**), so signed-in devices get them without
+  typing them in. Pick who can use each server (everyone, admins only, or chosen people) and give someone
+  their own Plex or Audiobookshelf login. Members and kids never get the SUB/WAVE admin login, and download
+  logins only go to admins and people with Autodownload. Logins are encrypted on the Hub. Navidrome logins stay
+  on each device. See [HUB.md](docs/HUB.md#server-logins).
+- **Admin logins stay on the Hub.** SUB/WAVE DJ controls, deemix and yt-dlp now go through the Hub, so no
+  device (admins' included) holds the SUB/WAVE admin login, the deemix ARL or a network-share login. The Hub
+  runs yt-dlp itself and saves straight into its music folder, so YouTube downloads work from phones and
+  Android TV too. Every download is in the Hub's activity log with who queued it.
+
+## 0.9.0
+- **Settings has tabs**: Sources, Playback, Downloads, Themes and Discover. **Edit charts** on Discover and
+  the Settings link in Downloads open the right tab.
+- **Themes tab**: skins grouped (Classic, Retro, Neon, Lasers, Nuclear, Editor palettes, Holidays, Accessibility), a search box,
+  and a live preview: point at (or D-pad to) a card and the whole app shows it until you move away.
+  **Random daily** picks a different skin every day. See the [user guide](docs/USER-GUIDE.md#skins-and-themes).
+- **5 holiday skins**: Halloween, Thanksgiving, Christmas, July 4th and Valentine's Day (light). **Seasonal**
+  mode switches to each one in the weeks around the holiday and back to your pick afterwards.
+- **5 nuclear skins** (Themes → Nuclear): Reactor core (Cherenkov blue), Meltdown (molten orange), Radiation
+  hazard (warning yellow and hazard tape), Fallout shelter (olive drab with a Geiger-green LCD) and Uranium glass
+  (UV-green glow). See the [user guide](docs/USER-GUIDE.md#skins-and-themes).
+- **5 more laser skins** (Themes → Lasers, which Laser grid has moved into): Laser show (RGB beams), Red laser,
+  Green laser, Laser harp (violet light strings) and Laser tag (orange vs. cyan). All ten new skins are in the
+  Random daily rotation.
+- **10 more glow skins**: Laser grid in magenta, amber, green and violet (Lasers); Nuclear, Radium and Isotope
+  (Nuclear); Neon diner, Neon lime and Neon ice (Neon). Reactor core is now labelled Cherenkov (reactor core).
+- **DJ raccoon** visualizer in Now Playing: he wears your skin's colours (and a hat on holiday skins), bobs on
+  the beat, scratches on sharp hits and yawns when paused. See the [user guide](docs/USER-GUIDE.md#dj-raccoon).
+- **Edit your radio stations**: Radio → Your stations → **Edit** to reorder (arrows or drag), hide stations on
+  this device, or delete a Navidrome station from the server (Navidrome admin accounts only). Favorites can
+  be reordered too. See the [user guide](docs/USER-GUIDE.md#editing-your-radio-stations).
+- **Wavelength Hub (Phase 1, server side).** A new optional server, `hub/`, shipped as a Docker image with an
+  Unraid template: user accounts with roles (admin, member, kid), sign-in with a Hub password or tinyauth
+  single sign-on (through Nginx Proxy Manager), TV-style pairing codes for devices, per-device sign-out,
+  synced preferences and an audit log. Admin-only routes are refused for members and kids on the server, not
+  just hidden. See [docs/HUB.md](docs/HUB.md) and the roadmap in
+  [docs/USERS-AND-ADMIN.md](docs/USERS-AND-ADMIN.md).
+- **Sign in to a Wavelength Hub** (Settings → Account): connect, set up a new Hub, sign in with a code and QR
+  code (approve it from your phone with tinyauth or your Hub password) or with a password. Your theme, EQ, Now
+  Playing scene, radio stations and Discover chart picks then follow you to every device; downloaded music
+  keeps playing offline. Link your tinyauth account to a password account (from the app or the browser),
+  change your password, and sign out lost devices. Admins get **Settings → Users**: add people, roles,
+  Autodownload, passwords, tinyauth usernames, turn accounts off, sign devices out, and recent activity. See the
+  [user guide](docs/USER-GUIDE.md#profiles-with-a-wavelength-hub).
 
 ## 0.8.0
 - **Fix: Dracula, Monokai, Solarized, OLED black, High contrast, Sakura and Cyberpunk didn't work on Windows.**

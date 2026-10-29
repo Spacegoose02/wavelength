@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
-import { useSettings } from './store/settings';
+import { startHubSync } from './lib/hubSync';
+import { skinGroup, useSettings } from './store/settings';
 import { useUi, type Route } from './store/ui';
 import { usePlayer } from './store/player';
 import { PlayerBar } from './components/PlayerBar';
@@ -24,6 +25,9 @@ import { Radio } from './views/Radio';
 import { Books } from './views/Books';
 import { Downloads } from './views/Downloads';
 import { Settings } from './views/Settings';
+import { activeSkin } from './lib/seasons';
+import { startUpdateChecks } from './lib/updates';
+import { UpdateBanner } from './components/Updates';
 
 const NAV: { view: Route['view']; label: string; icon: ReactNode }[] = [
   { view: 'home', label: 'Home', icon: <IconHome /> },
@@ -67,7 +71,7 @@ function View({ route }: { route: Route }) {
     case 'offline': return <Offline />;
     case 'offlineCollection': return <OfflineCollectionView key={route.id} id={route.id} />;
     case 'downloads': return <Downloads />;
-    case 'settings': return <Settings />;
+    case 'settings': return <Settings tab={route.tab} />;
   }
 }
 
@@ -96,14 +100,29 @@ function SidebarPlaylists({ route }: { route: Route }) {
 
 export default function App() {
   const skin = useSettings((s) => s.skin);
+  const seasonal = useSettings((s) => s.seasonal);
+  const randomDaily = useSettings((s) => s.randomDaily);
   const { route, history, go, nowPlayingOpen, queueOpen } = useUi();
+  // re-render now and then so Seasonal / Random daily roll over at midnight on an app left open
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!seasonal && !randomDaily) return;
+    const id = window.setInterval(() => tick((n) => n + 1), 10 * 60_000);
+    return () => window.clearInterval(id);
+  }, [seasonal, randomDaily]);
+  const previewSkin = useUi((s) => s.previewSkin);
+  const shown = previewSkin ?? activeSkin({ skin, seasonal, randomDaily });
 
   useEffect(() => {
-    document.documentElement.dataset.skin = skin;
-  }, [skin]);
+    document.documentElement.dataset.skin = shown;
+    // the raccoons dress for the skin's group (hazmat suits on Nuclear, visors on Lasers, …): styles.css
+    document.documentElement.dataset.skinGroup = skinGroup(shown);
+  }, [shown]);
 
   useEffect(() => {
     useCatalog.getState().load();
+    startHubSync();
+    startUpdateChecks();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back
@@ -152,6 +171,7 @@ export default function App() {
         </nav>
       )}
       <main className="main">
+        <UpdateBanner />
         {history.length > 0 && (!phone || !tabRoot) && <button className="back" onClick={() => window.history.back()} title="Back (Alt+←)"><IconBack /></button>}
         <ErrorBoundary key={JSON.stringify(route).slice(0, 200)} onReset={() => go({ view: 'home' })}>
           <View route={route} />

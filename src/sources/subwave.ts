@@ -1,5 +1,6 @@
 import { http, qs, trimSlash } from '../lib/http';
 import type { MusicSource, SourceConfig, Station } from './types';
+import { hubClient } from '../store/hub';
 
 /*
  * SUB/WAVE (github.com/perminder-klair/subwave) — self-hosted agentic radio.
@@ -125,8 +126,14 @@ export class SubWaveSource implements MusicSource {
     return trimSlash(this.config.apiUrl || `${this.site}/api`);
   }
 
-  get hasAdmin() {
+  /** The admin login is on this device. */
+  get localAdmin() {
     return !!(this.config.username && this.config.password);
+  }
+
+  /** Admin controls work: with a login on this device, or through the Hub that keeps it. */
+  get hasAdmin() {
+    return this.localAdmin || (this.config.hubId !== undefined && !!this.config.hubAdmin);
   }
 
   /** Resolve avatar / cover paths the API hands back (may be relative to the site). */
@@ -150,6 +157,13 @@ export class SubWaveSource implements MusicSource {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
     if (this.config.token) headers['x-station-auth'] = this.config.token;
+    if (opts.admin && !this.localAdmin && this.hasAdmin) {
+      // the Hub adds the admin login, which never comes to this device
+      const c = hubClient();
+      if (!c) throw new Error('Sign in to your Hub to use SUB/WAVE admin controls');
+      const q = opts.query ? qs(opts.query) : '';
+      return c.subwaveAdmin<T>(this.config.hubId!, method, `${path}${q ? `?${q}` : ''}`, opts.body);
+    }
     if (opts.admin) {
       if (!this.hasAdmin) throw new Error('Add your SubWave admin user/password in Settings to use admin controls');
       headers.Authorization = `Basic ${b64(`${this.config.username}:${this.config.password}`)}`;

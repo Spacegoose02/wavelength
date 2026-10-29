@@ -1,14 +1,16 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers**, the **equalizer** and **skins**. For how they're built, see the
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons), the **equalizer**,
+**skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations** and
+**profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
 
 ## Browse Deezer by artist, album and playlist
 
-**Where:** Downloads → **Deezer** tab. You need a deemix server URL in Settings → deemix.
+**Where:** Downloads → **Deezer** tab. You need a deemix server URL in Settings → Downloads → deemix.
 
 Before this, the Deezer tab only listed albums and songs that matched your search. Now you can open
 an artist, an album or a playlist and browse the way you would in a streaming app, then send exactly
@@ -148,6 +150,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
+| Raccoon | A DJ, country, rapper or rocker raccoon playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -160,13 +163,88 @@ spectrum under the title does the same.
 > `Draw` function that gets a `Frame` (frequency bins, waveform, bass/mid/treble levels, a `beat` flag,
 > the skin's `--viz-*` colours and the cover image) and draws on one square canvas every animation frame.
 > To add one, write a `Draw`, add its id to `NpScene` (`store/settings.ts`), and add it to `SCENES` and `DRAW`.
+> The audio reading (analyser → `freq`, `wave`, `bass`/`mid`/`treble`, `beat`, `transient`, or the calm
+> made-up signal) is `createAudioReader()` in `src/player/analysis.ts`, shared by every scene.
+
+### Raccoons
+
+The last visualizer is a raccoon who plays along with the music. There are four to choose from:
+
+<img src="screenshots/raccoons.png" alt="The four raccoons in the Neon synth skin: DJ, country, rapper and rocker" width="100%">
+
+| Raccoon | Look | While the music plays |
+|---|---|---|
+| **DJ** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
+| **Country** | Cowboy hat, plaid shirt, bandana, acoustic guitar, on a porch | Strums on the beat, changes chords, taps his boot |
+| **Rapper** | Snapback, shades, gold chain, mic, between two speaker stacks | Raps (his mouth follows the vocals and mids), throws his hand up on the beat, the speaker cones pump with the bass |
+| **Rocker** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
+
+**Switching raccoons.** On the raccoon visualizer, tap **Switch raccoon** in its top-right corner to go to
+the next one. Or go to **Settings → Playback → Now Playing visualizer** and pick one; that also switches
+Now Playing to the raccoon. Tapping the raccoon itself still moves on to the next visualizer, as on the others.
+If you're signed in to a [Wavelength Hub](HUB.md), your pick follows you to your other devices.
+
+<img src="screenshots/raccoon-picker.png" alt="Settings, Playback tab: the Now Playing visualizer chips and the four raccoon cards, with the rocker picked" width="80%">
+
+**They dress for your theme.** Fur is always raccoon grey, but their clothes, instruments and lights take
+your skin's colours, so every skin dresses them differently. Some groups of skins give them a whole outfit:
+
+| Skin group | Outfit |
+|---|---|
+| **Nuclear** | A hazmat suit with a hood, respirator, radiation badge and black rubber gloves and boots. Yellow on most nuclear skins, orange on Meltdown, green on Uranium glass and Isotope |
+| **Lasers** | A wraparound visor with a laser beam across it that pulses with the bass |
+| **Neon** | Glow-stick necklaces and a glow headband that pulse with the bass |
+| **Retro** | 8-bit pixel shades |
+| **Editor palettes** | Thick-rimmed coder glasses |
+| **Holidays** | A hat in place of their own: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an Uncle Sam hat for July 4th and heart boppers for Valentine's Day |
+
+Outfits swap out what they'd clash with: the hazmat hood replaces hats, caps and the mohawk (the DJ keeps
+his headphones on over it), and visors and glasses replace the rapper's shades. The outfit follows the skin
+on screen, so it changes with Seasonal and Random daily too.
+
+<img src="screenshots/raccoon-outfits.png" alt="All four raccoons in six skins: Cherenkov (hazmat suits), Laser show (visors), Outrun (glow sticks), Game Boy Color (8-bit shades), Dracula (coder glasses) and Christmas (Santa hats)" width="100%">
+
+### DJ raccoon
+
+The original raccoon, behind two decks:
+
+<img src="screenshots/raccoon-dj.png" alt="The DJ raccoon in five skins: Neon synth, Christmas (Santa hat), July 4th (Uncle Sam hat), Thanksgiving (pilgrim hat) and Valentine's Day (heart boppers)" width="100%">
+
+All four raccoons behave the same way around the music:
+
+- **Playing:** the head bobs on each beat (the rocker headbangs harder), and the hands and instrument
+  follow the music as in the table above.
+- **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ his
+  headphones, the country raccoon tips his hat, the rapper fixes his cap, the rocker pushes his mohawk up).
+  The rapper lowers his mic.
+- **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.
+
+> **Developer notes.** `src/components/raccoon/`. Unlike the other scenes the raccoons are inline SVG, not
+> canvas drawings, so the drawings stay editable.
+>
+> - `rig.ts` (`useRaccoonRig`) is the shared animation: head bob, sway, blink, yawn, the `adjust` part
+>   (headwear), tail, backlight and `[data-glow]` pulses. Every frame writes `transform`/`opacity` straight
+>   onto named parts (`data-part="head"`, `arm-r`, …), with no React re-render. Each raccoon passes a
+>   `frame` callback for its own hands and instrument; `guitar.ts` is the strum/fret/string-buzz shared by
+>   the country and rocker raccoons.
+> - `parts.tsx` has what they share: the frame and defs, the tail, the head (with the holiday hats and the
+>   skin-group outfits) and the body outfits. `DJ.tsx`, `Country.tsx`, `Rapper.tsx` and `Rocker.tsx` draw
+>   the rest; `Raccoon.tsx` has the `RACCOONS` list and picks one by `raccoon` in the settings store
+>   (`RaccoonKind`, synced to the Hub).
+> - Colours are CSS at the end of `styles.css` (`.raccoon .top { fill: var(--accent) }`, …). Hats and
+>   outfits are all in the SVG and hidden. Hats show per skin (`:root[data-skin='halloween'] .raccoon .hat-witch`);
+>   outfits per skin group, from `data-skin-group` on `<html>`, which `App.tsx` sets from `skinGroup()`
+>   (`:root[data-skin-group='nuclear'] .raccoon .outfit-nuclear`). A raccoon's own headwear has
+>   `className="own-hat"` and own glasses `own-eyewear`, so outfits can hide them.
+> - `still` draws a single (paused) frame, for the Settings cards.
+
 ## Equalizer
 
 A 10-band equalizer with presets. There are three ways to open it:
 
 - **Desktop:** the **EQ** button in the player bar, next to the queue button.
 - **Now Playing** (phone and desktop): the **EQ** chip under the song title.
-- **Settings → Equalizer**.
+- **Settings → Playback**.
 
 <img src="screenshots/equalizer.png" alt="Equalizer pop-over with the Bass boost preset" width="60%">
 
@@ -195,11 +273,34 @@ also show the idle visualiser animation.
 > The curve comes from `BiquadFilterNode.getFrequencyResponse` on a throwaway `OfflineAudioContext`. To
 > add a preset, add an entry to `EQ_PRESETS` (10 gains, low to high).
 
-## Skins
+## Skins and themes
 
-**Settings → Skin** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
+**Settings → Themes** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
 device and applies straight away. The visualizers and the LCD follow the skin's colours too.
 Every skin works on Windows, Android phones and tablets, and Android TV.
+
+<img src="screenshots/themes.png" alt="Settings, Themes tab: Seasonal and Random daily switches, a search box, and the Holidays group with Halloween marked in season" width="80%">
+
+- **Groups.** Skins are grouped as Classic, Retro, Neon, Lasers, Nuclear, Editor palettes, Holidays and Accessibility.
+- **Search.** Type in the box to filter by name or group (for example "neon", "laser", "nuclear" or "light").
+- **Live preview.** Point at a card (or move to it with the D-pad on TV) and the whole app shows that skin
+  until you move away. Tap it to keep it.
+- **Seasonal.** In the weeks around each holiday, the app switches to that holiday's skin by itself, then
+  goes back to your pick afterwards. Your pick isn't changed. The windows are:
+
+  | Holiday skin | When Seasonal shows it |
+  | --- | --- |
+  | Valentine's Day (rose and blush, a light skin) | Feb 7 – Feb 14 |
+  | July 4th (navy, red and white, with fireworks) | Jun 28 – Jul 5 |
+  | Halloween (pumpkin orange and witchy purple) | Oct 15 – Oct 31 |
+  | Thanksgiving (harvest gold, cranberry, warm wood) | 10 days before US Thanksgiving to the day after |
+  | Christmas (pine green, berry red, gold, a little snow) | Dec 1 – Dec 26 |
+
+- **Random daily.** A different skin every day (holiday skins are left out). Picking a card by hand
+  turns Random daily off. If Seasonal is on too, a holiday wins.
+- The note under the switches says which skin you're seeing today and why.
+
+You can also pick a holiday skin by hand at any time of year.
 
 <img src="screenshots/neon-skins.png" alt="Skin picker with the neon skins, Blacklight UV selected" width="80%">
 
@@ -214,13 +315,214 @@ Synthwave sunset and Cyberpunk:
 | **Miami nights** | Flamingo pink and teal neon-sign glow on deep purple. |
 | **Blacklight UV** | Deep violet with highlighter yellow and pink, like a blacklight poster. |
 | **Electric** | Arc-welder blue and violet with a white-hot glow. |
+| **Neon diner** | Cherry red and teal, like a roadside diner sign. |
+| **Neon lime** | Electric lime and orange on charcoal. |
+| **Neon ice** | Cold white-blue tubes on navy. |
+
+<img src="screenshots/nuclear-laser-skins.png" alt="Settings, Themes tab: the Neon, Lasers and Nuclear groups, Laser grid magenta selected" width="80%">
+
+**Laser skins.** Under **Lasers**, next to Laser grid:
+
+| Skin | Look |
+| --- | --- |
+| **Laser grid magenta / amber / green / violet** | Laser grid's glowing outlines on a black grid, in hot magenta, amber, phosphor green or ultraviolet. |
+| **Laser show** | Blue, green and magenta beams fanning up through haze; rainbow buttons and progress bar. |
+| **Red laser** | Crimson outlines and diagonal beams on black, square corners, like targeting sights. |
+| **Green laser** | A green beam cutting through fog, with lime highlights. |
+| **Laser harp** | Vertical violet and blue light strings over deep indigo, rounded and soft. |
+| **Laser tag** | A blacklit arena: team orange against team cyan. |
+
+**Nuclear skins.** Under **Nuclear**:
+
+| Skin | Look |
+| --- | --- |
+| **Cherenkov (reactor core)** | Cherenkov blue glowing up from the bottom of the screen, like a cooling pool. |
+| **Meltdown** | A molten core: white-hot through orange to scorched red. |
+| **Radiation hazard** | Warning yellow on black, square and bold, with hazard-tape stripes on the player bar. |
+| **Fallout shelter** | Olive drab, civil-defence yellow and rust, with a green Geiger-counter LCD. |
+| **Uranium glass** | Vaseline-glass green fluorescing under UV, with big round corners. |
+| **Nuclear** | Toxic green and hazard yellow glow. |
+| **Radium** | Glow-in-the-dark watch-dial green on black. |
+| **Isotope** | Plutonium violet with a hazard-yellow edge on cards and the player bar. |
+
+All of these are part of the **Random daily** rotation. They aren't holiday skins, so **Seasonal** never picks them.
 
 **Other skins worth knowing.** **OLED black** uses true black so OLED phone screens switch those pixels off,
 which saves battery. **High contrast** is yellow on black with thick outlines and strong focus rings, for low
-vision or bright sunlight. **Sakura** and **Solarized Light** are light skins.
+vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day** are light skins.
 
 > **Developer notes.** A skin is a `:root[data-skin='…']` block of CSS variables in `src/styles.css` plus a
-> `.skin-card.<id> .skin-preview` rule for its picker card, and an entry in `SKINS` (`store/settings.ts`).
-> Recipe: [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skin). Skin rules must sit at the top level of
-> `styles.css`; one inside a `@media (max-width: 760px)` block only applies at phone width, which is what
-> broke seven skins on Windows in 0.7.0.
+> `.skin-card.<id> .skin-preview` rule for its picker card, and an entry in `SKINS` (`store/settings.ts`)
+> with its `group` (one of `SKIN_GROUPS`). Recipe: [CONTRIBUTING.md](CONTRIBUTING.md#add-a-skin). Skin rules
+> must sit at the top level of `styles.css`; one inside a `@media (max-width: 760px)` block only applies at
+> phone width, which is what broke seven skins on Windows in 0.7.0.
+>
+> The saved `skin` is what the user picked. What's on screen is worked out in `App.tsx`:
+> `useUi.previewSkin` (hover preview, never saved) if set, else `activeSkin()` from `src/lib/seasons.ts`,
+> which applies Seasonal (`seasonal`, holiday windows in `SEASONS`) and Random daily (`randomDaily`,
+> a hash of the local date). `App` re-checks every 10 minutes while either mode is on, so it rolls over at
+> midnight. Everything uses the device's local date; nothing needs a server.
+
+## Settings tabs
+
+Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
+yt-dlp), **Themes**, **Discover** (charts) and **Updates**. Links elsewhere open the right tab: **Edit charts** on
+Discover opens Discover, and the Settings link in Downloads opens Downloads.
+
+> **Developer notes.** `src/views/Settings.tsx`, one component per tab. The route can name a tab:
+> `go({ view: 'settings', tab: 'themes' })` (`SettingsTab` in `store/ui.ts`).
+
+## Editing your radio stations
+
+**Radio → Your stations** lists the stations on your Navidrome and SUB/WAVE servers. Tap **Edit** next to
+the heading to change them:
+
+<img src="screenshots/radio-edit.png" alt="Radio, Your stations in edit mode: move arrows, Hide and Delete on each station, and a hidden station with a Show button" width="80%">
+
+- **Reorder** with the ◀ ▶ arrows, or drag a station onto another on desktop.
+- **Hide** removes a station from the row on this device only. Hidden stations are listed under the row
+  while editing, each with **Show** to bring it back.
+- **Delete** (Navidrome stations only) removes the station from the Navidrome server for everyone. Navidrome
+  only lets admin accounts do this; if your account isn't an admin you'll get an error, and you can hide it instead.
+- Tap **Done** when you're finished.
+
+Your **Favorites** (stations you hearted, and streams you added by URL) have ▲ ▼ arrows to reorder them,
+and the heart removes one.
+
+> **Developer notes.** `src/views/Radio.tsx`. Hidden stations and the order are `hiddenStations` and
+> `stationOrder` in the settings store, keyed `<sourceId>:<stationId>` because ids are only unique per
+> server. Stations the order doesn't know yet go at the end. Delete calls `deleteStation` on the source
+> (`deleteInternetRadioStation` in `sources/navidrome.ts`); Navidrome enforces the admin check. When the
+> Wavelength Hub arrives (see [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)) the hidden list and order are
+> meant to sync per user; today they're per device.
+
+## Profiles with a Wavelength Hub
+
+If your household runs a [Wavelength Hub](HUB.md), everyone gets their own profile. Without one, nothing
+changes: Wavelength works on its own, as before.
+
+### Signing in
+
+**Settings → Account**: type the Hub's address (e.g. `https://hub.example.com`) and press **Connect**.
+
+- **Sign in with a code** is the easy way, and the only comfortable one on a TV. Wavelength shows a code and
+  a QR code. Scan it with your phone (or open the address shown and type the code), sign in there with single
+  sign-on (tinyauth) or your Hub password, and press **Allow**. The TV signs itself in a moment later.
+- **Sign in with a password** signs in with your Hub username and password directly.
+- On a brand-new Hub, the Account tab offers **Set up this Hub** instead: that creates the first admin (you).
+
+<p align="center"><img src="screenshots/hub-sign-in.png" alt="Signing in with a code and QR code" width="80%"></p>
+
+### What follows you between devices
+
+Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **Now Playing scene** and **raccoon**,
+**radio stations** (favorites, hidden and order) and **Discover chart picks** sync to your profile. Change the
+skin on the TV and your phone has it next time it checks in (at start, when the window gets focus, and every
+few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and
+the skin on another never overwrite each other. Changes made with no connection are kept and sent later.
+
+Server logins your admin keeps on the Hub arrive too: Plex, Audiobookshelf and SUB/WAVE show up in
+Settings → Sources marked **from your Hub**, and people allowed to download can use the Hub's deemix and
+yt-dlp from Downloads (on Android too). Navidrome logins and downloaded music stay on each device. **Downloaded music always
+plays**, signed in or not, with or without the Hub.
+
+### Server logins on the Hub (admins)
+
+- **Settings → Sources → Move to Hub** puts a Plex, Audiobookshelf or SUB/WAVE server (and its login) on the
+  Hub. It keeps its place in the list and its downloads on this device. Servers you add while signed in go
+  to the Hub straight away.
+- **Edit** a Hub server to change it for everyone, and to pick **who can use it**: Everyone, Admins only, or
+  People I choose. **Own login** gives someone their own Plex token or Audiobookshelf key.
+- **Settings → Downloads → Move to Hub** hands deemix (with its ARL) and yt-dlp to the Hub. From then on the
+  Hub does the downloading: deemix with the ARL it keeps, and yt-dlp straight into a folder inside its music
+  folder (pick the folder there; no network-share login). It works from any device, phones and TVs included.
+  Change the settings there and press **Save to Hub**.
+- SUB/WAVE DJ controls, the schedule and shows go through the Hub too, which keeps the SUB/WAVE admin login.
+  No device is sent that login or the deemix ARL, not even yours.
+- Members and kids never get SUB/WAVE admin controls. Downloads are for admins and people with
+  **Autodownload**; everyone else sees "Your Hub admin looks after downloads".
+
+<p align="center"><img src="screenshots/hub-account.png" alt="Settings → Account when signed in" width="80%"></p>
+
+### Linking single sign-on to your account
+
+If you've been signing in with a Hub password and want to use tinyauth instead, link the two once. Either:
+
+- **From the app:** Settings → Account → **Link single sign-on**. Open the link it shows (or scan its QR code)
+  in a browser, sign in to tinyauth, press **Link**, then press **Done** in the app.
+- **From the browser:** start **Sign in with a code** and choose single sign-on. If tinyauth knows you but no
+  Wavelength account is linked yet, the page asks for your Wavelength username and Hub password once, links
+  them, and carries on signing in the device.
+
+After that, single sign-on is enough; your Hub password keeps working too. **Unlink** is in the same place
+(only if you have a Hub password, so you can't lock yourself out).
+
+### Your devices
+
+Settings → Account lists every device signed in to your profile. **Sign out** next to one (a lost phone, an old
+TV) and it's signed out at once.
+
+### Managing people (admins)
+
+Admins get a **Users** tab:
+
+- **Add someone**: username, display name, role, and a Hub password and/or their tinyauth username.
+- **Role**: Admin, Member or Kid. Changes apply straight away, no re-login.
+- **Autodownload** (members only): lets them download without your approval once requests arrive. Kids can never have it.
+- **Set password**, **SSO** (link or unlink their tinyauth username), **Turn off** (signs out all their devices), **Delete**.
+- **Signed-in devices**: everyone's devices, with **Sign out**.
+- **Activity**: recent sign-ins and admin changes.
+
+The Hub refuses every one of these actions from a non-admin, so hiding the tab isn't what protects them.
+
+<p align="center"><img src="screenshots/hub-users.png" alt="Settings → Users" width="80%"></p>
+
+> **Developer notes.** `src/views/HubSettings.tsx` (Account and Users tabs), `src/sources/hub.ts` (typed API
+> client), `src/store/hub.ts` (signed-in profile, persisted as `tonearm.hub`; `useCan(perm)` is true for
+> everything when no Hub is signed in), `src/lib/hubSync.ts` (settings sync: per-key last-writer-wins with
+> change times in `tonearm.hubStamps`, pushed 2 s after a change). Add a setting to sync by adding its
+> `useSettings` key to `SYNCED`. The Hub side is documented in [HUB.md](HUB.md).
+
+## Updates
+
+The Windows and Android apps check GitHub for a newer Wavelength on launch and every 6 hours. When there is
+one, a bar appears at the top of the page: **Install update**, **What's new** (opens **Settings → Updates**
+with the release notes) or **✕** to hide it until the next launch.
+
+**Settings → Updates** shows the version you're on, when it last checked, and the newer release if there is
+one. **Check now** checks straight away.
+
+- **Windows (installed with the setup exe):** **Install update** downloads the new setup exe and runs it with
+  just a progress bar. It closes Wavelength, installs over it and opens it again.
+- **Windows (portable `Wavelength.exe`):** the new `Wavelength.exe` replaces the old one in the same folder
+  and restarts. The folder has to be writable (not `C:\Program Files`).
+- **Android, Android TV:** the APK downloads, then Android's own install prompt appears; tap **Install** (or
+  **Update**). The first time, Android asks you to allow **Install unknown apps** for Wavelength: the button
+  says **Allow installs from Wavelength** and opens that switch; turn it on, come back and tap **Install
+  update** again. Your settings, downloads and sign-ins are kept.
+
+Options:
+
+- **Check for updates automatically** (on by default). Off: only **Check now** checks.
+- **Include pre-releases** (off by default). Pre-releases are test builds published before a release; turn
+  this on to get them early.
+
+Nothing is installed without you pressing **Install update**. A release published in the last half hour may
+not show yet: its files are still being built.
+
+**The first update-capable version has to be installed by hand** (download it from the
+[releases page](https://github.com/Spacegoose02/wavelength/releases) as before). Older versions don't know
+how to check. Every version after that can update itself.
+
+> **Developer notes.** `src/lib/updates.ts` (store `useUpdates`, `pickUpdate`, `startUpdateChecks`, called in
+> `App.tsx`), `src/components/Updates.tsx` (banner and the Updates tab), `src-tauri/src/update.rs` and
+> `src-tauri/gen/android/.../UpdateBridge.kt`. The options are `updates` in the settings store (per device, not
+> synced through the Hub). Releases come from the GitHub API through Rust (`update_releases`; GitHub wants a
+> User-Agent). The newest non-draft release with a plain `vX.Y.Z` tag that's newer than the app's version and
+> has a file for this install wins: `_x64-setup.exe` for installed Windows, `Wavelength.exe` for portable
+> (decided by whether `uninstall.exe` sits next to the exe), `-android.apk` on Android. Downloads only accept
+> URLs under this repo's `releases/download/`, go to `<app cache>/updates/`, and are cleared on the next launch.
+> Windows runs the NSIS installer with `/P /R` (passive, restart afterwards). Android checks
+> `canRequestPackageInstalls()` before downloading (granting it can restart the app) and opens the APK through
+> the existing `FileProvider` with `ACTION_VIEW`; Android itself refuses an APK signed with another key. Dev
+> builds (`npm run tauri dev`) never check.

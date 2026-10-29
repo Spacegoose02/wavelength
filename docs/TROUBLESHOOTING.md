@@ -51,10 +51,21 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | Symptom | Cause | Fix |
 |---|---|---|
 | Old songs in a genre chart | Source stopped updating (Deezer genre charts, several Billboard genre pages) | Freshness guard drops stale charts; if one slips through, check its date and remove it from `BY_GENRE` |
-| A genre shows different charts than expected | It was customised in Settings → Discover charts (genre chip has a •) | **Reset to defaults** for that genre |
+| A genre shows different charts than expected | It was customised in Settings → Discover (genre chip has a •) | **Reset to defaults** for that genre |
 | Deezer artist/album page says "no such artist/album" | Deezer removed or merged the id | Search again; Deezer answers 200 with `{ error }` for dead ids |
 | "Skipped: Apple Music timed out / 504" | Apple's RSS service is down | Nothing to do; Mix uses the rest |
 | A chart shows 0 rows / "layout changed" | Site HTML changed (Billboard, RadioWave scrapers) | Update the parser in `charts.ts`; test against the live page |
-| Everything goes to yt-dlp instead of deemix | deemix not logged in (per-session login) | Settings → deemix → ARL; **Test deemix** reports whether it's logged in |
+| Everything goes to yt-dlp instead of deemix | deemix not logged in (per-session login) | Settings → Downloads → deemix → ARL; **Test deemix** reports whether it's logged in |
 | yt-dlp: "ffmpeg not found" | ffmpeg not on PATH for the running app | `ytdlp.rs::find_ffmpeg_dir` checks winget's Packages folder; install with `winget install yt-dlp.FFmpeg` |
-| yt-dlp to a NAS share fails | Not logged into the SMB share | Settings → yt-dlp → network share username/password → **Test folder** |
+| yt-dlp to a NAS share fails | Not logged into the SMB share | Settings → Downloads → yt-dlp → network share username/password → **Test folder** |
+
+## In-app updates
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| No Updates check in a dev build | `update_target` returns `none` for debug builds, so `npm run tauri dev` never offers updates | Test with a release build (Actions → Test builds) |
+| "GitHub returned 403" on Check now | GitHub's API limit (60 requests an hour per IP, shared by everything on that network) | Wait an hour; automatic checks are every 6 hours so they rarely hit it |
+| A new release isn't offered | Files not attached yet (Actions takes 15–25 min), it's a pre-release, or the tag isn't plain `vX.Y.Z` | Wait for the builds, tick **Include pre-releases**, or fix the tag |
+| Android: "App not installed" after the prompt | APK signed with a different key than the installed app | Only release-signed APKs update; see RELEASING.md → signing |
+| Android: button stays on "Allow installs from Wavelength" | **Install unknown apps** not switched on for Wavelength (some TVs hide it) | Turn it on in Android settings → Apps → Special access, or install the APK by hand |
+| Portable exe: "can't replace …\\Wavelength.exe" | The exe sits in a folder you can't write to (e.g. Program Files) | Move it to a writable folder, or use the setup exe |

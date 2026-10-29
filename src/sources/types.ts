@@ -13,6 +13,10 @@ export interface SourceConfig {
   apiUrl?: string;
   nowPlayingUrl?: string;
   enabled: boolean;
+  /** Set when the login is kept by the signed-in Wavelength Hub (lib/hubServices.ts), not on this device. */
+  hubId?: number;
+  /** SUB/WAVE kept on the Hub: admin controls go through the Hub, which holds the admin login. */
+  hubAdmin?: boolean;
 }
 
 export type TrackKind = 'track' | 'radio' | 'book' | 'episode';
@@ -159,6 +163,8 @@ export interface MusicSource {
   getArtistAlbums?(artistId: string): Promise<Album[]>;
   getAlbumTracks?(albumId: string): Promise<Track[]>;
   getStations?(): Promise<Station[]>;
+  /** Delete one of the server's own radio stations. Navidrome only allows this for admin accounts. */
+  deleteStation?(id: string): Promise<void>;
   getBooks?(): Promise<Book[]>;
   startBook?(bookId: string): Promise<BookPlayback>;
   syncBook?(track: Track, absoluteTime: number, listened: number): Promise<void>;

@@ -5,7 +5,7 @@
 <p align="center">
   <b>One player for every self-hosted audio source.</b><br>
   Navidrome · Plex · Audiobookshelf · SUB/WAVE · internet radio — with deemix &amp; yt-dlp downloads,<br>
-  live charts, offline playback and 37 skins. Windows, Android phones/tablets, and Android TV.
+  live charts, offline playback and 62 skins. Windows, Android phones/tablets, and Android TV.
 </p>
 
 <p align="center">
@@ -38,7 +38,7 @@ spectrum bars, the skins.
 | **SUB/WAVE station control** | On-air view, song requests, likes, queue/cancel songs, DJ controls, a paint-the-hours schedule editor, shows and stats. |
 | **Offline** | Download albums and playlists to the device and play with no connection. |
 | **Built for every screen** | Desktop, phone (tab bar + mini player), tablets/car head units, and Android TV (D-pad navigation). Native Android media session: steering-wheel, Bluetooth and lock-screen controls. |
-| **37 skins** | Neon synth (default), Winamp, Plexamp, Windows 95, MS-DOS, Game Boy Color, C64, CRTs, iPod, Aqua, Walkman, and the Omarchy palettes (Tokyo Night, Catppuccin, Gruvbox, Nord, …), Dracula, Monokai, Solarized, OLED black, High contrast, Sakura, Cyberpunk, and six neon skins (Outrun, Laser grid, Acid rave, Miami nights, Blacklight UV, Electric). |
+| **62 skins** | Neon synth (default), Winamp, Plexamp, Windows 95, MS-DOS, Game Boy Color, C64, CRTs, iPod, Aqua, Walkman, and the Omarchy palettes (Tokyo Night, Catppuccin, Gruvbox, Nord, …), Dracula, Monokai, Solarized, OLED black, High contrast, Sakura, Cyberpunk, neon skins (Outrun, Acid rave, Miami nights, Blacklight UV, Electric, Neon diner, Neon lime, Neon ice), ten laser skins (Laser grid in cyan, magenta, amber, green and violet, Laser show, Red laser, Green laser, Laser harp, Laser tag), eight nuclear skins (Reactor core, Meltdown, Radiation hazard, Fallout shelter, Uranium glass, Nuclear, Radium, Isotope), and holiday skins (Halloween, Thanksgiving, Christmas, July 4th, Valentine's Day) that can switch on by themselves each season. Four raccoon visualizers (DJ, country, rapper, rocker) wear the skin's colours and dress for it: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats. |
 
 <p align="center">
   <img src="docs/screenshots/subwave.png" alt="SUB/WAVE on-air view" width="64%">
@@ -64,6 +64,8 @@ Grab the files from the [latest release](../../releases/latest):
 | Android phone / tablet / TV | `Wavelength-x.y.z-android.apk` | One APK for arm64 + armv7. Allow "install unknown apps" for your file manager. On Android 17+ tap **Allow** for local-network access, or it can't reach your servers. |
 
 Then open **Settings → Sources** and add your servers. Each source has a **Test connection** button.
+
+After that, Wavelength tells you when a new version is out and installs it for you (**Settings → Updates**).
 
 ## Build it yourself
 
