@@ -16,6 +16,9 @@ export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber'
 /** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
 export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' | 'raccoon';
 
+/** Which raccoon the raccoon scene shows (components/raccoon/). */
+export type RaccoonKind = 'dj' | 'country' | 'rapper' | 'rocker';
+
 /** Headings in Settings → Themes, in display order. */
 export const SKIN_GROUPS = ['Classic', 'Retro', 'Neon', 'Lasers', 'Nuclear', 'Editor palettes', 'Holidays', 'Accessibility'] as const;
 export type SkinGroup = (typeof SKIN_GROUPS)[number];
@@ -85,6 +88,9 @@ export const SKINS: { id: Skin; label: string; group: SkinGroup }[] = [
   { id: 'valentine', label: "Valentine's Day", group: 'Holidays' },
 ];
 
+/** CSS slug for a skin's group (`data-skin-group` on <html>): classic, retro, neon, lasers, nuclear, editor, holidays, accessibility. */
+export const skinGroup = (skin: Skin) => (SKINS.find((s) => s.id === skin)?.group ?? 'Classic').split(' ')[0].toLowerCase();
+
 interface SettingsState {
   sources: SourceConfig[];
   stations: Station[];
@@ -104,6 +110,8 @@ interface SettingsState {
   discoverCharts: Partial<Record<Genre, ChartSource[]>>;
   npScene: NpScene;
   setNpScene(s: NpScene): void;
+  raccoon: RaccoonKind;
+  setRaccoon(r: RaccoonKind): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
   /** Pass undefined to put a genre back on the defaults. */
@@ -137,6 +145,8 @@ export const useSettings = create<SettingsState>()(
       discoverCharts: {},
       npScene: 'art',
       setNpScene: (npScene) => set({ npScene }),
+      raccoon: 'dj',
+      setRaccoon: (raccoon) => set({ raccoon }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       setDiscoverCharts: (g, charts) =>

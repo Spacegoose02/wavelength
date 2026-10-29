@@ -3,6 +3,8 @@ import { Deemix } from '../sources/deemix';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid } from '../lib/platform';
 import { Equalizer } from '../components/Equalizer';
+import { SCENES } from '../components/Scenes';
+import { Raccoon, RACCOONS } from '../components/raccoon/Raccoon';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -342,6 +344,40 @@ function ThemesTab() {
   );
 }
 
+/** Settings → Playback: which Now Playing visualizer, and which raccoon the raccoon scene shows (both sync to the Hub). */
+function NowPlayingPicker() {
+  const { npScene, setNpScene, raccoon, setRaccoon } = useSettings();
+  return (
+    <section id="visualizer">
+      <h2>Now Playing visualizer</h2>
+      <p className="muted small">You can also tap the artwork in Now Playing to step through these.</p>
+      <div className="chips">
+        {SCENES.map((s) => (
+          <button key={s.id} className={`chip ${npScene === s.id ? 'on' : ''}`} onClick={() => setNpScene(s.id)}>{s.label}</button>
+        ))}
+      </div>
+      <h3>Raccoon</h3>
+      <p className="muted small">They dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
+      <div className="raccoon-picks">
+        {RACCOONS.map((r) => (
+          <button
+            key={r.id}
+            className={`raccoon-pick ${npScene === 'raccoon' && raccoon === r.id ? 'on' : ''}`}
+            onClick={() => {
+              setRaccoon(r.id);
+              setNpScene('raccoon');
+            }}
+          >
+            <Raccoon kind={r.id} still />
+            <b>{r.label}</b>
+            <small className="muted">{r.blurb}</small>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
   { id: 'account', label: 'Account' },
   { id: 'users', label: 'Users', admin: true },
@@ -374,10 +410,13 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'users' && isAdmin && <UsersTab />}
       {tab === 'sources' && <SourcesTab />}
       {tab === 'playback' && (
-        <section id="equalizer">
-          <h2>Equalizer</h2>
-          <Equalizer />
-        </section>
+        <>
+          <NowPlayingPicker />
+          <section id="equalizer">
+            <h2>Equalizer</h2>
+            <Equalizer />
+          </section>
+        </>
       )}
       {tab === 'downloads' && <DownloadsTab />}
       {tab === 'themes' && <ThemesTab />}

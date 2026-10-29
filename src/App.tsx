@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
 import { startHubSync } from './lib/hubSync';
-import { useSettings } from './store/settings';
+import { skinGroup, useSettings } from './store/settings';
 import { useUi, type Route } from './store/ui';
 import { usePlayer } from './store/player';
 import { PlayerBar } from './components/PlayerBar';
@@ -113,6 +113,8 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.skin = shown;
+    // the raccoons dress for the skin's group (hazmat suits on Nuclear, visors on Lasers, …): styles.css
+    document.documentElement.dataset.skinGroup = skinGroup(shown);
   }, [shown]);
 
   useEffect(() => {

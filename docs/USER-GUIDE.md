@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the DJ raccoon), the **equalizer**,
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations** and
 **profiles with a Wavelength Hub** (signing in, settings sync, managing people). For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
@@ -150,7 +150,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
-| DJ raccoon | A raccoon DJ behind two decks (see below) |
+| Raccoon | A DJ, country, rapper or rocker raccoon playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -166,26 +166,78 @@ spectrum under the title does the same.
 > The audio reading (analyser → `freq`, `wave`, `bass`/`mid`/`treble`, `beat`, `transient`, or the calm
 > made-up signal) is `createAudioReader()` in `src/player/analysis.ts`, shared by every scene.
 
+### Raccoons
+
+The last visualizer is a raccoon who plays along with the music. There are four to choose from:
+
+<img src="screenshots/raccoons.png" alt="The four raccoons in the Neon synth skin: DJ, country, rapper and rocker" width="100%">
+
+| Raccoon | Look | While the music plays |
+|---|---|---|
+| **DJ** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
+| **Country** | Cowboy hat, plaid shirt, bandana, acoustic guitar, on a porch | Strums on the beat, changes chords, taps his boot |
+| **Rapper** | Snapback, shades, gold chain, mic, between two speaker stacks | Raps (his mouth follows the vocals and mids), throws his hand up on the beat, the speaker cones pump with the bass |
+| **Rocker** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
+
+**Switching raccoons.** On the raccoon visualizer, tap **Switch raccoon** in its top-right corner to go to
+the next one. Or go to **Settings → Playback → Now Playing visualizer** and pick one; that also switches
+Now Playing to the raccoon. Tapping the raccoon itself still moves on to the next visualizer, as on the others.
+If you're signed in to a [Wavelength Hub](HUB.md), your pick follows you to your other devices.
+
+<img src="screenshots/raccoon-picker.png" alt="Settings, Playback tab: the Now Playing visualizer chips and the four raccoon cards, with the rocker picked" width="80%">
+
+**They dress for your theme.** Fur is always raccoon grey, but their clothes, instruments and lights take
+your skin's colours, so every skin dresses them differently. Some groups of skins give them a whole outfit:
+
+| Skin group | Outfit |
+|---|---|
+| **Nuclear** | A hazmat suit with a hood, respirator, radiation badge and black rubber gloves and boots. Yellow on most nuclear skins, orange on Meltdown, green on Uranium glass and Isotope |
+| **Lasers** | A wraparound visor with a laser beam across it that pulses with the bass |
+| **Neon** | Glow-stick necklaces and a glow headband that pulse with the bass |
+| **Retro** | 8-bit pixel shades |
+| **Editor palettes** | Thick-rimmed coder glasses |
+| **Holidays** | A hat in place of their own: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an Uncle Sam hat for July 4th and heart boppers for Valentine's Day |
+
+Outfits swap out what they'd clash with: the hazmat hood replaces hats, caps and the mohawk (the DJ keeps
+his headphones on over it), and visors and glasses replace the rapper's shades. The outfit follows the skin
+on screen, so it changes with Seasonal and Random daily too.
+
+<img src="screenshots/raccoon-outfits.png" alt="All four raccoons in six skins: Cherenkov (hazmat suits), Laser show (visors), Outrun (glow sticks), Game Boy Color (8-bit shades), Dracula (coder glasses) and Christmas (Santa hats)" width="100%">
+
 ### DJ raccoon
 
-The last visualizer is a raccoon DJ. His fur is always raccoon grey, but his hoodie, headphones, record
-labels and the deck lights take your skin's colours, so every skin dresses him differently. Holiday skins
-give him a hat: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an
-Uncle Sam hat for July 4th and heart boppers for Valentine's Day.
+The original raccoon, behind two decks:
 
 <img src="screenshots/raccoon-dj.png" alt="The DJ raccoon in five skins: Neon synth, Christmas (Santa hat), July 4th (Uncle Sam hat), Thanksgiving (pilgrim hat) and Valentine's Day (heart boppers)" width="100%">
 
-- **Playing:** his head bobs on each beat, his right hand scratches the record on sharp hits (claps,
-  snares), his left hand rides the mixer, the mixer meters follow the bass, mids and highs, and the records spin.
-- **Paused:** he sways slowly, blinks, yawns now and then and adjusts his headphones.
-- **Streams the app can't read** (no CORS, see above): he sways gently to a made-up rhythm instead.
+All four raccoons behave the same way around the music:
 
-> **Developer notes.** `src/components/RaccoonDJ.tsx`. Unlike the other scenes he's an inline SVG, not a
-> canvas drawing, so the drawing stays editable. Every frame writes `transform`/`opacity` straight onto
-> named parts (`data-part="head"`, `arm-r`, …), with no React re-render. Colours are CSS in `styles.css`
-> (`.raccoon .hoodie { fill: var(--accent) }`, …). Hats are all in the SVG and hidden; one rule per holiday
-> skin shows the right one (`:root[data-skin='halloween'] .raccoon .hat-witch`). To give a new skin a
-> hat, add a `<g className="hat hat-…">` and a matching rule.
+- **Playing:** the head bobs on each beat (the rocker headbangs harder), and the hands and instrument
+  follow the music as in the table above.
+- **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ his
+  headphones, the country raccoon tips his hat, the rapper fixes his cap, the rocker pushes his mohawk up).
+  The rapper lowers his mic.
+- **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.
+
+> **Developer notes.** `src/components/raccoon/`. Unlike the other scenes the raccoons are inline SVG, not
+> canvas drawings, so the drawings stay editable.
+>
+> - `rig.ts` (`useRaccoonRig`) is the shared animation: head bob, sway, blink, yawn, the `adjust` part
+>   (headwear), tail, backlight and `[data-glow]` pulses. Every frame writes `transform`/`opacity` straight
+>   onto named parts (`data-part="head"`, `arm-r`, …), with no React re-render. Each raccoon passes a
+>   `frame` callback for its own hands and instrument; `guitar.ts` is the strum/fret/string-buzz shared by
+>   the country and rocker raccoons.
+> - `parts.tsx` has what they share: the frame and defs, the tail, the head (with the holiday hats and the
+>   skin-group outfits) and the body outfits. `DJ.tsx`, `Country.tsx`, `Rapper.tsx` and `Rocker.tsx` draw
+>   the rest; `Raccoon.tsx` has the `RACCOONS` list and picks one by `raccoon` in the settings store
+>   (`RaccoonKind`, synced to the Hub).
+> - Colours are CSS at the end of `styles.css` (`.raccoon .top { fill: var(--accent) }`, …). Hats and
+>   outfits are all in the SVG and hidden. Hats show per skin (`:root[data-skin='halloween'] .raccoon .hat-witch`);
+>   outfits per skin group, from `data-skin-group` on `<html>`, which `App.tsx` sets from `skinGroup()`
+>   (`:root[data-skin-group='nuclear'] .raccoon .outfit-nuclear`). A raccoon's own headwear has
+>   `className="own-hat"` and own glasses `own-eyewear`, so outfits can hide them.
+> - `still` draws a single (paused) frame, for the Settings cards.
+
 ## Equalizer
 
 A 10-band equalizer with presets. There are three ways to open it:
@@ -363,7 +415,7 @@ changes: Wavelength works on its own, as before.
 
 ### What follows you between devices
 
-Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **Now Playing scene**,
+Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **Now Playing scene** and **raccoon**,
 **radio stations** (favorites, hidden and order) and **Discover chart picks** sync to your profile. Change the
 skin on the TV and your phone has it next time it checks in (at start, when the window gets focus, and every
 few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and
