@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Tag editor** (admins): **Edit tags** on a Navidrome album fixes its tags in the files, by hand or from a
+  Deezer / MusicBrainz match, with **Undo** (and **Settings → Server → Tag edits** for older saves). Navidrome
+  rescans afterwards.
+- **Hub:** migration 11 (`tag_edits`), `/api/admin/tags/*`, and `WAVELENGTH_NAVIDROME_MUSIC_DIR`.
 - **Import a playlist** (Playlists → Import) from a Deezer, Spotify or YouTube Music link, or a CSV, M3U or
   text file. Songs you have become a Wavelength playlist; **Get missing** / **Request missing** handles the rest.
 - **Hub:** `POST /api/import/youtube`; `/api/fetch` also reads Spotify's public pages.

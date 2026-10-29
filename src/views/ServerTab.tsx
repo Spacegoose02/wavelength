@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { HubAdminService, HubAdminUser, HubLibraryStatus, HubListening, HubServerStatus } from '../sources/hub';
+import type { HubAdminService, HubAdminUser, HubLibraryStatus, HubListening, HubServerStatus, HubTagEdit } from '../sources/hub';
 import { hubClient } from '../store/hub';
 
 const gb = (n: number) => (n >= 1e12 ? `${(n / 1e12).toFixed(1)} TB` : n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.max(0, Math.round(n / 1e6))} MB`);
@@ -224,6 +224,45 @@ function LibraryScan() {
 }
 
 /** Settings → Server (Hub admins): how the Hub is doing, and a backup of its database. */
+/** Tag editor saves (views/TagEditor.tsx), newest first, each with Undo. */
+function TagEdits() {
+  const c = hubClient();
+  const [edits, setEdits] = useState<HubTagEdit[]>();
+  const [msg, setMsg] = useState('');
+  const load = () => c?.tagHistory().then((r) => setEdits(r.edits)).catch(() => setEdits([]));
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!edits?.length) return null;
+  return (
+    <section>
+      <h2>Tag edits</h2>
+      <p className="muted small">Tags changed with <b>Edit tags</b> on an album page. Undo puts those files back as they were.</p>
+      {msg && <p className="small">{msg}</p>}
+      {edits.map((e) => (
+        <div key={e.batch} className="source-row">
+          <div className="track-main">
+            <div className="track-title">{e.label}</div>
+            <div className="track-sub">{e.files} file{e.files === 1 ? '' : 's'} · {e.by ?? 'someone'} · {new Date(e.at).toLocaleString()}{e.undoneAt ? ' · undone' : ''}</div>
+          </div>
+          {!e.undoneAt && (
+            <button className="btn small ghost" onClick={async () => {
+              if (!confirm(`Put the tags of ${e.label} back as they were?`)) return;
+              try {
+                const r = await c!.undoTags(e.batch);
+                setMsg(`Undid ${r.undone} file${r.undone === 1 ? '' : 's'}${r.failed.length ? `; ${r.failed.length} failed` : ''}`);
+              } catch (err) {
+                setMsg(String((err as Error).message ?? err));
+              }
+              load();
+            }}>Undo</button>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export function ServerTab() {
   const [s, setS] = useState<HubServerStatus>();
   const [err, setErr] = useState('');
@@ -294,6 +333,7 @@ export function ServerTab() {
       <ListeningNow />
       <NavidromeAccounts />
       <LibraryScan />
+      <TagEdits />
       <section>
         <h2>Backup</h2>
         <p className="muted small">

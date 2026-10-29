@@ -30,6 +30,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: hub/package-lock.json
+      # the tag editor's tests write real audio files with ffmpeg, as the image does
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - run: npm ci
       - run: npm run typecheck
       - run: npm test

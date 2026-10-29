@@ -93,6 +93,22 @@ export interface HubService {
   relay?: boolean;
 }
 
+/** Tags the tag editor reads and writes (hub/src/tags.ts). */
+export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' | 'disc' | 'year' | 'genre';
+export type HubTags = Partial<Record<HubTagKey, string>>;
+export interface HubTagSong { id: string; path: string; tags: HubTags }
+export interface HubTagMatch {
+  source: 'Deezer' | 'MusicBrainz';
+  id: string;
+  title: string;
+  artist: string;
+  year?: string;
+  genre?: string;
+  cover?: string;
+  tracks: { title: string; artist: string; track: number; disc: number }[];
+}
+export interface HubTagEdit { batch: string; label: string; at: number; files: number; undoneAt: number | null; by: string | null }
+
 /** One of this person's Wavelength playlists, as kept on the Hub. `deleted` ones are tombstones. */
 export interface HubPlaylist {
   id: string;
@@ -411,6 +427,11 @@ export class HubClient {
   myPlaylists = () => this.call<{ playlists: HubPlaylist[] }>('GET', '/api/me/playlists');
   putMyPlaylists = (playlists: HubPlaylist[]) => this.call<{ playlists: HubPlaylist[] }>('PUT', '/api/me/playlists', { playlists });
   myHistory = () => this.call<{ history: { playedAt: number; track: Track }[] }>('GET', '/api/me/history');
+  tagAlbum = (albumId: string) => this.call<{ songs: HubTagSong[] }>('GET', `/api/admin/tags/album/${encodeURIComponent(albumId)}`);
+  tagMatches = (artist: string, album: string) => this.call<{ candidates: HubTagMatch[] }>('GET', `/api/admin/tags/match?${new URLSearchParams({ artist, album })}`);
+  saveTags = (label: string, changes: { path: string; tags: HubTags }[]) => this.call<{ batch: string | null; changed: string[]; failed: { path: string; error: string }[] }>('PUT', '/api/admin/tags', { label, changes });
+  tagHistory = () => this.call<{ edits: HubTagEdit[] }>('GET', '/api/admin/tags/history');
+  undoTags = (batch: string) => this.call<{ undone: number; failed: { path: string; error: string }[] }>('POST', `/api/admin/tags/undo/${encodeURIComponent(batch)}`);
   importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });
   addMyHistory = (plays: { playedAt: number; track: Track }[]) => this.call('POST', '/api/me/history', { plays });
   removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);

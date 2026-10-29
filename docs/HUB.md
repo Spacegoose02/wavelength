@@ -150,7 +150,8 @@ Hub sees it) is an extra lock you can add.
 | `PORT` | `7780` | Port inside the container. |
 | `WAVELENGTH_DATA_DIR` | `/data` (image) | Database (`hub.db`) and `secret.key`. |
 | `WAVELENGTH_SECRET_KEY` | generated into `secret.key` | 32 bytes (64 hex chars or base64). Signs pairing forms; encrypts the saved server logins. |
-| `WAVELENGTH_MUSIC_DIR` | `/music` (image) | The music library. yt-dlp downloads go into a folder inside it. |
+| `WAVELENGTH_MUSIC_DIR` | `/music` (image) | The music library. yt-dlp downloads go into a folder inside it, and the tag editor writes the files in it. |
+| `WAVELENGTH_NAVIDROME_MUSIC_DIR` | `/music` | Where Navidrome's container sees the same music. The tag editor maps Navidrome's file paths from here onto `WAVELENGTH_MUSIC_DIR`. |
 | `WAVELENGTH_YTDLP` | `yt-dlp` | The yt-dlp command (the image includes it). |
 | `WAVELENGTH_WEB_DIR` | `/app/web` (image) | The app's web build, served at `/`. Without one, `/` goes to the sign-in page. |
 | `WAVELENGTH_FANART_KEY` | — | A [fanart.tv](https://fanart.tv/get-an-api-key/) API key (free). Adds fanart.tv artist pictures and album covers to the cover art picker. Without it the picker uses Deezer, Apple Music and the Cover Art Archive. |
@@ -250,6 +251,20 @@ The first time a device signs in after this update, the playlists already on it 
 
 Navidrome's own playlists, favorites and play counts are separate: they're per person once everyone has
 their own Navidrome account (Server logins above).
+
+## Tag editor
+
+Admins fix an album's tags from its page (**Edit tags**, on Navidrome albums). The Hub asks Navidrome for the
+album's files (with the Navidrome admin login), reads their tags with ffprobe, and writes changes with ffmpeg:
+the file is copied with the new tags (the audio is copied as is, never re-encoded) and swapped in, so a failed
+write leaves the original untouched. **Find on Deezer and MusicBrainz** looks the album up on both and fills in
+title, artist, track and disc numbers, album artist, year and genre for the admin to check before saving.
+Every save is kept in an undo log (migration 11, `tag_edits`): **Undo** on the page, or under **Settings →
+Server → Tag edits**, puts those tags back. After a save or an undo the Hub asks Navidrome to rescan.
+
+It needs the music mounted read-write at `/music` (as for yt-dlp) and a Navidrome admin login on the Hub.
+If Navidrome sees the music somewhere other than `/music`, set `WAVELENGTH_NAVIDROME_MUSIC_DIR` to that path.
+Code: `hub/src/tags.ts`, `hub/src/routes/tags.ts`, `src/views/TagEditor.tsx`.
 
 ## Cover art
 
@@ -358,6 +373,10 @@ with a 4xx status.
 | `GET /nd/:id/rest/:method` | relay login | Navidrome through the Hub (Subsonic, `t`+`s` or `p`); see "Navidrome through the Hub" |
 | `POST /nd/:id/auth/login`, `GET /nd/:id/api/song` | relay login | Navidrome's own API through the Hub, for play history only |
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
+| `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
+| `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
+| `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }] }` writes tags (only those given) → `{ batch, changed, failed }` |
+| `GET /api/admin/tags/history`, `POST /api/admin/tags/undo/:batch` | `library.edit` | saved edits / put a save's files back |
 | `POST /api/import/youtube` | signed in | `{ url }` of a YouTube / YouTube Music playlist → `{ tracks: [{ title, artist, duration? }] }`, read with the Hub's yt-dlp (titles only, nothing downloaded) |
 | `GET /*` | — | the app's web build (`WAVELENGTH_WEB_DIR`); unknown paths get `index.html` |
 | `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |

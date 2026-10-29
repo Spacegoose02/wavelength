@@ -20,6 +20,7 @@ export type Route =
   | { view: 'subwave'; sourceId?: string }
   | { view: 'discover' }
   | { view: 'import' }
+  | { view: 'tags'; album: Album }
   | { view: 'favorites' }
   | { view: 'recent' }
   | { view: 'library' }
