@@ -155,6 +155,8 @@ Hub sees it) is an extra lock you can add.
 | `WAVELENGTH_YTDLP` | `yt-dlp` | The yt-dlp command (the image includes it). |
 | `WAVELENGTH_WEB_DIR` | `/app/web` (image) | The app's web build, served at `/`. Without one, `/` goes to the sign-in page. |
 | `WAVELENGTH_FANART_KEY` | — | A [fanart.tv](https://fanart.tv/get-an-api-key/) API key (free). Adds fanart.tv artist pictures and album covers to the cover art picker. Without it the picker uses Deezer, Apple Music and the Cover Art Archive. |
+| `WAVELENGTH_DOCKER_URL` | — | A Docker socket proxy, e.g. `http://docker-socket-proxy:2375`. Turns on Docker control (below). Never the Docker socket itself. |
+| `WAVELENGTH_DOCKER_CONTAINERS` | — | Comma-separated container names admins may see, start, stop and restart, e.g. `navidrome,slskd`. Others stay invisible. |
 | `WAVELENGTH_SSO` | `false` | Accept tinyauth identity headers on `/auth/sso/`. |
 | `WAVELENGTH_PROXY_SECRET` | — | Value the proxy sends as `X-Wavelength-Proxy-Secret`. |
 | `WAVELENGTH_TRUSTED_PROXIES` | — | Comma-separated IPs allowed to send identity headers. SSO refuses to start unless this or the secret is set. |
@@ -278,6 +280,40 @@ the host's queue (the host can turn that off), and if the host allows it, their 
 the host too. Songs travel without their stream links: each guest plays them with their own login for that
 server, found by the Hub's id for it, or by title and artist when they don't have that server. Kids skip
 anything not for kids. The party ends when the host ends it or their device goes away for a minute.
+
+## Docker control
+
+Optional, and off unless you set it up. **Settings → Server → Containers** lists the containers you name,
+with their state, and lets admins start, stop or restart them and read the last 200 lines of their logs
+(`hub/src/routes/docker.ts`). Every start, stop and restart goes in the activity log.
+
+The Hub never gets the Docker socket: mounting `/var/run/docker.sock` into a container gives it root on the
+host. Instead, run a socket proxy that only lets container calls through, keep it off your LAN, and point the
+Hub at it. Only containers named in `WAVELENGTH_DOCKER_CONTAINERS` are shown or touched, even though the
+proxy could reach others.
+
+```yaml
+services:
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1" # list containers and read logs
+      POST: "1"       # start, stop, restart
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # no ports: only the Hub reaches it, on the shared network
+  wavelength-hub:
+    environment:
+      WAVELENGTH_DOCKER_URL: http://docker-socket-proxy:2375
+      WAVELENGTH_DOCKER_CONTAINERS: navidrome,slskd
+```
+
+On Unraid, install **docker-socket-proxy** from Community Apps with `CONTAINERS=1` and `POST=1`, put it and the
+Hub on the same custom network (e.g. `proxynet`), and fill in **Docker URL** and **Docker containers** in the
+Hub's template. Leave the Hub's own container off the list: stopping it from the app would leave nothing to
+start it again.
 
 ## Tag editor
 
@@ -404,6 +440,9 @@ with a 4xx status.
 | `DELETE /api/admin/artwork/:id` | `library.edit` | back to the server's own picture |
 | `GET /api/admin/server` | `server.view` | the server page: version, uptime, disks, yt-dlp version, counts |
 | `GET /api/admin/backup` | `server.view` | a copy of the database (`wavelength-hub-YYYY-MM-DD.db`), audited |
+| `GET /api/admin/docker` | `server.view` | `{ enabled, containers: [{ name, image, state, status, created }] }` for the containers in `WAVELENGTH_DOCKER_CONTAINERS`; `state` is `missing` for a name Docker doesn't have |
+| `POST /api/admin/docker/:name/start\|stop\|restart` | `server.view` | audited; `404` for a container not on the list, `501` when Docker control is off, `502` when Docker can't be reached |
+| `GET /api/admin/docker/:name/logs?lines=` | `server.view` | `{ logs }`: the last `lines` (10–2000, default 200) of output, with timestamps |
 | `POST /api/admin/restore[?force=1]` | `server.view` | body: a backup (`application/vnd.sqlite3`, 256 MB at most). Checked, staged, then the Hub restarts to swap it in (see "Backups"); `409` when its server logins were sealed with another secret key, unless `force=1` |
 | `POST /api/admin/invites` | `users.manage` | `{ role, displayName?, autodownload?, days? (1–30, default 7) }` → `{ id, url, code, expiresAt }`; the code is only shown here |
 | `GET /api/admin/invites`, `DELETE /api/admin/invites/:id` | `users.manage` | open invites and ones used in the last 30 days / cancel an unused one |

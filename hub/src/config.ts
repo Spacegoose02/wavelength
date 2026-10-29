@@ -24,6 +24,13 @@ export interface Config {
   webDir: string;
   /** fanart.tv API key: adds its artist pictures and album covers to the art picker. Empty = not used. */
   fanartKey: string;
+  /**
+   * Docker control (routes/docker.ts): a Docker API reached through a socket proxy, e.g.
+   * http://docker-socket-proxy:2375. Empty = off.
+   */
+  dockerUrl: string;
+  /** Container names admins may see and start, stop or restart. Empty = none, even with dockerUrl set. */
+  dockerContainers: string[];
 }
 
 export interface SsoConfig {
@@ -71,6 +78,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ytdlpBin: env.WAVELENGTH_YTDLP || 'yt-dlp',
     // the image puts the web build next to src/
     fanartKey: (env.WAVELENGTH_FANART_KEY ?? '').trim(),
+    dockerUrl: (env.WAVELENGTH_DOCKER_URL ?? '').trim().replace(/\/+$/, ''),
+    dockerContainers: list(env.WAVELENGTH_DOCKER_CONTAINERS).map((s) => s.replace(/^\//, '')),
     webDir: (env.WAVELENGTH_WEB_DIR ?? fileURLToPath(new URL('../web', import.meta.url))).replace(/\/+$/, ''),
   };
 }

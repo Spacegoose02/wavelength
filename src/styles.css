@@ -1608,6 +1608,7 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 
 /* Settings → Server (views/ServerTab.tsx) */
 .server-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.container-logs { max-height: 320px; overflow: auto; margin: 0 0 10px; padding: 10px 12px; border-radius: 8px; background: var(--panel-2, rgba(0, 0, 0, 0.25)); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; }
 .server-grid > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--radius); background: var(--panel); min-width: 0; }
 .server-grid > div > span { font-size: 12px; }
 .server-grid > div > b { font-weight: 600; overflow-wrap: anywhere; }
