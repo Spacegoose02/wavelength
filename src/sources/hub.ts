@@ -191,6 +191,20 @@ export interface HubAlbumRating {
   explicitTracks?: string[];
 }
 
+/** The admin server page (GET /api/admin/server). */
+export interface HubServerStatus {
+  version: string;
+  node: string;
+  startedAt: number;
+  publicUrl: string;
+  sso: boolean;
+  web: boolean;
+  data: { dir: string; dbBytes: number; disk: { free: number; total: number } | null };
+  music: { dir: string; exists: boolean; writable: boolean; disk: { free: number; total: number } | null } | null;
+  ytdlp: string | null;
+  counts: { users: number; admins: number; kids: number; devices: number; activeToday: number; pendingRequests: number; services: number; flags: number; ratedAlbums: number };
+}
+
 /** A kid's bedtime ('HH:MM', device time) and daily listening limit; null = none. */
 export interface KidRules {
   bedtimeFrom: string | null;
@@ -294,6 +308,14 @@ export class HubClient {
   unshare = (id: number) => this.call('DELETE', `/api/shares/${id}`);
 
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
+  server = () => this.call<HubServerStatus>('GET', '/api/admin/server');
+  /** A copy of the Hub's database, as a file to save. */
+  async backup(): Promise<{ name: string; blob: Blob }> {
+    const res = await http(`${this.url}/api/admin/backup`, { headers: { authorization: `Bearer ${this.token}` } });
+    if (!res.ok) throw new HubError(res.status, ((await res.json().catch(() => ({}))) as { error?: string }).error || `${res.status} error`);
+    const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'wavelength-hub.db';
+    return { name, blob: await res.blob() };
+  }
   ratings = () => this.call<{ ratings: HubRating[] }>('GET', '/api/ratings');
   kidStatus = (day: string) => this.call<{ kid: boolean; rules: KidRules; usedSeconds: number; pinSet: boolean }>('GET', `/api/me/kid?day=${day}`);
   listened = (day: string, seconds: number) => this.call<{ usedSeconds: number }>('POST', '/api/me/listened', { day, seconds });

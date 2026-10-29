@@ -400,7 +400,13 @@ Tag editor with MusicBrainz/Deezer match, undo log; playlist import from
 Spotify/Deezer/YouTube Music/CSV/M3U with "request missing". **Cards closed:** tag editor,
 import playlists.
 
-### Phase 6 — Admin server page, device control and extras · ~2–3 weeks + ongoing
+### Phase 6 — Admin server page, device control and extras · ~2–3 weeks + ongoing · **in progress**
+
+Done: **Settings → Server** (`hub/src/routes/server.ts`, `src/views/ServerTab.tsx`): version, uptime, disk
+space, music folder writable, yt-dlp version, household counts, and a database backup download. The Hub also
+serves the app's web build at `/` (`hub/src/web.ts`), with a few no-CORS public APIs fetched through
+`/api/fetch` (`hub/src/routes/webfetch.ts`), so Wavelength works in a browser. Still open: Docker control,
+remote control/handoff, listen together, Rewind, invites, restore from the app.
 
 Server controls page, optional Docker control via socket proxy, remote control/handoff, listen together,
 Rewind, invites, backups. **Cards closed:** admin server page, Docker control.

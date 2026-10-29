@@ -1,0 +1,9 @@
+# Used when building the Hub image from the repo root (docker build -f hub/Dockerfile .)
+**/node_modules
+.git
+dist
+src-tauri
+hub/data
+hub/test
+docs
+**/*.log

@@ -49,8 +49,22 @@ Package settings → Change visibility) so Unraid can pull it without a registry
 
 ## Other Docker hosts
 
-`hub/docker-compose.example.yml` has the same settings for docker compose. Or build it yourself:
-`docker build -t wavelength-hub hub`.
+`hub/docker-compose.example.yml` has the same settings for docker compose. Or build it yourself from the
+repo root (the image includes the app's web build): `docker build -f hub/Dockerfile -t wavelength-hub .`.
+
+## In a browser
+
+The Hub serves Wavelength itself: open `https://hub.example.com` in any browser. It asks you to sign in to
+that Hub (password, or **Sign in with a code** for single sign-on: open the link it shows in another tab).
+Everything works as in the app except downloading songs for offline play and running yt-dlp on the device.
+
+- Deezer, the charts in Discover and Release Radar can't be called from a browser directly, so the Hub
+  fetches them for signed-in people (`GET /api/fetch`, limited to those few public sites).
+- Music servers you add under **Settings → Sources** are reached from the browser, so give them addresses
+  the browser can reach. When the Hub is on `https://`, they need `https://` addresses too (for example
+  through Nginx Proxy Manager), because browsers block `http://` content on a secure page. Navidrome and Plex
+  allow requests from other sites; Audiobookshelf may need its allowed origins set.
+- The page itself isn't behind tinyauth (only `/auth/sso/` is), the same as the app's API calls.
 
 ## First admin
 
@@ -138,6 +152,7 @@ Hub sees it) is an extra lock you can add.
 | `WAVELENGTH_SECRET_KEY` | generated into `secret.key` | 32 bytes (64 hex chars or base64). Signs pairing forms; encrypts the saved server logins. |
 | `WAVELENGTH_MUSIC_DIR` | `/music` (image) | The music library. yt-dlp downloads go into a folder inside it. |
 | `WAVELENGTH_YTDLP` | `yt-dlp` | The yt-dlp command (the image includes it). |
+| `WAVELENGTH_WEB_DIR` | `/app/web` (image) | The app's web build, served at `/`. Without one, `/` goes to the sign-in page. |
 | `WAVELENGTH_SSO` | `false` | Accept tinyauth identity headers on `/auth/sso/`. |
 | `WAVELENGTH_PROXY_SECRET` | — | Value the proxy sends as `X-Wavelength-Proxy-Secret`. |
 | `WAVELENGTH_TRUSTED_PROXIES` | — | Comma-separated IPs allowed to send identity headers. SSO refuses to start unless this or the secret is set. |
@@ -270,6 +285,10 @@ with a 4xx status.
 | `POST /api/admin/flags`, `DELETE /api/admin/flags/:id` | `library.edit` | set `{ kind: track/album/artist, artist, title?, verdict: block/allow }` (the same item again replaces its verdict) / remove |
 | `GET /api/ratings` | signed in | `{ ratings: [{ kind: album/track, artist, album, title, rating: explicit/clean/unknown, cleanLink, checkedAt }] }`: the library check's results |
 | `POST /api/admin/ratings`, `DELETE /api/admin/ratings` | `library.edit` | save `{ albums: [{ artist, album, rating, cleanLink?, explicitTracks? }] }` (up to 200; an album sent again replaces its songs) / forget them all |
+| `GET /api/admin/server` | `server.view` | the server page: version, uptime, disks, yt-dlp version, counts |
+| `GET /api/admin/backup` | `server.view` | a copy of the database (`wavelength-hub-YYYY-MM-DD.db`), audited |
+| `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed or RadioWave Monitor (https only, nothing else) |
+| `GET /*` | — | the app's web build (`WAVELENGTH_WEB_DIR`); unknown paths get `index.html` |
 | `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |
 | `POST /api/me/listened` | signed in | `{ day, seconds }` (5 minutes at most per call) → `{ usedSeconds }`, the total across devices |
 | `POST /api/kid/unlock` | signed in | `{ pin }`: checks the grown-up PIN (rate limited, audited) |
@@ -293,7 +312,11 @@ A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`
 
 ## Backups
 
-Back up the appdata folder (`hub.db*` and `secret.key`). Keep `secret.key` with the database: it decrypts
+**Settings → Server → Download backup** (admins) saves a copy of the database. Keep `secret.key` from the
+data folder next to it. To restore, stop the Hub, put the backup in the data folder as `hub.db` (deleting any
+`hub.db-wal` and `hub.db-shm`), and start it again.
+
+Or back up the appdata folder (`hub.db*` and `secret.key`). Keep `secret.key` with the database: it decrypts
 the stored server logins. With a different key the Hub still starts, but shows those logins as unreadable
 until an admin enters them again.
 

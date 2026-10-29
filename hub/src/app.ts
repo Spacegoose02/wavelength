@@ -12,9 +12,12 @@ import { kidRoutes } from './routes/kids.ts';
 import { proxyRoutes } from './routes/proxy.ts';
 import { ratingRoutes } from './routes/ratings.ts';
 import { requestRoutes } from './routes/requests.ts';
+import { serverRoutes } from './routes/server.ts';
 import { serviceRoutes } from './routes/services.ts';
 import { shareRoutes } from './routes/shares.ts';
+import { webFetchRoutes } from './routes/webfetch.ts';
 import { getUser } from './users.ts';
+import { webRoutes } from './web.ts';
 import { YtdlpRunner } from './ytdlp.ts';
 
 declare module 'fastify' {
@@ -94,5 +97,8 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
   flagRoutes(app, ctx);
   kidRoutes(app, ctx);
   ratingRoutes(app, ctx);
+  serverRoutes(app, ctx);
+  webFetchRoutes(app, ctx);
+  webRoutes(app, config.webDir);
   return app;
 }

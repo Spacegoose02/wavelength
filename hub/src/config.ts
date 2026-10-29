@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /** Everything the Hub reads from its environment. See docs/HUB.md for the full list. */
 export interface Config {
@@ -17,6 +18,8 @@ export interface Config {
   musicDir: string;
   /** yt-dlp command; the Docker image ships it with ffmpeg. */
   ytdlpBin: string;
+  /** The app's web build, served at / so Wavelength works in a browser. Empty or missing = not served. */
+  webDir: string;
 }
 
 export interface SsoConfig {
@@ -61,6 +64,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     sso,
     musicDir: (env.WAVELENGTH_MUSIC_DIR ?? '').replace(/\/+$/, ''),
     ytdlpBin: env.WAVELENGTH_YTDLP || 'yt-dlp',
+    // the image puts the web build next to src/
+    webDir: (env.WAVELENGTH_WEB_DIR ?? fileURLToPath(new URL('../web', import.meta.url))).replace(/\/+$/, ''),
   };
 }
 

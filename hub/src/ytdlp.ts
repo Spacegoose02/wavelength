@@ -36,7 +36,7 @@ const FORMATS = ['opus', 'm4a', 'mp3', 'flac'];
 const MAX_RUNNING = 2;
 const KEEP_JOBS = 200;
 
-function run(bin: string, args: string[], onLine?: (l: string) => void): Promise<{ code: number; out: string; err: string }> {
+export function run(bin: string, args: string[], onLine?: (l: string) => void): Promise<{ code: number; out: string; err: string }> {
   return new Promise((done, fail) => {
     const p = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '', err = '', buf = '';
