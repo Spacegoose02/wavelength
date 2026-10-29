@@ -1185,6 +1185,94 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .skin-card.blacklight .skin-preview { background:radial-gradient(circle at 30% 0%,#3a1660,#0b0014 70%); } .skin-card.blacklight .skin-preview span { flex:1; background:linear-gradient(to top,#9d4dff,#ff3bf2,#f5ff3b); box-shadow:0 0 10px rgb(157 77 255 / 0.6); }
 .skin-card.electric .skin-preview { background:#050a1f; } .skin-card.electric .skin-preview span { flex:1; background:linear-gradient(to top,#3d7bff,#8fd3ff 60%,#ffffff); box-shadow:0 0 10px rgb(61 123 255 / 0.7); }
 
+/* ============ Laser skins (Laser grid lives with these in Settings → Themes → Lasers) ============ */
+/* Laser show: RGB beams fanning out of the stage through haze */
+:root[data-skin='lasershow'] { --bg:#05030c; --bg-2:#030208; --panel:#0e0a1c; --panel-2:#17112c; --line:#2c2250; --text:#f2f0ff; --muted:#a49fc8; --accent:#2bff88; --accent-ink:#021208; --lcd-bg:#020106; --lcd-text:#2bff88; --lcd-dim:#0a3a1f; --viz-low:#2b6bff; --viz-mid:#2bff88; --viz-high:#ff2bd6; --viz-peak:#ffffff; --radius:6px; --radius-lg:10px; --bevel:none; --bevel-in:inset 0 0 0 1px #2c2250; color-scheme:dark; }
+:root[data-skin='lasershow'] body { background: conic-gradient(from 200deg at 50% 110%, transparent 0deg, rgb(43 255 136 / 0.10) 6deg, transparent 12deg, transparent 40deg, rgb(43 107 255 / 0.10) 46deg, transparent 52deg, transparent 80deg, rgb(255 43 214 / 0.10) 86deg, transparent 92deg, transparent 360deg), #05030c; }
+:root[data-skin='lasershow'] .brand { color:#ffffff; text-shadow:-2px 0 6px #ff2bd6, 2px 0 6px #2b6bff, 0 0 14px #2bff88; }
+:root[data-skin='lasershow'] .btn.primary, :root[data-skin='lasershow'] .tbtn.play { background:linear-gradient(90deg,#2b6bff,#2bff88,#ff2bd6); color:#05030c; box-shadow:0 0 18px rgb(43 255 136 / 0.45); }
+:root[data-skin='lasershow'] .chip.on { background:#ff2bd6; color:#ffffff; } :root[data-skin='lasershow'] .tabs button.on { border-bottom-color:#2bff88; text-shadow:0 0 10px rgb(43 255 136 / 0.7); }
+:root[data-skin='lasershow'] .progress i { background:linear-gradient(90deg,#2b6bff,#2bff88,#ff2bd6); }
+/* Red laser: crimson beams and targeting sights on black */
+:root[data-skin='laserred'] { --bg:#070203; --bg-2:#040102; --panel:#130608; --panel-2:#1e0a0d; --line:#4a1218; --text:#ffecee; --muted:#c7949a; --accent:#ff1f3d; --accent-ink:#ffffff; --lcd-bg:#030001; --lcd-text:#ff1f3d; --lcd-dim:#3a0810; --viz-low:#8a0012; --viz-mid:#ff1f3d; --viz-high:#ff7a5c; --viz-peak:#ffffff; --radius:2px; --radius-lg:4px; --bevel:none; --bevel-in:inset 0 0 0 1px #4a1218; color-scheme:dark; }
+:root[data-skin='laserred'] body { background: repeating-linear-gradient(-35deg, transparent 0 140px, rgb(255 31 61 / 0.07) 140px 141px), #070203; }
+:root[data-skin='laserred'] .brand { color:#ff1f3d; text-shadow:0 0 6px rgb(255 31 61 / 0.9), 0 0 18px rgb(255 31 61 / 0.5); letter-spacing:2px; text-transform:uppercase; }
+:root[data-skin='laserred'] .card, :root[data-skin='laserred'] .deck { box-shadow:0 0 0 1px rgb(255 31 61 / 0.25), 0 0 14px rgb(255 31 61 / 0.08); }
+:root[data-skin='laserred'] .btn.primary, :root[data-skin='laserred'] .tbtn.play { background:transparent; color:#ff1f3d; box-shadow:inset 0 0 0 2px #ff1f3d, 0 0 14px rgb(255 31 61 / 0.55); }
+:root[data-skin='laserred'] .nav.on svg { color:#ff1f3d; filter:drop-shadow(0 0 6px rgb(255 31 61 / 0.85)); }
+:root[data-skin='laserred'] .chip.on { background:#ff1f3d; color:#ffffff; } :root[data-skin='laserred'] .tabs button.on { border-bottom-color:#ff1f3d; }
+/* Green laser: a 532 nm beam cutting through fog */
+:root[data-skin='lasergreen'] { --bg:#020704; --bg-2:#010402; --panel:#06130a; --panel-2:#0b1f11; --line:#123d20; --text:#e8ffee; --muted:#8fc49e; --accent:#39ff6a; --accent-ink:#021207; --lcd-bg:#000301; --lcd-text:#39ff6a; --lcd-dim:#0a3316; --viz-low:#0f9c3a; --viz-mid:#39ff6a; --viz-high:#d4ff3a; --viz-peak:#ffffff; --radius:4px; --radius-lg:8px; --bevel:none; --bevel-in:inset 0 0 0 1px #123d20; color-scheme:dark; }
+:root[data-skin='lasergreen'] body { background: linear-gradient(170deg, transparent 38%, rgb(57 255 106 / 0.10) 40%, transparent 42%), radial-gradient(900px 400px at 50% 120%, rgb(57 255 106 / 0.10), transparent 70%), #020704; }
+:root[data-skin='lasergreen'] .brand { color:#39ff6a; text-shadow:0 0 8px rgb(57 255 106 / 0.85), 0 0 22px rgb(57 255 106 / 0.4); }
+:root[data-skin='lasergreen'] .btn.primary, :root[data-skin='lasergreen'] .tbtn.play { background:#39ff6a; color:#021207; box-shadow:0 0 18px rgb(57 255 106 / 0.55); }
+:root[data-skin='lasergreen'] .nav.on svg { color:#39ff6a; filter:drop-shadow(0 0 6px rgb(57 255 106 / 0.8)); }
+:root[data-skin='lasergreen'] .chip.on { background:#d4ff3a; color:#020704; } :root[data-skin='lasergreen'] .tabs button.on { border-bottom-color:#39ff6a; }
+/* Laser harp: vertical violet and blue beams, like strings of light */
+:root[data-skin='laserharp'] { --bg:#07041a; --bg-2:#040211; --panel:#100a2b; --panel-2:#18103d; --line:#2e2266; --text:#f0ecff; --muted:#a69cd6; --accent:#8a5cff; --accent-ink:#ffffff; --lcd-bg:#03010c; --lcd-text:#b89cff; --lcd-dim:#231a4d; --viz-low:#3d5cff; --viz-mid:#8a5cff; --viz-high:#e05cff; --viz-peak:#ffffff; --radius:10px; --radius-lg:16px; --bevel:none; --bevel-in:inset 0 0 0 1px #2e2266; color-scheme:dark; }
+:root[data-skin='laserharp'] body { background: repeating-linear-gradient(90deg, transparent 0 70px, rgb(138 92 255 / 0.09) 70px 72px), linear-gradient(transparent 50%, rgb(138 92 255 / 0.10)), #07041a; }
+:root[data-skin='laserharp'] .brand { color:#e0d4ff; text-shadow:0 0 6px #8a5cff, 0 0 18px #3d5cff; }
+:root[data-skin='laserharp'] .btn.primary, :root[data-skin='laserharp'] .tbtn.play { background:linear-gradient(180deg,#e05cff,#8a5cff 50%,#3d5cff); color:#fff; box-shadow:0 0 18px rgb(138 92 255 / 0.55); }
+:root[data-skin='laserharp'] .chip.on { background:#e05cff; color:#07041a; } :root[data-skin='laserharp'] .tabs button.on { border-bottom-color:#8a5cff; text-shadow:0 0 10px rgb(138 92 255 / 0.7); }
+:root[data-skin='laserharp'] .lcd { box-shadow:inset 0 0 16px rgb(0 0 0 / 0.9), 0 0 16px rgb(138 92 255 / 0.18); }
+/* Laser tag: blacklit arena, team orange versus team cyan */
+:root[data-skin='lasertag'] { --bg:#0a0a0f; --bg-2:#06060a; --panel:#14141d; --panel-2:#1d1d2a; --line:#30304a; --text:#f4f4ff; --muted:#a3a3c2; --accent:#ff7b00; --accent-ink:#140800; --lcd-bg:#050508; --lcd-text:#00f0ff; --lcd-dim:#08343a; --viz-low:#00f0ff; --viz-mid:#7b61ff; --viz-high:#ff7b00; --viz-peak:#fff35c; --radius:14px; --radius-lg:20px; --bevel:none; --bevel-in:inset 0 0 0 1px #30304a; color-scheme:dark; }
+:root[data-skin='lasertag'] body { background: radial-gradient(600px 300px at 0% 0%, rgb(255 123 0 / 0.12), transparent 70%), radial-gradient(600px 300px at 100% 100%, rgb(0 240 255 / 0.12), transparent 70%), #0a0a0f; }
+:root[data-skin='lasertag'] .brand { color:#ff7b00; text-shadow:0 0 10px rgb(255 123 0 / 0.6), 3px 3px 0 #00f0ff; font-style:italic; }
+:root[data-skin='lasertag'] .btn.primary, :root[data-skin='lasertag'] .tbtn.play { background:#ff7b00; color:#140800; box-shadow:0 0 16px rgb(255 123 0 / 0.5); }
+:root[data-skin='lasertag'] .chip.on { background:#00f0ff; color:#0a0a0f; } :root[data-skin='lasertag'] .tabs button.on { border-bottom-color:#00f0ff; text-shadow:0 0 10px rgb(0 240 255 / 0.6); }
+:root[data-skin='lasertag'] .nav.on svg { color:#00f0ff; filter:drop-shadow(0 0 6px rgb(0 240 255 / 0.7)); }
+
+.skin-card.lasershow .skin-preview { background:conic-gradient(from 210deg at 50% 120%,transparent 0deg,rgb(43 255 136 / 0.3) 8deg,transparent 16deg,transparent 40deg,rgb(43 107 255 / 0.3) 48deg,transparent 56deg,transparent 80deg,rgb(255 43 214 / 0.3) 88deg,transparent 96deg),#05030c; } .skin-card.lasershow .skin-preview span { flex:1; background:linear-gradient(to top,#2b6bff,#2bff88 55%,#ff2bd6); box-shadow:0 0 10px rgb(43 255 136 / 0.5); }
+.skin-card.laserred .skin-preview { background:repeating-linear-gradient(-35deg,transparent 0 18px,rgb(255 31 61 / 0.25) 18px 19px),#070203; border:1px solid #ff1f3d; border-radius:2px; } .skin-card.laserred .skin-preview span { flex:1; background:transparent; box-shadow:inset 0 0 0 2px #ff1f3d, 0 0 8px rgb(255 31 61 / 0.75); }
+.skin-card.lasergreen .skin-preview { background:linear-gradient(170deg,transparent 40%,rgb(57 255 106 / 0.35) 45%,transparent 50%),#020704; } .skin-card.lasergreen .skin-preview span { flex:1; background:linear-gradient(to top,#0f9c3a,#39ff6a 60%,#d4ff3a); box-shadow:0 0 10px rgb(57 255 106 / 0.6); }
+.skin-card.laserharp .skin-preview { background:repeating-linear-gradient(90deg,transparent 0 10px,rgb(138 92 255 / 0.3) 10px 11px),#07041a; } .skin-card.laserharp .skin-preview span { flex:1; background:linear-gradient(to top,#3d5cff,#8a5cff,#e05cff); border-radius:6px 6px 0 0; box-shadow:0 0 10px rgb(138 92 255 / 0.6); }
+.skin-card.lasertag .skin-preview { background:linear-gradient(135deg,rgb(255 123 0 / 0.25),#0a0a0f 45%,#0a0a0f 55%,rgb(0 240 255 / 0.25)); } .skin-card.lasertag .skin-preview span { flex:1; background:linear-gradient(to top,#00f0ff,#7b61ff,#ff7b00); border-radius:8px 8px 0 0; }
+
+/* ============ Nuclear skins (Settings → Themes → Nuclear) ============ */
+/* Reactor core: Cherenkov blue glowing up through the cooling pool */
+:root[data-skin='reactor'] { --bg:#020814; --bg-2:#01050d; --panel:#071426; --panel-2:#0c1f38; --line:#163a63; --text:#e6f6ff; --muted:#86aac8; --accent:#2ec4ff; --accent-ink:#00121c; --lcd-bg:#00040a; --lcd-text:#5cd6ff; --lcd-dim:#0a2e45; --viz-low:#1a5cff; --viz-mid:#2ec4ff; --viz-high:#a8f0ff; --viz-peak:#ffffff; --radius:8px; --radius-lg:14px; --bevel:none; --bevel-in:inset 0 0 0 1px #163a63; color-scheme:dark; }
+:root[data-skin='reactor'] body { background: radial-gradient(900px 520px at 50% 115%, rgb(46 196 255 / 0.25), transparent 70%), radial-gradient(500px 260px at 50% 110%, rgb(168 240 255 / 0.15), transparent 70%), #020814; }
+:root[data-skin='reactor'] .brand { color:#a8f0ff; text-shadow:0 0 6px #2ec4ff, 0 0 20px #1a5cff; }
+:root[data-skin='reactor'] .btn.primary, :root[data-skin='reactor'] .tbtn.play { background:radial-gradient(circle at 50% 70%,#a8f0ff,#2ec4ff 55%,#1a5cff); color:#00121c; box-shadow:0 0 20px rgb(46 196 255 / 0.6); }
+:root[data-skin='reactor'] .chip.on { background:#2ec4ff; color:#020814; } :root[data-skin='reactor'] .tabs button.on { border-bottom-color:#2ec4ff; text-shadow:0 0 10px rgb(46 196 255 / 0.7); }
+:root[data-skin='reactor'] .nav.on svg { color:#5cd6ff; filter:drop-shadow(0 0 6px rgb(46 196 255 / 0.8)); }
+:root[data-skin='reactor'] .lcd { box-shadow:inset 0 0 16px rgb(0 0 0 / 0.9), 0 0 18px rgb(46 196 255 / 0.18); }
+/* Meltdown: a molten core, white-hot through orange to scorched red */
+:root[data-skin='meltdown'] { --bg:#0f0504; --bg-2:#0a0302; --panel:#1c0a07; --panel-2:#2a110b; --line:#4d1e12; --text:#fff1e6; --muted:#d0a28c; --accent:#ff5a1f; --accent-ink:#1a0600; --lcd-bg:#070201; --lcd-text:#ffb347; --lcd-dim:#3d1a08; --viz-low:#b3150b; --viz-mid:#ff5a1f; --viz-high:#ffb347; --viz-peak:#fff6d6; --radius:6px; --radius-lg:10px; --bevel:none; --bevel-in:inset 0 0 0 1px #4d1e12; color-scheme:dark; }
+:root[data-skin='meltdown'] body { background: radial-gradient(800px 420px at 50% 120%, rgb(255 90 31 / 0.30), transparent 70%), radial-gradient(400px 200px at 50% 110%, rgb(255 179 71 / 0.20), transparent 70%), #0f0504; }
+:root[data-skin='meltdown'] .brand { background:linear-gradient(0deg,#b3150b,#ff5a1f 45%,#fff6d6); -webkit-background-clip:text; background-clip:text; color:transparent; }
+:root[data-skin='meltdown'] .btn.primary, :root[data-skin='meltdown'] .tbtn.play { background:linear-gradient(0deg,#b3150b,#ff5a1f 60%,#ffb347); color:#fff; box-shadow:0 0 18px rgb(255 90 31 / 0.55); }
+:root[data-skin='meltdown'] .chip.on { background:#ffb347; color:#0f0504; } :root[data-skin='meltdown'] .tabs button.on { border-bottom-color:#ff5a1f; text-shadow:0 0 10px rgb(255 90 31 / 0.6); }
+:root[data-skin='meltdown'] .progress i { background:linear-gradient(90deg,#b3150b,#ff5a1f,#fff6d6); }
+/* Radiation hazard: trefoil yellow on black with warning-tape stripes */
+:root[data-skin='hazard'] { --bg:#0b0b08; --bg-2:#070705; --panel:#16160f; --panel-2:#202016; --line:#3d3a1a; --text:#fffbe0; --muted:#c2bb8a; --accent:#ffd600; --accent-ink:#0b0b08; --lcd-bg:#050503; --lcd-text:#ffd600; --lcd-dim:#3a3305; --viz-low:#c79a00; --viz-mid:#ffd600; --viz-high:#ff3b1f; --viz-peak:#ffffff; --radius:2px; --radius-lg:4px; --bevel:none; --bevel-in:inset 0 0 0 1px #3d3a1a; color-scheme:dark; }
+:root[data-skin='hazard'] .brand { color:#ffd600; letter-spacing:3px; text-transform:uppercase; font-weight:900; }
+:root[data-skin='hazard'] .deck { border-top:6px solid transparent; border-image:repeating-linear-gradient(-45deg,#ffd600 0 12px,#0b0b08 12px 24px) 6; }
+:root[data-skin='hazard'] .btn.primary, :root[data-skin='hazard'] .tbtn.play { background:#ffd600; color:#0b0b08; font-weight:800; box-shadow:0 0 0 2px #0b0b08, 0 0 0 4px #ffd600; }
+:root[data-skin='hazard'] .chip.on { background:#ffd600; color:#0b0b08; } :root[data-skin='hazard'] .tabs button.on { border-bottom-color:#ffd600; }
+:root[data-skin='hazard'] .nav.on svg { color:#ffd600; }
+/* Fallout shelter: olive drab, civil-defence yellow and rust, with a green Geiger readout */
+:root[data-skin='fallout'] { --bg:#15170f; --bg-2:#0f110a; --panel:#1f2216; --panel-2:#2a2e1e; --line:#43482e; --text:#ecebd6; --muted:#a8a888; --accent:#e8b923; --accent-ink:#15170f; --lcd-bg:#0a0d06; --lcd-text:#8cff5a; --lcd-dim:#1e3510; --viz-low:#6b7d3a; --viz-mid:#e8b923; --viz-high:#c2551f; --viz-peak:#ecebd6; --radius:3px; --radius-lg:6px; --bevel:inset 1px 1px 0 rgb(255 255 255 / 0.06), inset -1px -1px 0 rgb(0 0 0 / 0.4); --bevel-in:inset 1px 1px 0 rgb(0 0 0 / 0.5), inset -1px -1px 0 rgb(255 255 255 / 0.05); color-scheme:dark; }
+:root[data-skin='fallout'] body { background: radial-gradient(1000px 500px at 50% -20%, rgb(232 185 35 / 0.08), transparent 70%), #15170f; }
+:root[data-skin='fallout'] .brand { color:#e8b923; letter-spacing:2px; text-transform:uppercase; text-shadow:2px 2px 0 #0f110a; }
+:root[data-skin='fallout'] .btn.primary, :root[data-skin='fallout'] .tbtn.play { background:#e8b923; color:#15170f; font-weight:700; }
+:root[data-skin='fallout'] .chip.on { background:#c2551f; color:#ecebd6; } :root[data-skin='fallout'] .tabs button.on { border-bottom-color:#e8b923; }
+:root[data-skin='fallout'] .lcd { box-shadow:inset 0 0 18px rgb(0 0 0 / 0.9), 0 0 12px rgb(140 255 90 / 0.12); text-shadow:0 0 6px rgb(140 255 90 / 0.6); }
+/* Uranium glass: vaseline-glass green fluorescing under UV */
+:root[data-skin='uranium'] { --bg:#060a03; --bg-2:#040702; --panel:#0d1607; --panel-2:#14210b; --line:#2a4514; --text:#f1ffe4; --muted:#a6c48a; --accent:#a6ff00; --accent-ink:#081000; --lcd-bg:#030501; --lcd-text:#c8ff4d; --lcd-dim:#29400a; --viz-low:#3d9c00; --viz-mid:#a6ff00; --viz-high:#e6ff8a; --viz-peak:#ffffff; --radius:16px; --radius-lg:24px; --bevel:none; --bevel-in:inset 0 0 0 1px #2a4514; color-scheme:dark; }
+:root[data-skin='uranium'] body { background: radial-gradient(700px 400px at 80% -10%, rgb(166 255 0 / 0.16), transparent 70%), radial-gradient(600px 360px at 10% 110%, rgb(120 60 255 / 0.12), transparent 70%), #060a03; }
+:root[data-skin='uranium'] .brand { color:#c8ff4d; text-shadow:0 0 8px rgb(166 255 0 / 0.9), 0 0 24px rgb(166 255 0 / 0.45); }
+:root[data-skin='uranium'] .card, :root[data-skin='uranium'] .deck { box-shadow:0 0 0 1px rgb(166 255 0 / 0.18), 0 0 18px rgb(166 255 0 / 0.07); }
+:root[data-skin='uranium'] .btn.primary, :root[data-skin='uranium'] .tbtn.play { background:radial-gradient(circle at 35% 30%,#e6ff8a,#a6ff00 60%,#3d9c00); color:#081000; box-shadow:0 0 20px rgb(166 255 0 / 0.55); }
+:root[data-skin='uranium'] .chip.on { background:#a6ff00; color:#060a03; } :root[data-skin='uranium'] .tabs button.on { border-bottom-color:#a6ff00; text-shadow:0 0 10px rgb(166 255 0 / 0.7); }
+
+.skin-card.reactor .skin-preview { background:radial-gradient(circle at 50% 120%,#2ec4ff,#0c1f38 55%,#020814); } .skin-card.reactor .skin-preview span { flex:1; background:linear-gradient(to top,#1a5cff,#2ec4ff 55%,#a8f0ff); border-radius:4px 4px 0 0; box-shadow:0 0 10px rgb(46 196 255 / 0.65); }
+.skin-card.meltdown .skin-preview { background:radial-gradient(circle at 50% 120%,#ff5a1f,#2a110b 60%,#0f0504); } .skin-card.meltdown .skin-preview span { flex:1; background:linear-gradient(to top,#b3150b,#ff5a1f 55%,#fff6d6); box-shadow:0 0 10px rgb(255 90 31 / 0.6); }
+.skin-card.hazard .skin-preview { background:repeating-linear-gradient(-45deg,#ffd600 0 8px,#0b0b08 8px 16px); border-radius:2px; } .skin-card.hazard .skin-preview span { flex:1; background:#0b0b08; box-shadow:inset 0 0 0 2px #ffd600; }
+.skin-card.fallout .skin-preview { background:#1f2216; border:2px solid #43482e; border-radius:3px; } .skin-card.fallout .skin-preview span { flex:1; background:linear-gradient(to top,#6b7d3a,#e8b923 60%,#c2551f); }
+.skin-card.uranium .skin-preview { background:radial-gradient(circle at 70% 0%,#2a4514,#060a03 70%); } .skin-card.uranium .skin-preview span { flex:1; background:linear-gradient(to top,#3d9c00,#a6ff00 60%,#e6ff8a); border-radius:10px 10px 0 0; box-shadow:0 0 12px rgb(166 255 0 / 0.6); }
+
 /* ============ Settings → Themes ============ */
 .skin-group { margin-top: 18px; }
 .skin-group h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
