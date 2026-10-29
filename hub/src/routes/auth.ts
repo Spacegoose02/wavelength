@@ -87,7 +87,7 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
   app.post('/setup', async (req, reply) => {
     try {
       await setup(req.body, clientIp(req));
-      return html(reply, message('Ready', 'Your admin account is ready. Sign in from the Wavelength app: Settings → Wavelength Hub.'));
+      return html(reply, message('Ready', 'Your admin account is ready. Sign in from the Wavelength app: Settings → Account.'));
     } catch (e) {
       if (e instanceof HttpError && e.statusCode === 409) return reply.redirect('/link');
       if (e instanceof HttpError) return html(reply, setupPage(e.message), e.statusCode);
