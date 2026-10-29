@@ -228,8 +228,8 @@ Every skin works on Windows, Android phones and tablets, and Android TV.
 
 <img src="screenshots/themes.png" alt="Settings, Themes tab: Seasonal and Random daily switches, a search box, and the Holidays group with Halloween marked in season" width="80%">
 
-- **Groups.** Skins are grouped as Classic, Retro, Neon, Editor palettes, Holidays and Accessibility.
-- **Search.** Type in the box to filter by name or group (for example "neon" or "light").
+- **Groups.** Skins are grouped as Classic, Retro, Neon, Lasers, Nuclear, Editor palettes, Holidays and Accessibility.
+- **Search.** Type in the box to filter by name or group (for example "neon", "laser", "nuclear" or "light").
 - **Live preview.** Point at a card (or move to it with the D-pad on TV) and the whole app shows that skin
   until you move away. Tap it to keep it.
 - **Seasonal.** In the weeks around each holiday, the app switches to that holiday's skin by itself, then
@@ -262,6 +262,30 @@ Synthwave sunset and Cyberpunk:
 | **Miami nights** | Flamingo pink and teal neon-sign glow on deep purple. |
 | **Blacklight UV** | Deep violet with highlighter yellow and pink, like a blacklight poster. |
 | **Electric** | Arc-welder blue and violet with a white-hot glow. |
+
+<img src="screenshots/nuclear-laser-skins.png" alt="Settings, Themes tab: the Lasers and Nuclear groups, Uranium glass selected" width="80%">
+
+**Laser skins.** Under **Lasers**, next to Laser grid:
+
+| Skin | Look |
+| --- | --- |
+| **Laser show** | Blue, green and magenta beams fanning up through haze; rainbow buttons and progress bar. |
+| **Red laser** | Crimson outlines and diagonal beams on black, square corners, like targeting sights. |
+| **Green laser** | A green beam cutting through fog, with lime highlights. |
+| **Laser harp** | Vertical violet and blue light strings over deep indigo, rounded and soft. |
+| **Laser tag** | A blacklit arena: team orange against team cyan. |
+
+**Nuclear skins.** Under **Nuclear**:
+
+| Skin | Look |
+| --- | --- |
+| **Reactor core** | Cherenkov blue glowing up from the bottom of the screen, like a cooling pool. |
+| **Meltdown** | A molten core: white-hot through orange to scorched red. |
+| **Radiation hazard** | Warning yellow on black, square and bold, with hazard-tape stripes on the player bar. |
+| **Fallout shelter** | Olive drab, civil-defence yellow and rust, with a green Geiger-counter LCD. |
+| **Uranium glass** | Vaseline-glass green fluorescing under UV, with big round corners. |
+
+All ten are part of the **Random daily** rotation. They aren't holiday skins, so **Seasonal** never picks them.
 
 **Other skins worth knowing.** **OLED black** uses true black so OLED phone screens switch those pixels off,
 which saves battery. **High contrast** is yellow on black with thick outlines and strong focus rings, for low

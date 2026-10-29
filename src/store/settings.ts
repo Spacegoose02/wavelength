@@ -8,13 +8,15 @@ export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
   | 'dracula' | 'monokai' | 'solarized' | 'solarizedlight' | 'oled' | 'contrast' | 'sakura' | 'cyberpunk'
   | 'outrun' | 'lasergrid' | 'acid' | 'miami' | 'blacklight' | 'electric'
+  | 'lasershow' | 'laserred' | 'lasergreen' | 'laserharp' | 'lasertag'
+  | 'reactor' | 'meltdown' | 'hazard' | 'fallout' | 'uranium'
   | 'halloween' | 'thanksgiving' | 'christmas' | 'july4' | 'valentine';
 
 /** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
 export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' | 'raccoon';
 
 /** Headings in Settings → Themes, in display order. */
-export const SKIN_GROUPS = ['Classic', 'Retro', 'Neon', 'Editor palettes', 'Holidays', 'Accessibility'] as const;
+export const SKIN_GROUPS = ['Classic', 'Retro', 'Neon', 'Lasers', 'Nuclear', 'Editor palettes', 'Holidays', 'Accessibility'] as const;
 export type SkinGroup = (typeof SKIN_GROUPS)[number];
 
 export const SKINS: { id: Skin; label: string; group: SkinGroup }[] = [
@@ -50,11 +52,21 @@ export const SKINS: { id: Skin; label: string; group: SkinGroup }[] = [
   { id: 'sakura', label: 'Sakura (light)', group: 'Classic' },
   { id: 'cyberpunk', label: 'Cyberpunk', group: 'Neon' },
   { id: 'outrun', label: 'Outrun (neon)', group: 'Neon' },
-  { id: 'lasergrid', label: 'Laser grid (neon)', group: 'Neon' },
   { id: 'acid', label: 'Acid rave (neon)', group: 'Neon' },
   { id: 'miami', label: 'Miami nights (neon)', group: 'Neon' },
   { id: 'blacklight', label: 'Blacklight UV (neon)', group: 'Neon' },
   { id: 'electric', label: 'Electric (neon)', group: 'Neon' },
+  { id: 'lasergrid', label: 'Laser grid (neon)', group: 'Lasers' },
+  { id: 'lasershow', label: 'Laser show', group: 'Lasers' },
+  { id: 'laserred', label: 'Red laser', group: 'Lasers' },
+  { id: 'lasergreen', label: 'Green laser', group: 'Lasers' },
+  { id: 'laserharp', label: 'Laser harp', group: 'Lasers' },
+  { id: 'lasertag', label: 'Laser tag', group: 'Lasers' },
+  { id: 'reactor', label: 'Reactor core', group: 'Nuclear' },
+  { id: 'meltdown', label: 'Meltdown', group: 'Nuclear' },
+  { id: 'hazard', label: 'Radiation hazard', group: 'Nuclear' },
+  { id: 'fallout', label: 'Fallout shelter', group: 'Nuclear' },
+  { id: 'uranium', label: 'Uranium glass', group: 'Nuclear' },
   { id: 'halloween', label: 'Halloween', group: 'Holidays' },
   { id: 'thanksgiving', label: 'Thanksgiving', group: 'Holidays' },
   { id: 'christmas', label: 'Christmas', group: 'Holidays' },

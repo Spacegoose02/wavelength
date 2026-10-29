@@ -3,11 +3,17 @@
 ## Unreleased
 - **Settings has tabs**: Sources, Playback, Downloads, Themes and Discover. **Edit charts** on Discover and
   the Settings link in Downloads open the right tab.
-- **Themes tab**: skins grouped (Classic, Retro, Neon, Editor palettes, Holidays, Accessibility), a search box,
+- **Themes tab**: skins grouped (Classic, Retro, Neon, Lasers, Nuclear, Editor palettes, Holidays, Accessibility), a search box,
   and a live preview: point at (or D-pad to) a card and the whole app shows it until you move away.
   **Random daily** picks a different skin every day. See the [user guide](docs/USER-GUIDE.md#skins-and-themes).
 - **5 holiday skins**: Halloween, Thanksgiving, Christmas, July 4th and Valentine's Day (light). **Seasonal**
   mode switches to each one in the weeks around the holiday and back to your pick afterwards.
+- **5 nuclear skins** (Themes → Nuclear): Reactor core (Cherenkov blue), Meltdown (molten orange), Radiation
+  hazard (warning yellow and hazard tape), Fallout shelter (olive drab with a Geiger-green LCD) and Uranium glass
+  (UV-green glow). See the [user guide](docs/USER-GUIDE.md#skins-and-themes).
+- **5 more laser skins** (Themes → Lasers, which Laser grid has moved into): Laser show (RGB beams), Red laser,
+  Green laser, Laser harp (violet light strings) and Laser tag (orange vs. cyan). All ten new skins are in the
+  Random daily rotation.
 - **DJ raccoon** visualizer in Now Playing: he wears your skin's colours (and a hat on holiday skins), bobs on
   the beat, scratches on sharp hits and yawns when paused. See the [user guide](docs/USER-GUIDE.md#dj-raccoon).
 - **Edit your radio stations**: Radio → Your stations → **Edit** to reorder (arrows or drag), hide stations on
