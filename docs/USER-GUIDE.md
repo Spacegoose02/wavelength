@@ -403,6 +403,14 @@ for kids are left out.
 > YouTube goes through the Hub's `POST /api/import/youtube`; Spotify's embed page and Deezer's API go through
 > `/api/fetch` in a browser.
 
+## Control your other devices
+
+Signed in to a Hub, the **Devices** button in the player (and on Now Playing) lists your other devices that
+have Wavelength open: what each is playing, with play/pause, next, previous and volume for it. **Continue
+there** moves what you're playing to that device, picking up at the same spot, and pauses it here; **Play
+here** does the opposite. Only your own devices show up. To keep a device out of the list, turn off
+**Settings → Account → Let my other devices see and control this one** on it.
+
 ## Rewind
 
 **History → Rewind** (with a Hub) is your year in music, or any month of it: minutes listened, plays, top

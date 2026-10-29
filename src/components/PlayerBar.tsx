@@ -2,6 +2,7 @@ import { trackArt, useArtworkList } from '../lib/artwork';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
 import { Cover, fmtTime } from './common';
+import { DevicesButton } from './Devices';
 import { EqButton } from './Equalizer';
 import { IconNext, IconPause, IconPlay, IconPrev, IconQueue, IconRepeat, IconShuffle, IconVolume } from './Icons';
 import { Visualizer } from './Visualizer';
@@ -61,6 +62,7 @@ export function PlayerBar() {
       </div>
 
       <div className="deck-right">
+        <DevicesButton />
         <EqButton />
         <button className={`tbtn small ${ui.queueOpen ? 'on' : ''}`} onClick={ui.toggleQueue} title="Queue"><IconQueue /></button>
         <IconVolume className="vol-icon" />

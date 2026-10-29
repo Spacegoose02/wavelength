@@ -84,7 +84,7 @@ function switchOwner() {
 }
 
 /** What goes to the Hub: Navidrome stream and cover links carry this device's login, so they're rebuilt. */
-function forHub(t: Track): Track {
+export function forHub(t: Track): Track {
   const cfg = useSettings.getState().sources.find((s) => s.id === t.sourceId);
   if (cfg?.kind !== 'navidrome' || t.kind !== 'track') return t;
   const { streamUrl: _s, coverUrl: _c, ...rest } = t;

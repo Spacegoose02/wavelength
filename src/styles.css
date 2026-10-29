@@ -1653,3 +1653,10 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .rewind-bars > div { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; min-width: 0; }
 .rewind-bars span { display: block; min-height: 2px; border-radius: 4px 4px 0 0; background: linear-gradient(var(--accent), var(--accent-2, var(--accent))); }
 .rewind-bars small { font-size: 10px; color: var(--muted); text-align: center; height: 14px; white-space: nowrap; overflow: visible; }
+
+/* ---- Devices: remote control and handoff (components/Devices.tsx) ---- */
+.eq-pop.devices-pop { width: min(420px, calc(100vw - 32px)); max-height: 70vh; overflow-y: auto; }
+.devices h3 { margin: 0 0 10px; }
+.device-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
+.device-now { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.device-row .vol { width: 90px; }
