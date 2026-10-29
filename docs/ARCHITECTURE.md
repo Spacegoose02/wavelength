@@ -77,6 +77,7 @@ Small on purpose. The UI does almost everything; Rust only does what a WebView c
 | `lib.rs` | App builder: registers the http plugin, grants the asset-protocol scope for offline files at startup, registers commands. | — |
 | `ytdlp.rs` | Runs `yt-dlp` (search + download to a folder, progress events `ytdlp-progress`). Finds `yt-dlp.exe`/`ffmpeg` via winget's folders even when PATH is stale. Desktop only. | `ytdlp_version`, `ytdlp_search`, `ytdlp_download` |
 | `share.rs` | Logs into an SMB share (`\\server\share`) with `WNetAddConnection2W` so yt-dlp can write to a NAS; checks the folder is writable. Windows only (no-op elsewhere). | `connect_share` |
+| `update.rs` | In-app updates: lists GitHub releases, downloads a release file into `<app cache>/updates` (progress events `update-progress`), runs the Windows installer or swaps the portable exe. See [USER-GUIDE.md](USER-GUIDE.md#updates). | `update_target`, `update_releases`, `update_download`, `update_install` |
 | `offline.rs` | Downloads songs/covers into `<app data>/offline/…` for offline playback (temp `.part` file then rename). Deletes them. | `offline_save`, `offline_delete`, `offline_delete_file` |
 
 **Why `tauri-plugin-http`?** Self-hosted servers rarely send CORS headers, and chart sites never do.
@@ -154,12 +155,13 @@ Tauri generates this project once; we edit it by hand and commit it.
 
 | File | Why it's customised |
 |---|---|
-| `app/src/main/AndroidManifest.xml` | Permissions: `ACCESS_LOCAL_NETWORK` (Android 17+ LAN access), `FOREGROUND_SERVICE(_MEDIA_PLAYBACK)`, `POST_NOTIFICATIONS`. Android TV: `leanback`, touchscreen not required, `android:banner`. Registers `MediaPlaybackService` and `MediaButtonReceiver`. `usesCleartextTraffic` (via gradle placeholder) for `http://` LAN servers. |
-| `MainActivity.kt` | Edge-to-edge insets (status/nav bars, cutouts) so tablets and car head units don't hide UI; runtime permission requests; attaches `MediaBridge` in `onWebViewCreate`. |
+| `app/src/main/AndroidManifest.xml` | Permissions: `ACCESS_LOCAL_NETWORK` (Android 17+ LAN access), `FOREGROUND_SERVICE(_MEDIA_PLAYBACK)`, `POST_NOTIFICATIONS`, `REQUEST_INSTALL_PACKAGES` (in-app updates). Android TV: `leanback`, touchscreen not required, `android:banner`. Registers `MediaPlaybackService` and `MediaButtonReceiver`. `usesCleartextTraffic` (via gradle placeholder) for `http://` LAN servers. |
+| `MainActivity.kt` | Edge-to-edge insets (status/nav bars, cutouts) so tablets and car head units don't hide UI; runtime permission requests; attaches `MediaBridge` and `UpdateBridge` in `onWebViewCreate`. |
+| `UpdateBridge.kt` | In-app updates: `window.WavelengthUpdater.canInstall()` / `allowInstalls()` / `install(path)` hands a downloaded APK (in the cache folder) to the system installer via the `FileProvider`. |
 | `MediaBridge.kt` | A `MediaSessionCompat` mirroring the web player. JS → native: `window.WavelengthNative.update(json)`. Native → JS: `window.__wlMedia('next')`. Loads album art for the session/notification. |
 | `MediaPlaybackService.kt` | Foreground service type `mediaPlayback` with a MediaStyle notification — keeps audio alive with the screen off and makes Android treat Wavelength as *the* media app. |
 | `app/build.gradle.kts` | Release signing from `keystore.properties`; cleartext; `androidx.media` dependency. |
-| `app/proguard-wavelength.pro` | Keeps `MediaBridge$Js` methods (called from JavaScript) from being stripped by R8. |
+| `app/proguard-wavelength.pro` | Keeps `MediaBridge$Js` and `UpdateBridge$Js` methods (called from JavaScript) from being stripped by R8. |
 | `res/drawable-xhdpi/tv_banner.png`, `res/values/themes.xml` | TV launcher banner; dark system bars / no white flash. |
 
 ## 6. UI conventions

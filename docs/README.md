@@ -32,7 +32,7 @@ src/                React + TypeScript UI (Vite). Almost all features live here.
   components/       Shared UI (player bar, track list, buttons)
   lib/              http, matching, platform detection, TV remote, Android media bridge, seasonal themes
   styles.css        All styling + all 62 skins (CSS variables per [data-skin])
-src-tauri/          Rust shell (Tauri 2): http plugin, yt-dlp, SMB login, offline files
+src-tauri/          Rust shell (Tauri 2): http plugin, yt-dlp, SMB login, offline files, in-app updates
 hub/                Wavelength Hub (Node + SQLite, Docker): accounts, roles, sign-in, admin-only API
   gen/android/      The Android project (Kotlin): media session, playback service, TV, permissions
 docs/               You are here. brand/ = logo & banners, screenshots/ = README and user-guide images

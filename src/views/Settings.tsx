@@ -12,6 +12,7 @@ import { useUi, type SettingsTab } from '../store/ui';
 import { hubClient, useCan, useHub } from '../store/hub';
 import { deemixClient, hubKeeps, loadHubServices, saveDownloaderToHub, saveSourceToHub, useHubRuns } from '../lib/hubServices';
 import { AccountTab, HubAccess, UsersTab } from './HubSettings';
+import { UpdatesTab } from '../components/Updates';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
 
@@ -494,6 +495,7 @@ const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
   { id: 'downloads', label: 'Downloads' },
   { id: 'themes', label: 'Themes' },
   { id: 'discover', label: 'Discover' },
+  { id: 'updates', label: 'Updates' },
 ];
 
 export function Settings({ tab: initial }: { tab?: SettingsTab }) {
@@ -529,6 +531,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'downloads' && <DownloadsTab />}
       {tab === 'themes' && <ThemesTab />}
       {tab === 'discover' && <DiscoverCharts />}
+      {tab === 'updates' && <UpdatesTab />}
     </div>
   );
 }

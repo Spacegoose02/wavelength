@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+- **In-app updates (Windows and Android).** Wavelength checks GitHub for a newer release on launch and every
+  6 hours, shows a banner, and lists it in the new **Settings → Updates** tab with the release notes.
+  **Install update** downloads the right file and installs it: on Windows the setup exe runs with a progress bar
+  and reopens Wavelength (the portable `Wavelength.exe` is swapped in place); on Android the APK goes to the
+  system installer (allow **Install unknown apps** for Wavelength the first time). **Include pre-releases** is
+  off by default. The first version with this has to be installed by hand; updates after it don't. See the
+  [user guide](docs/USER-GUIDE.md#updates).
+
 ## 0.10.0
 - **Three more raccoons** in Now Playing: a **country** raccoon (cowboy hat, acoustic guitar, taps his boot),
   a **rapper** raccoon (cap, shades, gold chain, raps into the mic while the speakers pump) and a **rocker**

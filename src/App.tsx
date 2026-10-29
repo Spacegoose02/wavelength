@@ -26,6 +26,8 @@ import { Books } from './views/Books';
 import { Downloads } from './views/Downloads';
 import { Settings } from './views/Settings';
 import { activeSkin } from './lib/seasons';
+import { startUpdateChecks } from './lib/updates';
+import { UpdateBanner } from './components/Updates';
 
 const NAV: { view: Route['view']; label: string; icon: ReactNode }[] = [
   { view: 'home', label: 'Home', icon: <IconHome /> },
@@ -120,6 +122,7 @@ export default function App() {
   useEffect(() => {
     useCatalog.getState().load();
     startHubSync();
+    startUpdateChecks();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back
@@ -168,6 +171,7 @@ export default function App() {
         </nav>
       )}
       <main className="main">
+        <UpdateBanner />
         {history.length > 0 && (!phone || !tabRoot) && <button className="back" onClick={() => window.history.back()} title="Back (Alt+←)"><IconBack /></button>}
         <ErrorBoundary key={JSON.stringify(route).slice(0, 200)} onReset={() => go({ view: 'home' })}>
           <View route={route} />
