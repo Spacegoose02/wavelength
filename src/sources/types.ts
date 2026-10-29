@@ -15,6 +15,8 @@ export interface SourceConfig {
   enabled: boolean;
   /** Set when the login is kept by the signed-in Wavelength Hub (lib/hubServices.ts), not on this device. */
   hubId?: number;
+  /** SUB/WAVE kept on the Hub: admin controls go through the Hub, which holds the admin login. */
+  hubAdmin?: boolean;
 }
 
 export type TrackKind = 'track' | 'radio' | 'book' | 'episode';

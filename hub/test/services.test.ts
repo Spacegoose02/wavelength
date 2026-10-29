@@ -23,7 +23,7 @@ async function withServices() {
 }
 
 const mine = async (app: Parameters<typeof json>[0], token: string) =>
-  (await json(app, 'GET', '/api/me/services', { token })).body.services as { kind: string; url: string; secrets: Record<string, string>; ownLogin: boolean; config: Record<string, unknown> }[];
+  (await json(app, 'GET', '/api/me/services', { token })).body.services as { kind: string; url: string; secrets: Record<string, string>; ownLogin: boolean; hubAdmin?: boolean; config: Record<string, unknown> }[];
 
 test('admins see which secrets are set, never their values', async () => {
   const { app, tokens, plex } = await withServices();
@@ -47,8 +47,10 @@ test('each person gets only the servers and logins they may use', async () => {
   const { app, tokens } = await withServices();
   const admin = await mine(app, tokens.admin);
   assert.deepEqual(admin.map((s) => s.kind).sort(), ['audiobookshelf', 'deemix', 'plex', 'subwave']);
-  assert.equal(admin.find((s) => s.kind === 'deemix')!.secrets.arl, ARL);
-  assert.equal(admin.find((s) => s.kind === 'subwave')!.secrets.password, SW_PASS);
+  // admin and download logins never leave the Hub, not even to admins: the Hub makes those calls
+  assert.ok(!JSON.stringify(admin).includes(ARL), 'no device gets the ARL');
+  assert.ok(!JSON.stringify(admin).includes(SW_PASS), 'no device gets the SUB/WAVE admin password');
+  assert.equal(admin.find((s) => s.kind === 'subwave')!.hubAdmin, true, 'admins get SUB/WAVE admin through the Hub');
 
   const member = await mine(app, tokens.member);
   assert.deepEqual(member.map((s) => s.kind).sort(), ['plex', 'subwave'], 'no deemix without Autodownload, no chosen-only ABS');
@@ -56,6 +58,7 @@ test('each person gets only the servers and logins they may use', async () => {
   assert.equal(sw.secrets.password, undefined, 'SUB/WAVE admin login stays with admins');
   assert.equal(sw.secrets.username, undefined);
   assert.equal(sw.config.apiUrl, 'http://sw:7701');
+  assert.equal(sw.hubAdmin, false);
   assert.ok(!JSON.stringify(member).includes(ARL));
   assert.ok(!JSON.stringify(await mine(app, tokens.kid)).includes(SW_PASS));
 });
@@ -98,7 +101,7 @@ test('editing keeps secrets that were left out and clears ones set to empty', as
   const r = await json(app, 'PATCH', `/api/admin/services/${sw.id}`, { token: tokens.admin, body: { name: 'SUB/WAVE', secrets: { username: '' } } });
   assert.deepEqual(r.body.service.secretsSet, ['password']);
   assert.equal(r.body.service.name, 'SUB/WAVE');
-  assert.equal((await mine(app, tokens.admin)).find((s) => s.kind === 'subwave')!.secrets.password, SW_PASS);
+  assert.equal((await mine(app, tokens.admin)).find((s) => s.kind === 'subwave')!.hubAdmin, false, 'no admin login left, so no admin controls');
   const log = JSON.stringify((await json(app, 'GET', '/api/admin/audit', { token: tokens.admin })).body);
   assert.ok(log.includes('"changed":["name","username"]'));
 });
@@ -119,5 +122,5 @@ test('a changed secret key makes old logins unreadable instead of crashing', asy
   const list = await json(app, 'GET', '/api/admin/services', { token: tokens.admin });
   assert.equal(list.status, 200);
   assert.ok(list.body.services.every((s: { unreadable: boolean; secretsSet: string[] }) => s.unreadable && !s.secretsSet.length));
-  assert.equal((await mine(app, tokens.admin)).find((s) => s.kind === 'deemix')!.secrets.arl, undefined);
+  assert.equal((await mine(app, tokens.admin)).find((s) => s.kind === 'subwave')!.hubAdmin, false);
 });

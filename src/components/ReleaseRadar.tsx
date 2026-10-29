@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { deemixClient } from '../lib/hubServices';
 import { albumPreview, releaseRadar, type Release } from '../sources/releaseRadar';
-import { Deemix } from '../sources/deemix';
 import { norm } from '../sources/registry';
 import { useCatalog } from '../store/catalog';
 import { usePlayer } from '../store/player';
@@ -38,7 +38,7 @@ export function ReleaseRadar() {
   const get = async (r: Release) => {
     setStatus((s) => ({ ...s, [r.id]: '…' }));
     try {
-      await new Deemix(deemix.url, deemix.arl).addToQueue(r.deezerLink, deemix.bitrate);
+      await deemixClient().addToQueue(r.deezerLink, deemix.bitrate);
       setStatus((s) => ({ ...s, [r.id]: 'Queued' }));
     } catch (e) {
       setStatus((s) => ({ ...s, [r.id]: String((e as Error).message ?? e) }));

@@ -99,7 +99,7 @@ interface SettingsState {
   /** Radio → Your stations: `${sourceId}:${id}` keys in the order the user arranged them. Unknown ones go last. */
   stationOrder: string[];
   deemix: { url: string; arl: string; bitrate: number };
-  ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string };
+  ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string; /** Folder inside the Hub's music folder, when the Hub runs yt-dlp. */ hubFolder: string };
   /** Discover: which charts each genre uses. A genre that isn't listed uses the built-in defaults. */
   discoverCharts: Partial<Record<Genre, ChartSource[]>>;
   npScene: NpScene;
@@ -133,7 +133,7 @@ export const useSettings = create<SettingsState>()(
       hiddenStations: [],
       stationOrder: [],
       deemix: { url: 'http://localhost:6595', arl: '', bitrate: 9 },
-      ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '' },
+      ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '', hubFolder: 'yt-dlp' },
       discoverCharts: {},
       npScene: 'art',
       setNpScene: (npScene) => set({ npScene }),

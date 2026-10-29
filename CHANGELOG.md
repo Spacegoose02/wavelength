@@ -7,6 +7,10 @@
   their own Plex or Audiobookshelf login. Members and kids never get the SUB/WAVE admin login, and download
   logins only go to admins and people with Autodownload. Logins are encrypted on the Hub. Navidrome logins stay
   on each device. See [HUB.md](docs/HUB.md#server-logins).
+- **Admin logins stay on the Hub.** SUB/WAVE DJ controls, deemix and yt-dlp now go through the Hub, so no
+  device (admins' included) holds the SUB/WAVE admin login, the deemix ARL or a network-share login. The Hub
+  runs yt-dlp itself and saves straight into its music folder, so YouTube downloads work from phones and
+  Android TV too. Every download is in the Hub's activity log with who queued it.
 
 ## 0.9.0
 - **Settings has tabs**: Sources, Playback, Downloads, Themes and Discover. **Edit charts** on Discover and

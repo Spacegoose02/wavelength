@@ -7,8 +7,10 @@ import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { authRoutes } from './routes/auth.ts';
 import { meRoutes } from './routes/me.ts';
+import { proxyRoutes } from './routes/proxy.ts';
 import { serviceRoutes } from './routes/services.ts';
 import { getUser } from './users.ts';
+import { YtdlpRunner } from './ytdlp.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -21,6 +23,7 @@ export interface Ctx {
   db: Db;
   config: Config;
   limits: { login: RateLimiter; pairing: RateLimiter; poll: RateLimiter };
+  ytdlp: YtdlpRunner;
 }
 
 export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}): FastifyInstance {
@@ -33,6 +36,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
       pairing: new RateLimiter(30, 60_000), // per IP
       poll: new RateLimiter(120, 60_000), // per IP
     },
+    ytdlp: new YtdlpRunner(config.ytdlpBin, config.musicDir),
   };
 
   // HTML forms post url-encoded bodies
@@ -79,5 +83,6 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
   meRoutes(app, ctx);
   adminRoutes(app, ctx);
   serviceRoutes(app, ctx);
+  proxyRoutes(app, ctx);
   return app;
 }

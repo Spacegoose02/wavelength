@@ -13,6 +13,10 @@ export interface Config {
   /** 32 random bytes. Signs pairing forms and (through a derived key) encrypts stored server logins. */
   secretKey: Buffer;
   sso: SsoConfig;
+  /** The music library folder (mounted at /music in Docker). yt-dlp saves into it. Empty = not mounted. */
+  musicDir: string;
+  /** yt-dlp command; the Docker image ships it with ffmpeg. */
+  ytdlpBin: string;
 }
 
 export interface SsoConfig {
@@ -55,6 +59,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     publicUrl: (env.WAVELENGTH_PUBLIC_URL || `http://localhost:${env.PORT || 7780}`).replace(/\/+$/, ''),
     secretKey: loadSecretKey(env.WAVELENGTH_SECRET_KEY, dataDir),
     sso,
+    musicDir: (env.WAVELENGTH_MUSIC_DIR ?? '').replace(/\/+$/, ''),
+    ytdlpBin: env.WAVELENGTH_YTDLP || 'yt-dlp',
   };
 }
 
