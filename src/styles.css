@@ -1273,6 +1273,95 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .skin-card.fallout .skin-preview { background:#1f2216; border:2px solid #43482e; border-radius:3px; } .skin-card.fallout .skin-preview span { flex:1; background:linear-gradient(to top,#6b7d3a,#e8b923 60%,#c2551f); }
 .skin-card.uranium .skin-preview { background:radial-gradient(circle at 70% 0%,#2a4514,#060a03 70%); } .skin-card.uranium .skin-preview span { flex:1; background:linear-gradient(to top,#3d9c00,#a6ff00 60%,#e6ff8a); border-radius:10px 10px 0 0; box-shadow:0 0 12px rgb(166 255 0 / 0.6); }
 
+/* ============ More laser skins: Laser grid in other colours ============ */
+/* Laser grid magenta: hot magenta outlines on a black grid */
+:root[data-skin='gridmagenta'] { --bg:#030306; --bg-2:#010103; --panel:#14071a; --panel-2:#1f0c29; --line:#4a0f44; --text:#ffe6fa; --muted:#c48fbb; --accent:#ff2bd6; --accent-ink:#030306; --lcd-bg:#000000; --lcd-text:#ff2bd6; --lcd-dim:#3a0833; --viz-low:#9b1aff; --viz-mid:#ff2bd6; --viz-high:#00e5ff; --viz-peak:#ffffff; --radius:2px; --radius-lg:4px; --bevel:none; --bevel-in:inset 0 0 0 1px #4a0f44; color-scheme:dark; }
+:root[data-skin='gridmagenta'] body { background: repeating-linear-gradient(90deg, rgb(255 43 214 / 0.05) 0 1px, transparent 1px 40px), repeating-linear-gradient(0deg, rgb(255 43 214 / 0.05) 0 1px, transparent 1px 40px), #030306; }
+:root[data-skin='gridmagenta'] .brand { color:#ff2bd6; text-shadow:0 0 8px rgb(255 43 214 / 0.8); letter-spacing:2px; text-transform:uppercase; }
+:root[data-skin='gridmagenta'] .card, :root[data-skin='gridmagenta'] .deck { box-shadow:0 0 0 1px rgb(255 43 214 / 0.25), 0 0 14px rgb(255 43 214 / 0.08); }
+:root[data-skin='gridmagenta'] .btn.primary, :root[data-skin='gridmagenta'] .tbtn.play { background:transparent; color:#ff2bd6; box-shadow:inset 0 0 0 2px #ff2bd6, 0 0 14px rgb(255 43 214 / 0.5); }
+:root[data-skin='gridmagenta'] .nav.on svg { color:#ff2bd6; filter:drop-shadow(0 0 6px rgb(255 43 214 / 0.8)); }
+:root[data-skin='gridmagenta'] .chip.on { background:#00e5ff; color:#030306; } :root[data-skin='gridmagenta'] .tabs button.on { border-bottom-color:#ff2bd6; }
+/* Laser grid amber: amber outlines on a black grid */
+:root[data-skin='gridamber'] { --bg:#030306; --bg-2:#010103; --panel:#160f05; --panel-2:#22180a; --line:#4a3208; --text:#fff4dc; --muted:#c7a874; --accent:#ffb000; --accent-ink:#030306; --lcd-bg:#000000; --lcd-text:#ffb000; --lcd-dim:#3a2a06; --viz-low:#ff6a00; --viz-mid:#ffb000; --viz-high:#ff3b3b; --viz-peak:#ffffff; --radius:2px; --radius-lg:4px; --bevel:none; --bevel-in:inset 0 0 0 1px #4a3208; color-scheme:dark; }
+:root[data-skin='gridamber'] body { background: repeating-linear-gradient(90deg, rgb(255 176 0 / 0.05) 0 1px, transparent 1px 40px), repeating-linear-gradient(0deg, rgb(255 176 0 / 0.05) 0 1px, transparent 1px 40px), #030306; }
+:root[data-skin='gridamber'] .brand { color:#ffb000; text-shadow:0 0 8px rgb(255 176 0 / 0.8); letter-spacing:2px; text-transform:uppercase; }
+:root[data-skin='gridamber'] .card, :root[data-skin='gridamber'] .deck { box-shadow:0 0 0 1px rgb(255 176 0 / 0.25), 0 0 14px rgb(255 176 0 / 0.08); }
+:root[data-skin='gridamber'] .btn.primary, :root[data-skin='gridamber'] .tbtn.play { background:transparent; color:#ffb000; box-shadow:inset 0 0 0 2px #ffb000, 0 0 14px rgb(255 176 0 / 0.5); }
+:root[data-skin='gridamber'] .nav.on svg { color:#ffb000; filter:drop-shadow(0 0 6px rgb(255 176 0 / 0.8)); }
+:root[data-skin='gridamber'] .chip.on { background:#ff6a00; color:#030306; } :root[data-skin='gridamber'] .tabs button.on { border-bottom-color:#ffb000; }
+/* Laser grid green: phosphor green outlines on a black grid */
+:root[data-skin='gridgreen'] { --bg:#030306; --bg-2:#010103; --panel:#06150c; --panel-2:#0b2214; --line:#0f4a26; --text:#e3ffee; --muted:#8cc4a2; --accent:#2bff7a; --accent-ink:#030306; --lcd-bg:#000000; --lcd-text:#2bff7a; --lcd-dim:#083a1c; --viz-low:#0fa84a; --viz-mid:#2bff7a; --viz-high:#d4ff3a; --viz-peak:#ffffff; --radius:2px; --radius-lg:4px; --bevel:none; --bevel-in:inset 0 0 0 1px #0f4a26; color-scheme:dark; }
+:root[data-skin='gridgreen'] body { background: repeating-linear-gradient(90deg, rgb(43 255 122 / 0.05) 0 1px, transparent 1px 40px), repeating-linear-gradient(0deg, rgb(43 255 122 / 0.05) 0 1px, transparent 1px 40px), #030306; }
+:root[data-skin='gridgreen'] .brand { color:#2bff7a; text-shadow:0 0 8px rgb(43 255 122 / 0.8); letter-spacing:2px; text-transform:uppercase; }
+:root[data-skin='gridgreen'] .card, :root[data-skin='gridgreen'] .deck { box-shadow:0 0 0 1px rgb(43 255 122 / 0.25), 0 0 14px rgb(43 255 122 / 0.08); }
+:root[data-skin='gridgreen'] .btn.primary, :root[data-skin='gridgreen'] .tbtn.play { background:transparent; color:#2bff7a; box-shadow:inset 0 0 0 2px #2bff7a, 0 0 14px rgb(43 255 122 / 0.5); }
+:root[data-skin='gridgreen'] .nav.on svg { color:#2bff7a; filter:drop-shadow(0 0 6px rgb(43 255 122 / 0.8)); }
+:root[data-skin='gridgreen'] .chip.on { background:#d4ff3a; color:#030306; } :root[data-skin='gridgreen'] .tabs button.on { border-bottom-color:#2bff7a; }
+/* Laser grid violet: ultraviolet outlines on a black grid */
+:root[data-skin='gridviolet'] { --bg:#030306; --bg-2:#010103; --panel:#0e0820; --panel-2:#170e33; --line:#2f1a5c; --text:#f1e9ff; --muted:#a597cc; --accent:#a35cff; --accent-ink:#030306; --lcd-bg:#000000; --lcd-text:#a35cff; --lcd-dim:#24124a; --viz-low:#5c3dff; --viz-mid:#a35cff; --viz-high:#ff4fd8; --viz-peak:#ffffff; --radius:2px; --radius-lg:4px; --bevel:none; --bevel-in:inset 0 0 0 1px #2f1a5c; color-scheme:dark; }
+:root[data-skin='gridviolet'] body { background: repeating-linear-gradient(90deg, rgb(163 92 255 / 0.05) 0 1px, transparent 1px 40px), repeating-linear-gradient(0deg, rgb(163 92 255 / 0.05) 0 1px, transparent 1px 40px), #030306; }
+:root[data-skin='gridviolet'] .brand { color:#a35cff; text-shadow:0 0 8px rgb(163 92 255 / 0.8); letter-spacing:2px; text-transform:uppercase; }
+:root[data-skin='gridviolet'] .card, :root[data-skin='gridviolet'] .deck { box-shadow:0 0 0 1px rgb(163 92 255 / 0.25), 0 0 14px rgb(163 92 255 / 0.08); }
+:root[data-skin='gridviolet'] .btn.primary, :root[data-skin='gridviolet'] .tbtn.play { background:transparent; color:#a35cff; box-shadow:inset 0 0 0 2px #a35cff, 0 0 14px rgb(163 92 255 / 0.5); }
+:root[data-skin='gridviolet'] .nav.on svg { color:#a35cff; filter:drop-shadow(0 0 6px rgb(163 92 255 / 0.8)); }
+:root[data-skin='gridviolet'] .chip.on { background:#ff4fd8; color:#030306; } :root[data-skin='gridviolet'] .tabs button.on { border-bottom-color:#a35cff; }
+
+.skin-card.gridmagenta .skin-preview { background:repeating-linear-gradient(90deg,rgb(255 43 214 / 0.15) 0 1px,transparent 1px 12px),#030306; border:1px solid #ff2bd6; border-radius:2px; } .skin-card.gridmagenta .skin-preview span { flex:1; background:transparent; box-shadow:inset 0 0 0 2px #ff2bd6, 0 0 8px rgb(255 43 214 / 0.7); }
+.skin-card.gridamber .skin-preview { background:repeating-linear-gradient(90deg,rgb(255 176 0 / 0.15) 0 1px,transparent 1px 12px),#030306; border:1px solid #ffb000; border-radius:2px; } .skin-card.gridamber .skin-preview span { flex:1; background:transparent; box-shadow:inset 0 0 0 2px #ffb000, 0 0 8px rgb(255 176 0 / 0.7); }
+.skin-card.gridgreen .skin-preview { background:repeating-linear-gradient(90deg,rgb(43 255 122 / 0.15) 0 1px,transparent 1px 12px),#030306; border:1px solid #2bff7a; border-radius:2px; } .skin-card.gridgreen .skin-preview span { flex:1; background:transparent; box-shadow:inset 0 0 0 2px #2bff7a, 0 0 8px rgb(43 255 122 / 0.7); }
+.skin-card.gridviolet .skin-preview { background:repeating-linear-gradient(90deg,rgb(163 92 255 / 0.15) 0 1px,transparent 1px 12px),#030306; border:1px solid #a35cff; border-radius:2px; } .skin-card.gridviolet .skin-preview span { flex:1; background:transparent; box-shadow:inset 0 0 0 2px #a35cff, 0 0 8px rgb(163 92 255 / 0.7); }
+
+/* ============ More nuclear skins ============ */
+/* Nuclear: toxic green and hazard yellow glow */
+:root[data-skin='nuclear'] { --bg:#080a04; --bg-2:#050602; --panel:#12160a; --panel-2:#1b210f; --line:#34401a; --text:#f4ffe0; --muted:#adbd88; --accent:#6ee82a; --accent-ink:#0a1200; --lcd-bg:#040502; --lcd-text:#6ee82a; --lcd-dim:#203a0a; --viz-low:#3fae1a; --viz-mid:#6ee82a; --viz-high:#f2d20f; --viz-peak:#ffffff; --radius:8px; --radius-lg:12px; --bevel:none; --bevel-in:inset 0 0 0 1px #34401a; color-scheme:dark; }
+:root[data-skin='nuclear'] body { background: radial-gradient(800px 420px at 50% 115%, rgb(110 232 42 / 0.18), transparent 70%), radial-gradient(600px 300px at 100% -10%, rgb(242 210 15 / 0.10), transparent 70%), #080a04; }
+:root[data-skin='nuclear'] .brand { color:#6ee82a; text-shadow:0 0 10px rgb(110 232 42 / 0.7), 2px 2px 0 #f2d20f; }
+:root[data-skin='nuclear'] .btn.primary, :root[data-skin='nuclear'] .tbtn.play { background:#6ee82a; color:#0a1200; box-shadow:0 0 18px rgb(110 232 42 / 0.5); }
+:root[data-skin='nuclear'] .chip.on { background:#f2d20f; color:#080a04; } :root[data-skin='nuclear'] .tabs button.on { border-bottom-color:#f2d20f; }
+:root[data-skin='nuclear'] .lcd { box-shadow:inset 0 0 16px rgb(0 0 0 / 0.9), 0 0 16px rgb(110 232 42 / 0.15); }
+/* Radium: glow-in-the-dark watch-dial green on black */
+:root[data-skin='radium'] { --bg:#030806; --bg-2:#010504; --panel:#0a1611; --panel-2:#10211a; --line:#1d3d30; --text:#e8fff5; --muted:#8fbfaa; --accent:#3ee0a0; --accent-ink:#00140c; --lcd-bg:#000302; --lcd-text:#3ee0a0; --lcd-dim:#0b3324; --viz-low:#1a9c6c; --viz-mid:#3ee0a0; --viz-high:#bfe655; --viz-peak:#f2fff9; --radius:12px; --radius-lg:18px; --bevel:none; --bevel-in:inset 0 0 0 1px #1d3d30; color-scheme:dark; }
+:root[data-skin='radium'] body { background: radial-gradient(circle at 50% 40%, rgb(62 224 160 / 0.06) 0 30%, transparent 60%), #030806; }
+:root[data-skin='radium'] .brand { color:#bfffe4; text-shadow:0 0 6px #3ee0a0, 0 0 18px rgb(62 224 160 / 0.6); }
+:root[data-skin='radium'] .btn.primary, :root[data-skin='radium'] .tbtn.play { background:#3ee0a0; color:#00140c; box-shadow:0 0 16px rgb(62 224 160 / 0.55); }
+:root[data-skin='radium'] .chip.on { background:#bfe655; color:#030806; } :root[data-skin='radium'] .tabs button.on { border-bottom-color:#3ee0a0; text-shadow:0 0 10px rgb(62 224 160 / 0.7); }
+:root[data-skin='radium'] .lcd { text-shadow:0 0 6px rgb(62 224 160 / 0.8); }
+/* Isotope: plutonium violet with a hazard-yellow edge */
+:root[data-skin='isotope'] { --bg:#0a0612; --bg-2:#06040c; --panel:#150d22; --panel-2:#1f1433; --line:#3a2659; --text:#f5eeff; --muted:#ad9dcc; --accent:#a75ce6; --accent-ink:#ffffff; --lcd-bg:#050309; --lcd-text:#e8c51a; --lcd-dim:#3a3108; --viz-low:#6b3dc2; --viz-mid:#a75ce6; --viz-high:#e8c51a; --viz-peak:#ffffff; --radius:8px; --radius-lg:12px; --bevel:none; --bevel-in:inset 0 0 0 1px #3a2659; color-scheme:dark; }
+:root[data-skin='isotope'] body { background: radial-gradient(800px 420px at 20% -10%, rgb(167 92 230 / 0.18), transparent 70%), #0a0612; }
+:root[data-skin='isotope'] .brand { color:#a75ce6; text-shadow:0 0 10px rgb(167 92 230 / 0.7); }
+:root[data-skin='isotope'] .card, :root[data-skin='isotope'] .deck { box-shadow:inset 0 2px 0 #e8c51a; }
+:root[data-skin='isotope'] .btn.primary, :root[data-skin='isotope'] .tbtn.play { background:#a75ce6; color:#fff; box-shadow:0 0 0 2px #e8c51a, 0 0 16px rgb(167 92 230 / 0.5); }
+:root[data-skin='isotope'] .chip.on { background:#e8c51a; color:#0a0612; } :root[data-skin='isotope'] .tabs button.on { border-bottom-color:#e8c51a; }
+
+.skin-card.nuclear .skin-preview { background:radial-gradient(circle at 50% 120%,#3a5a10,#080a04 70%); } .skin-card.nuclear .skin-preview span { flex:1; background:linear-gradient(to top,#3fae1a,#6ee82a 55%,#f2d20f); box-shadow:0 0 10px rgb(110 232 42 / 0.55); }
+.skin-card.radium .skin-preview { background:radial-gradient(circle at 50% 50%,#10211a,#030806 70%); } .skin-card.radium .skin-preview span { flex:1; background:linear-gradient(to top,#1a9c6c,#3ee0a0 60%,#bfe655); border-radius:999px 999px 0 0; box-shadow:0 0 10px rgb(62 224 160 / 0.6); }
+.skin-card.isotope .skin-preview { background:#0a0612; border-top:3px solid #e8c51a; } .skin-card.isotope .skin-preview span { flex:1; background:linear-gradient(to top,#6b3dc2,#a75ce6 60%,#e8c51a); box-shadow:0 0 10px rgb(167 92 230 / 0.5); }
+
+/* ============ More neon skins ============ */
+/* Neon diner: cherry red and teal roadside sign */
+:root[data-skin='diner'] { --bg:#100608; --bg-2:#0a0405; --panel:#1c0c10; --panel-2:#291218; --line:#4a1f28; --text:#fff0f2; --muted:#c99aa3; --accent:#ff3b4f; --accent-ink:#ffffff; --lcd-bg:#070203; --lcd-text:#2ee6c8; --lcd-dim:#0b3a33; --viz-low:#2ee6c8; --viz-mid:#ff3b4f; --viz-high:#ffd23f; --viz-peak:#ffffff; --radius:14px; --radius-lg:22px; --bevel:none; --bevel-in:inset 0 0 0 1px #4a1f28; color-scheme:dark; }
+:root[data-skin='diner'] .brand { color:#ff3b4f; text-shadow:0 0 6px rgb(255 59 79 / 0.9), 0 0 18px rgb(255 59 79 / 0.5); font-style:italic; }
+:root[data-skin='diner'] .btn.primary, :root[data-skin='diner'] .tbtn.play { background:#ff3b4f; color:#fff; box-shadow:0 0 16px rgb(255 59 79 / 0.5); }
+:root[data-skin='diner'] .chip.on { background:#2ee6c8; color:#100608; } :root[data-skin='diner'] .tabs button.on { border-bottom-color:#2ee6c8; text-shadow:0 0 10px rgb(46 230 200 / 0.6); }
+:root[data-skin='diner'] .nav.on svg { color:#2ee6c8; filter:drop-shadow(0 0 6px rgb(46 230 200 / 0.7)); }
+/* Neon lime: electric lime and orange on charcoal */
+:root[data-skin='lime'] { --bg:#0e0f0c; --bg-2:#090a08; --panel:#181a14; --panel-2:#22251c; --line:#3a3f2c; --text:#f6ffe6; --muted:#aab394; --accent:#b8f02a; --accent-ink:#101400; --lcd-bg:#060705; --lcd-text:#b8f02a; --lcd-dim:#2c3a0a; --viz-low:#ff7a1a; --viz-mid:#b8f02a; --viz-high:#ffd23f; --viz-peak:#ffffff; --radius:10px; --radius-lg:16px; --bevel:none; --bevel-in:inset 0 0 0 1px #3a3f2c; color-scheme:dark; }
+:root[data-skin='lime'] .brand { color:#b8f02a; text-shadow:0 0 10px rgb(184 240 42 / 0.6); }
+:root[data-skin='lime'] .btn.primary, :root[data-skin='lime'] .tbtn.play { background:#b8f02a; color:#101400; box-shadow:0 0 16px rgb(184 240 42 / 0.45); }
+:root[data-skin='lime'] .chip.on { background:#ff7a1a; color:#0e0f0c; } :root[data-skin='lime'] .tabs button.on { border-bottom-color:#ff7a1a; }
+/* Neon ice: cold white-blue tubes on navy */
+:root[data-skin='ice'] { --bg:#060c1a; --bg-2:#040812; --panel:#0d1729; --panel-2:#142139; --line:#253a5e; --text:#eef6ff; --muted:#97abc9; --accent:#7cc8f0; --accent-ink:#04101c; --lcd-bg:#02060e; --lcd-text:#bfe6ff; --lcd-dim:#1a3048; --viz-low:#4a7cf0; --viz-mid:#7cc8f0; --viz-high:#b39ef0; --viz-peak:#ffffff; --radius:10px; --radius-lg:16px; --bevel:none; --bevel-in:inset 0 0 0 1px #253a5e; color-scheme:dark; }
+:root[data-skin='ice'] body { background: radial-gradient(900px 480px at 50% -15%, rgb(124 200 240 / 0.14), transparent 70%), #060c1a; }
+:root[data-skin='ice'] .brand { color:#ffffff; text-shadow:0 0 4px #bfe6ff, 0 0 14px #7cc8f0; }
+:root[data-skin='ice'] .btn.primary, :root[data-skin='ice'] .tbtn.play { background:#bfe6ff; color:#04101c; box-shadow:0 0 16px rgb(124 200 240 / 0.6); }
+:root[data-skin='ice'] .chip.on { background:#b39ef0; color:#060c1a; } :root[data-skin='ice'] .tabs button.on { border-bottom-color:#7cc8f0; text-shadow:0 0 10px rgb(124 200 240 / 0.6); }
+
+.skin-card.diner .skin-preview { background:#100608; } .skin-card.diner .skin-preview span { flex:1; background:linear-gradient(to top,#2ee6c8,#ff3b4f 60%,#ffd23f); border-radius:8px 8px 0 0; box-shadow:0 0 10px rgb(255 59 79 / 0.5); }
+.skin-card.lime .skin-preview { background:#0e0f0c; } .skin-card.lime .skin-preview span { flex:1; background:linear-gradient(to top,#ff7a1a,#b8f02a 55%,#ffd23f); box-shadow:0 0 10px rgb(184 240 42 / 0.45); }
+.skin-card.ice .skin-preview { background:linear-gradient(180deg,#142139,#060c1a); } .skin-card.ice .skin-preview span { flex:1; background:linear-gradient(to top,#4a7cf0,#7cc8f0 55%,#ffffff); box-shadow:0 0 10px rgb(124 200 240 / 0.6); }
+
 /* ============ Settings → Themes ============ */
 .skin-group { margin-top: 18px; }
 .skin-group h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }

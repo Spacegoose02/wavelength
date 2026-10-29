@@ -10,6 +10,7 @@ export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber'
   | 'outrun' | 'lasergrid' | 'acid' | 'miami' | 'blacklight' | 'electric'
   | 'lasershow' | 'laserred' | 'lasergreen' | 'laserharp' | 'lasertag'
   | 'reactor' | 'meltdown' | 'hazard' | 'fallout' | 'uranium'
+  | 'gridmagenta' | 'gridamber' | 'gridgreen' | 'gridviolet' | 'nuclear' | 'radium' | 'isotope' | 'diner' | 'lime' | 'ice'
   | 'halloween' | 'thanksgiving' | 'christmas' | 'july4' | 'valentine';
 
 /** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
@@ -56,17 +57,27 @@ export const SKINS: { id: Skin; label: string; group: SkinGroup }[] = [
   { id: 'miami', label: 'Miami nights (neon)', group: 'Neon' },
   { id: 'blacklight', label: 'Blacklight UV (neon)', group: 'Neon' },
   { id: 'electric', label: 'Electric (neon)', group: 'Neon' },
+  { id: 'diner', label: 'Neon diner', group: 'Neon' },
+  { id: 'lime', label: 'Neon lime', group: 'Neon' },
+  { id: 'ice', label: 'Neon ice', group: 'Neon' },
   { id: 'lasergrid', label: 'Laser grid (neon)', group: 'Lasers' },
+  { id: 'gridmagenta', label: 'Laser grid magenta', group: 'Lasers' },
+  { id: 'gridamber', label: 'Laser grid amber', group: 'Lasers' },
+  { id: 'gridgreen', label: 'Laser grid green', group: 'Lasers' },
+  { id: 'gridviolet', label: 'Laser grid violet', group: 'Lasers' },
   { id: 'lasershow', label: 'Laser show', group: 'Lasers' },
   { id: 'laserred', label: 'Red laser', group: 'Lasers' },
   { id: 'lasergreen', label: 'Green laser', group: 'Lasers' },
   { id: 'laserharp', label: 'Laser harp', group: 'Lasers' },
   { id: 'lasertag', label: 'Laser tag', group: 'Lasers' },
-  { id: 'reactor', label: 'Reactor core', group: 'Nuclear' },
+  { id: 'reactor', label: 'Cherenkov (reactor core)', group: 'Nuclear' },
   { id: 'meltdown', label: 'Meltdown', group: 'Nuclear' },
   { id: 'hazard', label: 'Radiation hazard', group: 'Nuclear' },
   { id: 'fallout', label: 'Fallout shelter', group: 'Nuclear' },
   { id: 'uranium', label: 'Uranium glass', group: 'Nuclear' },
+  { id: 'nuclear', label: 'Nuclear', group: 'Nuclear' },
+  { id: 'radium', label: 'Radium', group: 'Nuclear' },
+  { id: 'isotope', label: 'Isotope', group: 'Nuclear' },
   { id: 'halloween', label: 'Halloween', group: 'Holidays' },
   { id: 'thanksgiving', label: 'Thanksgiving', group: 'Holidays' },
   { id: 'christmas', label: 'Christmas', group: 'Holidays' },
