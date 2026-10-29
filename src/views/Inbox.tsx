@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { REQUEST_STATUS, refreshInbox, useInbox } from '../lib/inbox';
-import { findTrackOnSource, pool } from '../lib/match';
+import { refreshInbox, requestStatus, useInbox } from '../lib/inbox';
+import { cleanTitle, findTrackOnSource, pool, primaryArtist } from '../lib/match';
 import type { HubRequest, HubShare } from '../sources/hub';
-import { sourceFor } from '../sources/registry';
+import { norm, sourceFor } from '../sources/registry';
+import { useCatalog } from '../store/catalog';
 import type { Track } from '../sources/types';
 import { hubClient, useHub } from '../store/hub';
 import { useLibrary } from '../store/library';
@@ -169,11 +170,50 @@ function RequestRow({ r, who, children }: { r: HubRequest; who?: boolean; childr
         {r.note && <div className="share-note">“{r.note}”</div>}
         {r.reason && <div className={r.status === 'failed' ? 'card-err small' : 'muted small'}>{r.reason}</div>}
       </div>
-      <span className={`req-status ${r.status}`}>
-        {REQUEST_STATUS[r.status]}{r.status === 'approved' && r.via ? ` via ${r.via}` : ''}{r.decidedBy && r.status !== 'pending' && !who ? ` · ${r.decidedBy}` : ''}
+      <span className={`req-status ${r.readyAt ? 'ready' : r.status}`}>
+        {requestStatus(r)}{r.status === 'approved' && r.via && !r.readyAt ? ` via ${r.via}` : ''}{r.decidedBy && r.status !== 'pending' && !who ? ` · ${r.decidedBy}` : ''}
       </span>
       {children}
     </div>
+  );
+}
+
+/**
+ * "Your song is ready": find what was asked for in this person's own library (it was just scanned in) and
+ * play it. Albums and playlists play the album with that name; anything else plays the song.
+ */
+async function findRequested(r: HubRequest): Promise<Track[]> {
+  const libs = enabledSources().filter((c) => c.kind === 'navidrome' || c.kind === 'plex').map(sourceFor);
+  const artist = norm(primaryArtist(r.artist));
+  const title = cleanTitle(r.title.replace(/\s*\((clean|explicit)\)$/i, ''));
+  for (const src of libs) {
+    if (r.kind === 'album' || r.kind === 'playlist' || r.kind === 'artist') {
+      const res = await src.search?.(`${primaryArtist(r.artist)} ${r.title}`).catch(() => undefined);
+      const album = res?.albums?.find((a) => cleanTitle(a.title) === title && (!artist || norm(primaryArtist(a.artist)) === artist))
+        ?? res?.albums?.find((a) => cleanTitle(a.title) === title);
+      const tracks = album && (await src.getAlbumTracks?.(album.id).catch(() => undefined));
+      if (tracks?.length) return tracks;
+    }
+    const hit = await findTrackOnSource(src, { title: r.title, artist: r.artist }).catch(() => undefined);
+    if (hit) return [hit];
+  }
+  return [];
+}
+
+function PlayRequest({ r }: { r: HubRequest }) {
+  const [state, setState] = useState<string>();
+  const play = async () => {
+    setState('Finding…');
+    const tracks = await findRequested(r);
+    if (!tracks.length) return setState('Not in your library yet');
+    setState(undefined);
+    usePlayer.getState().playTracks(tracks);
+    useCatalog.getState().load();
+  };
+  return (
+    <button className="btn small primary" disabled={state === 'Finding…'} onClick={play} title="Play it from your library">
+      <IconPlay /> {state ?? 'Play'}
+    </button>
   );
 }
 
@@ -189,6 +229,7 @@ function MyRequests() {
     <div className="tracklist">
       {data.map((r) => (
         <RequestRow key={r.id} r={r}>
+          {(r.readyAt || r.status === 'have') && <PlayRequest r={r} />}
           {r.status === 'pending' && (
             <button className="btn small ghost" onClick={async () => {
               await hubClient()?.cancelRequest(r.id);

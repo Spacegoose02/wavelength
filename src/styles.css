@@ -1569,6 +1569,7 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .req-status { font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--muted); }
 .req-status.approved { color: var(--accent); }
 .req-status.failed { color: #e5534b; }
+.req-status.ready { color: #4ade80; }
 @media (max-width: 700px) {
   .share-card { flex-wrap: wrap; }
   .share-actions { width: 100%; justify-content: flex-start; }

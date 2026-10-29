@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **"Your song is ready."** Approved requests now go *Downloading* → *Adding to your library* → *Ready*, and
+  a ready one lights up the Inbox with a **Play** button that finds it in your library.
+- **Navidrome rescans after downloads.** Add a Navidrome admin login under **Settings → Server → Library
+  updates** and the Hub starts a scan as soon as downloads finish (also **Scan now**).
+- **Hub:** migration 8 (request download tracking), `/api/admin/library` routes.
 - **Wavelength in a browser.** Open your Hub's address in any browser to use Wavelength there. It goes
   straight to signing in to that Hub. Deezer, the charts and Release Radar work through the Hub; offline
   downloads still need the app. The Hub's Docker image now includes the web build (build it from the repo

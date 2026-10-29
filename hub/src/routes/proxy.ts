@@ -11,7 +11,7 @@ import { deemixFor, subwaveAdmin } from '../upstream.ts';
  * password, the deemix ARL or a share login: SUB/WAVE admin (`subwave.control`), deemix and yt-dlp
  * (`downloads.run`: admins, and members with Autodownload).
  */
-export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp }: Ctx) {
+export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library }: Ctx) {
   const key = config.secretKey;
   const str = (v: unknown, max = 2000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
@@ -58,6 +58,7 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp }: Ctx) {
     if (!isDeezerLink(link)) throw new HttpError(400, 'Send a Deezer link');
     const { s, client } = deemix();
     const bitrate = typeof b.bitrate === 'number' && [1, 3, 9].includes(b.bitrate) ? b.bitrate : Number(s.config.bitrate) || 9;
+    library.activity();
     const r = await client.addToQueue(link, bitrate);
     audit(db, { actorId: user.id, action: 'download.queued', target: link, detail: { via: 'deemix', bitrate }, ip: clientIp(req) });
     return r ?? { ok: true };

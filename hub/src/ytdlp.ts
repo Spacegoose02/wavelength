@@ -63,6 +63,8 @@ const isUrl = (s: string) => /^https?:\/\/\S+$/i.test(s);
 export class YtdlpRunner {
   private jobs: YtJob[] = [];
   private running = 0;
+  /** Called when a download ends, done or not (library.ts follows requests and rescans). */
+  onFinished?: (job: YtJob) => void;
   private bin: string;
   private musicDir: string;
   constructor(bin: string, musicDir: string) {
@@ -161,6 +163,7 @@ export class YtdlpRunner {
     } catch (e) {
       Object.assign(job, { status: 'error', message: (e as Error).message });
     }
+    this.onFinished?.(job);
   }
 
   /** A person's own jobs, or everyone's for admins. */

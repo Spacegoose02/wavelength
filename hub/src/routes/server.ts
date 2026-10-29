@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { clientIp, need } from '../http.ts';
+import { clientIp, HttpError, need, str } from '../http.ts';
+import { getScanSettings, navidrome, saveScanSettings } from '../library.ts';
 import { run } from '../ytdlp.ts';
 
 const STARTED = Date.now();
@@ -33,7 +34,7 @@ async function ytdlpVersion(bin: string) {
  * The admin server page (docs/USERS-AND-ADMIN.md Phase 6): how the Hub is doing, and a backup of its
  * database. Admins only (`server.view`).
  */
-export function serverRoutes(app: FastifyInstance, { db, config }: Ctx) {
+export function serverRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
   const dbFile = join(config.dataDir, 'hub.db');
   const count = (sql: string, ...args: (string | number)[]) => (db.prepare(sql).get(...args) as { n: number }).n;
 
@@ -70,6 +71,51 @@ export function serverRoutes(app: FastifyInstance, { db, config }: Ctx) {
         ratedAlbums: count("SELECT COUNT(*) AS n FROM ratings WHERE kind = 'album'"),
       },
     };
+  });
+
+  // ---- library: Navidrome rescans after downloads (library.ts) ----
+
+  app.get('/api/admin/library', async (req) => {
+    need(req, 'server.view');
+    return library.status();
+  });
+
+  /** The Navidrome admin login the Hub scans with; checked before it's saved. Kept sealed, never sent to devices. */
+  app.put('/api/admin/library/navidrome', async (req) => {
+    const { user } = need(req, 'keys.manage');
+    const b = req.body ?? {};
+    const url = str(b, 'url', 300).replace(/\/+$/, '');
+    const username = str(b, 'username', 100);
+    let password = str(b, 'password', 200);
+    if (!/^https?:\/\/\S+$/i.test(url)) throw new HttpError(400, 'Navidrome address must start with http:// or https://');
+    if (!username) throw new HttpError(400, 'Enter the Navidrome admin username');
+    // keep the saved password when only the address or username changes
+    if (!password) password = getScanSettings(db, config.secretKey)?.password ?? '';
+    if (!password) throw new HttpError(400, 'Enter the Navidrome admin password');
+    const s = { url, username, password };
+    const me = await navidrome(s, 'getUser', { username }).catch((e: Error) => {
+      throw new HttpError(400, e.message);
+    });
+    if (!me.user?.adminRole) throw new HttpError(400, `${username} isn't a Navidrome admin, so it can't start a scan`);
+    saveScanSettings(db, config.secretKey, s);
+    audit(db, { actorId: user.id, action: 'library.navidrome_set', target: url, ip: clientIp(req) });
+    return library.status();
+  });
+
+  app.delete('/api/admin/library/navidrome', async (req) => {
+    const { user } = need(req, 'keys.manage');
+    saveScanSettings(db, config.secretKey, null);
+    audit(db, { actorId: user.id, action: 'library.navidrome_removed', ip: clientIp(req) });
+    return library.status();
+  });
+
+  /** Scan now. Answers straight away; the scan carries on in the background. */
+  app.post('/api/admin/library/scan', async (req) => {
+    const { user } = need(req, 'server.view');
+    if (!getScanSettings(db, config.secretKey)) throw new HttpError(409, 'Add a Navidrome admin login first');
+    void library.scan().catch(() => undefined);
+    audit(db, { actorId: user.id, action: 'library.scan', ip: clientIp(req) });
+    return { ...library.status(), scanning: true };
   });
 
   /**

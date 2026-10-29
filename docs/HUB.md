@@ -270,7 +270,7 @@ with a 4xx status.
 | `POST /api/downloads/ytdlp/search` | `downloads.run` | `{ query }` → `{ results }` (YouTube search, or a link's contents) |
 | `GET/POST/DELETE /api/downloads/ytdlp/jobs` | `downloads.run` | downloads (your own; admins see everyone's) / start `{ url, title?, channel? }` / clear finished |
 | `POST /api/requests` | `requests.create` | ask for music `{ link, kind?, title, artist?, cover?, note? }` → `{ request }`. With `downloads.run` it is approved (downloaded) straight away |
-| `GET /api/requests` | signed in | your requests, newest first |
+| `GET /api/requests` | signed in | your requests, newest first; approved ones carry `downloadedAt` and `readyAt` (scanned into the library) |
 | `GET /api/requests/counts` | signed in | `{ unseen, pending }`: your decided requests you haven't looked at, and (with `requests.approve`) how many wait |
 | `POST /api/requests/seen`, `DELETE /api/requests/:id` | signed in | mark yours as seen / cancel one still waiting |
 | `GET /api/admin/requests?status=` | `requests.approve` | everyone's requests, waiting ones first |
@@ -287,6 +287,9 @@ with a 4xx status.
 | `POST /api/admin/ratings`, `DELETE /api/admin/ratings` | `library.edit` | save `{ albums: [{ artist, album, rating, cleanLink?, explicitTracks? }] }` (up to 200; an album sent again replaces its songs) / forget them all |
 | `GET /api/admin/server` | `server.view` | the server page: version, uptime, disks, yt-dlp version, counts |
 | `GET /api/admin/backup` | `server.view` | a copy of the database (`wavelength-hub-YYYY-MM-DD.db`), audited |
+| `GET /api/admin/library` | `server.view` | rescans: `{ navidrome: { url, username } \| null, scanning, lastScanAt, lastError, scanQueued }` |
+| `PUT /api/admin/library/navidrome`, `DELETE …` | `keys.manage` | the Navidrome admin login the Hub scans with (`{ url, username, password? }`, checked first, kept sealed) / remove |
+| `POST /api/admin/library/scan` | `server.view` | start a Navidrome scan now |
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed or RadioWave Monitor (https only, nothing else) |
 | `GET /*` | — | the app's web build (`WAVELENGTH_WEB_DIR`); unknown paths get `index.html` |
 | `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |
