@@ -517,6 +517,15 @@ badge for everyone; that comes from your files' tags (Navidrome reads them) or f
 kids** for something marked explicit that's fine. It applies on every kid's device. **Settings → Users →
 Kid-safe music** lists everything flagged, with **Remove**.
 
+**Files without the explicit tag, and Plex.** Under **Settings → Users → Kid-safe music**, **Check my
+library** looks each album up on Deezer and records on your Hub which albums and songs are explicit. Your
+files aren't changed. It takes a few minutes for a big library, can be stopped, and **Check new albums** later
+only looks up albums it hasn't seen. Albums Deezer doesn't have stay as they are, so flag those by hand if
+needed. When Deezer has a clean version of an explicit album, the album page shows **Get clean version**
+(**Request clean version** for people without Autodownload).
+
+So that new downloads carry the tag, open deemix, go to **Settings → Tags** and tick **Explicit lyrics**.
+
 Flags match by artist and title, so a song is hidden however a kid reaches it. A kid who knows their
 Navidrome password could still use another app to reach the full library.
 

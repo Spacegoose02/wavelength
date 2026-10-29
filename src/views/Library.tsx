@@ -12,8 +12,8 @@ import { IconPlay, IconShuffle } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfArtist, shareOfTracks } from '../lib/inbox';
-import { useHidden } from '../lib/kids';
-import { KidFlagButton } from '../components/KidFlag';
+import { explicitOfAlbum, explicitOfTrack, useHidden, useRatings } from '../lib/kids';
+import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 
@@ -229,6 +229,7 @@ export function AlbumView({ album }: { album: Album }) {
   const playTracks = usePlayer((s) => s.playTracks);
   const ref = refs[refIdx];
   const hidden = useHidden();
+  useRatings((s) => s.ratings);
 
   useEffect(() => {
     let alive = true;
@@ -252,7 +253,7 @@ export function AlbumView({ album }: { album: Album }) {
         <Cover src={ref.coverUrl ?? album.coverUrl} alt={album.title} className="hero-art" />
         <div>
           <div className="kicker">Album{album.year ? ` · ${album.year}` : ''}</div>
-          <h1>{album.title} <Rating explicit={album.explicit} /></h1>
+          <h1>{album.title} <Rating explicit={explicitOfAlbum(album)} /></h1>
           <button className="link" onClick={() => {
             const artist = useCatalog.getState().artists.find((a) => (a.refs ?? [a]).some((r) => r.id === ref.artistId && r.sourceId === ref.sourceId));
             if (artist) useUi.getState().go({ view: 'artist', artist });
@@ -268,7 +269,8 @@ export function AlbumView({ album }: { album: Album }) {
             {tracks?.length ? <AddToPlaylist tracks={tracks} label="Add to playlist" className="btn" /> : null}
             {tracks?.length ? <QueueAllOnSubwave tracks={tracks} albumBlock /> : null}
             {tracks?.length ? <ShareButton what={() => shareOfTracks('album', album.title, tracks, album.artist, ref.coverUrl ?? album.coverUrl)} /> : null}
-            <KidFlagButton kind="album" artist={album.artist} title={album.title} explicit={album.explicit === 'explicit' || tracks?.some((t) => t.explicit === 'explicit')} />
+            <KidFlagButton kind="album" artist={album.artist} title={album.title} explicit={explicitOfAlbum(album) === 'explicit' || tracks?.some((t) => explicitOfTrack(t) === 'explicit')} />
+            <CleanVersionButton artist={album.artist} album={album.title} />
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
                 cover={ref.coverUrl ?? album.coverUrl} tracks={tracks} />

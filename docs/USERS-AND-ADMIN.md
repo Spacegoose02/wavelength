@@ -386,8 +386,10 @@ hide explicit and admin-flagged songs, albums and artists in every list, and the
 line of defence. Admins flag from a **Kids** button on songs, albums and artists, with the list under
 Settings → Users. Flags match by artist and title, since ids differ between devices' logins. Kid profiles (`hub/src/routes/kids.ts`, `src/lib/kidTime.ts`, `src/components/KidLock.tsx`): a shorter,
 bigger menu; per-kid bedtime and minutes a day, counted across devices; a household grown-up PIN that unlocks
-30 minutes and is needed to sign out of a kid profile. Still open: Plex explicit status, clean-version lookup
-and the version switch, and keeping the kid's Navidrome password off their device.
+30 minutes and is needed to sign out of a kid profile. Library check (`src/lib/explicitCheck.ts`,
+`hub/src/routes/ratings.ts`): an admin's device looks every album up on Deezer and keeps explicit albums,
+explicit songs and the clean version's link on the Hub, which covers untagged files and Plex; explicit albums
+get **Get clean version**. Still open: the version switch, a per-user clean/explicit preference, and keeping the kid's Navidrome password off their device.
 
 Kid role and UI, automatic + manual not-safe flags, explicit/clean detection, clean-version lookup
 and version switch. **Cards closed:** kids profiles, mark not safe for kids, explicit and clean versions.

@@ -10,6 +10,7 @@ import { meRoutes } from './routes/me.ts';
 import { flagRoutes } from './routes/flags.ts';
 import { kidRoutes } from './routes/kids.ts';
 import { proxyRoutes } from './routes/proxy.ts';
+import { ratingRoutes } from './routes/ratings.ts';
 import { requestRoutes } from './routes/requests.ts';
 import { serviceRoutes } from './routes/services.ts';
 import { shareRoutes } from './routes/shares.ts';
@@ -92,5 +93,6 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
   shareRoutes(app, ctx);
   flagRoutes(app, ctx);
   kidRoutes(app, ctx);
+  ratingRoutes(app, ctx);
   return app;
 }

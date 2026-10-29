@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useSettings } from '../store/settings';
 import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
-import { useHidden } from '../lib/kids';
+import { explicitOfAlbum, explicitOfTrack, useHidden, useRatings } from '../lib/kids';
 import { KidFlagButton } from './KidFlag';
 import { usePlayer } from '../store/player';
 import { IconMore, IconPlay } from './Icons';
@@ -52,11 +52,12 @@ export function Rating({ explicit }: { explicit?: 'explicit' | 'clean' | boolean
 
 export function AlbumCard({ album, onOpen }: { album: Album; onOpen(a: Album): void }) {
   const hidden = useHidden();
+  useRatings((s) => s.ratings);
   if (hidden.album(album)) return null;
   return (
     <button className="card" onClick={() => onOpen(album)}>
       <Cover src={album.coverUrl} alt={album.title} />
-      <div className="card-title" title={album.title}><Rating explicit={album.explicit} />{album.title}</div>
+      <div className="card-title" title={album.title}><Rating explicit={explicitOfAlbum(album)} />{album.title}</div>
       <div className="card-sub">
         <SourceDots sourceIds={(album.refs ?? [album]).map((r) => r.sourceId)} />
         <span>{album.artist}{album.year ? ` · ${album.year}` : ''}</span>
@@ -101,6 +102,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
   const enqueue = usePlayer((s) => s.enqueue);
   const current = usePlayer((s) => s.queue[s.index]);
   const hidden = useHidden();
+  useRatings((s) => s.ratings);
   return (
     <div className="tracklist">
       {tracks.map((t, i) => hidden.track(t) ? null : (
@@ -114,7 +116,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <IconPlay className="hover-play" />
           </button>
           <div className="track-main">
-            <div className="track-title"><Rating explicit={t.explicit} />{t.title}</div>
+            <div className="track-title"><Rating explicit={explicitOfTrack(t)} />{t.title}</div>
             <div className="track-sub">{sub ? sub(t) : <>{t.artist}{showAlbum && t.album ? ` — ${t.album}` : ''}</>}</div>
             {t.progress ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
           </div>
@@ -126,7 +128,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <button className="chip" onClick={() => enqueue([t])}>+ Queue</button>
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} />}
             <QueueOnSubwave track={t} />
-            {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} explicit={t.explicit === 'explicit'} className="chip" />}
+            {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} explicit={explicitOfTrack(t) === 'explicit'} className="chip" />}
             {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}
             {onRemove && <button className="chip" onClick={() => onRemove(i)} title="Remove from playlist">✕</button>}
           </div>

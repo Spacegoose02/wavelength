@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { flagOn, setFlag, useFlags } from '../lib/kids';
+import { deemixClient } from '../lib/hubServices';
+import { mustRequest, requestMusic } from '../lib/inbox';
+import { albumRating, flagOn, setFlag, useFlags, useRatings } from '../lib/kids';
 import type { HubFlag } from '../sources/hub';
 import { useHub } from '../store/hub';
+import { useSettings } from '../store/settings';
 
 /**
  * Admin button: hide a song, album or artist from kid profiles, or let something marked explicit through.
@@ -51,5 +54,33 @@ export function KidFlagButton({ kind, artist, title = '', explicit, className = 
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * "Get clean version": shown on an explicit album when the library check found its clean version on Deezer.
+ * Downloads it with deemix, or requests it for people without Autodownload.
+ */
+export function CleanVersionButton({ artist, album }: { artist: string; album: string }) {
+  const can = useHub((s) => !!s.token && (s.permissions.includes('downloads.run') || s.permissions.includes('requests.create')));
+  useRatings((s) => s.ratings);
+  const [status, setStatus] = useState<string>();
+  const link = albumRating(artist, album)?.cleanLink;
+  if (!can || !link) return null;
+  const request = mustRequest();
+  const get = async () => {
+    setStatus('…');
+    try {
+      if (request) await requestMusic({ link, kind: 'album', title: `${album} (clean)`, artist });
+      else await deemixClient().addToQueue(link, useSettings.getState().deemix.bitrate);
+      setStatus(request ? 'Clean version requested' : 'Clean version queued');
+    } catch (e) {
+      setStatus(String((e as Error).message ?? e));
+    }
+  };
+  return (
+    <button className="btn" disabled={status === '…'} onClick={get} title="Deezer has a clean version of this album">
+      {status ?? (request ? 'Request clean version' : 'Get clean version')}
+    </button>
   );
 }
