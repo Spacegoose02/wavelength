@@ -1,4 +1,5 @@
 mod offline;
+mod secrets;
 mod share;
 mod update;
 mod ytdlp;
@@ -17,7 +18,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![ytdlp::ytdlp_version, ytdlp::ytdlp_search, ytdlp::ytdlp_download, share::connect_share,
             offline::offline_save, offline::offline_delete, offline::offline_delete_file,
-            update::update_target, update::update_releases, update::update_download, update::update_install])
+            update::update_target, update::update_releases, update::update_download, update::update_install,
+            secrets::secrets_available, secrets::secrets_get, secrets::secrets_set])
         .run(tauri::generate_context!())
         .expect("error while running Wavelength");
 }

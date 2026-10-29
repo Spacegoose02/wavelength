@@ -174,9 +174,9 @@ so users can have their own Navidrome profile."*
 Keys are added once by the admin under **Admin → Keys**, then **linked** to profiles (all users, a group,
 or one user). A user can see *which* services they have but not admin secrets.
 
-On devices, per-user secrets move from `localStorage` into the OS keychain
-(`tauri-plugin-stronghold` on desktop, Android Keystore). This was already on the roadmap
-(ARCHITECTURE.md §4) and should land in Phase 1.
+On devices, per-user secrets live in the OS keychain instead of `localStorage`: Windows Credential Manager
+and the Android Keystore, through the `keyring` stores (`src-tauri/src/secrets.rs`, `src/lib/secrets.ts`).
+Done; see Phase 1.
 
 ## 5. How admin-only is enforced
 
@@ -333,12 +333,14 @@ Phase 6  Server page + extras ───┘ (needs 2; grows each phase)
 | Sleep timer, synced lyrics (extras) | S–M |
 | Device-level PIN lock for SUB/WAVE admin and Downloads (stopgap, labelled as such) | S |
 
-### Phase 1 — Hub foundation · ~3–4 weeks · **in progress**
+### Phase 1 — Hub foundation · ~3–4 weeks · **done**
 
 Done: the Hub server ([HUB.md](HUB.md)), and in the app Settings → Account (sign in with a code/QR or a
 password, devices, settings sync, linking tinyauth to a password account) and Settings → Users (item 6).
 Playlists and play history sync per person too (`hub/src/routes/mine.ts`, `src/lib/librarySync.ts`).
-Still open: moving the device token and server logins into the OS keychain (item 4). Passwords use scrypt
+The device token and server logins are kept in the OS keychain (item 4): Windows Credential Manager, or the
+Android Keystore, with the rest of the settings still in app storage (`src/lib/secrets.ts`). In a browser they
+stay in the browser's storage. Passwords use scrypt
 (built into Node) rather than argon2id, to keep the image free of native modules.
 
 Everything else in the users/admin column depends on this.

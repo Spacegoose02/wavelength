@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { secretStorage } from '../lib/secrets';
 import { isAndroid } from '../lib/platform';
 import { isTauri, setHubFetch } from '../lib/http';
 import { HubClient, HubError, type HubDevice, type HubPermission, type HubService, type HubSession, type HubUser } from '../sources/hub';
@@ -56,7 +57,31 @@ export const useHub = create<HubState>()(
         localStorage.removeItem(STAMPS_KEY);
       },
     }),
-    { name: 'tonearm.hub', partialize: ({ url, token, user, permissions, device, lastSeen, services }) => ({ url, token, user, permissions, device, lastSeen, services }) },
+    {
+      name: 'tonearm.hub',
+      partialize: ({ url, token, user, permissions, device, lastSeen, services }) => ({ url, token, user, permissions, device, lastSeen, services }),
+      // the device token, and the server logins the Hub hands out, live in the OS keychain (lib/secrets.ts)
+      storage: createJSONStorage(() =>
+        secretStorage<Partial<HubState>>({
+          strip: ({ token, services, ...rest }) => {
+            const secrets: Record<string, string> = token ? { 'hub.token': token } : {};
+            services?.forEach((x) => {
+              if (Object.keys(x.secrets ?? {}).length) secrets[`hub.service.${x.id}`] = JSON.stringify(x.secrets);
+            });
+            return { state: { ...rest, services: services?.map((x) => ({ ...x, secrets: {} })) }, secrets };
+          },
+          fill: (state, get) => ({
+            ...state,
+            token: get('hub.token') ?? state.token,
+            services: state.services?.map((x) => {
+              const v = get(`hub.service.${x.id}`);
+              return v ? { ...x, secrets: JSON.parse(v) } : x;
+            }),
+          }),
+          owns: (k) => k.startsWith('hub.'),
+        }),
+      ),
+    },
   ),
 );
 

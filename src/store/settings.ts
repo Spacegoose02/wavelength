@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { secretStorage } from '../lib/secrets';
 import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
@@ -214,6 +215,36 @@ export const useSettings = create<SettingsState>()(
     }),
     {
       name: 'tonearm.settings',
+      // server passwords and tokens, the deemix ARL and the share password live in the OS keychain (lib/secrets.ts)
+      storage: createJSONStorage(() =>
+        secretStorage<Partial<SettingsState>>({
+          strip: (st) => {
+            const secrets: Record<string, string> = {};
+            const sources = st.sources?.map((x) => {
+              const { password, token, ...rest } = x;
+              if (password) secrets[`source.${x.id}.password`] = password;
+              if (token) secrets[`source.${x.id}.token`] = token;
+              return rest;
+            });
+            if (st.deemix?.arl) secrets['deemix.arl'] = st.deemix.arl;
+            if (st.ytdlp?.sharePass) secrets['ytdlp.sharePass'] = st.ytdlp.sharePass;
+            return {
+              state: { ...st, sources, ...(st.deemix && { deemix: { ...st.deemix, arl: '' } }), ...(st.ytdlp && { ytdlp: { ...st.ytdlp, sharePass: '' } }) },
+              secrets,
+            };
+          },
+          fill: (st, get) => ({
+            ...st,
+            sources: st.sources?.map((x) => {
+              const password = get(`source.${x.id}.password`), token = get(`source.${x.id}.token`);
+              return { ...x, ...(password && { password }), ...(token && { token }) };
+            }),
+            ...(st.deemix && { deemix: { ...st.deemix, arl: get('deemix.arl') || st.deemix.arl } }),
+            ...(st.ytdlp && { ytdlp: { ...st.ytdlp, sharePass: get('ytdlp.sharePass') || st.ytdlp.sharePass } }),
+          }),
+          owns: (k) => k.startsWith('source.') || k === 'deemix.arl' || k === 'ytdlp.sharePass',
+        }),
+      ),
       // v1: Wavelength rebrand — move the old default skin onto the new Neon default once
       version: 1,
       migrate: (saved, version) => {
