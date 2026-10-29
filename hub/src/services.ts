@@ -1,5 +1,5 @@
 import type { Auth } from './http.ts';
-import { seal, unseal } from './crypto.ts';
+import { hmac, seal, unseal } from './crypto.ts';
 import type { Db } from './db.ts';
 import { tx } from './db.ts';
 import { HttpError } from './http.ts';
@@ -32,7 +32,8 @@ export const KINDS = {
   deemix: { secrets: ['arl'], own: [], config: ['bitrate'], hubOnly: ['arl'], download: true },
   // Each person gets their own Navidrome login (made by the Hub with the admin login, or entered by an
   // admin); the admin login only creates accounts and starts scans, and never leaves the Hub.
-  navidrome: { secrets: ['adminUsername', 'adminPassword', 'username', 'password'], own: ['username', 'password'], config: [], hubOnly: ['adminUsername', 'adminPassword'] },
+  // `relay: 'everyone'` sends everyone's Navidrome through the Hub; kids always go through it (routes/relay.ts).
+  navidrome: { secrets: ['adminUsername', 'adminPassword', 'username', 'password'], own: ['username', 'password'], config: ['relay'], hubOnly: ['adminUsername', 'adminPassword'] },
   // runs inside the Hub container and saves into its music folder, so there's no share login
   ytdlp: { secrets: [], own: [], config: ['folder', 'format'], download: true },
 } satisfies Record<string, KindSpec>;
@@ -83,6 +84,11 @@ export interface DeviceService {
   ownLogin: boolean;
   /** SUB/WAVE: admin controls work through the Hub for this person (the login itself stays on the Hub). */
   hubAdmin?: boolean;
+  /**
+   * Navidrome through the Hub: the device gets a login for the Hub's relay at `/nd/<id>` (url is left
+   * empty, the device knows the Hub's address) and the person's real Navidrome login stays on the Hub.
+   */
+  relay?: boolean;
 }
 
 const aadShared = (id: number) => `service:${id}`;
@@ -245,7 +251,7 @@ export function removeServiceUser(db: Db, key: Buffer, id: number, userId: numbe
  * The servers this person's devices may use, with the logins filled in. This is the only place a secret
  * leaves the Hub, so every rule about who gets what lives here.
  */
-export function servicesFor(db: Db, key: Buffer, { user, permissions }: Auth): DeviceService[] {
+export function servicesFor(db: Db, key: Buffer, { user, device, permissions }: Auth): DeviceService[] {
   const out: DeviceService[] = [];
   for (const r of rows(db)) {
     const s = spec(r.kind);
@@ -257,10 +263,15 @@ export function servicesFor(db: Db, key: Buffer, { user, permissions }: Auth): D
     const own = open(key, mine?.secrets ?? null, aadUser(r.id, user.id)).fields;
     // Navidrome is per person: no own login yet, nothing to hand over
     if (r.kind === 'navidrome' && !(own.username && own.password)) continue;
+    const config = JSON.parse(r.config) as Config;
+    if (r.kind === 'navidrome' && relayed(user.role, config)) {
+      out.push({ id: r.id, kind: r.kind, name: r.name, url: '', config, secrets: { username: relayUsername(user.username, device.id), password: relayPassword(key, device.id) }, ownLogin: true, relay: true });
+      continue;
+    }
     const secrets = { ...open(key, r.secrets, aadShared(r.id)).fields, ...own };
     const hubAdmin = r.kind === 'subwave' ? permissions.includes('subwave.control') && !!secrets.username && !!secrets.password : undefined;
     for (const f of s.hubOnly ?? []) delete secrets[f];
-    out.push({ id: r.id, kind: r.kind, name: r.name, url: r.url, config: JSON.parse(r.config) as Config, secrets, ownLogin: Object.keys(own).length > 0, ...(hubAdmin !== undefined && { hubAdmin }) });
+    out.push({ id: r.id, kind: r.kind, name: r.name, url: r.url, config, secrets, ownLogin: Object.keys(own).length > 0, ...(hubAdmin !== undefined && { hubAdmin }) });
   }
   return out;
 }
@@ -274,3 +285,21 @@ export function serviceForHub(db: Db, key: Buffer, id: number): { id: number; ki
 
 export const serviceIdOfKind = (db: Db, kind: ServiceKind) =>
   (db.prepare('SELECT id FROM services WHERE kind = ? ORDER BY id LIMIT 1').get(kind) as { id: number } | undefined)?.id;
+
+// ---- Navidrome relay (routes/relay.ts) ----
+
+/** Kids always reach Navidrome through the Hub, so their login never sits on a device they hold. */
+export const relayed = (role: string, config: Config) => role === 'kid' || config.relay === 'everyone';
+/** The relay login is per device, so revoking a device ends its access straight away. */
+export const relayUsername = (username: string, deviceId: number) => `${username}~${deviceId}`;
+export const relayPassword = (key: Buffer, deviceId: number) => hmac(key, `navidrome-relay:${deviceId}`).slice(0, 32);
+
+/** The real Navidrome login the relay uses for this person, if they may still use this server. */
+export function relayTarget(db: Db, key: Buffer, id: number, userId: number, role: string): { url: string; username: string; password: string } | undefined {
+  const r = getRow(db, id);
+  if (!r || r.kind !== 'navidrome' || !relayed(role, JSON.parse(r.config) as Config)) return undefined;
+  const mine = db.prepare('SELECT secrets FROM service_users WHERE service_id = ? AND user_id = ?').get(id, userId) as { secrets: string | null } | undefined;
+  if (!(r.access === 'everyone' || role === 'admin' || (r.access === 'chosen' && mine))) return undefined;
+  const own = open(key, mine?.secrets ?? null, aadUser(id, userId)).fields;
+  return own.username && own.password ? { url: r.url, username: own.username, password: own.password } : undefined;
+}

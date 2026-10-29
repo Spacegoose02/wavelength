@@ -205,6 +205,18 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
   | Plex, Audiobookshelf, SUB/WAVE listening (login sent to the device) | per the server's **Access**: Everyone, Admins only, or People I choose (admins always) | same | same |
   | SUB/WAVE admin controls (**the Hub** calls SUB/WAVE with the admin login) | ✓ | – | – |
   | deemix and yt-dlp downloads (**the Hub** runs them; the ARL stays on the Hub) | ✓ | only with **Autodownload** | – |
+  | Their own Navidrome login | sent to the device, or relayed if **Send everyone through the Hub** is on | same | always relayed |
+
+- **Navidrome through the Hub (relay):** kids' devices, and everyone's when an admin turns on **Send everyone
+  through the Hub** (Settings → Server → Navidrome accounts), never get a Navidrome password. They get a
+  login for the Hub's relay at `/nd/<server id>/rest/…` instead: the username is `<hub username>~<device id>`
+  and the password is derived from the Hub's secret key and the device, so signing a device out ends its
+  access at once. The Hub checks it, puts the person's real Navidrome login in its place and passes the call
+  on (`hub/src/routes/relay.ts`), streams included, with seeking. Account and server calls (`changePassword`,
+  user admin, `startScan`, shares, podcast and radio admin) are refused. For kids the Hub also refuses to
+  stream or download a song that Navidrome tags as explicit, that the library check rated explicit, or that
+  an admin flagged as not for kids, so another Subsonic app with the relay login gets no further than
+  Wavelength would. The Hub must be able to reach the Navidrome address.
 
 - **Logins that never leave the Hub:** the SUB/WAVE admin user and password and the deemix ARL aren't sent
   to any device, admins' included. The app sends those calls to the Hub (`/api/admin/subwave/…`,
@@ -327,6 +339,8 @@ with a 4xx status.
 | `POST /api/admin/services/:id/users/:userId/navidrome-account` | `keys.manage` | make a Navidrome account (their Hub username, random password) with the Navidrome server's admin login, saved as their own login |
 | `POST /api/me/playing` | signed in | what this device is playing (`{ title, artist?, album?, source? }`, or `{ stopped: true }`); memory only |
 | `GET /api/admin/listening` | `users.manage` | who is playing what right now, per device |
+| `GET /nd/:id/rest/:method` | relay login | Navidrome through the Hub (Subsonic, `t`+`s` or `p`); see "Navidrome through the Hub" |
+| `POST /nd/:id/auth/login`, `GET /nd/:id/api/song` | relay login | Navidrome's own API through the Hub, for play history only |
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed or RadioWave Monitor (https only, nothing else) |
 | `GET /*` | — | the app's web build (`WAVELENGTH_WEB_DIR`); unknown paths get `index.html` |
 | `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |

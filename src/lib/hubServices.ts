@@ -1,3 +1,4 @@
+import { trimSlash } from './http';
 import { Deemix } from '../sources/deemix';
 import type { HubService, HubServiceInput, HubServiceKind } from '../sources/hub';
 import type { SourceConfig, SourceKind } from '../sources/types';
@@ -33,7 +34,8 @@ function toSource(s: HubService, keep?: SourceConfig): SourceConfig {
     hubId: s.id,
     kind: s.kind as SourceKind,
     name: s.name,
-    url: s.url,
+    // relayed Navidrome: the Hub passes calls on with this person's real login, which stays there
+    url: s.relay ? `${trimSlash(useHub.getState().url)}/nd/${s.id}` : s.url,
     username: str(s.secrets.username),
     password: str(s.secrets.password),
     token: str(s.secrets.token),

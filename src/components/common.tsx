@@ -3,6 +3,7 @@ import { useSettings } from '../store/settings';
 import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
 import { explicitOfAlbum, explicitOfTrack, useHidden, useRatings } from '../lib/kids';
 import { albumArt, artistArt, trackArt, useArtworkList } from '../lib/artwork';
+import { cleanSide, useVersionHidden } from '../lib/versions';
 import { KidFlagButton } from './KidFlag';
 import { usePlayer } from '../store/player';
 import { IconMore, IconPlay } from './Icons';
@@ -53,9 +54,10 @@ export function Rating({ explicit }: { explicit?: 'explicit' | 'clean' | boolean
 
 export function AlbumCard({ album, onOpen }: { album: Album; onOpen(a: Album): void }) {
   const hidden = useHidden();
+  const otherVersion = useVersionHidden();
   useRatings((s) => s.ratings);
   useArtworkList();
-  if (hidden.album(album)) return null;
+  if (hidden.album(cleanSide(album)) || otherVersion(album)) return null;
   return (
     <button className="card" onClick={() => onOpen(album)}>
       <Cover src={albumArt(album)} alt={album.title} />

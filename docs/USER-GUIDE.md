@@ -420,7 +420,10 @@ servers need.
 address and its admin login once. Then **Make account** gives anyone their own Navidrome account (named
 after their Hub username, with a long random password), or **Use their login** saves one they already have.
 Their devices get it in Settings → Sources when they sign in, so favorites, play counts and playlists are
-each person's own. The admin login stays on the Hub; it also starts the scans after downloads.
+each person's own. The admin login stays on the Hub; it also starts the scans after downloads. Kids' devices
+never get their Navidrome password: they reach Navidrome through the Hub, which plays them nothing explicit
+or flagged. Turn on **Send everyone through the Hub** to do the same for everybody (the Hub has to be able
+to reach Navidrome, and music then travels through it).
 
 **Listening now (admins):** **Settings → Server** lists who is playing what, on which device. Devices report
 it every minute while playing; the Hub only keeps it in memory.
@@ -550,8 +553,15 @@ needed. When Deezer has a clean version of an explicit album, the album page sho
 
 So that new downloads carry the tag, open deemix, go to **Settings → Tags** and tick **Explicit lyrics**.
 
-Flags match by artist and title, so a song is hidden however a kid reaches it. A kid who knows their
-Navidrome password could still use another app to reach the full library.
+**Explicit and clean versions.** When your library has both versions of an album (for example *Loud* and
+*Loud (Clean)*, or two copies tagged differently), its page has an **Explicit** / **Clean** switch, and **Get
+clean version** goes away. Under **Settings → Playback → Explicit and clean versions**, **Prefer clean** or
+**Prefer explicit** shows only that version in album lists and opens albums on it (**Show both** is the
+default). It follows you to your other devices. Kid profiles always get the clean version.
+
+Flags match by artist and title, so a song is hidden however a kid reaches it. Kids' devices reach Navidrome
+through the Hub without ever getting the Navidrome password, and the Hub refuses to stream them anything
+explicit or flagged, so another app wouldn't get around it either.
 
 ### Changing cover art (admins)
 

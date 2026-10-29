@@ -12,7 +12,8 @@ import { IconPlay, IconShuffle } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfArtist, shareOfTracks } from '../lib/inbox';
-import { explicitOfAlbum, explicitOfTrack, useHidden, useRatings } from '../lib/kids';
+import { explicitOfAlbum, explicitOfTrack, useHidden, useIsKid, useRatings } from '../lib/kids';
+import { hasBoth, preferredRef, useVersionPref, versionOf, versionsOf } from '../lib/versions';
 import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
@@ -228,14 +229,22 @@ export function AlbumView({ album }: { album: Album }) {
   const cfgOf = useSourceCfg();
   const refs = album.refs ?? [album];
   const [refIdx, setRefIdx] = useState(0);
+  const pref = useVersionPref();
+  // a version picked on the Explicit / Clean switch (or the preferred one), which can be another album's copy
+  const [pick, setPick] = useState<Album | undefined>(() => preferredRef(album, pref));
   const [tracks, setTracks] = useState<Track[] | null>(null);
   const [error, setError] = useState<string>();
   const playTracks = usePlayer((s) => s.playTracks);
-  const ref = refs[refIdx];
+  const ref = pick ?? refs[refIdx];
   const hidden = useHidden();
   useRatings((s) => s.ratings);
   useArtworkList();
   const art = albumArt(album, ref.coverUrl ?? album.coverUrl);
+  useCatalog((s) => s.albums);
+  const versions = versionsOf(album);
+  const both = hasBoth(versions);
+  const shown = versionOf(ref);
+  const kid = useIsKid();
 
   useEffect(() => {
     let alive = true;
@@ -252,14 +261,14 @@ export function AlbumView({ album }: { album: Album }) {
   }, [ref]);
 
   const total = tracks?.reduce((s, t) => s + (t.duration ?? 0), 0) ?? 0;
-  if (hidden.album(album)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
+  if (hidden.album(both ? { ...album, explicit: shown } : album)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
   return (
     <div className="page">
       <header className="hero">
         <Cover src={art} alt={album.title} className="hero-art" />
         <div>
           <div className="kicker">Album{album.year ? ` · ${album.year}` : ''}</div>
-          <h1>{album.title} <Rating explicit={explicitOfAlbum(album)} /></h1>
+          <h1>{both ? ref.title : album.title} <Rating explicit={both ? shown : explicitOfAlbum(album)} /></h1>
           <button className="link" onClick={() => {
             const artist = useCatalog.getState().artists.find((a) => (a.refs ?? [a]).some((r) => r.id === ref.artistId && r.sourceId === ref.sourceId));
             if (artist) useUi.getState().go({ view: 'artist', artist });
@@ -276,7 +285,16 @@ export function AlbumView({ album }: { album: Album }) {
             {tracks?.length ? <QueueAllOnSubwave tracks={tracks} albumBlock /> : null}
             {tracks?.length ? <ShareButton what={() => shareOfTracks('album', album.title, tracks, album.artist, art)} /> : null}
             <KidFlagButton kind="album" artist={album.artist} title={album.title} explicit={explicitOfAlbum(album) === 'explicit' || tracks?.some((t) => explicitOfTrack(t) === 'explicit')} />
-            <CleanVersionButton artist={album.artist} album={album.title} />
+            {!both && <CleanVersionButton artist={album.artist} album={album.title} />}
+            {both && !kid && (
+              <div className="chips inline" role="group" aria-label="Version">
+                {(['explicit', 'clean'] as const).map((v) => (
+                  <button key={v} className={`chip ${shown === v ? 'on' : ''}`} onClick={() => setPick(versions.find((x) => x.version === v)?.ref)}>
+                    {v === 'explicit' ? 'Explicit' : 'Clean'}
+                  </button>
+                ))}
+              </div>
+            )}
             <ArtworkButton kind="album" artist={album.artist} album={album.title} current={art} />
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
@@ -285,7 +303,7 @@ export function AlbumView({ album }: { album: Album }) {
             {refs.length > 1 && (
               <div className="chips inline">
                 {refs.map((r, i) => (
-                  <button key={r.sourceId} className={`chip ${i === refIdx ? 'on' : ''}`} onClick={() => setRefIdx(i)}>
+                  <button key={`${r.sourceId}:${r.id}`} className={`chip ${!pick && i === refIdx ? 'on' : ''}`} onClick={() => { setPick(undefined); setRefIdx(i); }}>
                     <i className="dot" style={{ background: SOURCE_COLORS[cfgOf(r.sourceId)?.kind ?? 'radio'] }} />
                     {cfgOf(r.sourceId)?.name}
                   </button>

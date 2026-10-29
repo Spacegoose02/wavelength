@@ -114,6 +114,9 @@ interface SettingsState {
   setRaccoon(r: RaccoonKind): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
+  /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
+  versions: 'both' | 'clean' | 'explicit';
+  setVersions(v: SettingsState['versions']): void;
   /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
   updates: { auto: boolean; prerelease: boolean };
   setUpdates(u: Partial<SettingsState['updates']>): void;
@@ -152,6 +155,8 @@ export const useSettings = create<SettingsState>()(
       setRaccoon: (raccoon) => set({ raccoon }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
+      versions: 'both',
+      setVersions: (versions) => set({ versions }),
       updates: { auto: true, prerelease: false },
       setUpdates: (u) => set((st) => ({ updates: { ...st.updates, ...u } })),
       setDiscoverCharts: (g, charts) =>

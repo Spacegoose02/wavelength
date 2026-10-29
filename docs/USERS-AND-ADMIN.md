@@ -388,7 +388,7 @@ Request button + approval queue, server-side deemix/yt-dlp runner, slskd source,
 auto-download settings, sharing. **Cards closed:** request music, per-user autodownload, sharing (connect to
 slskd still open).
 
-### Phase 4 — Kids and content rating · ~2–3 weeks · **in progress**
+### Phase 4 — Kids and content rating · ~2–3 weeks · **done**
 
 Done: kid-safe flags (`hub/src/routes/flags.ts`, `src/lib/kids.ts`). Explicit status is read from Navidrome
 (OpenSubsonic `explicitStatus`) and Deezer (`explicit_lyrics`) and shown as **E** / **C** badges. Kid profiles
@@ -399,7 +399,11 @@ bigger menu; per-kid bedtime and minutes a day, counted across devices; a househ
 30 minutes and is needed to sign out of a kid profile. Library check (`src/lib/explicitCheck.ts`,
 `hub/src/routes/ratings.ts`): an admin's device looks every album up on Deezer and keeps explicit albums,
 explicit songs and the clean version's link on the Hub, which covers untagged files and Plex; explicit albums
-get **Get clean version**. Still open: the version switch, a per-user clean/explicit preference, and keeping the kid's Navidrome password off their device.
+get **Get clean version**. Versions (`src/lib/versions.ts`): an Explicit / Clean switch on albums the library has
+in both versions, and a synced per-person preference (Settings → Playback) that shows only the preferred
+version in album lists; kids always get clean. Navidrome relay (`hub/src/routes/relay.ts`): kids' devices
+(everyone's, if the admin chooses) get a per-device relay login instead of their Navidrome password, and the
+Hub refuses to stream kids anything explicit or flagged.
 
 Kid role and UI, automatic + manual not-safe flags, explicit/clean detection, clean-version lookup
 and version switch. **Cards closed:** kids profiles, mark not safe for kids, explicit and clean versions.
