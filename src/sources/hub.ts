@@ -306,6 +306,29 @@ export interface HubAdminService {
 /** Secrets to save: a value sets it, '' or null clears it, a missing key keeps it. */
 export type HubServiceInput = Partial<{ kind: HubServiceKind; name: string; url: string; access: HubAccess; config: Record<string, string | number | null>; secrets: Record<string, string | null> }>;
 
+/** One person's year or month of listening (hub/src/rewind.ts). */
+export interface HubRewind {
+  year: number;
+  month: number | null;
+  plays: number;
+  minutes: number;
+  songs: number;
+  artists: number;
+  albums: number;
+  topArtists: { artist: string; plays: number; minutes: number; track: Track }[];
+  topSongs: { title: string; artist: string; plays: number; track: Track }[];
+  topAlbums: { album: string; artist: string; plays: number; track: Track }[];
+  favourite: { title: string; artist: string; plays: number; firstPlayedAt: number | null } | null;
+  newArtists: { count: number; top: { artist: string; plays: number }[] };
+  byHour: number[];
+  byWeekday: number[];
+  byMonth: number[] | null;
+  busiestDay: { day: string; plays: number } | null;
+  daysListened: number;
+  streak: number;
+  playlist: Track[];
+}
+
 export interface HubInvite {
   id: number;
   role: HubRole;
@@ -462,6 +485,9 @@ export class HubClient {
   tagHistory = () => this.call<{ edits: HubTagEdit[] }>('GET', '/api/admin/tags/history');
   undoTags = (batch: string) => this.call<{ undone: number; failed: { path: string; error: string }[] }>('POST', `/api/admin/tags/undo/${encodeURIComponent(batch)}`);
   importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });
+  rewindPeriods = () => this.call<{ periods: { year: number; month: number; plays: number }[] }>('GET', `/api/me/rewind/periods?tz=${new Date().getTimezoneOffset()}`);
+  rewind = (year: number, month?: number) =>
+    this.call<HubRewind>('GET', `/api/me/rewind?${new URLSearchParams({ year: String(year), ...(month && { month: String(month) }), tz: String(new Date().getTimezoneOffset()) })}`);
   addMyHistory = (plays: { playedAt: number; track: Track }[]) => this.call('POST', '/api/me/history', { plays });
   removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);
   allRequests = (status?: string) => this.call<{ requests: HubRequest[] }>('GET', `/api/admin/requests${status ? `?status=${status}` : ''}`);

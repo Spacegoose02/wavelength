@@ -90,7 +90,8 @@ function forHub(t: Track): Track {
   const { streamUrl: _s, coverUrl: _c, ...rest } = t;
   return rest;
 }
-function fromHub(t: Track): Track {
+/** A track that came back from the Hub, with this device's Navidrome links put back. */
+export function fromHub(t: Track): Track {
   const cfg = useSettings.getState().sources.find((s) => s.id === t.sourceId);
   if (cfg?.kind !== 'navidrome' || t.kind !== 'track' || t.coverUrl) return t;
   const src = sourceFor(cfg);

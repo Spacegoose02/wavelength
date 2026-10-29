@@ -403,6 +403,15 @@ for kids are left out.
 > YouTube goes through the Hub's `POST /api/import/youtube`; Spotify's embed page and Deezer's API go through
 > `/api/fetch` in a browser.
 
+## Rewind
+
+**History → Rewind** (with a Hub) is your year in music, or any month of it: minutes listened, plays, top
+artists, songs and albums, your most played song and when you first played it, new artists you found, your
+busiest day and longest streak, and when you listen most. **Play your top songs**, **Save as playlist**, or
+**Share as a picture** (a card in your skin's colours; on a phone it opens the share sheet). It counts music
+from every device you're signed in on, not radio, audiobooks or podcasts, and starts from the history your
+Hub already has.
+
 ## Settings tabs
 
 Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** and **Server** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
