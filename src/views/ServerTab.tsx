@@ -116,16 +116,23 @@ function NavidromeAccounts() {
       <p className="muted small">
         Give everyone their own Navidrome account, so their favorites, play counts and playlists are their own. The Hub keeps
         the Navidrome admin login (it never leaves the Hub) and uses it to make accounts and to scan after downloads. Each
-        person's devices get their own login when they sign in, in Settings → Sources.
+        person's devices get their own login when they sign in, in Settings → Sources. Kids' devices never get their Navidrome
+        password: they reach Navidrome through the Hub, which also refuses to play them anything explicit or flagged.
       </p>
       <form className="editor" onSubmit={save}>
         <div className="editor-grid">
-          <label className="span2">Navidrome address (as people's devices reach it)<input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://music.example.com" required /></label>
+          <label className="span2">Navidrome address (as the Hub and people's devices reach it)<input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://music.example.com" required /></label>
           <label>Admin username<input value={form.adminUsername} onChange={(e) => setForm({ ...form, adminUsername: e.target.value })} placeholder={hasAdmin ? 'saved' : ''} autoComplete="off" /></label>
           <label>Admin password<input type="password" value={form.adminPassword} onChange={(e) => setForm({ ...form, adminPassword: e.target.value })} placeholder={hasAdmin ? 'saved, leave empty to keep' : ''} autoComplete="new-password" /></label>
         </div>
         <div className="row gap"><button className="btn primary">{svc ? 'Save' : 'Add Navidrome'}</button>{msg && <span className="small">{msg}</span>}</div>
       </form>
+      {svc && (
+        <label className="check" style={{ margin: '12px 0' }} title="Every device reaches Navidrome through the Hub, so no device holds a Navidrome password">
+          <span className="switch"><input type="checkbox" checked={svc.config.relay === 'everyone'} onChange={(e) => run(0, () => c!.updateService(svc.id, { config: { relay: e.target.checked ? 'everyone' : null } }))} /><span /></span>
+          <small>Send everyone through the Hub, not just kids</small>
+        </label>
+      )}
       {svc && users.map((u) => {
         const has = svc.users.find((x) => x.userId === u.id)?.secretsSet.includes('username');
         return (

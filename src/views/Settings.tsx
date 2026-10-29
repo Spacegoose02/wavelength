@@ -7,6 +7,7 @@ import { Raccoon, RACCOONS } from '../components/raccoon/Raccoon';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
+import { useIsKid } from '../lib/kids';
 import { SKIN_GROUPS, SKINS, useSettings, type Skin } from '../store/settings';
 import { useUi, type SettingsTab } from '../store/ui';
 import { hubClient, useCan, useHub } from '../store/hub';
@@ -500,6 +501,27 @@ const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
   { id: 'updates', label: 'Updates' },
 ];
 
+/** Explicit / clean versions (lib/versions.ts). Kid profiles always get the clean one. */
+function VersionsPicker() {
+  const versions = useSettings((s) => s.versions);
+  const setVersions = useSettings((s) => s.setVersions);
+  const kid = useIsKid();
+  return (
+    <section id="versions">
+      <h2>Explicit and clean versions</h2>
+      <p className="muted small">
+        When the library has both versions of an album, the album page has an Explicit / Clean switch. Pick one here to see only
+        that version in album lists and open albums on it.{kid ? ' On this profile it’s always the clean version.' : ''}
+      </p>
+      <div className="chips">
+        {([['both', 'Show both'], ['clean', 'Prefer clean'], ['explicit', 'Prefer explicit']] as const).map(([v, label]) => (
+          <button key={v} className={`chip ${(kid ? 'clean' : versions) === v ? 'on' : ''}`} disabled={kid} onClick={() => setVersions(v)}>{label}</button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   const [tab, setTab] = useState<SettingsTab>(initial ?? 'sources');
   // Users is for Hub admins only (the Hub refuses its calls from anyone else anyway)
@@ -525,6 +547,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'playback' && (
         <>
           <NowPlayingPicker />
+          <VersionsPicker />
           <section id="equalizer">
             <h2>Equalizer</h2>
             <Equalizer />
