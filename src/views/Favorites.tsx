@@ -8,6 +8,9 @@ import { useUi } from '../store/ui';
 import { AlbumCard, Empty, Spinner, TrackList } from '../components/common';
 import { IconPlay, IconShuffle } from '../components/Icons';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
+import { ShareButton } from '../components/ShareButton';
+import { shareOfTracks } from '../lib/inbox';
+import { useHub } from '../store/hub';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -34,7 +37,7 @@ export function Favorites() {
   );
 }
 
-function PlayBar({ tracks }: { tracks: Track[] }) {
+function PlayBar({ tracks, share }: { tracks: Track[]; share?: boolean }) {
   const playTracks = usePlayer((s) => s.playTracks);
   if (!tracks.length) return null;
   return (
@@ -45,6 +48,7 @@ function PlayBar({ tracks }: { tracks: Track[] }) {
         playTracks(tracks, Math.floor(Math.random() * tracks.length));
       }}><IconShuffle /> Shuffle</button>
       <QueueAllOnSubwave tracks={tracks} />
+      {share && <ShareButton what={() => shareOfTracks('favorites', `${useHub.getState().user?.displayName ?? 'My'}'s favorites`, tracks)} label="Share favorites" />}
     </div>
   );
 }
@@ -69,7 +73,7 @@ function NavidromeFavs({ sourceId }: { sourceId: string }) {
       )}
       <section>
         <h2>Tracks <small className="muted">{favs.tracks.length}</small></h2>
-        <PlayBar tracks={favs.tracks} />
+        <PlayBar tracks={favs.tracks} share />
         <TrackList tracks={favs.tracks} showAlbum showCover />
       </section>
     </>

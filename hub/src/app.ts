@@ -8,7 +8,9 @@ import { adminRoutes } from './routes/admin.ts';
 import { authRoutes } from './routes/auth.ts';
 import { meRoutes } from './routes/me.ts';
 import { proxyRoutes } from './routes/proxy.ts';
+import { requestRoutes } from './routes/requests.ts';
 import { serviceRoutes } from './routes/services.ts';
+import { shareRoutes } from './routes/shares.ts';
 import { getUser } from './users.ts';
 import { YtdlpRunner } from './ytdlp.ts';
 
@@ -84,5 +86,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
   adminRoutes(app, ctx);
   serviceRoutes(app, ctx);
   proxyRoutes(app, ctx);
+  requestRoutes(app, ctx);
+  shareRoutes(app, ctx);
   return app;
 }

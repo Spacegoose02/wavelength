@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- **Request music.** Signed in to a Hub without Autodownload, **Get** becomes **Request** in Downloads, Discover
+  and Release Radar, and you can paste a YouTube, SoundCloud or Bandcamp link too. Admins approve in the new
+  **Inbox → To approve**: the Hub downloads it with deemix or yt-dlp, or they mark it as already in the library
+  or reject it with a reason. You see the answer in **Inbox → My requests**. Admins and people with
+  Autodownload still download straight away.
+- **Share with each other.** A **Share** button on playlists, albums, artists, radio stations, songs and your
+  favorites sends them to one person on your Hub or to everyone, with a note. They show up in **Inbox → Shared
+  with you**, where **Play** finds the songs in your own library and **Save as playlist** keeps them.
+- **Inbox** in the sidebar (and the phone's Library tab) with a count of new shares, answers and requests to
+  approve. See the [user guide](docs/USER-GUIDE.md#requesting-music).
+- **Hub:** new `requests`, `shares` and `share_seen` tables (migration 4) and the `/api/requests`,
+  `/api/admin/requests`, `/api/people` and `/api/shares` routes. Update the Hub container along with the app.
+
 ## 0.11.0
 - **In-app updates (Windows and Android).** Wavelength checks GitHub for a newer release on launch and every
   6 hours, shows a banner, and lists it in the new **Settings → Updates** tab with the release notes.

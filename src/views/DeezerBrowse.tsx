@@ -5,6 +5,7 @@
  * Navigation is a small stack owned by the Deezer tab, so Back walks back through what you opened.
  */
 import { useEffect, useState } from 'react';
+import { mustRequest, useMustRequest } from '../lib/inbox';
 import { getDeezerAlbum, getDeezerArtist, getDeezerPlaylist, type DeezerAlbumPage, type DeezerArtistPage, type DeezerPlaylistPage, type DeezerResult } from '../sources/deemix';
 import type { Track } from '../sources/types';
 import { usePlayer } from '../store/player';
@@ -48,9 +49,11 @@ function PreviewButton({ r }: { r: DeezerResult }) {
 
 export function GetButton({ r, send, status, label = 'Get' }: { r: DeezerResult; send(r: DeezerResult): void; status: Record<string, SendStatus>; label?: string }) {
   const st = status[statusKey(r)];
+  // no Autodownload: ask the Hub admin instead
+  const ask = useMustRequest();
   return (
-    <button className="btn small" disabled={st?.s === 'sending' || st?.s === 'queued'} onClick={(e) => { e.stopPropagation(); send(r); }}>
-      <IconDownload /> {st?.s === 'queued' ? 'Queued' : st?.s === 'sending' ? '…' : label}
+    <button className="btn small" disabled={st?.s === 'sending' || st?.s === 'queued'} title={st?.s === 'error' ? st.msg : undefined} onClick={(e) => { e.stopPropagation(); send(r); }}>
+      <IconDownload /> {st?.s === 'queued' ? (ask ? 'Requested' : 'Queued') : st?.s === 'sending' ? '…' : ask ? label.replace(/^Get/, 'Request') : label}
     </button>
   );
 }
@@ -135,7 +138,7 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
           <h2>{artist.title}</h2>
           <div className="muted small">{artist.fans ? `${artist.fans.toLocaleString()} fans · ` : ''}{albums.length} releases</div>
           <div className="hero-actions">
-            <GetButton r={artist} send={(r) => confirm(`Send ${artist.title}'s whole discography (${albums.length} releases) to deemix?`) && p.send(r)} status={p.status} label="Get discography" />
+            <GetButton r={artist} send={(r) => confirm(`Send ${artist.title}'s whole discography (${albums.length} releases) to ${mustRequest() ? 'your Hub admin' : 'deemix'}?`) && p.send(r)} status={p.status} label="Get discography" />
           </div>
           {p.status[statusKey(artist)]?.s === 'error' && <div className="card-err">{p.status[statusKey(artist)].msg}</div>}
         </div>
@@ -246,7 +249,7 @@ export function DeezerPlaylist({ id, ...p }: BrowseProps & { id: number }) {
           </div>
           {description && <p className="muted small dz-desc">{description}</p>}
           <div className="hero-actions">
-            <GetButton r={playlist} send={(r) => (tracks.length <= 50 || confirm(`Send all ${tracks.length} songs in "${playlist.title}" to deemix?`)) && p.send(r)} status={p.status} label="Get playlist" />
+            <GetButton r={playlist} send={(r) => (tracks.length <= 50 || confirm(`Send all ${tracks.length} songs in "${playlist.title}" to ${mustRequest() ? 'your Hub admin' : 'deemix'}?`)) && p.send(r)} status={p.status} label="Get playlist" />
           </div>
           {p.status[statusKey(playlist)]?.s === 'error' && <div className="card-err">{p.status[statusKey(playlist)].msg}</div>}
         </div>

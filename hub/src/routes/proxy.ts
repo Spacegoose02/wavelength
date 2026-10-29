@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need } from '../http.ts';
+import type { Db } from '../db.ts';
 import { serviceForHub, serviceIdOfKind } from '../services.ts';
 import { deemixFor, subwaveAdmin } from '../upstream.ts';
 
@@ -38,12 +39,7 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp }: Ctx) {
   });
 
   // ---- deemix ----
-  const deemix = () => {
-    const id = serviceIdOfKind(db, 'deemix');
-    const s = id === undefined ? undefined : serviceForHub(db, key, id);
-    if (!s) throw new HttpError(404, 'The Hub has no deemix set up. An admin adds it in Settings → Downloads');
-    return { s, client: deemixFor(s.id, s.url, s.secrets.arl ?? '') };
-  };
+  const deemix = () => hubDeemix(db, key);
 
   app.get('/api/downloads/deemix', async (req) => {
     need(req, 'downloads.run');
@@ -59,7 +55,7 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp }: Ctx) {
     const { user } = need(req, 'downloads.run');
     const b = (req.body ?? {}) as Record<string, unknown>;
     const link = str(b.link, 500);
-    if (!/^https:\/\/(www\.)?deezer\.com\/\S+$/i.test(link) && !/^https:\/\/(deezer\.page\.link|link\.deezer\.com)\/\S+$/i.test(link)) throw new HttpError(400, 'Send a Deezer link');
+    if (!isDeezerLink(link)) throw new HttpError(400, 'Send a Deezer link');
     const { s, client } = deemix();
     const bitrate = typeof b.bitrate === 'number' && [1, 3, 9].includes(b.bitrate) ? b.bitrate : Number(s.config.bitrate) || 9;
     const r = await client.addToQueue(link, bitrate);
@@ -68,11 +64,7 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp }: Ctx) {
   });
 
   // ---- yt-dlp ----
-  const ytSettings = () => {
-    const id = serviceIdOfKind(db, 'ytdlp');
-    const s = id === undefined ? undefined : serviceForHub(db, key, id);
-    return { folder: str(s?.config.folder) || 'yt-dlp', format: str(s?.config.format) || 'opus' };
-  };
+  const ytSettings = () => hubYtSettings(db, key);
 
   app.post('/api/downloads/ytdlp/search', async (req) => {
     need(req, 'downloads.run');
@@ -98,3 +90,22 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp }: Ctx) {
     return { ok: true };
   });
 }
+
+/** The Hub's deemix server and a logged-in client for it. 404 when none is set up. */
+export function hubDeemix(db: Db, key: Buffer) {
+  const id = serviceIdOfKind(db, 'deemix');
+  const s = id === undefined ? undefined : serviceForHub(db, key, id);
+  if (!s) throw new HttpError(404, 'The Hub has no deemix set up. An admin adds it in Settings → Downloads');
+  return { s, client: deemixFor(s.id, s.url, s.secrets.arl ?? '') };
+}
+
+/** Where and how the Hub's yt-dlp saves. */
+export function hubYtSettings(db: Db, key: Buffer) {
+  const id = serviceIdOfKind(db, 'ytdlp');
+  const s = id === undefined ? undefined : serviceForHub(db, key, id);
+  const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  return { folder: text(s?.config.folder) || 'yt-dlp', format: text(s?.config.format) || 'opus' };
+}
+
+export const isDeezerLink = (link: string) =>
+  /^https:\/\/(www\.)?deezer\.com\/\S+$/i.test(link) || /^https:\/\/(deezer\.page\.link|link\.deezer\.com)\/\S+$/i.test(link);

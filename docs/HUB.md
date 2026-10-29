@@ -213,7 +213,7 @@ each device** (everyone signs in to Navidrome as themselves).
 
 | Role | Permissions today |
 |---|---|
-| **admin** | `users.manage`, `audit.view`, `keys.manage` (server logins), `subwave.control`, `downloads.run`, and the ones later phases use (`requests.approve`, `library.edit`, `server.view`). |
+| **admin** | `users.manage`, `audit.view`, `keys.manage` (server logins), `subwave.control`, `downloads.run`, `requests.approve`, and the ones later phases use (`library.edit`, `server.view`). |
 | **member** | `requests.create`; plus `downloads.run` while the admin has their **Autodownload** switch on. |
 | **kid** | `requests.create`. Kids can never be given Autodownload. |
 
@@ -254,6 +254,18 @@ with a 4xx status.
 | `GET/POST /api/downloads/deemix/queue` | `downloads.run` | deemix's queue / add `{ link, bitrate? }` (a Deezer link) |
 | `POST /api/downloads/ytdlp/search` | `downloads.run` | `{ query }` → `{ results }` (YouTube search, or a link's contents) |
 | `GET/POST/DELETE /api/downloads/ytdlp/jobs` | `downloads.run` | downloads (your own; admins see everyone's) / start `{ url, title?, channel? }` / clear finished |
+| `POST /api/requests` | `requests.create` | ask for music `{ link, kind?, title, artist?, cover?, note? }` → `{ request }`. With `downloads.run` it is approved (downloaded) straight away |
+| `GET /api/requests` | signed in | your requests, newest first |
+| `GET /api/requests/counts` | signed in | `{ unseen, pending }`: your decided requests you haven't looked at, and (with `requests.approve`) how many wait |
+| `POST /api/requests/seen`, `DELETE /api/requests/:id` | signed in | mark yours as seen / cancel one still waiting |
+| `GET /api/admin/requests?status=` | `requests.approve` | everyone's requests, waiting ones first |
+| `POST /api/admin/requests/:id/approve` | `requests.approve` | `{ bitrate? }`: the Hub downloads it (Deezer links with deemix, anything else with yt-dlp); `failed` with the reason if that didn't work, and approving again retries |
+| `POST /api/admin/requests/:id/reject`, `/have`, `DELETE …/:id` | `requests.approve` | reject `{ reason? }` / "already in the library" / remove |
+| `GET /api/people` | signed in | who you can share with: `{ people: [{ id, username, displayName, kid }] }` |
+| `POST /api/shares` | signed in | `{ to: userId \| null (everyone), kind, title, subtitle?, cover?, note?, payload }`; `kind` is playlist, album, track, artist, station or favorites; `payload` is `{ tracks: [{ title, artist, album?, duration?, coverUrl? }] }`, `{ station: { name, streamUrl, … } }` or `{ artist }` (512 KB at most) |
+| `GET /api/shares?sent=1` | signed in | shared with you (or `sent=1`: what you shared), newest first |
+| `GET /api/shares/counts`, `POST /api/shares/seen` | signed in | `{ unseen }` / mark `{ ids? }` (or all) as seen |
+| `POST /api/shares/:id/hide`, `DELETE /api/shares/:id` | signed in | take one off your list / unshare (the sender, or an admin) |
 | `GET /api/admin/audit?limit=&before=` | `audit.view` | newest first |
 
 A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`,

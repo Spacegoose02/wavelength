@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { deemixClient } from '../lib/hubServices';
+import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
 import { albumPreview, releaseRadar, type Release } from '../sources/releaseRadar';
 import { norm } from '../sources/registry';
 import { useCatalog } from '../store/catalog';
@@ -17,6 +18,7 @@ export function ReleaseRadar() {
   const [status, setStatus] = useState<Record<number, string>>({});
   const albums = useCatalog((s) => s.albums);
   const deemix = useSettings((s) => s.deemix);
+  const ask = useMustRequest();
 
   useEffect(() => {
     let alive = true;
@@ -38,8 +40,13 @@ export function ReleaseRadar() {
   const get = async (r: Release) => {
     setStatus((s) => ({ ...s, [r.id]: '…' }));
     try {
-      await deemixClient().addToQueue(r.deezerLink, deemix.bitrate);
-      setStatus((s) => ({ ...s, [r.id]: 'Queued' }));
+      if (mustRequest()) {
+        await requestMusic({ link: r.deezerLink, kind: 'album', title: r.title, artist: r.artist, cover: r.cover });
+        setStatus((s) => ({ ...s, [r.id]: 'Requested' }));
+      } else {
+        await deemixClient().addToQueue(r.deezerLink, deemix.bitrate);
+        setStatus((s) => ({ ...s, [r.id]: 'Queued' }));
+      }
     } catch (e) {
       setStatus((s) => ({ ...s, [r.id]: String((e as Error).message ?? e) }));
     }
@@ -77,8 +84,8 @@ export function ReleaseRadar() {
                 {mine ? (
                   <button className="btn small" onClick={() => useUi.getState().go({ view: 'album', album: mine })}>In library</button>
                 ) : (
-                  <button className="btn small" disabled={!deemix.url || status[r.id] === '…' || status[r.id] === 'Queued'} title={status[r.id]} onClick={() => get(r)}>
-                    <IconDownload /> {status[r.id] && status[r.id].length < 12 ? status[r.id] : 'Get'}
+                  <button className="btn small" disabled={(!deemix.url && !ask) || status[r.id] === '…' || status[r.id] === 'Queued' || status[r.id] === 'Requested'} title={status[r.id]} onClick={() => get(r)}>
+                    <IconDownload /> {status[r.id] && status[r.id].length < 12 ? status[r.id] : ask ? 'Request' : 'Get'}
                   </button>
                 )}
               </div>

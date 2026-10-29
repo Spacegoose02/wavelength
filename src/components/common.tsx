@@ -6,6 +6,8 @@ import { IconMore, IconPlay } from './Icons';
 import { useIsPhone } from '../lib/platform';
 import { AddToPlaylist } from './AddToPlaylist';
 import { FavButton, QueueOnSubwave } from './TrackButtons';
+import { ShareButton } from './ShareButton';
+import { shareOfTracks } from '../lib/inbox';
 
 export function fmtTime(s?: number) {
   if (!s || !Number.isFinite(s)) return '0:00';
@@ -100,6 +102,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <button className="chip" onClick={() => enqueue([t])}>+ Queue</button>
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} />}
             <QueueOnSubwave track={t} />
+            {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}
             {onRemove && <button className="chip" onClick={() => onRemove(i)} title="Remove from playlist">✕</button>}
           </div>
           <FavButton key={`${t.sourceId}:${t.id}:${t.starred}`} track={t} />

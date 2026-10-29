@@ -1,12 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
 import { startHubSync } from './lib/hubSync';
+import { inboxBadge, startInboxChecks, useInbox } from './lib/inbox';
+import { useHub } from './store/hub';
 import { skinGroup, useSettings } from './store/settings';
 import { useUi, type Route } from './store/ui';
 import { usePlayer } from './store/player';
 import { PlayerBar } from './components/PlayerBar';
 import { NowPlaying, QueuePanel } from './components/NowPlaying';
-import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart } from './components/Icons';
+import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart, IconInbox } from './components/Icons';
 import { Podcasts, PodcastView } from './views/Podcasts';
 import { History } from './views/History';
 import { PlaylistView, Playlists, ServerPlaylistView } from './views/Playlists';
@@ -24,6 +26,7 @@ import { Search } from './views/Search';
 import { Radio } from './views/Radio';
 import { Books } from './views/Books';
 import { Downloads } from './views/Downloads';
+import { Inbox } from './views/Inbox';
 import { Settings } from './views/Settings';
 import { activeSkin } from './lib/seasons';
 import { startUpdateChecks } from './lib/updates';
@@ -44,6 +47,7 @@ const NAV: { view: Route['view']; label: string; icon: ReactNode }[] = [
   { view: 'books', label: 'Audiobooks', icon: <IconBook /> },
   { view: 'podcasts', label: 'Podcasts', icon: <IconPodcast /> },
   { view: 'downloads', label: 'Downloads', icon: <IconDownload /> },
+  { view: 'inbox', label: 'Inbox', icon: <IconInbox /> },
   { view: 'settings', label: 'Settings', icon: <IconSettings /> },
 ];
 
@@ -71,6 +75,7 @@ function View({ route }: { route: Route }) {
     case 'offline': return <Offline />;
     case 'offlineCollection': return <OfflineCollectionView key={route.id} id={route.id} />;
     case 'downloads': return <Downloads />;
+    case 'inbox': return <Inbox />;
     case 'settings': return <Settings tab={route.tab} />;
   }
 }
@@ -123,6 +128,7 @@ export default function App() {
     useCatalog.getState().load();
     startHubSync();
     startUpdateChecks();
+    startInboxChecks();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back
@@ -155,6 +161,8 @@ export default function App() {
   }, []);
 
   const phone = useIsPhone();
+  const hubOn = useHub((s) => !!s.token);
+  const badge = useInbox(inboxBadge);
   const tabRoot = ['home', 'discover', 'search', 'subwave', 'library'].includes(route.view);
 
   return (
@@ -162,9 +170,10 @@ export default function App() {
       {!phone && (
         <nav className="sidebar">
           <div className="brand"><span className="brand-mark" />Wavelength</div>
-          {NAV.map((n) => (
+          {NAV.filter((n) => n.view !== 'inbox' || hubOn).map((n) => (
             <button key={n.view} className={`nav ${route.view === n.view ? 'on' : ''}`} onClick={() => go({ view: n.view } as Route)}>
               {n.icon}<span>{n.label}</span>
+              {n.view === 'inbox' && badge > 0 && <span className="badge">{badge}</span>}
             </button>
           ))}
           <SidebarPlaylists route={route} />

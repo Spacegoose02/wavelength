@@ -1553,3 +1553,26 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
   .source-row { flex-wrap: wrap; }
   .hub-qr { width: 140px; height: 140px; }
 }
+
+/* Inbox: shared items, requests, approvals */
+.badge { margin-left: auto; min-width: 18px; padding: 1px 6px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; text-align: center; }
+.tabs .badge { margin-left: 6px; }
+.tabbar button { position: relative; }
+.tab-dot { position: absolute; top: 6px; right: calc(50% - 16px); width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.share-list { display: flex; flex-direction: column; gap: 10px; }
+.share-card { display: flex; gap: 14px; align-items: center; padding: 12px; border-radius: var(--radius); background: var(--panel); }
+.share-card .share-cover { width: 72px; height: 72px; flex: none; border-radius: calc(var(--radius) * 0.7); }
+.share-card .kicker { margin-bottom: 2px; }
+.share-note { font-style: italic; color: var(--muted); font-size: 13px; margin-top: 4px; }
+.share-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.request-row { align-items: center; }
+.req-status { font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--muted); }
+.req-status.approved { color: var(--accent); }
+.req-status.failed { color: #e5534b; }
+@media (max-width: 700px) {
+  .share-card { flex-wrap: wrap; }
+  .share-actions { width: 100%; justify-content: flex-start; }
+  .request-row { flex-wrap: wrap; }
+}
+.request-link { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 14px; }
+.request-link input { flex: 1; min-width: 0; }

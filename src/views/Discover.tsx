@@ -15,6 +15,7 @@ import { IconDownload, IconPause, IconPlay, IconRefresh } from '../components/Ic
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { QueueAllOnSubwave, QueueOnSubwave } from '../components/TrackButtons';
 import { isAndroid } from '../lib/platform';
+import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
 import { ReleaseRadar } from '../components/ReleaseRadar';
 
 type View = 'mix' | ChartSource;
@@ -95,6 +96,7 @@ export function Discover() {
   const patch = (i: number, p: Partial<Row>) => setRows((rs) => rs?.map((r, j) => (j === i ? { ...r, ...p } : r)));
 
   const hubYt = useHubRuns('ytdlp');
+  const ask = useMustRequest();
   const ytAvailable = hubYt || (!isAndroid && !!yt.outDir);
   const nowPlayingId = usePlayer((s) => s.queue[s.index]?.id);
   const playing = usePlayer((s) => s.playing);
@@ -128,6 +130,19 @@ export function Discover() {
    */
   const get = async (i: number) => {
     const e = rows![i];
+    if (mustRequest()) {
+      // no Autodownload: ask the Hub admin for it
+      patch(i, { dl: { state: 'sending' } });
+      const link = await deezerLinkFor(e);
+      if (!link) return patch(i, { dl: { state: 'error', msg: 'Not on Deezer', notOnDeezer: true } });
+      try {
+        await requestMusic({ link, kind: 'track', title: e.title, artist: e.artist, cover: e.cover });
+        patch(i, { dl: { state: 'queued', via: 'request' } });
+      } catch (err) {
+        patch(i, { dl: { state: 'error', msg: String((err as Error).message ?? err) } });
+      }
+      return;
+    }
     if (!deemix.url) {
       if (ytAvailable) return viaYtdlp(i);
       return patch(i, { dl: { state: 'error', msg: useHub.getState().token && !useHub.getState().permissions.includes('downloads.run') ? 'Ask your Hub admin for Autodownload' : 'Set your deemix URL in Settings' } });
@@ -183,9 +198,9 @@ export function Discover() {
           <AddToPlaylist tracks={() => owned} label="Save owned as playlist" className="btn small" />
           {owned.length > 0 && <QueueAllOnSubwave tracks={() => owned} className="btn small" />}
           <button className="btn small" disabled={!missing.length || checked < total} onClick={async () => {
-            if (!confirm(`Send ${missing.length} missing songs to ${deemix.url ? 'deemix' : 'yt-dlp'}?`)) return;
+            if (!confirm(ask ? `Request ${missing.length} missing songs from your Hub admin?` : `Send ${missing.length} missing songs to ${deemix.url ? 'deemix' : 'yt-dlp'}?`)) return;
             for (const { i } of missing) await get(i);
-          }}><IconDownload /> Get all missing ({missing.length})</button>
+          }}><IconDownload /> {ask ? 'Request' : 'Get'} all missing ({missing.length})</button>
           <button className="btn small ghost" disabled={!owned.length} onClick={() => {
             const id = useLibrary.getState().createPlaylist(`${label} — ${new Date().toLocaleDateString()}`, owned);
             useUi.getState().go({ view: 'playlist', id });
@@ -228,15 +243,15 @@ export function Discover() {
                       <AddToPlaylist tracks={[r.lib]} />
                       <button className="btn small primary" onClick={() => playTracks([r.lib!])}><IconPlay /> Play</button>
                     </>
-                  ) : r.dl?.state === 'queued' ? <span className="ok small">Queued via {r.dl.via}</span>
+                  ) : r.dl?.state === 'queued' ? <span className="ok small">{r.dl.via === 'request' ? 'Requested' : `Queued via ${r.dl.via}`}</span>
                   : r.dl?.state === 'error' ? (
                     <div className="dl-err">
                       <span className="card-err" title={r.dl.msg}>{r.dl.msg}</span>
-                      {!r.dl.notOnDeezer && <button className="btn small" onClick={() => get(i)}>Retry deemix</button>}
+                      {!r.dl.notOnDeezer && <button className="btn small" onClick={() => get(i)}>{ask ? 'Retry' : 'Retry deemix'}</button>}
                       {ytAvailable && <button className="btn small ghost" onClick={() => viaYtdlp(i)}>Use yt-dlp</button>}
                     </div>
                   )
-                  : <button className="btn small" disabled={r.dl?.state === 'sending'} onClick={() => get(i)}><IconDownload /> {r.dl?.state === 'sending' ? '…' : 'Get'}</button>}
+                  : <button className="btn small" disabled={r.dl?.state === 'sending'} onClick={() => get(i)}><IconDownload /> {r.dl?.state === 'sending' ? '…' : ask ? 'Request' : 'Get'}</button>}
               </div>
             </div>
           ))}

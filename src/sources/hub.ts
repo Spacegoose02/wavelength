@@ -102,6 +102,65 @@ export interface HubYtJob {
   message?: string;
 }
 
+/** A music request (docs/USERS-AND-ADMIN.md §6.3). */
+export interface HubRequest {
+  id: number;
+  userId: number;
+  username: string;
+  displayName: string;
+  link: string;
+  kind: string;
+  title: string;
+  artist: string;
+  cover: string | null;
+  note: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'have' | 'failed';
+  reason: string | null;
+  via: string | null;
+  decidedBy: string | null;
+  createdAt: number;
+  decidedAt: number | null;
+  seen: boolean;
+}
+export type HubRequestInput = { link: string; kind: string; title: string; artist: string; cover?: string; note?: string };
+
+export interface HubPerson {
+  id: number;
+  username: string;
+  displayName: string;
+  kid: boolean;
+}
+
+export type ShareKind = 'playlist' | 'album' | 'track' | 'artist' | 'station' | 'favorites';
+/** A song in a share: enough to find it again in someone else's library. */
+export interface SharedTrack {
+  title: string;
+  artist: string;
+  album?: string;
+  duration?: number;
+  coverUrl?: string;
+}
+export interface SharePayload {
+  tracks?: SharedTrack[];
+  station?: { name: string; streamUrl: string; favicon?: string; homepage?: string; nowPlayingUrl?: string };
+  artist?: string;
+}
+export interface HubShare {
+  id: number;
+  kind: ShareKind;
+  title: string;
+  subtitle: string | null;
+  cover: string | null;
+  note: string | null;
+  payload: SharePayload;
+  createdAt: number;
+  from: { id: number; displayName: string; username: string };
+  /** null: shared with everyone. */
+  to: { id: number; displayName: string } | null;
+  seen: boolean;
+}
+export type HubShareInput = { to: number | null; kind: ShareKind; title: string; subtitle?: string; cover?: string; note?: string; payload: SharePayload };
+
 /** What an admin sees: which secrets are set, never their values. */
 export interface HubAdminService {
   id: number;
@@ -183,6 +242,20 @@ export class HubClient {
   ytStart = (r: { url: string; title?: string; channel?: string }) => this.call<{ job: HubYtJob }>('POST', '/api/downloads/ytdlp/jobs', r);
   ytClear = () => this.call('DELETE', '/api/downloads/ytdlp/jobs');
 
+  // ---- requests and sharing ----
+  request = (b: HubRequestInput) => this.call<{ request: HubRequest }>('POST', '/api/requests', b);
+  myRequests = () => this.call<{ requests: HubRequest[] }>('GET', '/api/requests');
+  requestCounts = () => this.call<{ unseen: number; pending: number }>('GET', '/api/requests/counts');
+  requestsSeen = () => this.call('POST', '/api/requests/seen', {});
+  cancelRequest = (id: number) => this.call('DELETE', `/api/requests/${id}`);
+  people = () => this.call<{ people: HubPerson[] }>('GET', '/api/people');
+  share = (b: HubShareInput) => this.call<{ share: HubShare }>('POST', '/api/shares', b);
+  shares = (sent = false) => this.call<{ shares: HubShare[] }>('GET', `/api/shares${sent ? '?sent=1' : ''}`);
+  shareCounts = () => this.call<{ unseen: number }>('GET', '/api/shares/counts');
+  sharesSeen = (ids?: number[]) => this.call('POST', '/api/shares/seen', ids ? { ids } : {});
+  hideShare = (id: number) => this.call('POST', `/api/shares/${id}/hide`, {});
+  unshare = (id: number) => this.call('DELETE', `/api/shares/${id}`);
+
   // ---- admin (the Hub refuses these unless the user holds the permission) ----
   users = () => this.call<{ users: HubAdminUser[] }>('GET', '/api/admin/users');
   createUser = (b: { username: string; role: HubRole; displayName?: string; password?: string; ssoSubject?: string; autodownload?: boolean }) =>
@@ -199,5 +272,10 @@ export class HubClient {
   setServiceUser = (id: number, userId: number, secrets?: Record<string, string | null>) =>
     this.call<{ service: HubAdminService }>('PUT', `/api/admin/services/${id}/users/${userId}`, { secrets });
   removeServiceUser = (id: number, userId: number) => this.call<{ service: HubAdminService }>('DELETE', `/api/admin/services/${id}/users/${userId}`);
+  allRequests = (status?: string) => this.call<{ requests: HubRequest[] }>('GET', `/api/admin/requests${status ? `?status=${status}` : ''}`);
+  approveRequest = (id: number, bitrate?: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/approve`, { bitrate });
+  rejectRequest = (id: number, reason?: string) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/reject`, { reason });
+  haveRequest = (id: number) => this.call<{ request: HubRequest }>('POST', `/api/admin/requests/${id}/have`, {});
+  deleteRequest = (id: number) => this.call('DELETE', `/api/admin/requests/${id}`);
   audit = (limit = 50) => this.call<{ entries: HubAuditEntry[] }>('GET', `/api/admin/audit?limit=${limit}`);
 }
