@@ -258,6 +258,16 @@ minutes are the song's length (capped at 30).
 Navidrome's own playlists, favorites and play counts are separate: they're per person once everyone has
 their own Navidrome account (Server logins above).
 
+## Your devices: remote control and handoff
+
+Each signed-in device waits on the Hub for commands (`GET /api/me/remote/wait`, a long poll of up to 25
+seconds, well inside Nginx Proxy Manager's 60 second timeout) and reports what it's playing (`PUT
+/api/me/remote/state`). The **Devices** button in the player shows the person's other open devices, with
+play/pause, next, previous and volume, **Play here** (bring that device's queue and place to this one and
+pause it there) and **Continue there** (send this device's queue and place there and pause here). Only a
+person's own devices see each other. It's all kept in memory (`hub/src/routes/remote.ts`); nothing is
+stored. **Settings → Account → Let my other devices see and control this one** turns it off per device.
+
 ## Tag editor
 
 Admins fix an album's tags from its page (**Edit tags**, on Navidrome albums). The Hub asks Navidrome for the
@@ -334,6 +344,11 @@ with a 4xx status.
 | `GET /api/me/prefs` | signed in | `{ prefs: { key: { value, updatedAt } } }` |
 | `GET /api/me/playlists`, `PUT …` | signed in | your own Wavelength playlists (`{ playlists: [{ id, name, tracks, createdAt, updatedAt, deleted? }] }`); a PUT keeps each one only if it's newer and answers with them all |
 | `GET /api/me/history`, `POST …` | signed in | your play history, newest first (`?limit=`, up to 1000) / add plays `{ plays: [{ playedAt, track }] }` |
+| `GET /api/me/remote/wait?timeout=` | signed in | wait (up to 25 s) for commands from your other devices: `{ commands: [{ id, action, value?, queue?, index?, position?, play?, from, at }] }` |
+| `PUT /api/me/remote/state` | signed in | what this device is playing: `{ queue (up to 300), index, position, duration, playing, volume }` |
+| `GET /api/me/remote/devices` | signed in | your devices that are open, each with `current`, `listening` and its `state` (position worked out to now) |
+| `POST /api/me/remote/command` | signed in | `{ deviceId, action: toggle/play/pause/next/prev/seek/volume/jump/load, value?, index?, queue?, position?, play? }` to one of your own devices |
+| `DELETE /api/me/remote` | signed in | this device stops showing up |
 | `GET /api/me/rewind?year=&month=&tz=` | signed in | your Rewind for a year (or one month of it); `tz` is the device's `getTimezoneOffset()` so days and hours are local |
 | `GET /api/me/rewind/periods?tz=` | signed in | `{ periods: [{ year, month, plays }] }`, newest first |
 | `PUT /api/me/prefs` | signed in | `{ changes: { key: { value, updatedAt } } }` → `{ applied, stale, prefs }`. Newest `updatedAt` wins per key. |

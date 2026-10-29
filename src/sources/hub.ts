@@ -306,6 +306,20 @@ export interface HubAdminService {
 /** Secrets to save: a value sets it, '' or null clears it, a missing key keeps it. */
 export type HubServiceInput = Partial<{ kind: HubServiceKind; name: string; url: string; access: HubAccess; config: Record<string, string | number | null>; secrets: Record<string, string | null> }>;
 
+export interface HubRemoteState { queue: Track[]; index: number; position: number; duration: number; playing: boolean; volume: number; at: number }
+export interface HubRemoteDevice { id: number; name: string; platform: string; current: boolean; listening: boolean; state: HubRemoteState | null }
+export interface HubRemoteCommand {
+  id: number;
+  action: 'toggle' | 'play' | 'pause' | 'next' | 'prev' | 'seek' | 'volume' | 'jump' | 'load';
+  value?: number;
+  queue?: Track[];
+  index?: number;
+  position?: number;
+  play?: boolean;
+  from: string;
+  at: number;
+}
+
 /** One person's year or month of listening (hub/src/rewind.ts). */
 export interface HubRewind {
   year: number;
@@ -485,6 +499,12 @@ export class HubClient {
   tagHistory = () => this.call<{ edits: HubTagEdit[] }>('GET', '/api/admin/tags/history');
   undoTags = (batch: string) => this.call<{ undone: number; failed: { path: string; error: string }[] }>('POST', `/api/admin/tags/undo/${encodeURIComponent(batch)}`);
   importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });
+  // remote control and handoff between this person's devices (lib/remote.ts)
+  remoteWait = () => this.call<{ commands: HubRemoteCommand[] }>('GET', '/api/me/remote/wait');
+  remoteState = (s: Omit<HubRemoteState, 'at'>) => this.call('PUT', '/api/me/remote/state', s);
+  remoteLeave = () => this.call('DELETE', '/api/me/remote');
+  remoteDevices = () => this.call<{ devices: HubRemoteDevice[] }>('GET', '/api/me/remote/devices');
+  remoteCommand = (deviceId: number, c: Omit<HubRemoteCommand, 'id' | 'from' | 'at'>) => this.call('POST', '/api/me/remote/command', { deviceId, ...c });
   rewindPeriods = () => this.call<{ periods: { year: number; month: number; plays: number }[] }>('GET', `/api/me/rewind/periods?tz=${new Date().getTimezoneOffset()}`);
   rewind = (year: number, month?: number) =>
     this.call<HubRewind>('GET', `/api/me/rewind?${new URLSearchParams({ year: String(year), ...(month && { month: String(month) }), tz: String(new Date().getTimezoneOffset()) })}`);

@@ -117,6 +117,9 @@ interface SettingsState {
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';
   setVersions(v: SettingsState['versions']): void;
+  /** This device shows up under Devices on your other devices, which can control it (lib/remote.ts). Not synced. */
+  remoteControl: boolean;
+  setRemoteControl(v: boolean): void;
   /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
   updates: { auto: boolean; prerelease: boolean };
   setUpdates(u: Partial<SettingsState['updates']>): void;
@@ -157,6 +160,8 @@ export const useSettings = create<SettingsState>()(
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       versions: 'both',
       setVersions: (versions) => set({ versions }),
+      remoteControl: true,
+      setRemoteControl: (remoteControl) => set({ remoteControl }),
       updates: { auto: true, prerelease: false },
       setUpdates: (u) => set((st) => ({ updates: { ...st.updates, ...u } })),
       setDiscoverCharts: (g, charts) =>

@@ -7,6 +7,7 @@ import { loadFlags, setFlag, useFlags, useRatings } from '../lib/kids';
 import { today } from '../lib/kidTime';
 import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
+import { useSettings } from '../store/settings';
 
 /** Settings → Account (sign in to a Wavelength Hub) and Settings → Users (Hub admins). See docs/HUB.md. */
 
@@ -192,6 +193,24 @@ export function SignedOut() {
   );
 }
 
+/** Whether this device shows up under Devices on the person's others (lib/remote.ts). */
+function RemoteSetting() {
+  const on = useSettings((s) => s.remoteControl);
+  return (
+    <div className="editor">
+      <h3>Devices</h3>
+      <p className="muted small">
+        The Devices button by the volume shows your other devices that are open: see what they're playing, control them, or move
+        playback between them ("Continue there", "Play here"). Only your own devices can see each other.
+      </p>
+      <label className="check">
+        <span className="switch"><input type="checkbox" checked={on} onChange={(e) => useSettings.getState().setRemoteControl(e.target.checked)} /><span /></span>
+        Let my other devices see and control this one
+      </label>
+    </div>
+  );
+}
+
 /** Link a tinyauth identity to this account: a one-time link opened in a browser where tinyauth signs you in. */
 function SsoLink() {
   const { user, refresh } = useHub();
@@ -294,6 +313,8 @@ function SignedIn() {
           {msg && <span className="muted">{msg}</span>}
         </div>
       </div>
+
+      <RemoteSetting />
 
       <SsoLink />
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **Devices** (with a Hub): the new button by the volume shows your other open devices and what they're
+  playing. Control them, or move playback: **Continue there** sends what's playing here to that device at the
+  same spot, **Play here** brings it back. Turn it off per device under Settings → Account.
+- **Hub:** `/api/me/remote/*` (in memory, long polling).
+
 ## 0.12.0
 - **Invite links** (admins): **Settings → Users → Invite someone** makes a one-time link (and QR code) for a
   role. The person opens it, or pastes it in the app under **Settings → Account → I have an invite**, and picks

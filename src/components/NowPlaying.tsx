@@ -6,6 +6,7 @@ import { Visualizer } from './Visualizer';
 import { NowPlayingStage } from './Scenes';
 import { AddToPlaylist } from './AddToPlaylist';
 import { EqButton } from './Equalizer';
+import { DevicesButton } from './Devices';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
 export function NowPlaying() {
@@ -31,6 +32,7 @@ export function NowPlaying() {
           <div className="np-actions">
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} label="Add to playlist" />}
             <EqButton className="chip" />
+            <DevicesButton className="chip" />
           </div>
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && (

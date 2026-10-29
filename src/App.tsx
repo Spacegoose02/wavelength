@@ -6,6 +6,7 @@ import { inboxBadge, startInboxChecks, useInbox } from './lib/inbox';
 import { KID_VIEWS, startFlagChecks, useIsKid } from './lib/kids';
 import { detectWebHub } from './lib/webHub';
 import { startListeningReports } from './lib/listening';
+import { startRemote } from './lib/remote';
 import { WebSignIn } from './components/WebSignIn';
 import { startKidTime } from './lib/kidTime';
 import { KidLockScreen, KidSettings } from './components/KidLock';
@@ -147,6 +148,7 @@ export default function App() {
     startKidTime();
     detectWebHub();
     startListeningReports();
+    startRemote();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back
