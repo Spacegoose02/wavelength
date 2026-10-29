@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- **Kid profiles.** Kids get a shorter menu with bigger buttons (Home, Search, Discover, Albums, Artists,
+  Favorites, Radio, Audiobooks, **Ask for music**, Inbox and **Me**), and no Settings.
+- **Bedtime and a daily listening limit** per kid, set by an admin under **Settings → Users → Kid profiles**.
+  At bedtime or when the day's minutes are used up, the music stops and a "Time for bed" screen covers the
+  app. Listening adds up across all the kid's devices.
+- **Grown-up PIN.** Set once for the household. It unlocks 30 more minutes on the bedtime screen, and it's
+  needed to sign out of a kid profile (**Me → Sign out**).
+- **Hub:** migration 6 (`kid_rules`, `listening`, `hub_settings`) and the `/api/me/kid`, `/api/me/listened`,
+  `/api/kid/unlock`, `/api/admin/kids` and `/api/admin/kid-pin` routes.
 - **Kid-safe music.** On a kid profile, anything marked explicit (from your files' tags through Navidrome, or
   from Deezer) is hidden everywhere: albums, artists, search, playlists, favorites, Discover, Release Radar and
   Deezer browsing, and the player won't play it. Admins get a **Kids** button on every song, album and artist

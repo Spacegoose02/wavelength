@@ -268,6 +268,12 @@ with a 4xx status.
 | `POST /api/shares/:id/hide`, `DELETE /api/shares/:id` | signed in | take one off your list / unshare (the sender, or an admin) |
 | `GET /api/flags` | signed in | `{ flags: [{ id, kind, artist, title, verdict, setBy, createdAt }] }`: kid-safe flags |
 | `POST /api/admin/flags`, `DELETE /api/admin/flags/:id` | `library.edit` | set `{ kind: track/album/artist, artist, title?, verdict: block/allow }` (the same item again replaces its verdict) / remove |
+| `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |
+| `POST /api/me/listened` | signed in | `{ day, seconds }` (5 minutes at most per call) → `{ usedSeconds }`, the total across devices |
+| `POST /api/kid/unlock` | signed in | `{ pin }`: checks the grown-up PIN (rate limited, audited) |
+| `GET /api/admin/kids?day=` | `users.manage` | `{ pinSet, kids: [{ userId, displayName, rules, usedSeconds }] }` |
+| `PUT /api/admin/kids/:userId` | `users.manage` | `{ bedtimeFrom?, bedtimeTo?, dailyMinutes? }` ('HH:MM' device time; null clears) |
+| `PUT /api/admin/kid-pin` | `users.manage` | `{ pin }` (4 to 8 digits, stored hashed) or `{ pin: null }` |
 | `GET /api/admin/audit?limit=&before=` | `audit.view` | newest first |
 
 A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`,

@@ -5,6 +5,7 @@ import type { HubFlag } from '../sources/hub';
 import { norm } from '../sources/registry';
 import type { Album, Artist, Track } from '../sources/types';
 import { hubClient, useHub } from '../store/hub';
+import type { Route } from '../store/ui';
 import { cleanTitle, primaryArtist } from './match';
 
 /**
@@ -62,6 +63,12 @@ function verdictFor(artist?: string, album?: string, title?: string): HubFlag['v
     ?? (album ? v.get(key('album', artist, album)) : undefined)
     ?? v.get(key('artist', artist));
 }
+
+/** Kid profiles get a shorter, bigger menu, with these labels. */
+export const KID_VIEWS: Partial<Record<Route['view'], string>> = {
+  home: 'Home', search: 'Search', discover: 'Discover', albums: 'Albums', artists: 'Artists', favorites: 'Favorites',
+  radio: 'Radio', books: 'Audiobooks', downloads: 'Ask for music', inbox: 'Inbox', settings: 'Me', playlists: 'Playlists',
+};
 
 export const isKid = () => useHub.getState().user?.role === 'kid';
 export const useIsKid = () => useHub((s) => s.user?.role === 'kid');

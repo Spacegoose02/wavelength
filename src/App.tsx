@@ -2,7 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
 import { startHubSync } from './lib/hubSync';
 import { inboxBadge, startInboxChecks, useInbox } from './lib/inbox';
-import { startFlagChecks } from './lib/kids';
+import { KID_VIEWS, startFlagChecks, useIsKid } from './lib/kids';
+import { startKidTime } from './lib/kidTime';
+import { KidLockScreen, KidSettings } from './components/KidLock';
 import { useHub } from './store/hub';
 import { skinGroup, useSettings } from './store/settings';
 import { useUi, type Route } from './store/ui';
@@ -77,7 +79,7 @@ function View({ route }: { route: Route }) {
     case 'offlineCollection': return <OfflineCollectionView key={route.id} id={route.id} />;
     case 'downloads': return <Downloads />;
     case 'inbox': return <Inbox />;
-    case 'settings': return <Settings tab={route.tab} />;
+    case 'settings': return useHub.getState().user?.role === 'kid' ? <KidSettings /> : <Settings tab={route.tab} />;
   }
 }
 
@@ -131,6 +133,7 @@ export default function App() {
     startUpdateChecks();
     startInboxChecks();
     startFlagChecks();
+    startKidTime();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back
@@ -164,17 +167,18 @@ export default function App() {
 
   const phone = useIsPhone();
   const hubOn = useHub((s) => !!s.token);
+  const kid = useIsKid();
   const badge = useInbox(inboxBadge);
   const tabRoot = ['home', 'discover', 'search', 'subwave', 'library'].includes(route.view);
 
   return (
-    <div className={`app ${queueOpen ? 'with-queue' : ''} ${phone ? 'phone' : ''}`}>
+    <div className={`app ${queueOpen ? 'with-queue' : ''} ${phone ? 'phone' : ''} ${kid ? 'kid' : ''}`}>
       {!phone && (
         <nav className="sidebar">
           <div className="brand"><span className="brand-mark" />Wavelength</div>
-          {NAV.filter((n) => n.view !== 'inbox' || hubOn).map((n) => (
+          {NAV.filter((n) => (n.view !== 'inbox' || hubOn) && (!kid || KID_VIEWS[n.view])).map((n) => (
             <button key={n.view} className={`nav ${route.view === n.view ? 'on' : ''}`} onClick={() => go({ view: n.view } as Route)}>
-              {n.icon}<span>{n.label}</span>
+              {n.icon}<span>{kid ? KID_VIEWS[n.view] : n.label}</span>
               {n.view === 'inbox' && badge > 0 && <span className="badge">{badge}</span>}
             </button>
           ))}
@@ -191,6 +195,7 @@ export default function App() {
       {queueOpen && <QueuePanel />}
       {phone ? <MobileNav /> : <PlayerBar />}
       {nowPlayingOpen && <NowPlaying />}
+      <KidLockScreen />
     </div>
   );
 }

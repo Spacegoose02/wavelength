@@ -159,6 +159,28 @@ const MIGRATIONS: string[] = [
   );
   CREATE UNIQUE INDEX content_flags_key ON content_flags(kind, artist COLLATE NOCASE, title COLLATE NOCASE);
   `,
+  `
+  -- Kid profiles: bedtime and a daily listening limit per kid (times are the device's local time), how long
+  -- each kid listened per day across all their devices, and Hub-wide settings such as the grown-up PIN
+  -- (stored hashed) that unlocks bedtime and signing out of a kid profile. See routes/kids.ts.
+  CREATE TABLE kid_rules (
+    user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    bedtime_from  TEXT,                        -- 'HH:MM' or null
+    bedtime_to    TEXT,
+    daily_minutes INTEGER,                     -- null = no limit
+    updated_at    INTEGER NOT NULL
+  );
+  CREATE TABLE listening (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day     TEXT NOT NULL,                     -- 'YYYY-MM-DD', the device's local date
+    seconds INTEGER NOT NULL,
+    PRIMARY KEY (user_id, day)
+  );
+  CREATE TABLE hub_settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+  `,
 ];
 
 export function openDb(file: string): Db {

@@ -173,6 +173,13 @@ export interface HubFlag {
   createdAt: number;
 }
 
+/** A kid's bedtime ('HH:MM', device time) and daily listening limit; null = none. */
+export interface KidRules {
+  bedtimeFrom: string | null;
+  bedtimeTo: string | null;
+  dailyMinutes: number | null;
+}
+
 /** What an admin sees: which secrets are set, never their values. */
 export interface HubAdminService {
   id: number;
@@ -269,6 +276,9 @@ export class HubClient {
   unshare = (id: number) => this.call('DELETE', `/api/shares/${id}`);
 
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
+  kidStatus = (day: string) => this.call<{ kid: boolean; rules: KidRules; usedSeconds: number; pinSet: boolean }>('GET', `/api/me/kid?day=${day}`);
+  listened = (day: string, seconds: number) => this.call<{ usedSeconds: number }>('POST', '/api/me/listened', { day, seconds });
+  kidUnlock = (pin: string) => this.call<{ ok: true }>('POST', '/api/kid/unlock', { pin });
 
   // ---- admin (the Hub refuses these unless the user holds the permission) ----
   users = () => this.call<{ users: HubAdminUser[] }>('GET', '/api/admin/users');
@@ -293,5 +303,8 @@ export class HubClient {
   deleteRequest = (id: number) => this.call('DELETE', `/api/admin/requests/${id}`);
   setFlag = (b: { kind: HubFlag['kind']; artist: string; title?: string; verdict: HubFlag['verdict'] }) => this.call<{ flag: HubFlag }>('POST', '/api/admin/flags', b);
   deleteFlag = (id: number) => this.call('DELETE', `/api/admin/flags/${id}`);
+  adminKids = (day: string) => this.call<{ pinSet: boolean; kids: { userId: number; displayName: string; rules: KidRules; usedSeconds: number }[] }>('GET', `/api/admin/kids?day=${day}`);
+  setKidRules = (userId: number, rules: Partial<KidRules>) => this.call<{ rules: KidRules }>('PUT', `/api/admin/kids/${userId}`, rules);
+  setKidPin = (pin: string | null) => this.call<{ pinSet: boolean }>('PUT', '/api/admin/kid-pin', { pin });
   audit = (limit = 50) => this.call<{ entries: HubAuditEntry[] }>('GET', `/api/admin/audit?limit=${limit}`);
 }

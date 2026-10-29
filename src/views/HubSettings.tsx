@@ -3,7 +3,8 @@ import qrcode from 'qrcode-generator';
 import { syncNow } from '../lib/hubSync';
 import { loadHubServices } from '../lib/hubServices';
 import { loadFlags, setFlag, useFlags } from '../lib/kids';
-import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubPairing, type HubRole } from '../sources/hub';
+import { today } from '../lib/kidTime';
+import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubPairing, type HubRole, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 
 /** Settings → Account (sign in to a Wavelength Hub) and Settings → Users (Hub admins). See docs/HUB.md. */
@@ -424,6 +425,8 @@ export function UsersTab() {
         ))}
       </section>
 
+      <KidRulesSection />
+
       <KidSafeList />
 
       {canAudit && (
@@ -437,6 +440,82 @@ export function UsersTab() {
         </section>
       )}
     </>
+  );
+}
+
+/** Kid profiles: the grown-up PIN, and each kid's bedtime and daily listening limit. */
+function KidRulesSection() {
+  const can = useHub((s) => s.permissions.includes('users.manage'));
+  const [data, setData] = useState<{ pinSet: boolean; kids: { userId: number; displayName: string; rules: KidRules; usedSeconds: number }[] }>();
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+  const c = hubClient();
+  const load = () => c?.adminKids(today()).then(setData).catch((e) => setErr(errText(e)));
+  useEffect(() => {
+    if (can) load();
+  }, [can]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!can || !c) return null;
+
+  const save = async (userId: number, rules: Partial<KidRules>) => {
+    setErr('');
+    try {
+      await c.setKidRules(userId, rules);
+      setMsg('Saved');
+      window.setTimeout(() => setMsg(''), 1500);
+      load();
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+
+  return (
+    <section>
+      <h2>Kid profiles</h2>
+      <p className="muted small">
+        Kids get a simpler menu and only kid-safe music. Music stops at bedtime and when today's time is up, on all their
+        devices. The <b>grown-up PIN</b> unlocks 30 more minutes, and is needed to sign out of a kid profile.
+      </p>
+      {err && <div className="errors">{err}</div>}
+      <div className="source-row">
+        <div className="track-main">
+          <div className="track-title">Grown-up PIN</div>
+          <div className="track-sub">{data?.pinSet ? 'Set' : 'Not set: kids can’t be unlocked or signed out until you set one'}</div>
+        </div>
+        <button className="btn small" onClick={async () => {
+          const pin = prompt('New grown-up PIN (4 to 8 digits):');
+          if (!pin) return;
+          try {
+            await c.setKidPin(pin.trim());
+            load();
+          } catch (e) {
+            setErr(errText(e));
+          }
+        }}>{data?.pinSet ? 'Change' : 'Set PIN'}</button>
+        {data?.pinSet && <button className="btn small ghost" onClick={() => confirm('Remove the grown-up PIN?') && c.setKidPin(null).then(load).catch((e) => setErr(errText(e)))}>Remove</button>}
+      </div>
+      {data && !data.kids.length && <p className="muted">No kid profiles yet. Add someone with the <b>Kid</b> role below.</p>}
+      {data?.kids.map((k) => (
+        <form key={k.userId} className="source-row kid-rules" onSubmit={(e) => {
+          e.preventDefault();
+          const f = new FormData(e.currentTarget);
+          const minutes = Number(f.get('minutes'));
+          save(k.userId, {
+            bedtimeFrom: String(f.get('from') || '') || null,
+            bedtimeTo: String(f.get('to') || '') || null,
+            dailyMinutes: minutes > 0 ? minutes : null,
+          });
+        }}>
+          <div className="track-main">
+            <div className="track-title">{k.displayName}</div>
+            <div className="track-sub">{Math.round(k.usedSeconds / 60)} min today{k.rules.dailyMinutes ? ` of ${k.rules.dailyMinutes}` : ''}</div>
+          </div>
+          <label className="small">Bedtime <input type="time" name="from" defaultValue={k.rules.bedtimeFrom ?? ''} /></label>
+          <label className="small">until <input type="time" name="to" defaultValue={k.rules.bedtimeTo ?? ''} /></label>
+          <label className="small">Minutes a day <input type="number" name="minutes" min={0} max={1440} placeholder="no limit" defaultValue={k.rules.dailyMinutes ?? ''} style={{ width: 90 }} /></label>
+          <button className="btn small">{msg || 'Save'}</button>
+        </form>
+      ))}
+    </section>
   );
 }
 

@@ -9,6 +9,7 @@ import {
   IconNext, IconPause, IconPlay, IconPlaylist, IconPodcast, IconRadio, IconSearch, IconSettings, IconSparkle, IconWave, IconInbox,
 } from './Icons';
 import { inboxBadge, useInbox } from '../lib/inbox';
+import { KID_VIEWS, useIsKid } from '../lib/kids';
 import { useHub } from '../store/hub';
 
 const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route['view'][] }[] = [
@@ -62,6 +63,7 @@ export function LibraryHub() {
   const playlists = useLibrary((s) => s.playlists);
   const hubOn = useHub((s) => !!s.token);
   const badge = useInbox(inboxBadge);
+  const kid = useIsKid();
   const items: { view: Route['view']; label: string; icon: ReactNode }[] = [
     { view: 'recent', label: 'Recently added', icon: <IconSparkle /> },
     { view: 'albums', label: 'Albums', icon: <IconAlbum /> },
@@ -81,9 +83,9 @@ export function LibraryHub() {
     <div className="page">
       <header className="page-head"><h1>Library</h1></header>
       <div className="hub">
-        {items.map((i) => (
+        {items.filter((i) => !kid || KID_VIEWS[i.view]).map((i) => (
           <button key={i.view} className="hub-item" onClick={() => go({ view: i.view } as Route)}>
-            {i.icon}<span>{i.label}</span>
+            {i.icon}<span>{kid && i.view !== 'inbox' ? KID_VIEWS[i.view] : i.label}</span>
           </button>
         ))}
       </div>

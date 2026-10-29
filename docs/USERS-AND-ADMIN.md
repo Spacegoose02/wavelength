@@ -384,9 +384,10 @@ Done: kid-safe flags (`hub/src/routes/flags.ts`, `src/lib/kids.ts`). Explicit st
 (OpenSubsonic `explicitStatus`) and Deezer (`explicit_lyrics`) and shown as **E** / **C** badges. Kid profiles
 hide explicit and admin-flagged songs, albums and artists in every list, and the player drops them as a last
 line of defence. Admins flag from a **Kids** button on songs, albums and artists, with the list under
-Settings → Users. Flags match by artist and title, since ids differ between devices' logins. Still open:
-Plex explicit status, the simple big-button kid UI, bedtime and listening limits, a PIN to leave a kid
-profile, clean-version lookup and the version switch, and keeping the kid's Navidrome password off their device.
+Settings → Users. Flags match by artist and title, since ids differ between devices' logins. Kid profiles (`hub/src/routes/kids.ts`, `src/lib/kidTime.ts`, `src/components/KidLock.tsx`): a shorter,
+bigger menu; per-kid bedtime and minutes a day, counted across devices; a household grown-up PIN that unlocks
+30 minutes and is needed to sign out of a kid profile. Still open: Plex explicit status, clean-version lookup
+and the version switch, and keeping the kid's Navidrome password off their device.
 
 Kid role and UI, automatic + manual not-safe flags, explicit/clean detection, clean-version lookup
 and version switch. **Cards closed:** kids profiles, mark not safe for kids, explicit and clean versions.
