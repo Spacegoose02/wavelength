@@ -12,6 +12,8 @@ import { IconPlay, IconRefresh, IconShuffle } from '../components/Icons';
 import { ErrorList } from './Library';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
+import { ShareButton } from '../components/ShareButton';
+import { shareOfTracks } from '../lib/inbox';
 
 export function PlaylistCover({ p }: { p: Playlist }) {
   const covers = [...new Set(p.tracks.map((t) => t.coverUrl).filter(Boolean))].slice(0, 4) as string[];
@@ -167,6 +169,7 @@ export function PlaylistView({ id }: { id: string }) {
             <button className="btn primary" disabled={!p.tracks.length} onClick={() => playTracks(p.tracks)}><IconPlay /> Play</button>
             <button className="btn" disabled={!p.tracks.length} onClick={() => shuffleAndPlay(p.tracks)}><IconShuffle /> Shuffle</button>
             {p.tracks.length > 0 && <QueueAllOnSubwave tracks={p.tracks} />}
+            <ShareButton what={() => shareOfTracks('playlist', p.name, p.tracks)} />
             <DownloadButton id={`playlist:local:${p.id}`} kind="playlist" name={p.name} cover={p.tracks.find((t) => t.coverUrl)?.coverUrl} tracks={p.tracks} />
             <button className="btn ghost" onClick={() => {
               if (confirm(`Delete "${p.name}"?`)) {
@@ -246,6 +249,7 @@ export function ServerPlaylistView({ playlist }: { playlist: ServerPlaylist }) {
               <DownloadButton id={`playlist:${playlist.sourceId}:${playlist.id}`} kind="playlist" name={name} subtitle={cfg.name}
                 cover={playlist.coverUrl ?? tracks.find((t) => t.coverUrl)?.coverUrl} tracks={tracks} />
             ) : null}
+            {tracks?.length ? <ShareButton what={() => shareOfTracks('playlist', name, tracks, undefined, playlist.coverUrl)} /> : null}
             <button className="btn" disabled={!tracks?.length} onClick={() => {
               if (!tracks) return;
               const id = createLocal(name, tracks);

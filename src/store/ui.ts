@@ -25,6 +25,7 @@ export type Route =
   | { view: 'offline' }
   | { view: 'offlineCollection'; id: string }
   | { view: 'downloads' }
+  | { view: 'inbox' }
   | { view: 'settings'; tab?: SettingsTab };
 
 /** The tabs of the Settings page (views/Settings.tsx). */

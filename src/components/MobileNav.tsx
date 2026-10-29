@@ -6,15 +6,17 @@ import { isAndroid } from '../lib/platform';
 import { Cover } from './common';
 import {
   IconAlbum, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
-  IconNext, IconPause, IconPlay, IconPlaylist, IconPodcast, IconRadio, IconSearch, IconSettings, IconSparkle, IconWave,
+  IconNext, IconPause, IconPlay, IconPlaylist, IconPodcast, IconRadio, IconSearch, IconSettings, IconSparkle, IconWave, IconInbox,
 } from './Icons';
+import { inboxBadge, useInbox } from '../lib/inbox';
+import { useHub } from '../store/hub';
 
 const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route['view'][] }[] = [
   { view: 'home', label: 'Home', icon: <IconHome /> },
   { view: 'discover', label: 'Discover', icon: <IconCompass /> },
   { view: 'search', label: 'Search', icon: <IconSearch /> },
   { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave /> },
-  { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'podcasts', 'podcast', 'radio', 'downloads', 'settings', 'offline', 'offlineCollection'] },
+  { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'podcasts', 'podcast', 'radio', 'downloads', 'inbox', 'settings', 'offline', 'offlineCollection'] },
 ];
 
 /** Phone layout: mini player + bottom tab bar (replaces the sidebar and desktop deck). */
@@ -22,6 +24,7 @@ export function MobileNav() {
   const { route, go, setNowPlaying } = useUi();
   const p = usePlayer();
   const t = p.current();
+  const badge = useInbox(inboxBadge);
   const live = t?.kind === 'radio';
   return (
     <div className="mobile-dock">
@@ -44,6 +47,7 @@ export function MobileNav() {
             <button key={tab.view} className={on ? 'on' : ''} onClick={() => go({ view: tab.view } as Route)}>
               {tab.icon}
               <span>{tab.label}</span>
+              {tab.view === 'library' && badge > 0 && <i className="tab-dot" title={`${badge} new in your Inbox`} />}
             </button>
           );
         })}
@@ -56,6 +60,8 @@ export function MobileNav() {
 export function LibraryHub() {
   const go = useUi((s) => s.go);
   const playlists = useLibrary((s) => s.playlists);
+  const hubOn = useHub((s) => !!s.token);
+  const badge = useInbox(inboxBadge);
   const items: { view: Route['view']; label: string; icon: ReactNode }[] = [
     { view: 'recent', label: 'Recently added', icon: <IconSparkle /> },
     { view: 'albums', label: 'Albums', icon: <IconAlbum /> },
@@ -68,6 +74,7 @@ export function LibraryHub() {
     { view: 'books', label: 'Audiobooks', icon: <IconBook /> },
     { view: 'podcasts', label: 'Podcasts', icon: <IconPodcast /> },
     { view: 'downloads', label: isAndroid ? 'Downloads (deemix)' : 'Downloads', icon: <IconDownload /> },
+    ...(hubOn ? [{ view: 'inbox' as const, label: badge ? `Inbox (${badge})` : 'Inbox', icon: <IconInbox /> }] : []),
     { view: 'settings', label: 'Settings', icon: <IconSettings /> },
   ];
   return (

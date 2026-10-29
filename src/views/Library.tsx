@@ -10,6 +10,8 @@ import { SOURCE_COLORS } from '../sources/types';
 import { AlbumCard, Cover, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
 import { IconPlay, IconShuffle } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
+import { ShareButton } from '../components/ShareButton';
+import { shareOfArtist, shareOfTracks } from '../lib/inbox';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 
@@ -207,6 +209,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
           <div className="kicker">Artist</div>
           <h1>{artist.name}</h1>
           <SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} />
+          <div className="hero-actions"><ShareButton what={() => shareOfArtist(artist.name, artist.coverUrl)} /></div>
         </div>
       </header>
       {!albums ? <Spinner /> : <Grid>{albums.map((a) => <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={openAlbum} />)}</Grid>}
@@ -259,6 +262,7 @@ export function AlbumView({ album }: { album: Album }) {
             }}><IconShuffle /> Shuffle</button>
             {tracks?.length ? <AddToPlaylist tracks={tracks} label="Add to playlist" className="btn" /> : null}
             {tracks?.length ? <QueueAllOnSubwave tracks={tracks} albumBlock /> : null}
+            {tracks?.length ? <ShareButton what={() => shareOfTracks('album', album.title, tracks, album.artist, ref.coverUrl ?? album.coverUrl)} /> : null}
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
                 cover={ref.coverUrl ?? album.coverUrl} tracks={tracks} />

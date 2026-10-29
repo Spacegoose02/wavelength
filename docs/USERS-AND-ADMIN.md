@@ -268,6 +268,18 @@ paths stay for standalone mode.
 | **Admin server controls page** | **Admin → Server**: health and version for every service (Navidrome scan status, last scan, track count; SUB/WAVE on-air + listeners; deemix login state + queue; slskd connection; ABS; Hub disk usage), buttons for rescan / restart download queue / clear failed jobs, the audit log, Hub backup download, and links into each service's own web UI. | Yes | M |
 | **Optional Docker for admin device control and saving data/keys** | The Hub *is* that container: it saves data and keys (SQLite volume + encrypted secrets) and controls devices (see sessions, sign devices out, send "stop" / "play" commands to a device over its WebSocket). **Optional and off by default:** controlling other containers (restart Navidrome, update images) through the Docker socket. Mounting `/var/run/docker.sock` gives root on the host, so if enabled it goes through a socket proxy (e.g. `tecnativa/docker-socket-proxy`) limited to list/restart for named containers. | Yes | M (+S for Docker control) |
 
+### 6.8 Sharing between people
+
+Owner request: "share playlists to each other, favorites, you name it".
+
+| Card | Design | Needs Hub | Effort |
+|---|---|---|---|
+| **Share playlists, favorites, albums, songs, artists and stations** | A **Share** button on Wavelength and server playlists, albums, artists, radio stations, each song row and Favorites. Pick one person (from `GET /api/people`) or **Everyone**, add an optional note. The Hub stores a **snapshot** (title, artist, album, duration for each song; the stream for a station), not source ids, because the other person's Navidrome login and Plex library differ. Cover links that carry a login in the query string (Subsonic `t`/`s`, `X-Plex-Token`) are dropped before sending. The receiver's **Inbox → Shared with you** lists it with who sent it; **Play** finds each song in their own library with `lib/match.ts`, **Save as playlist** makes a Wavelength playlist of what they have, and it says how many are missing. Senders can unshare under **You shared**; admins can remove any share. | Yes | M |
+| **Inbox** | One page (with a badge in the sidebar, and a dot on the phone's Library tab) for things shared with you, answers to your requests, and (admins) the request queue. Counts come from `GET /api/requests/counts` and `GET /api/shares/counts`, checked every two minutes and when the window gets focus; Android notifications are a follow-up. | Yes | S |
+
+Follow-ups: "Request missing" on a shared playlist (feeds §6.3), live shared playlists that stay in sync with
+the sender's (the collaborative playlists in §7), and sharing straight onto SUB/WAVE.
+
 ## 7. Extra features worth adding
 
 High value and they fit naturally on top of the Hub:
@@ -279,7 +291,8 @@ High value and they fit naturally on top of the Hub:
 3. **Synced lyrics** — LRCLIB (free, no key) or embedded LRC; karaoke-style highlighting in Now Playing, a
    big-text TV mode, and kids get lyrics only on clean tracks. App only. **S–M**
 4. **Request notifications and an inbox** — "your request was approved/ready", "new release from an artist you
-   follow"; Android notifications through the existing foreground service. **S** (after requests)
+   follow"; Android notifications through the existing foreground service. **S** (after requests). The Inbox
+   page and badge are done (§6.8); push notifications are still open.
 5. **Wavelength Rewind** — a yearly/monthly personal stats page (top artists, hours listened, first play of
    your favourite song), shareable as an image. Per-user history makes this possible. **M**
 6. **Invite links with QR codes** — admin creates an invite (role, services, expiry); the new user scans it on
@@ -351,10 +364,19 @@ SUB/WAVE admin proxy (admin controls for admins only), active users view. **Card
 users, own Navidrome profile, no SUB/WAVE admin for non-admins, admin picks ABS sign-in, admin sees active
 users, sign-in sync (account part).
 
-### Phase 3 — Requests and downloads · ~3 weeks
+### Phase 3 — Requests, downloads and sharing · ~3 weeks · **in progress**
+
+Done: server-side deemix/yt-dlp runner (Phase 2 work); **requests** (`hub/src/routes/requests.ts`): people
+without Autodownload see **Request** instead of Get in Downloads, Discover and Release Radar, or paste any
+link yt-dlp understands; admins get **Inbox → To approve** with Approve (the Hub sends Deezer links to
+deemix and everything else to yt-dlp), Already have, Reject with a reason, and Retry for a failed download.
+People with Autodownload skip the queue. **Sharing** between people and the **Inbox** (§6.8,
+`hub/src/routes/shares.ts`). Still open: slskd source, a Navidrome rescan when an approved download
+finishes, "your song is ready" with a play button, push notifications.
 
 Request button + approval queue, server-side deemix/yt-dlp runner, slskd source, notifications,
-auto-download settings. **Cards closed:** request music, per-user autodownload, connect to slskd.
+auto-download settings, sharing. **Cards closed:** request music, per-user autodownload, sharing (connect to
+slskd still open).
 
 ### Phase 4 — Kids and content rating · ~2–3 weeks
 
@@ -386,6 +408,7 @@ Rewind, invites, backups. **Cards closed:** admin server page, Docker control.
 | Request music near the preview, admin approves | 3 |
 | Per-user autodownload setting | 3 |
 | Connect to slskd | 3 |
+| Share playlists, favorites and more with each other | 3 |
 | Kids profiles | 4 |
 | Mark music not safe for kids | 4 |
 | Explicit and non-explicit versions | 4 (badges in 0) |

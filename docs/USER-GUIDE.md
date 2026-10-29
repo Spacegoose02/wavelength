@@ -468,7 +468,7 @@ Admins get a **Users** tab:
 
 - **Add someone**: username, display name, role, and a Hub password and/or their tinyauth username.
 - **Role**: Admin, Member or Kid. Changes apply straight away, no re-login.
-- **Autodownload** (members only): lets them download without your approval once requests arrive. Kids can never have it.
+- **Autodownload** (members only): lets them download without your approval. Without it, their **Get** buttons say **Request** and you approve in the Inbox. Kids can never have it.
 - **Set password**, **SSO** (link or unlink their tinyauth username), **Turn off** (signs out all their devices), **Delete**.
 - **Signed-in devices**: everyone's devices, with **Sign out**.
 - **Activity**: recent sign-ins and admin changes.
@@ -476,6 +476,40 @@ Admins get a **Users** tab:
 The Hub refuses every one of these actions from a non-admin, so hiding the tab isn't what protects them.
 
 <p align="center"><img src="screenshots/hub-users.png" alt="Settings → Users" width="80%"></p>
+
+### Requesting music
+
+Signed in to a Hub without **Autodownload**, the **Get** buttons in Downloads, Discover and Release Radar say
+**Request** instead. Search Deezer in **Downloads** as usual, or paste a YouTube, SoundCloud or Bandcamp link
+under **Not on Deezer?**. Your requests and their answers are in **Inbox → My requests** (and in the side
+panel of Downloads): *Waiting*, *Downloading*, *Already in the library*, *Not this time* (with the admin's
+reason) or *Download failed*. You can cancel one that's still waiting.
+
+**Admins** see a number on **Inbox** when something waits. **Inbox → To approve** lists who asked for what,
+with their note:
+
+- **Approve**: the Hub downloads it, Deezer links with deemix and anything else with yt-dlp, straight into
+  the music folder. If the download can't start it shows *Download failed* with the reason and **Retry**.
+- **Already have**: nothing to download; they're told it's in the library.
+- **Reject**: asks for a reason, which they see.
+
+Admins and people with Autodownload skip the queue: their **Get** downloads straight away.
+
+### Sharing with each other
+
+**Share** sends something to one person on your Hub, or to **Everyone**, with an optional note. It's on
+playlists (yours and Navidrome/Plex ones), albums, artists, radio stations, every song's row, and **Favorites
+→ Share favorites**.
+
+What you're sent is in **Inbox → Shared with you**, with who sent it. **Play** finds the songs in *your*
+library (by title and artist, since everyone's servers and logins differ) and plays them; **Save as playlist**
+keeps them as a Wavelength playlist, and it tells you how many it couldn't find. A station plays straight
+away, and an artist opens a search. **✕** takes it off your list. **You shared** lists what you've sent, with
+**Unshare**.
+
+> **Developer notes.** Requests: `hub/src/routes/requests.ts`; sharing: `hub/src/routes/shares.ts`; the app
+> side is `src/lib/inbox.ts` (badge counts, `requestMusic`, share snapshots; cover links carrying a login are
+> left out), `src/components/ShareButton.tsx` and `src/views/Inbox.tsx`.
 
 > **Developer notes.** `src/views/HubSettings.tsx` (Account and Users tabs), `src/sources/hub.ts` (typed API
 > client), `src/store/hub.ts` (signed-in profile, persisted as `tonearm.hub`; `useCan(perm)` is true for

@@ -7,6 +7,8 @@ import { usePlayer } from '../store/player';
 import { Cover, Spinner } from '../components/common';
 import { IconHeart, IconPlay } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
+import { ShareButton } from '../components/ShareButton';
+import { shareOfStation } from '../lib/inbox';
 
 /** Key for a server station in `hiddenStations` / `stationOrder`. Ids are only unique per server. */
 const keyOf = (s: Station) => `${s.sourceId}:${s.id}`;
@@ -106,7 +108,7 @@ export function Radio() {
         <div className="track-title">{s.name}</div>
         <div className="track-sub">{[s.country, s.codec && `${s.codec}${s.bitrate ? ` ${s.bitrate}k` : ''}`, s.tags?.split(',').slice(0, 3).join(', ')].filter(Boolean).join(' · ')}</div>
       </div>
-      <div className="track-actions"><AddToPlaylist tracks={() => [stationToTrack(s)]} /></div>
+      <div className="track-actions"><AddToPlaylist tracks={() => [stationToTrack(s)]} /><ShareButton what={() => shareOfStation(s)} className="chip" /></div>
       {s.sourceId === 'radio' && (
         <button className={`icon-btn ${isSaved(s) ? 'on' : ''}`} title={isSaved(s) ? 'Remove from favorites' : 'Save'} onClick={() => toggleStation(s)}><IconHeart /></button>
       )}
