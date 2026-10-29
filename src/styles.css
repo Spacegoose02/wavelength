@@ -1611,3 +1611,21 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .server-grid > div > span { font-size: 12px; }
 .server-grid > div > b { font-weight: 600; overflow-wrap: anywhere; }
 .server-disk { display: flex; flex-direction: column; gap: 6px; font-weight: 500; }
+
+/* Cover art picker (admins): components/ArtworkButton.tsx */
+.art-dialog { display: flex; flex-direction: column; gap: 12px; width: min(760px, 100%); max-height: calc(100vh - 32px); padding: 20px; border-radius: var(--radius); background: var(--panel); text-align: left; overflow: auto; }
+.art-head { display: flex; gap: 14px; align-items: center; }
+.art-head h3 { margin: 0 0 4px; }
+.art-head p { margin: 0; }
+.art-now { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; flex: none; }
+.art-now.round, .art-pick img.round { border-radius: 50%; }
+.art-search { display: flex; gap: 8px; flex-wrap: wrap; }
+.art-search input { flex: 1 1 180px; min-width: 0; }
+.art-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; min-height: 80px; }
+.art-pick { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: var(--radius); background: transparent; color: inherit; text-align: left; min-width: 0; }
+.art-pick:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.art-pick img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: var(--bg); }
+.art-source { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
+.art-title, .art-sub { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.art-sub { color: var(--muted); }
+.art-foot { flex-wrap: wrap; }

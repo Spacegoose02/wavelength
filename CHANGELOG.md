@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Change cover art** (admins). Album and artist pages get **Change cover** / **Change picture**: look the
+  art up on Deezer, Apple Music and MusicBrainz's Cover Art Archive (plus fanart.tv with a key), upload a
+  picture, or paste an image link. It's kept on the Hub and shows on every device and in the browser, in song
+  lists, the player and Now Playing too. **Use the server's picture** undoes it. Your music files aren't
+  changed.
+- **Hub:** migration 8 (`artwork`), the `/api/artwork`, `/api/art/:file` and `/api/admin/artwork` routes, and
+  `WAVELENGTH_FANART_KEY`. Pictures are stored in the data folder under `artwork/`.
 - **Wavelength in a browser.** Open your Hub's address in any browser to use Wavelength there. It goes
   straight to signing in to that Hub. Deezer, the charts and Release Radar work through the Hub; offline
   downloads still need the app. The Hub's Docker image now includes the web build (build it from the repo

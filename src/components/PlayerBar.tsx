@@ -1,3 +1,4 @@
+import { trackArt, useArtworkList } from '../lib/artwork';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
 import { Cover, fmtTime } from './common';
@@ -10,13 +11,15 @@ export function PlayerBar() {
   const p = usePlayer();
   const ui = useUi();
   const t = p.current();
+  useArtworkList();
+  const art = p.liveCover ?? trackArt(t);
   const live = t?.kind === 'radio';
   const marquee = t ? `${live && p.liveTitle ? p.liveTitle : `${t.artist} — ${t.title}`}` : 'Wavelength  ·  nothing playing';
 
   return (
     <footer className="deck">
       <button className="deck-now" onClick={() => t && ui.setNowPlaying(true)} title="Open Now Playing">
-        <Cover key={p.liveCover ?? t?.coverUrl} src={p.liveCover ?? t?.coverUrl} alt={t?.title ?? 'Wavelength'} />
+        <Cover key={art} src={art} alt={t?.title ?? 'Wavelength'} />
         <div className="deck-meta">
           <div className="deck-title">{t ? (live ? p.liveTitle ?? t.title : t.title) : 'Nothing playing'}</div>
           <div className="deck-sub">{t ? (live ? (p.liveTitle ? t.title : 'Live radio') : t.artist) : 'Pick something from your library'}</div>

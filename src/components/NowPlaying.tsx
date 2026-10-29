@@ -1,3 +1,4 @@
+import { trackArt, useArtworkList } from '../lib/artwork';
 import { usePlayer } from '../store/player';
 import { Cover, fmtTime } from './common';
 import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat, IconShuffle } from './Icons';
@@ -11,9 +12,10 @@ export function NowPlaying() {
   const p = usePlayer();
   const close = () => window.history.back(); // pops the entry setNowPlaying(true) pushed
   const t = p.current();
+  useArtworkList();
   if (!t) return null;
   const live = t.kind === 'radio';
-  const art = p.liveCover ?? t.coverUrl;
+  const art = p.liveCover ?? trackArt(t);
   const upNext = p.queue.slice(p.index + 1, p.index + 8);
 
   return (
@@ -51,7 +53,7 @@ export function NowPlaying() {
               <div className="np-kicker">Up next</div>
               {upNext.map((q, i) => (
                 <button key={i} className="np-next-row" onClick={() => p.jump(p.index + 1 + i)}>
-                  <Cover src={q.coverUrl} alt={q.title} className="tiny" />
+                  <Cover src={trackArt(q)} alt={q.title} className="tiny" />
                   <span>{q.title}</span>
                   <small>{q.artist}</small>
                 </button>
@@ -76,7 +78,7 @@ export function QueuePanel() {
       <div className="queue-list">
         {p.queue.map((t, i) => (
           <div key={`${i}:${t.id}`} className={`queue-row ${i === p.index ? 'active' : ''} ${i < p.index ? 'played' : ''}`} onDoubleClick={() => p.jump(i)}>
-            <Cover src={t.coverUrl} alt={t.title} className="tiny" />
+            <Cover src={trackArt(t)} alt={t.title} className="tiny" />
             <div className="track-main" onClick={() => p.jump(i)}>
               <div className="track-title">{t.title}</div>
               <div className="track-sub">{t.artist}</div>

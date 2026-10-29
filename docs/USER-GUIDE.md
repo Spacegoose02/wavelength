@@ -539,6 +539,22 @@ So that new downloads carry the tag, open deemix, go to **Settings → Tags** an
 Flags match by artist and title, so a song is hidden however a kid reaches it. A kid who knows their
 Navidrome password could still use another app to reach the full library.
 
+### Changing cover art (admins)
+
+Admins can give any album or artist a better picture, for everyone on your Hub. Open the album or artist and
+press **Change cover** (albums) or **Change picture** (artists).
+
+- Wavelength looks it up on **Deezer**, **Apple Music** and **MusicBrainz's Cover Art Archive** (and
+  **fanart.tv**, if your Hub has a fanart.tv key). Each result says where it's from. Click one to use it.
+- Not the right album? Change the artist or album in the search boxes and press **Search**. The picture is
+  still saved for the album you opened.
+- **Upload a picture** from your computer or phone, or paste an image link and press **Use link**.
+- **Use the server's picture** goes back to the art from Navidrome or Plex.
+
+The new picture shows everywhere in Wavelength on every device, the browser included: album and artist
+pages, the grids, song lists, the player, Now Playing and your phone's lock screen. Your music files aren't
+changed, so other apps keep showing the old art.
+
 ### Sharing with each other
 
 **Share** sends something to one person on your Hub, or to **Everyone**, with an optional note. It's on

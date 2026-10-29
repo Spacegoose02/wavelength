@@ -197,6 +197,22 @@ const MIGRATIONS: string[] = [
   );
   CREATE UNIQUE INDEX ratings_key ON ratings(kind, artist COLLATE NOCASE, album COLLATE NOCASE, title COLLATE NOCASE);
   `,
+  `
+  -- Cover art an admin picked for an album or an artist, shown on every device instead of the server's own.
+  -- The image is a file in <data>/artwork; nothing is written to the music. Matched by name on each device.
+  -- See routes/artwork.ts.
+  CREATE TABLE artwork (
+    id         INTEGER PRIMARY KEY,
+    kind       TEXT NOT NULL CHECK (kind IN ('album', 'artist')),
+    artist     TEXT NOT NULL,
+    album      TEXT NOT NULL DEFAULT '',     -- '' for an artist
+    file       TEXT NOT NULL,                -- <32 hex>.jpg/png/webp in <data>/artwork
+    source     TEXT NOT NULL,                -- Deezer, Apple Music, Cover Art Archive, fanart.tv, link, upload
+    set_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX artwork_key ON artwork(kind, artist COLLATE NOCASE, album COLLATE NOCASE);
+  `,
 ];
 
 export function openDb(file: string): Db {

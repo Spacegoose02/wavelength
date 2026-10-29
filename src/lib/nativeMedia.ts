@@ -4,6 +4,7 @@
  * WebView doesn't create one — so we mirror the player state into a native session and take the
  * button presses back as commands.
  */
+import { trackArt } from './artwork';
 import { usePlayer } from '../store/player';
 
 interface NativeMedia {
@@ -48,7 +49,7 @@ export function enableNativeMedia() {
       title: t ? (live ? s.liveTitle ?? t.title : t.title) : '',
       artist: t ? (live ? (s.liveTitle ? t.title : 'Live radio') : t.artist) : '',
       album: t?.album ?? '',
-      art: s.liveCover ?? t?.coverUrl ?? '',
+      art: s.liveCover ?? trackArt(t) ?? '',
       duration: s.duration || t?.duration || 0,
       position: s.position,
     };

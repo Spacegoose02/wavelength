@@ -5,6 +5,7 @@ import { deviceForToken } from './devices.ts';
 import { HttpError, RateLimiter } from './http.ts';
 import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
+import { artworkRoutes } from './routes/artwork.ts';
 import { authRoutes } from './routes/auth.ts';
 import { meRoutes } from './routes/me.ts';
 import { flagRoutes } from './routes/flags.ts';
@@ -97,6 +98,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean } = {}
   flagRoutes(app, ctx);
   kidRoutes(app, ctx);
   ratingRoutes(app, ctx);
+  artworkRoutes(app, ctx);
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
   webRoutes(app, config.webDir);

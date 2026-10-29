@@ -1,3 +1,4 @@
+import { startArtworkChecks } from './lib/artwork';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
 import { startHubSync } from './lib/hubSync';
@@ -135,6 +136,7 @@ export default function App() {
     startUpdateChecks();
     startInboxChecks();
     startFlagChecks();
+    startArtworkChecks();
     startKidTime();
     detectWebHub();
   }, []);

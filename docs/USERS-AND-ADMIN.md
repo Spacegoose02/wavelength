@@ -244,6 +244,11 @@ paths stay for standalone mode.
 | **Admin tag editor for artists, albums and songs, with matching** | Navidrome can't write tags over its API, so the Hub mounts the music folder read-write and edits files directly (ID3/Vorbis/MP4 via a tag library), then asks Navidrome to rescan. UI: open any artist/album/song → **Edit info** (admin only): title, artist, album artist, album, track/disc numbers, year, genre, cover art, explicit flag. Bulk edit for a whole album. **Match**: look the album up on MusicBrainz and Deezer, show a side-by-side diff, apply with one click (like MusicBrainz Picard). Every edit is logged with the old values so it can be undone. | Yes | XL |
 | **Users import / create playlists, import from Spotify, Plex and other sources** | Creating playlists already works (Navidrome/Plex two-way sync + mixed-source playlists). Import: paste a Spotify, Deezer, YouTube Music or Apple Music playlist link, or a CSV/M3U file. The Hub (or the app for public links) reads the track list, matches each song against the user's library with `lib/match.ts`, creates the playlist in the user's own Navidrome account, and lists missing songs with one **Request missing** button (feeds §6.3). Plex → Navidrome already exists as "export between servers" and gets surfaced here. Spotify needs API credentials (client credentials for public playlists, or per-user OAuth for private ones) — kept in the Hub. | Partly | L |
 
+**Cover art (done).** Admins pick album and artist art for everyone from Deezer, Apple Music, the Cover Art
+Archive or fanart.tv, or upload their own. It's kept on the Hub as an override matched by name, not written
+into the files, so it ships ahead of the tag editor and doesn't need the music folder. See docs/HUB.md
+"Cover art". The tag editor can later offer "also write this cover into the files".
+
 ### 6.5 Kids and content rating
 
 | Card | Design | Needs Hub | Effort |
