@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.0
 - **Notifications** (with a Hub): a request that's ready, turned down or failed, something shared with you,
   and (admins) a new request show up as Windows, Android or browser notifications while Wavelength isn't in
   front. On or off per device under **Settings → Account → Notifications**.
@@ -32,6 +32,9 @@
   playing. Control them, or move playback: **Continue there** sends what's playing here to that device at the
   same spot, **Play here** brings it back. Turn it off per device under Settings → Account.
 - **Hub:** `/api/me/remote/*` (in memory, long polling).
+- **Rewind** (History → Rewind, with a Hub): your year or month in music, with top artists, songs and
+  albums, minutes, streaks and when you listen. Play it, save it as a playlist, or share it as a picture.
+- **Hub:** migration 13 (`plays`, filled from existing history), `/api/me/rewind`, `/api/me/rewind/periods`.
 
 ## 0.12.0
 - **Invite links** (admins): **Settings → Users → Invite someone** makes a one-time link (and QR code) for a
