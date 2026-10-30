@@ -30,6 +30,24 @@ export async function navidromeAdmin(url: string, username: string, password: st
       const list = (await r.json().catch(() => [])) as any[];
       return (Array.isArray(list) ? list : []).filter((x) => x && (x.albumId ?? x.album_id ?? albumId) === albumId);
     },
+    /** Every album with its genres (for the genre review). */
+    async albums(): Promise<{ id: string; name: string; artist: string; genres: string[]; songs: number }[]> {
+      const r = await call(`/api/album?${new URLSearchParams({ _start: '0', _end: '50000', _sort: 'name', _order: 'ASC' })}`, {
+        headers: { 'x-nd-authorization': `Bearer ${session.token}` },
+      });
+      if (!r.ok) throw new HttpError(502, `Navidrome couldn't list the albums (${r.status})`);
+      const list = (await r.json().catch(() => [])) as any[];
+      return (Array.isArray(list) ? list : []).filter((a) => a?.id).map((a) => {
+        const names = (Array.isArray(a.genres) ? a.genres : []).map((g: { name?: unknown }) => String(g?.name ?? '')).filter(Boolean);
+        return {
+          id: String(a.id),
+          name: String(a.name ?? ''),
+          artist: String(a.albumArtist || a.artist || ''),
+          genres: names.length ? [...new Set<string>(names)] : a.genre ? [String(a.genre)] : [],
+          songs: Number(a.songCount ?? 0),
+        };
+      });
+    },
     /** Artist and genre names in the library, for the tag editor's suggestions. */
     async names(): Promise<{ artists: string[]; genres: string[] }> {
       const list = async (path: string) => {

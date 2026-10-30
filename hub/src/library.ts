@@ -119,6 +119,10 @@ export class Library {
   /** The same for slskd transfers. */
   private slskdDone?: Set<string>;
   private lastSlskd = 0;
+  private newMusic = false;
+  private tidying?: Promise<void>;
+  /** Called with new downloads in the music folder before Navidrome scans them (genres.ts tidies their genres). */
+  onNewMusic?: () => Promise<void>;
 
   constructor(db: Db, key: Buffer, ytdlp: YtdlpRunner) {
     this.db = db;
@@ -147,15 +151,34 @@ export class Library {
     this.lastActivity = Date.now();
   }
 
-  /** A download finished: scan soon, or mark requests ready straight away without a Navidrome login. */
+  /** A download finished: tidy what came in (onNewMusic), then scan as for changed(). */
   downloaded() {
-    if (!getScanSettings(this.db, this.key)) return this.markReady();
+    this.newMusic = true;
+    this.changed();
+  }
+
+  /** Files in the library changed: scan soon, or mark requests ready straight away without a Navidrome login. */
+  changed() {
+    if (!getScanSettings(this.db, this.key)) {
+      void this.tidy();
+      return this.markReady();
+    }
     clearTimeout(this.scanTimer);
     this.scanTimer = setTimeout(() => {
       this.scanTimer = undefined;
-      void this.scan().catch(() => undefined);
+      void this.tidy().then(() => this.scan()).catch(() => undefined);
     }, this.scanDelayMs);
     this.scanTimer.unref?.();
+  }
+
+  /** Run onNewMusic once for the downloads that finished since it last ran (and wait for one already running). */
+  async tidy() {
+    if (this.newMusic && this.onNewMusic) {
+      this.newMusic = false;
+      const run = this.onNewMusic;
+      this.tidying = (this.tidying ?? Promise.resolve()).then(() => run()).catch(() => undefined);
+    }
+    await this.tidying;
   }
 
   /** Ask Navidrome to scan, wait for it, then mark finished downloads ready. */
