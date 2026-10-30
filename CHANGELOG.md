@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your
   library's or Deezer's) and their new albums, EPs and singles from the last 6 weeks show up under **Discover →
   New releases → Release Radar → Following**, with preview and Get / Request. The Hub checks the artists you
@@ -23,6 +25,8 @@
   two versions stay separate albums. The Hub waits until deemix is free, then switches deemix's album folder name
   for that one album.
 - **Hub:** `POST`/`GET /api/downloads/deemix/clean`.
+- **Fixed:** the Apple Music chart showed "Skipped: 403" in Discover. Apple moved its chart feed to a new
+  address; Wavelength and the Hub now read it from there.
 
 ## 0.15.0
 - **Tidy genres** (Hub admins): one genre per kind of music, so "Hip Hop", "Trap" and "Rap/Hip Hop" all become
