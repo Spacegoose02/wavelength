@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Clean versions get their own folder** (with deemix on the Hub): **Get clean version**, Inbox → Clean
+  versions and approved clean requests save to a "… (Clean)" folder instead of colliding with the explicit
+  copy (where deemix skipped every song as already downloaded), and the songs' album tag gets " (Clean)" so the
+  two versions stay separate albums. The Hub waits until deemix is free, then switches deemix's album folder name
+  for that one album.
+- **Hub:** `POST`/`GET /api/downloads/deemix/clean`.
+
 ## 0.15.0
 - **Tidy genres** (Hub admins): one genre per kind of music, so "Hip Hop", "Trap" and "Rap/Hip Hop" all become
   **Rap; Hip-Hop**, "Dance Pop" becomes **Pop**, and "EDM", "House" and "Techno" become **Electronic**. New downloads

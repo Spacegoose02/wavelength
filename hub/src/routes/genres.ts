@@ -47,7 +47,7 @@ export function genreRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
   if (genresSince(db) === null) setGenresSince(db, Date.now());
 
   /** New downloads: give their files the tidy genre before Navidrome scans them (Library.onNewMusic). */
-  library.onNewMusic = async () => {
+  library.onNewMusic.push(async () => {
     const s = getGenreSettings(db);
     const since = genresSince(db) ?? Date.now();
     setGenresSince(db, Date.now());
@@ -67,7 +67,7 @@ export function genreRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
     if (!plan.length) return;
     const r = await saveTagChanges(db, config.musicDir, plan, 'Genres of new downloads', null);
     if (r.changed.length) audit(db, { action: 'genres.tidied', target: 'new downloads', detail: { files: r.changed.length, failed: r.failed.length } });
-  };
+  });
 
   app.get('/api/admin/genres', async (req) => {
     need(req, 'library.edit');
