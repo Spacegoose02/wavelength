@@ -5,7 +5,7 @@
 | Tool | Install | Why |
 |---|---|---|
 | Git | `winget install Git.Git` | |
-| Node.js LTS (20+) | `winget install OpenJS.NodeJS.LTS` | Vite, TypeScript, Tauri CLI |
+| Node.js LTS (22+; Vite 8 needs 20.19 or newer) | `winget install OpenJS.NodeJS.LTS` | Vite, TypeScript, Tauri CLI |
 | Rust (stable, MSVC) | `winget install Rustlang.Rustup` | The Tauri shell |
 | Visual Studio 2022 Build Tools, **C++ workload** | `winget install Microsoft.VisualStudio.2022.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"` | MSVC linker for Rust |
 | WebView2 | Preinstalled on Windows 10/11 | Runs the UI |

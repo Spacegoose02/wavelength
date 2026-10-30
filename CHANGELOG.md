@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Security:** the app now has a Content-Security-Policy (so does its browser version on the Hub): text from
+  the internet can't run scripts inside Wavelength.
+- **Hub:** the Docker image checks yt-dlp against its published checksum, rebuilds every week for a fresh
+  yt-dlp and Alpine fixes, and is scanned for known vulnerabilities.
+- **Builds:** Vite 8 (fixes the dev-server advisories in `npm audit`); release builds use Node 22.
 
 ## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your
