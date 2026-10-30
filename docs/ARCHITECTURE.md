@@ -107,7 +107,7 @@ browser (dev preview). The capability file `src-tauri/capabilities/default.json`
 3. `engine.load(url, startAt)`.
 4. Scrobble "now playing"; at 50% or 4 min record a play (local history + server scrobble).
 5. Audiobooks/podcasts: sync position to Audiobookshelf every 15 s.
-6. Radio: poll the station's now-playing endpoint every 15 s (Icecast `status-json.xsl`, SUB/WAVE `/api/now-playing`, …) for the live title and artwork.
+6. Radio: every 15 s, poll the station's now-playing endpoint (Icecast `status-json.xsl`, SUB/WAVE `/api/now-playing`, …) for the live title and artwork, and when that gives nothing read the ICY title from inside the stream (directly in the apps, through the Hub in a browser; see SOURCES.md → Radio).
 
 **System integration.**
 - Desktop: `navigator.mediaSession` (Windows media keys, overlay).

@@ -14,6 +14,11 @@ export function setHubFetch(fn: typeof hubFetch) {
   hubFetch = fn;
 }
 
+/** The signed-in Hub's address and token, if any. */
+export function hubEndpoint() {
+  return hubFetch?.();
+}
+
 /** fetch() that goes through Rust inside the app (no CORS limits), plain fetch in a browser. */
 export function http(url: string, init?: RequestInit): Promise<Response> {
   if (isTauri) return tauriFetch(url, init);

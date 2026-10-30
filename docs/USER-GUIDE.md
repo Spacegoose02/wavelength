@@ -2,7 +2,7 @@
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons), the **equalizer**,
-**skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations** and
+**skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
@@ -487,6 +487,30 @@ and the heart removes one.
 > (`deleteInternetRadioStation` in `sources/navidrome.ts`); Navidrome enforces the admin check. When the
 > Wavelength Hub arrives (see [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)) the hidden list and order are
 > meant to sync per user; today they're per device.
+
+## Song titles on radio
+
+While a station plays, the player shows the song it's on instead of just the station's name, wherever the
+station tells us:
+
+1. **The station's now-playing page** (SUB/WAVE, AzuraCast, Icecast's status page), which can also bring
+   cover art.
+2. **The title inside the stream.** Most Shoutcast and Icecast stations send the current song inside the
+   audio stream itself, even when they have no now-playing page. The desktop and Android apps read it
+   straight from the station. In a **browser**, the page isn't allowed to, so it asks your **Wavelength Hub**
+   instead: sign in to a Hub to get titles there.
+
+The title is checked every 15 seconds, so a new song can take that long to appear.
+
+**Still only the station name?** Then the station doesn't send song titles at all. That's common for DJ mix
+and "sessions" stations, which play one long mix rather than separate songs. Nothing in the stream says
+what's playing, so the only way to name the song is to recognise the audio, like Shazam does.
+
+> **Developer notes.** `watchNowPlaying` in `store/player.ts` tries the now-playing page, then
+> `streamTitle()` in `sources/radio.ts`, and keeps using whichever gave a title first. The ICY parser is
+> `lib/icy.ts` (apps) and `hub/src/radio.ts` (Hub, `GET /api/radio/now-playing`); `hub/test/radio.test.ts`
+> checks they agree. HLS (`.m3u8`) streams carry no ICY titles and are skipped. A title equal to the
+> station's own name is ignored.
 
 ## Profiles with a Wavelength Hub
 

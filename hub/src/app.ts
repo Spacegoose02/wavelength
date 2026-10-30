@@ -31,6 +31,7 @@ import { serverRoutes } from './routes/server.ts';
 import { serviceRoutes } from './routes/services.ts';
 import { shareRoutes } from './routes/shares.ts';
 import { webFetchRoutes } from './routes/webfetch.ts';
+import { radioRoutes } from './routes/radio.ts';
 import { discoverRoutes } from './routes/discover.ts';
 import { ChartCache } from './discover.ts';
 import { getUser } from './users.ts';
@@ -155,6 +156,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   genreRoutes(app, ctx);
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
+  radioRoutes(app, ctx);
   discoverRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;

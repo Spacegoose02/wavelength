@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Song titles on more radio stations.** Most Shoutcast and Icecast stations send the current song inside
+  their stream even when they have no now-playing page; Wavelength now reads it, so stations that only
+  showed their name show the song. In a browser this goes through your Hub. Stations that send no titles at
+  all (many DJ mix and "sessions" streams) still show only their name.
+- **Hub:** `GET /api/radio/now-playing?url=`.
 - **Clean versions get their own folder** (with deemix on the Hub): **Get clean version**, Inbox → Clean
   versions and approved clean requests save to a "… (Clean)" folder instead of colliding with the explicit
   copy (where deemix skipped every song as already downloaded), and the songs' album tag gets " (Clean)" so the
