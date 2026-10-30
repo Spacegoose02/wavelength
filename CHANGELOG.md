@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+- **Discover loads from your Hub.** With a Hub, every device reads the charts from the Hub's copy instead of
+  pulling Billboard, Deezer, iHeart, Spotify and the rest each time Discover opens. The Hub fetches the charts
+  people use again every 30 minutes, and when a chart service is down or rate limiting (Deezer often is) you
+  get the last copy that worked, marked with when it's from, instead of an error. Without a Hub, the app
+  keeps the last copy that loaded and shows that when a refresh fails. **Refresh** now really fetches again.
+- **New releases:** Spotify's **New Music Friday** (read from Spotify's public page, no Spotify account
+  needed) and Deezer's **Radar Weekly** are now the first two lists, alongside iHeart's Newly Released and
+  Fresh Picks.
+- **Genre lists from Deezer's editors:** **Fresh Rap** (updated daily) under Rap / Hip-Hop, **Fresh Pop**
+  under Pop, **Fresh R&B** under R&B and **Metal Radar** under Rock. New Dance now leads EDM / Dance.
+- The genre chips are reordered: Rap / Hip-Hop, EDM / Dance, Rock and Country come right after New releases.
+- If you picked your own charts for a genre in **Settings → Discover charts**, that genre keeps your pick; tick
+  the new lists there, or **Reset to defaults**.
+- **Hub:** `GET /api/discover/fetch?url=` (the chart cache).
+
 ## 0.13.1
 - **Fixed:** 0.13.0 didn't start on Windows or Android. The notification icon setting in `tauri.conf.json`
   made the notification plugin fail to load; the icon is now set on each notification instead.

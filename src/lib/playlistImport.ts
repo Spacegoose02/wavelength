@@ -1,5 +1,6 @@
 import { getJson, http, qs } from './http';
 import { hubClient } from '../store/hub';
+import { readSpotifyEmbed } from './spotifyEmbed';
 
 /**
  * Read a playlist from somewhere else (docs/USER-GUIDE.md "Import a playlist"): a Deezer, Spotify or
@@ -20,8 +21,6 @@ export interface Imported {
   name: string;
   songs: ImportedSong[];
 }
-
-const clean = (s: unknown) => (typeof s === 'string' ? s.trim() : '');
 
 // ---- files ----
 
@@ -128,21 +127,15 @@ async function fromDeezer(url: string): Promise<Imported> {
   return { name: info.title ?? 'Deezer playlist', songs };
 }
 
-/** Spotify's embed page carries the list (no Spotify login needed; up to the first 100 songs or so). */
+/** Spotify's embed page carries the list (no Spotify login needed; up to the first 100 songs or so): lib/spotifyEmbed.ts. */
 async function fromSpotify(url: string): Promise<Imported> {
   const m = /open\.spotify\.com\/(?:intl-[a-z-]+\/)?(playlist|album)\/([A-Za-z0-9]+)/.exec(url);
   if (!m) throw new Error('Paste a Spotify playlist or album link');
   const res = await http(`https://open.spotify.com/embed/${m[1]}/${m[2]}`);
   if (!res.ok) throw new Error(`Spotify answered ${res.status}. Is the playlist public?`);
-  const html = await res.text();
-  const json = /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/.exec(html)?.[1];
-  const entity = json ? JSON.parse(json)?.props?.pageProps?.state?.data?.entity : undefined;
-  const list: any[] = entity?.trackList ?? [];
-  if (!list.length) throw new Error("Couldn't read that Spotify playlist. Export it as CSV (exportify.app) and import the file instead");
-  return {
-    name: entity.name ?? entity.title ?? 'Spotify playlist',
-    songs: list.map((t) => ({ title: clean(t.title), artist: clean(t.subtitle).split(/,\s*/)[0] })).filter((s) => s.title && s.artist),
-  };
+  const { name, songs } = readSpotifyEmbed(await res.text());
+  if (!songs.length) throw new Error("Couldn't read that Spotify playlist. Export it as CSV (exportify.app) and import the file instead");
+  return { name: name ?? 'Spotify playlist', songs: songs.map(({ title, artist }) => ({ title, artist })) };
 }
 
 async function fromYoutube(url: string): Promise<Imported> {
