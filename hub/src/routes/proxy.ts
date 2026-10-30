@@ -11,7 +11,7 @@ import { deemixFor, subwaveAdmin } from '../upstream.ts';
  * password, the deemix ARL or a share login: SUB/WAVE admin (`subwave.control`), deemix and yt-dlp
  * (`downloads.run`: admins, and members with Autodownload).
  */
-export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library }: Ctx) {
+export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, clean }: Ctx) {
   const key = config.secretKey;
   const str = (v: unknown, max = 2000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
@@ -62,6 +62,25 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library }
     const r = await client.addToQueue(link, bitrate);
     audit(db, { actorId: user.id, action: 'download.queued', target: link, detail: { via: 'deemix', bitrate }, ip: clientIp(req) });
     return r ?? { ok: true };
+  });
+
+  /** A clean version: into its own "… (Clean)" folder, so it doesn't clash with the explicit one (cleanDownloads.ts). */
+  app.post('/api/downloads/deemix/clean', async (req) => {
+    const { user } = need(req, 'downloads.run');
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const link = str(b.link, 500);
+    if (!isDeezerLink(link)) throw new HttpError(400, 'Send a Deezer link');
+    const { s } = deemix();
+    const bitrate = typeof b.bitrate === 'number' && [1, 3, 9].includes(b.bitrate) ? b.bitrate : Number(s.config.bitrate) || 9;
+    const job = clean.add(link, bitrate);
+    audit(db, { actorId: user.id, action: 'download.queued', target: link, detail: { via: 'deemix', bitrate, clean: true }, ip: clientIp(req) });
+    return { job };
+  });
+
+  /** Clean versions waiting for deemix to be free, or that failed to queue. */
+  app.get('/api/downloads/deemix/clean', async (req) => {
+    need(req, 'downloads.run');
+    return { jobs: clean.list() };
   });
 
   // ---- yt-dlp ----

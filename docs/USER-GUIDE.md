@@ -703,6 +703,17 @@ already have a clean copy. Albums already in your library or already sent are sk
 what it sent on this device, so you won't download one twice. The tab shows up once the check has found at
 least one clean version, for anyone who can download or request music (not on kid profiles).
 
+**Where clean versions go.** Deezer gives a clean album the same name as the explicit one, so deemix would
+normally save it to the same folder and skip every song as already there. When your Hub runs deemix, Wavelength
+saves each clean version to its own folder instead, named like the explicit one with **(Clean)** on the end
+(*Rihanna - Loud (Clean)*), and your explicit copy stays where it is. To do that, the Hub waits until deemix
+has nothing else to do (the row says **Waiting for deemix**), adds " (Clean)" to deemix's album folder name
+while that one album starts, then puts deemix's setting back. With a music folder on the Hub, the songs' album
+tag gets " (Clean)" too, so Navidrome shows the two versions as separate albums, the album page gets its
+Explicit / Clean switch, and kid profiles play the clean one. **Get clean version** on an album page works the
+same way. If deemix runs on your device instead of the Hub, clean versions go wherever deemix's own settings
+put them.
+
 So that new downloads carry the tag, open deemix, go to **Settings → Tags** and tick **Explicit lyrics**.
 
 **Explicit and clean versions.** When your library has both versions of an album (for example *Loud* and

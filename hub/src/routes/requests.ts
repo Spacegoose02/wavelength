@@ -64,7 +64,7 @@ const getRequest = (db: Db, id: number) => {
 
 const KINDS = ['track', 'album', 'playlist', 'artist', 'video'];
 
-export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library }: Ctx) {
+export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library, clean }: Ctx) {
   const key = config.secretKey;
 
   /**
@@ -81,6 +81,11 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     }
     if (isDeezerLink(r.link)) {
       const { s, client } = hubDeemix(db, key);
+      // "Request clean version": into its own folder, once deemix is free (followed by its Deezer id)
+      if (r.kind === 'album' && /\(clean\)$/i.test(r.title)) {
+        clean.add(r.link, bitrate ?? (Number(s.config.bitrate) || 9));
+        return { via: 'deemix', job: null };
+      }
       const answer = await client.addToQueue(r.link, bitrate ?? (Number(s.config.bitrate) || 9));
       const ids = deemixJobIds(answer);
       return { via: 'deemix', job: ids.length ? JSON.stringify(ids) : null };
