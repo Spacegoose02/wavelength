@@ -4366,7 +4366,7 @@ name = "tonearm"
 version = "0.1.0"
 dependencies = [
  "android-native-keyring-store",
- "base64 0.22.1",
+ "base64 0.23.1",
  "keyring-core",
  "minisign-verify",
  "serde",
