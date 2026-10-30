@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.15.0
 - **Fixed:** Favorites showed "getFavorites is not a function" when a SUB/WAVE server with a login (or Hub
   admin access) was connected. Favorites lists Navidrome stars only again; SUB/WAVE likes are already in them.
 - **Discover loads from your Hub.** With a Hub, every device reads the charts from the Hub's copy instead of
@@ -17,6 +17,7 @@
 - If you picked your own charts for a genre in **Settings → Discover charts**, that genre keeps your pick; tick
   the new lists there, or **Reset to defaults**.
 - **Hub:** `GET /api/discover/fetch?url=` (the chart cache).
+
 ## 0.14.0
 - **Clean versions list:** **Inbox → Clean versions** lists every explicit album the library check found a
   clean version of on Deezer. Preview each one, download it on its own, or tick several (or **Select all**)
