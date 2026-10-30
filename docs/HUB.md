@@ -334,6 +334,33 @@ albums at once and renames the artist in their Artist and Album artist tags, als
 B" if asked, with an optional genre; it saves through the same `PUT /api/admin/tags`, so it's undone the same
 way. The editors suggest artist and genre names from Navidrome (`GET /api/admin/tags/values`).
 
+## Genres
+
+The Hub keeps one genre per kind of music: "Hip Hop", "Trap", "Pop Rap" and Deezer's "Rap/Hip Hop" all become
+**Rap; Hip-Hop**, "Dance Pop" and "Synth-pop" become **Pop**, "EDM", "House" and "Techno" become **Electronic**, and so
+on. A list of rules (genre → what it becomes) decides; the defaults are in `DEFAULT_GENRES` in `hub/src/genres.ts`,
+and admins change them under **Settings → Server → Genres** (kept in `hub_settings` as `genres`, no migration).
+Names are compared without case, spaces or punctuation, so "hip-hop", "Hip Hop" and "HipHop" are one rule; "&" and
+"and" count as the same. A tag with several genres ("Christmas; Dance Pop") takes the genre of the first one a rule
+knows. A genre that is already a rule's result is left as it is.
+
+**New downloads.** When a download finishes (deemix, Soulseek or yt-dlp), the Hub looks for music files in the
+music folder that changed since it last looked (`genres.since` in `hub_settings`, set when the Hub first starts with
+this feature, so the library already there isn't touched), gives each the tidy genre, and only then asks Navidrome
+to scan. Genres no rule knows are left for the review. Files an admin edited by hand since are left alone. The
+changes are one save in the tag editor's undo log ("Genres of new downloads"), so **Settings → Server → Tag edits**
+undoes them. It can be turned off there (on by default). Code: `Library.onNewMusic` in `hub/src/library.ts`, set by
+`hub/src/routes/genres.ts`.
+
+**Review.** **Review library genres** asks Navidrome for every album and its genres and lists the albums whose
+genre isn't the tidy one, with what it would become (editable). **Apply**, **Apply selected** or **Apply all** write
+the genre into every song of those albums through the same save as the tag editor, so **Undo** (there, or under Tag
+edits) puts them back; Navidrome rescans afterwards. **Keep** leaves an album as it is and stops suggesting it.
+**Genres without a rule** lists the genres no rule knows, with how many albums have each: pick what one becomes
+(**Save rule**), or **Keep** it as a genre of its own. Code: `src/views/GenreReview.tsx`.
+
+It needs what the tag editor needs: the music read-write at `/music` and a Navidrome admin login on the Hub.
+
 ## Soulseek
 
 The Hub can search and download from Soulseek through [slskd](https://github.com/slskd/slskd)
@@ -505,6 +532,10 @@ with a 4xx status.
 | `GET /api/admin/tags/history`, `POST /api/admin/tags/undo/:batch` | `library.edit` | saved edits / put a save's files back |
 | `GET /api/admin/tags/albums?ids=a,b` | `library.edit` | up to 200 Navidrome albums' files and tags at once, each with `albumId` (for Edit artist) → `{ songs, missing }` |
 | `GET /api/admin/tags/values` | `library.edit` | `{ artists, genres }`: names in Navidrome and in recent edits, for suggestions |
+| `GET /api/admin/genres`, `PUT /api/admin/genres` | `library.edit` | genre rules: `{ auto, rules: [{ from, to }], defaults, kept, genres }`; `PUT` takes `{ auto?, rules? }` (`rules: null` = the defaults) |
+| `GET /api/admin/genres/review` | `library.edit` | `{ albums: [{ id, name, artist, songs, current, proposed }], unknown: [{ genre, albums, examples }], total, kept, genres }` |
+| `POST /api/admin/genres/apply` | `library.edit` | `{ albums: [{ id, genre }] }` (up to 500) sets the genre in every song, as one undoable save → `{ batch, label, changed, failed, missing }` |
+| `POST /api/admin/genres/keep` | `library.edit` | `{ ids, keep? }`: leave albums out of the review (`keep: false` puts them back) |
 | `DELETE /api/admin/library/album/:id` | `library.edit` | move a Navidrome album's files to the trash → `{ batch, label, files, failed }` |
 | `GET /api/admin/trash` | `library.edit` | deleted albums of the last 60 days: `{ albums: [{ batch, label, at, files, by, restoredAt, purgedAt, purgeAt }] }` |
 | `POST /api/admin/trash/:batch/restore`, `DELETE /api/admin/trash/:batch` | `library.edit` | put a deleted album back / remove it for good now |

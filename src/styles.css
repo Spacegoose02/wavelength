@@ -1674,3 +1674,17 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .clean-bar { gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .clean-row > input[type='checkbox'] { flex: none; }
 .clean-row .share-actions .btn svg { width: 14px; height: 14px; }
+
+/* Settings → Server → Genres */
+.genre-row > input[type='checkbox'] { flex: none; }
+.genre-row .genre-input { flex: 0 1 180px; min-width: 110px; }
+.genre-row .track-sub s { opacity: 0.8; }
+.genre-rules { display: grid; gap: 6px; margin-top: 8px; }
+.genre-rule { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.genre-rule > b { min-width: 110px; }
+.genre-chip { display: inline-flex; align-items: center; gap: 2px; margin: 0 8px 2px 0; }
+.genre-chip .link { padding: 0 2px; }
+@media (max-width: 640px) {
+  .genre-row { flex-wrap: wrap; }
+  .genre-row .genre-input { flex: 1 1 140px; }
+}

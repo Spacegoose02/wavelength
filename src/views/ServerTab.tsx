@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HubError, type HubAdminService, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit, type HubTrashAlbum } from '../sources/hub';
 import { hubClient } from '../store/hub';
+import { GenreReview } from './GenreReview';
 
 const gb = (n: number) => (n >= 1e12 ? `${(n / 1e12).toFixed(1)} TB` : n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.max(0, Math.round(n / 1e6))} MB`);
 const since = (t: number) => {
@@ -318,13 +319,13 @@ function TagEdits() {
   return (
     <section>
       <h2>Tag edits</h2>
-      <p className="muted small">Tags changed with <b>Edit tags</b> on an album page. Undo puts those files back as they were.</p>
+      <p className="muted small">Tags changed with <b>Edit tags</b> on an album page, and genres tidied under Genres. Undo puts those files back as they were.</p>
       {msg && <p className="small">{msg}</p>}
       {edits.map((e) => (
         <div key={e.batch} className="source-row">
           <div className="track-main">
             <div className="track-title">{e.label}</div>
-            <div className="track-sub">{e.files} file{e.files === 1 ? '' : 's'} · {e.by ?? 'someone'} · {new Date(e.at).toLocaleString()}{e.undoneAt ? ' · undone' : ''}</div>
+            <div className="track-sub">{e.files} file{e.files === 1 ? '' : 's'} · {e.by ?? (e.label === 'Genres of new downloads' ? 'the Hub' : 'someone')} · {new Date(e.at).toLocaleString()}{e.undoneAt ? ' · undone' : ''}</div>
           </div>
           {!e.undoneAt && (
             <button className="btn small ghost" onClick={async () => {
@@ -487,6 +488,7 @@ export function ServerTab() {
       <Containers />
       <NavidromeAccounts />
       <LibraryScan />
+      <GenreReview />
       <TagEdits />
       <DeletedAlbums />
       <section>

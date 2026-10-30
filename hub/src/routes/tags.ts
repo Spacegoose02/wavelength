@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { tx } from '../db.ts';
+import { tx, type Db } from '../db.ts';
 import { clientIp, HttpError, need, str } from '../http.ts';
 import { getScanSettings } from '../library.ts';
 import { findMatches, libraryFile, readTags, relPath, TAG_KEYS, writeTags, type Tags } from '../tags.ts';
@@ -25,6 +25,37 @@ function readTagsBody(v: unknown): Tags {
     out[k as keyof Tags] = x.trim();
   }
   return out;
+}
+
+/**
+ * Write tag changes to files as one Save (one batch in `tag_edits`, so it can be undone). Only tags that
+ * actually change are written and kept, so undo puts back exactly those. `batch` is null when nothing changed.
+ */
+export async function saveTagChanges(db: Db, musicDir: string, plan: { file: string; tags: Tags }[], label: string, userId: number | null) {
+  const batch = randomBytes(8).toString('hex');
+  const now = Date.now();
+  const changed: string[] = [];
+  const failed: { path: string; error: string }[] = [];
+  const save = db.prepare('INSERT INTO tag_edits (batch, path, before, after, label, user_id, at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  for (const p of plan) {
+    const rel = relPath(musicDir, p.file);
+    try {
+      const cur = await readTags(p.file);
+      const after: Tags = {}, before: Tags = {};
+      for (const k of TAG_KEYS) {
+        if (p.tags[k] === undefined || (p.tags[k] ?? '') === (cur[k] ?? '')) continue;
+        after[k] = p.tags[k];
+        before[k] = cur[k] ?? '';
+      }
+      if (!Object.keys(after).length) continue;
+      await writeTags(p.file, after);
+      tx(db, () => save.run(batch, rel, JSON.stringify(before), JSON.stringify(after), label, userId, now));
+      changed.push(rel);
+    } catch (e) {
+      failed.push({ path: rel, error: (e as Error).message });
+    }
+  }
+  return { batch: changed.length ? batch : null, changed, failed };
 }
 
 export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
@@ -118,35 +149,12 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
       const path = typeof c?.path === 'string' ? c.path : '';
       return { file: file(path), tags: readTagsBody(c.tags) };
     });
-    const batch = randomBytes(8).toString('hex');
-    const now = Date.now();
-    const done: string[] = [];
-    const failed: { path: string; error: string }[] = [];
-    const save = db.prepare('INSERT INTO tag_edits (batch, path, before, after, label, user_id, at) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    for (const p of plan) {
-      const rel = relPath(config.musicDir, p.file);
-      try {
-        const cur = await readTags(p.file);
-        // only what actually changes, so undo puts back exactly that
-        const after: Tags = {}, before: Tags = {};
-        for (const k of TAG_KEYS) {
-          if (p.tags[k] === undefined || (p.tags[k] ?? '') === (cur[k] ?? '')) continue;
-          after[k] = p.tags[k];
-          before[k] = cur[k] ?? '';
-        }
-        if (!Object.keys(after).length) continue;
-        await writeTags(p.file, after);
-        tx(db, () => save.run(batch, rel, JSON.stringify(before), JSON.stringify(after), label, user.id, now));
-        done.push(rel);
-      } catch (e) {
-        failed.push({ path: rel, error: (e as Error).message });
-      }
-    }
+    const { batch, changed: done, failed } = await saveTagChanges(db, config.musicDir, plan, label, user.id);
     if (done.length) {
       audit(db, { actorId: user.id, action: 'tags.edited', target: label, detail: { files: done.length, failed: failed.length }, ip: clientIp(req) });
-      library.downloaded();
+      library.changed();
     }
-    return { batch: done.length ? batch : null, changed: done, failed };
+    return { batch, changed: done, failed };
   });
 
   app.get('/api/admin/tags/history', async (req) => {
@@ -175,7 +183,7 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
       }
     }
     audit(db, { actorId: user.id, action: 'tags.undone', target: rows[0].label, detail: { files: undone, failed: failed.length }, ip: clientIp(req) });
-    if (undone) library.downloaded();
+    if (undone) library.changed();
     return { undone, failed };
   });
 }

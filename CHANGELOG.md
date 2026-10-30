@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Tidy genres** (Hub admins): one genre per kind of music, so "Hip Hop", "Trap" and "Rap/Hip Hop" all become
+  **Rap; Hip-Hop**, "Dance Pop" becomes **Pop**, and "EDM", "House" and "Techno" become **Electronic**. New downloads
+  get the tidy genre before Navidrome adds them. **Settings → Server → Genres → Review library genres** lists the
+  albums already in your library whose genre isn't tidy: apply one, the ones you tick, or all, with **Undo**. Genres
+  the Hub doesn't know yet are listed so you can pick what each becomes. The rules can be edited there.
+- **Hub:** `/api/admin/genres`, `/api/admin/genres/review`, `/api/admin/genres/apply`, `/api/admin/genres/keep`.
 - **Clean versions list:** **Inbox → Clean versions** lists every explicit album the library check found a
   clean version of on Deezer. Preview each one, download it on its own, or tick several (or **Select all**)
   and **Download selected** / **Download all**. Each row shows Queued, Downloading, Downloaded or Failed, and

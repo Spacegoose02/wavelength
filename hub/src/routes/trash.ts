@@ -123,7 +123,7 @@ export function trashRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
     }
     if (!moved) throw new HttpError(500, `Couldn’t move the album’s files: ${failed[0] ?? 'unknown error'}`);
     audit(db, { actorId: user.id, action: 'album.deleted', target: label, detail: { files: moved, failed: failed.length }, ip: clientIp(req) });
-    library.downloaded();
+    library.changed();
     return { batch, label, files: moved, failed };
   });
 
@@ -164,7 +164,7 @@ export function trashRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
     }
     if (!failed.length) rmSync(join(music, TRASH_DIR, req.params.batch), { recursive: true, force: true });
     audit(db, { actorId: user.id, action: 'album.restored', target: rows[0].label, detail: { files: restored, failed: failed.length }, ip: clientIp(req) });
-    if (restored) library.downloaded();
+    if (restored) library.changed();
     return { files: restored, failed };
   });
 

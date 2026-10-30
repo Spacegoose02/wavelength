@@ -126,6 +126,11 @@ export interface HubTagMatch {
 /** An album an admin deleted (GET /api/admin/trash): in the trash until `purgeAt`, unless restored or purged. */
 export interface HubTrashAlbum { batch: string; label: string; at: number; files: number; by: string | null; restoredAt: number | null; purgedAt: number | null; purgeAt: number }
 export interface HubTagEdit { batch: string; label: string; at: number; files: number; undoneAt: number | null; by: string | null }
+/** Tidy genres (hub/src/genres.ts): rules turn variants ("Hip Hop", "Trap") into one genre ("Rap; Hip-Hop"). */
+export interface HubGenreRule { from: string; to: string }
+export interface HubGenreSettings { auto: boolean; rules: HubGenreRule[]; defaults: boolean; kept: number; genres: string[] }
+export interface HubGenreAlbum { id: string; name: string; artist: string; songs: number; current: string; proposed: string }
+export interface HubGenreReview { albums: HubGenreAlbum[]; unknown: { genre: string; albums: number; examples: string[] }[]; total: number; kept: number; genres: string[] }
 
 /** One of this person's Wavelength playlists, as kept on the Hub. `deleted` ones are tombstones. */
 export interface HubPlaylist {
@@ -562,6 +567,13 @@ export class HubClient {
   restoreAlbum = (batch: string) => this.call<{ files: number; failed: string[] }>('POST', `/api/admin/trash/${encodeURIComponent(batch)}/restore`, {});
   purgeAlbum = (batch: string) => this.call('DELETE', `/api/admin/trash/${encodeURIComponent(batch)}`);
   tagHistory = () => this.call<{ edits: HubTagEdit[] }>('GET', '/api/admin/tags/history');
+  genreSettings = () => this.call<HubGenreSettings>('GET', '/api/admin/genres');
+  /** `rules: null` goes back to the default rules. */
+  saveGenreSettings = (b: { auto?: boolean; rules?: HubGenreRule[] | null }) => this.call<HubGenreSettings>('PUT', '/api/admin/genres', b);
+  genreReview = () => this.call<HubGenreReview>('GET', '/api/admin/genres/review');
+  applyGenres = (albums: { id: string; genre: string }[]) =>
+    this.call<{ batch: string | null; label: string; changed: string[]; failed: { path: string; error: string }[]; missing: string[] }>('POST', '/api/admin/genres/apply', { albums });
+  keepGenres = (ids: string[], keep = true) => this.call<HubGenreSettings>('POST', '/api/admin/genres/keep', { ids, keep });
   undoTags = (batch: string) => this.call<{ undone: number; failed: { path: string; error: string }[] }>('POST', `/api/admin/tags/undo/${encodeURIComponent(batch)}`);
   importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });
   // remote control and handoff between this person's devices (lib/remote.ts)

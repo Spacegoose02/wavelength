@@ -422,7 +422,9 @@ Done: playlist import (`src/lib/playlistImport.ts`, `src/views/ImportPlaylist.ts
 YouTube Music (through the Hub's yt-dlp), CSV, M3U and text, matched to the library, with "request missing".
 Tag editor (`hub/src/tags.ts`, `hub/src/routes/tags.ts`, `src/views/TagEditor.tsx`): the Hub reads and writes
 the files' tags with ffprobe / ffmpeg, matches albums on Deezer and MusicBrainz, keeps an undo log and
-rescans Navidrome afterwards.
+rescans Navidrome afterwards. Genres (`hub/src/genres.ts`, `hub/src/routes/genres.ts`,
+`src/views/GenreReview.tsx`) builds on it: rules that turn genre variants into one genre, applied to new downloads
+before the scan and, from a review under Settings → Server → Genres, to the rest of the library.
 
 Tag editor with MusicBrainz/Deezer match, undo log; playlist import from
 Spotify/Deezer/YouTube Music/CSV/M3U with "request missing". **Cards closed:** tag editor,
