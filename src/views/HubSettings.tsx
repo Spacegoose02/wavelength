@@ -11,6 +11,7 @@ import { isAndroid } from '../lib/platform';
 import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
+import { useUi } from '../store/ui';
 
 /** Settings → Account (sign in to a Wavelength Hub) and Settings → Users (Hub admins). See docs/HUB.md. */
 
@@ -746,6 +747,12 @@ function LibraryCheck() {
         <p className="small">
           Checked {albums.length} album{albums.length === 1 ? '' : 's'}: {explicit.length} explicit
           {withClean ? ` (${withClean} with a clean version on Deezer)` : ''}{unknown ? `, ${unknown} not found on Deezer` : ''}.
+        </p>
+      )}
+      {withClean > 0 && (
+        <p className="small">
+          <button className="link small" onClick={() => useUi.getState().go({ view: 'inbox', tab: 'clean' })}>See the clean versions →</button>{' '}
+          <span className="muted">Preview and download them from Inbox → Clean versions.</span>
         </p>
       )}
       {check.running && (

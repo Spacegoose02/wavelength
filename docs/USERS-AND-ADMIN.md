@@ -405,7 +405,9 @@ bigger menu; per-kid bedtime and minutes a day, counted across devices; a househ
 30 minutes and is needed to sign out of a kid profile. Library check (`src/lib/explicitCheck.ts`,
 `hub/src/routes/ratings.ts`): an admin's device looks every album up on Deezer and keeps explicit albums,
 explicit songs and the clean version's link on the Hub, which covers untagged files and Plex; explicit albums
-get **Get clean version**. Versions (`src/lib/versions.ts`): an Explicit / Clean switch on albums the library has
+get **Get clean version**, and **Inbox → Clean versions** (`src/lib/cleanVersions.ts`, `src/views/CleanVersions.tsx`)
+lists all of them with a preview, per-album download, and select / download all; deemix's queue gives each row
+its status, and what was sent is remembered on the device so it isn't sent twice. Versions (`src/lib/versions.ts`): an Explicit / Clean switch on albums the library has
 in both versions, and a synced per-person preference (Settings → Playback) that shows only the preferred
 version in album lists; kids always get clean. Navidrome relay (`hub/src/routes/relay.ts`): kids' devices
 (everyone's, if the admin chooses) get a per-device relay login instead of their Navidrome password, and the
