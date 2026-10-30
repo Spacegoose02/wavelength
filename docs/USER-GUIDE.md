@@ -126,6 +126,26 @@ What you can add:
 Charts are still checked for freshness: one that hasn't updated recently is skipped with a note,
 whether you picked it or not.
 
+A genre you've changed keeps your pick when new charts are added in an update. Tick the new ones here, or
+use **Reset to defaults** to get the new default list.
+
+### New releases and genre lists
+
+- **New releases** opens with Spotify's **New Music Friday** and Deezer's **Radar Weekly** (both new every
+  Friday), then iHeart's Newly Released and Fresh Picks, with your **Release Radar** above them. No Spotify
+  account is needed: Wavelength reads Spotify's public playlist page.
+- Each genre has a list from Deezer's genre editors: **Fresh Rap** (daily) under Rap / Hip-Hop, **New Dance**,
+  Electronic Hits and Global Dance Hits under EDM / Dance, **Metal Radar** under Rock, **Fresh Pop** under Pop
+  and **Fresh R&B** under R&B. Country uses iHeart's Breaking Country and Country Top 40.
+- Click a list's tab to see just that list, or **Mix** to combine them.
+
+### Charts with a Hub
+
+When you're signed in to a Hub, Discover reads the charts from the Hub instead of every device pulling them
+from Billboard, Deezer, Spotify and the rest each time. The Hub fetches the ones people use again every
+30 minutes. If a chart service is down or busy, you see the last copy that worked, with a note such as
+"couldn't refresh, showing the Hub's copy from Fri 3:10 PM", instead of an error. **Refresh** asks again.
+
 > **Developer notes.** Choices are stored as `discoverCharts` (genre → chart ids) in the settings
 > store (`tonearm.settings`). A genre with no entry uses the built-in `BY_GENRE` list.
 > `sourcesFor(genre, custom)` in `src/sources/charts.ts` resolves what a genre uses, `chartsFor(genre)`

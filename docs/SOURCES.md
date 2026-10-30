@@ -74,7 +74,8 @@ can't prove it updated recently (21 days by default; RadioWave 35, iHeart R&B Hi
 | Billboard | Scrape `billboard.com/charts/<slug>/` (DOMParser, `h3#title-of-a-story`), "Week of" date | Hot 100, Pop, Country, Rock | Rap, R&B/Hip-Hop, Dance and Latin pages are stale — not used |
 | Apple Music | RSS `rss.applemarketingtools.com/.../most-played/100/songs.json`, filtered by genre name | all but EDM | One shared fetch for all genres; the service has outages (504) |
 | Deezer | `api.deezer.com/chart/0/tracks` | Top overall | Deezer's **genre** charts are frozen — don't use them |
-| Deezer editors | `api.deezer.com/playlist/<id>` (Electronic Hits, New Dance, Global Dance Hits); fresh = newest `time_add` | EDM | Includes 30 s `preview` URLs |
+| Deezer editors | `api.deezer.com/playlist/<id>`; fresh = newest `time_add`. Ids in `DEEZER_PLAYLISTS`: Radar Weekly `1282495565` (new releases, Fridays), Fresh Rap `6682665064` (daily), Fresh Pop `2228601362`, Fresh R&B `2021225582`, Metal Radar `1050179021`, Electronic Hits `1902101402`, New Dance `2249258602`, Global Dance Hits `706093725` | New, Rap, Pop, R&B, Rock, EDM | Includes 30 s `preview` URLs. To add one: the number at the end of a deezer.com playlist link, owned by a "Deezer … Editor" account |
+| Spotify editors | Spotify's public embed page `open.spotify.com/embed/playlist/<id>` (`__NEXT_DATA__`, read by `src/lib/spotifyEmbed.ts`, shared with playlist import). New Music Friday `37i9dQZF1DX4JAvHpjipBk` | New | No dates on the page, so it's treated as live (Spotify replaces it every Friday). Spotify's Web API stopped serving its own editorial playlists to new apps in Nov 2024, so the API isn't an option; the embed page needs no login |
 | RadioWave Monitor | Scrape `radiowavemonitor.com/pub_charts/r100_<n>.aspx` (1 Alt Rock, 4 Pop/Top 40, 6 Hot Country, 8 Big Rock, 9 Rhythmic) | several | ~2-week publishing lag; titles are UPPERCASE → title-cased |
 | iHeartRadio editors | `us.api.iheart.com/api/v3/collection/user/312064750/collection/<id>` + `api/v3/catalog/tracks/<ids>`; freshness = `lastUpdated` | many | Playlist ids are in the `IHEART` map. To add one: take the id at the end of an iheart.com playlist URL |
 | ~~Shazam~~ | — | — | Removed |
@@ -83,6 +84,13 @@ can't prove it updated recently (21 days by default; RadioWave 35, iHeart R&B Hi
 **Which charts a genre uses** is the user's choice: Settings → Discover stores `discoverCharts` (genre → ids)
 in the settings store. `sourcesFor(genre, custom)` returns that pick, or the built-in `BY_GENRE` list. `chartsFor(genre)`
 is what the picker offers: everything, except Billboard/Apple under genres they don't publish (`BILLBOARD`, `APPLE`).
+
+**Where the pages come from.** Every chart page is read through `chartFetch()` (`src/lib/http.ts`). Signed in
+to a Hub, that asks the Hub's chart cache (`GET /api/discover/fetch`, `hub/src/discover.ts`): one copy for
+every device, refreshed by the Hub every 30 minutes while people use it, and the last good copy when the
+source fails (Deezer's `200 {"error": "Quota limit exceeded"}` counts as a failure). Without a Hub, or with a
+Hub older than this, it fetches directly as before. On top of that the app keeps each chart for 30 minutes
+(**Refresh** skips that) and keeps the last copy that loaded, shown with a note when fetching again fails.
 
 Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others).
 

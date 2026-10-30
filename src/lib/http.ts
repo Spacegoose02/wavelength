@@ -24,6 +24,23 @@ export function http(url: string, init?: RequestInit): Promise<Response> {
   return fetch(url, init);
 }
 
+/**
+ * Discover's charts: from the signed-in Hub's copy (hub/src/discover.ts), so opening Discover doesn't pull
+ * every chart again and a chart service that's down still shows its last good copy. `stale` is set when the
+ * Hub's source failed and this is that older copy. With no Hub, or a Hub too old to keep charts, it's http().
+ */
+export async function chartFetch(url: string, init?: RequestInit): Promise<{ res: Response; stale?: Date }> {
+  const hub = hubFetch?.();
+  if (hub && NO_CORS_HOSTS.has(hostOf(url))) {
+    const res = await http(`${hub.url}/api/discover/fetch?${qs({ url })}`, { headers: { authorization: `Bearer ${hub.token}` } }).catch(() => undefined);
+    if (res?.ok) {
+      const at = res.headers.get('x-wavelength-fetched-at');
+      return { res, stale: res.headers.get('x-wavelength-stale') === '1' && at ? new Date(at) : undefined };
+    }
+  }
+  return { res: await http(url, init) };
+}
+
 const hostOf = (url: string) => {
   try {
     return new URL(url).hostname;

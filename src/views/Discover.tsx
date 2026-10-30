@@ -48,10 +48,14 @@ export function Discover() {
   const yt = useSettings((s) => s.ytdlp);
   const playTracks = usePlayer((s) => s.playTracks);
   const run = useRef(0);
+  /** Refresh skips this app's 30-minute copy of the charts (the Hub keeps its own). */
+  const fresh = useRef(false);
 
   // load the chart, then check each song against the library in the background
   useEffect(() => {
     const id = ++run.current;
+    const force = fresh.current;
+    fresh.current = false;
     setRows(undefined);
     setError(undefined);
     setInfo(undefined);
@@ -60,13 +64,13 @@ export function Discover() {
       try {
         let entries: ChartEntry[];
         if (view === 'mix') {
-          const m = await getMix(genre, available);
+          const m = await getMix(genre, available, force);
           entries = m.entries;
           setInfo(`Combining ${m.used.map((s) => CHART_LABELS[s]).join(' + ')}`);
           if (!m.used.length) throw new Error(m.failed.map((f) => f.reason).join(' · ') || "Couldn't reach any chart service.");
           if (m.failed.length) setError(`Skipped: ${m.failed.map((f) => f.reason).join(' · ')}`);
         } else {
-          const c = await getChart(view, genre);
+          const c = await getChart(view, genre, force);
           entries = c.entries;
           setInfo(c.asOf ? `${CHART_LABELS[view]} · ${c.asOf}` : CHART_LABELS[view]);
           if (!entries.length) throw new Error(`${CHART_LABELS[view]} has no ${GENRES.find((g) => g.id === genre)!.label} songs right now.`);
@@ -133,7 +137,10 @@ export function Discover() {
     <div className="page">
       <header className="page-head">
         <h1>Discover</h1>
-        <button className="btn small" onClick={() => setNonce(nonce + 1)}><IconRefresh /> Refresh</button>
+        <button className="btn small" onClick={() => {
+          fresh.current = true;
+          setNonce(nonce + 1);
+        }}><IconRefresh /> Refresh</button>
         <button className="btn small ghost" onClick={() => {
           useUi.getState().go({ view: 'settings', tab: 'discover' });
         }} title="Pick which charts each genre uses">Edit charts</button>
