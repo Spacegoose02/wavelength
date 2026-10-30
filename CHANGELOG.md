@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.14.0
 - **Clean versions list:** **Inbox → Clean versions** lists every explicit album the library check found a
   clean version of on Deezer. Preview each one, download it on its own, or tick several (or **Select all**)
   and **Download selected** / **Download all**. Each row shows Queued, Downloading, Downloaded or Failed, and
