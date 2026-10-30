@@ -35,6 +35,7 @@ import { discoverRoutes } from './routes/discover.ts';
 import { ChartCache } from './discover.ts';
 import { getUser } from './users.ts';
 import { Library } from './library.ts';
+import { CleanDownloads } from './cleanDownloads.ts';
 import { webRoutes } from './web.ts';
 import { YtdlpRunner } from './ytdlp.ts';
 
@@ -42,6 +43,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     hubRoutes: { method: string; url: string }[];
     hubLibrary: Library;
+    hubClean: CleanDownloads;
   }
 }
 
@@ -52,6 +54,8 @@ export interface Ctx {
   limits: { login: RateLimiter; pairing: RateLimiter; poll: RateLimiter };
   ytdlp: YtdlpRunner;
   library: Library;
+  /** Clean versions downloaded into their own folder (cleanDownloads.ts). */
+  clean: CleanDownloads;
   /** Discover's charts, fetched and kept by the Hub so the apps don't each pull them (discover.ts). */
   charts: ChartCache;
   /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
@@ -71,13 +75,15 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     ytdlp: new YtdlpRunner(config.ytdlpBin, config.musicDir),
     charts: new ChartCache(),
     restart: opts.restart ?? (() => undefined),
-  } as Omit<Ctx, 'library'> as Ctx;
+  } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
+  ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
   if (opts.watchLibrary ?? true) ctx.library.start();
   app.addHook('onClose', async () => ctx.library.stop());
   ctx.charts.start();
   app.addHook('onClose', async () => ctx.charts.stop());
   app.decorate('hubLibrary', ctx.library);
+  app.decorate('hubClean', ctx.clean);
 
   // database backups, for restore (routes/server.ts); the route sets how big
   app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));

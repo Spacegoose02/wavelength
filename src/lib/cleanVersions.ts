@@ -5,7 +5,8 @@ import { getDeezerAlbum } from '../sources/deemix';
 import type { Track } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { useSettings } from '../store/settings';
-import { deemixClient } from './hubServices';
+import { hubClient } from '../store/hub';
+import { deemixClient, hubRuns } from './hubServices';
 import { mustRequest, requestMusic } from './inbox';
 import { useRatings } from './kids';
 import { versionKey, versionOf } from './versions';
@@ -61,10 +62,12 @@ interface CleanState {
   sending: Record<string, string | undefined>;
   /** deemix's queue, by Deezer album id. */
   queue: Record<number, { status: string; progress: number }>;
+  /** Clean versions the Hub holds until deemix is free, or couldn't queue, by link. */
+  hub: Record<string, { state: string; error?: string }>;
 }
 
 export const useCleanVersions = create<CleanState>()(
-  persist(() => ({ sent: {}, sending: {}, queue: {} } as CleanState), { name: 'tonearm.cleanVersions', partialize: (s) => ({ sent: s.sent }) }),
+  persist(() => ({ sent: {}, sending: {}, queue: {}, hub: {} } as CleanState), { name: 'tonearm.cleanVersions', partialize: (s) => ({ sent: s.sent }) }),
 );
 
 /** What to show for one album. */
@@ -73,6 +76,9 @@ export function offerStatus(o: CleanOffer, s: CleanState): { label: string; kind
   const sending = s.sending[o.link];
   if (sending === '…') return { label: 'Sending…', kind: 'busy' };
   if (sending) return { label: sending, kind: 'error' };
+  const held = s.hub[o.link];
+  if (held?.state === 'waiting') return { label: 'Waiting for deemix', kind: 'queued' };
+  if (held?.state === 'failed') return { label: held.error ?? 'Couldn’t queue it', kind: 'error' };
   const q = o.deezerId ? s.queue[o.deezerId] : undefined;
   if (q) {
     if (q.status === 'completed') return { label: 'Downloaded', kind: 'done' };
@@ -98,7 +104,10 @@ export async function getClean(o: CleanOffer) {
   try {
     const request = mustRequest();
     if (request) await requestMusic({ link: o.link, kind: 'album', title: `${o.album} (clean)`, artist: o.artist, cover: offerCover(o) });
-    else await deemixClient().addToQueue(o.link, useSettings.getState().deemix.bitrate);
+    else if (hubRuns('deemix')) {
+      const { job } = await hubClient()!.deemixClean(o.link, useSettings.getState().deemix.bitrate);
+      useCleanVersions.setState((s) => ({ hub: { ...s.hub, [o.link]: job } }));
+    } else await deemixClient().addToQueue(o.link, useSettings.getState().deemix.bitrate);
     useCleanVersions.setState((s) => ({ sent: { ...s.sent, [o.link]: { at: Date.now(), via: request ? 'request' : 'deemix' } } }));
     set(undefined);
   } catch (e) {
@@ -122,7 +131,8 @@ export async function refreshCleanQueue() {
       if (item?.type !== 'album' || !item.id) continue;
       queue[Number(item.id)] = { status: String(item.status ?? ''), progress: Number(item.progress ?? 0) };
     }
-    useCleanVersions.setState({ queue });
+    const jobs = hubRuns('deemix') ? (await hubClient()!.deemixCleanJobs().catch(() => undefined))?.jobs : undefined;
+    useCleanVersions.setState((s) => ({ queue, hub: jobs ? Object.fromEntries(jobs.map((j) => [j.link, j])) : s.hub }));
   } catch {
     /* deemix not reachable: keep showing what was sent */
   }

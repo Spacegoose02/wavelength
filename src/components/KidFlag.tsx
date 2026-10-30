@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { deemixClient } from '../lib/hubServices';
-import { mustRequest, requestMusic } from '../lib/inbox';
+import { getClean, offerStatus, useCleanVersions, type CleanOffer } from '../lib/cleanVersions';
+import { mustRequest } from '../lib/inbox';
 import { albumRating, flagOn, setFlag, useFlags, useRatings } from '../lib/kids';
 import type { HubFlag } from '../sources/hub';
 import { useHub } from '../store/hub';
-import { useSettings } from '../store/settings';
 
 /**
  * Admin button: hide a song, album or artist from kid profiles, or let something marked explicit through.
@@ -59,28 +58,21 @@ export function KidFlagButton({ kind, artist, title = '', explicit, className = 
 
 /**
  * "Get clean version": shown on an explicit album when the library check found its clean version on Deezer.
- * Downloads it with deemix, or requests it for people without Autodownload.
+ * Downloads it with deemix (into its own folder when the Hub runs deemix), or requests it for people without
+ * Autodownload. Same as Inbox → Clean versions (lib/cleanVersions.ts).
  */
 export function CleanVersionButton({ artist, album }: { artist: string; album: string }) {
   const can = useHub((s) => !!s.token && (s.permissions.includes('downloads.run') || s.permissions.includes('requests.create')));
   useRatings((s) => s.ratings);
-  const [status, setStatus] = useState<string>();
+  const state = useCleanVersions();
   const link = albumRating(artist, album)?.cleanLink;
   if (!can || !link) return null;
   const request = mustRequest();
-  const get = async () => {
-    setStatus('…');
-    try {
-      if (request) await requestMusic({ link, kind: 'album', title: `${album} (clean)`, artist });
-      else await deemixClient().addToQueue(link, useSettings.getState().deemix.bitrate);
-      setStatus(request ? 'Clean version requested' : 'Clean version queued');
-    } catch (e) {
-      setStatus(String((e as Error).message ?? e));
-    }
-  };
+  const offer: CleanOffer = { artist, album, link, have: false };
+  const st = offerStatus(offer, state);
   return (
-    <button className="btn" disabled={status === '…'} onClick={get} title="Deezer has a clean version of this album">
-      {status ?? (request ? 'Request clean version' : 'Get clean version')}
+    <button className="btn" disabled={st.kind === 'busy'} onClick={() => getClean(offer)} title={st.kind === 'error' ? st.label : 'Deezer has a clean version of this album'}>
+      {st.kind === 'new' ? (request ? 'Request clean version' : 'Get clean version') : st.kind === 'error' ? 'Clean version: failed, try again' : `Clean version: ${st.label}`}
     </button>
   );
 }
