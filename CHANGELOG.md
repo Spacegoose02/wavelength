@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- **Security:** updates are checked before they install. The app compares each downloaded file with the
+  SHA-256 GitHub publishes for it, and, once a signing key is set up, also requires a valid signature
+  (docs/RELEASING.md "Update signing").
+- **Security:** yt-dlp downloads in the app only take web links and pass them after `--`, so a link can't
+  turn into a yt-dlp option; a custom yt-dlp path must be an actual yt-dlp program.
+- **Security:** updated the Rust TLS libraries (rustls, rustls-webpki, webpki-roots) and tokio for published
+  advisories.
+- **Builds:** a new `App` check runs TypeScript, Rust tests, clippy and dependency audits on every pull
+  request and weekly; Dependabot keeps npm, Cargo, Docker and Actions dependencies current.
 
 ## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your
