@@ -3,7 +3,7 @@ import { kidSafe } from '../lib/kids';
 import { create } from 'zustand';
 import { engine } from '../player/engine';
 import { getJson } from '../lib/http';
-import { parseNowPlaying, parseNowPlayingCover } from '../sources/radio';
+import { parseNowPlaying, parseNowPlayingCover, streamTitle } from '../sources/radio';
 import { sourceFor } from '../sources/registry';
 import type { Track } from '../sources/types';
 import { useSettings } from './settings';
@@ -281,24 +281,57 @@ engine.on('ended', () => {
   } else st.next();
 });
 
+/**
+ * Radio: every 15 s, the station's now-playing page (SUB/WAVE, AzuraCast, Icecast `status-json.xsl`…) and,
+ * when that gives nothing, the title inside the stream itself (ICY metadata, sources/radio.ts streamTitle).
+ * Whichever answers first is used from then on.
+ */
 function watchNowPlaying(t: Track) {
   window.clearInterval(nowPlayingTimer);
-  if (t.kind !== 'radio' || !t.nowPlayingUrl) return;
-  const poll = async () => {
+  if (t.kind !== 'radio') return;
+  let use: 'page' | 'stream' | undefined;
+  const noPage = !t.nowPlayingUrl;
+  let noStream = !t.streamUrl;
+  if (noPage && noStream) return;
+  const fromPage = async () => {
     try {
       const json = await getJson(t.nowPlayingUrl!);
-      const title = parseNowPlaying(json, t.streamUrl);
-      const cover = parseNowPlayingCover(json, t.nowPlayingUrl!);
-      if (usePlayer.getState().current() === t) {
-        usePlayer.setState({ liveTitle: title, liveCover: cover });
-        if (title) updateMediaSession(t, title, cover);
-      }
+      return { title: parseNowPlaying(json, t.streamUrl), cover: parseNowPlayingCover(json, t.nowPlayingUrl!) };
     } catch {
-      /* station has no metadata endpoint */
+      return undefined; // no such page, or not reachable right now
     }
   };
+  const fromStream = async () => {
+    try {
+      const title = await streamTitle(t.streamUrl!);
+      if (title === null) noStream = true;
+      return { title: title || undefined, cover: undefined };
+    } catch {
+      return undefined; // couldn't reach it this time; try again next poll
+    }
+  };
+  const poll = async () => {
+    let got: { title?: string; cover?: string } | undefined;
+    if (use !== 'stream' && !noPage) {
+      got = await fromPage();
+      if (got?.title) use = 'page';
+    }
+    if (!got?.title && use !== 'page' && !noStream) {
+      got = await fromStream();
+      if (got?.title) use = 'stream';
+    }
+    if (noPage && noStream) window.clearInterval(timer);
+    if (!got) return; // couldn't reach the station this time: keep the last title
+    // some stations send their own name as the "song"
+    const title = got.title && got.title.toLowerCase() !== t.title.toLowerCase() ? got.title : undefined;
+    if (usePlayer.getState().current() === t) {
+      usePlayer.setState({ liveTitle: title, liveCover: got.cover });
+      if (title) updateMediaSession(t, title, got.cover);
+    }
+  };
+  const timer = window.setInterval(poll, 15_000);
+  nowPlayingTimer = timer;
   poll();
-  nowPlayingTimer = window.setInterval(poll, 15_000);
 }
 
 function updateMediaSession(t: Track, live?: string, cover?: string) {

@@ -1,4 +1,5 @@
-import { getJson, qs } from '../lib/http';
+import { getJson, http, hubEndpoint, isTauri, qs } from '../lib/http';
+import { readIcyTitle } from '../lib/icy';
 import type { Station, Track } from './types';
 
 const RB = 'https://de1.api.radio-browser.info/json';
@@ -78,6 +79,34 @@ export function parseNowPlayingCover(json: any, endpoint: string): string | unde
   } catch {
     return undefined;
   }
+}
+
+/**
+ * The song title a station sends inside its stream (ICY metadata, lib/icy.ts) — what most Shoutcast and
+ * Icecast stations offer even when they have no now-playing page. `null` when this station doesn't send
+ * titles in its stream (or there's no way to ask), else the title ('' while it sends none).
+ *
+ * The apps read the stream directly; a browser can't (no CORS, and the `icy-metaint` header is hidden), so it
+ * asks the signed-in Hub (`/api/radio/now-playing`), which is also the fallback for the old Shoutcast servers
+ * that answer `ICY 200 OK`, which the apps' HTTP client refuses.
+ */
+export async function streamTitle(streamUrl: string): Promise<string | null> {
+  if (!/^https?:/i.test(streamUrl) || /\.m3u8(\?|$)/i.test(streamUrl)) return null; // HLS has no ICY
+  if (isTauri) {
+    try {
+      const res = await http(streamUrl, { headers: { 'Icy-MetaData': '1' }, signal: AbortSignal.timeout(8_000) });
+      if (!res.ok) throw new Error(String(res.status));
+      return (await readIcyTitle(res.headers.get('icy-metaint'), res.body)) ?? null;
+    } catch {
+      /* fall through to the Hub */
+    }
+  }
+  const hub = hubEndpoint();
+  if (!hub) return null;
+  const r = await getJson<{ icy: boolean; title: string | null }>(`${hub.url}/api/radio/now-playing?${qs({ url: streamUrl })}`, {
+    headers: { authorization: `Bearer ${hub.token}` },
+  });
+  return r.icy ? (r.title ?? '') : null;
 }
 
 function safePath(u: string) {

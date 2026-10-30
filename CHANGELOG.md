@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **Song titles on more radio stations.** Most Shoutcast and Icecast stations send the current song inside
+  their stream even when they have no now-playing page; Wavelength now reads it, so stations that only
+  showed their name show the song. In a browser this goes through your Hub. Stations that send no titles at
+  all (many DJ mix and "sessions" streams) still show only their name.
+- **Hub:** `GET /api/radio/now-playing?url=`.
+
 ## 0.15.0
 - **Tidy genres** (Hub admins): one genre per kind of music, so "Hip Hop", "Trap" and "Rap/Hip Hop" all become
   **Rap; Hip-Hop**, "Dance Pop" becomes **Pop**, and "EDM", "House" and "Techno" become **Electronic**. New downloads

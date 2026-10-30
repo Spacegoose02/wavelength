@@ -61,6 +61,8 @@ Everything works as in the app except downloading songs for offline play and run
 - Deezer, the charts in Discover and Release Radar can't be called from a browser directly, so the Hub
   fetches them for signed-in people (`GET /api/fetch`, limited to those few public sites). Discover's charts
   come from the Hub's own copy (`GET /api/discover/fetch`) in the browser and the apps alike.
+- Radio song titles sent inside a station's stream can't be read by a browser either, so the Hub reads them
+  (`GET /api/radio/now-playing`).
 - Music servers you add under **Settings → Sources** are reached from the browser, so give them addresses
   the browser can reach. When the Hub is on `https://`, they need `https://` addresses too (for example
   through Nginx Proxy Manager), because browsers block `http://` content on a secure page. Navidrome and Plex
@@ -527,6 +529,7 @@ with a 4xx status.
 | `GET /nd/:id/rest/:method` | relay login | Navidrome through the Hub (Subsonic, `t`+`s` or `p`); see "Navidrome through the Hub" |
 | `POST /nd/:id/auth/login`, `GET /nd/:id/api/song` | relay login | Navidrome's own API through the Hub, for play history only |
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
+| `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
 | `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
