@@ -121,8 +121,11 @@ export class Library {
   private lastSlskd = 0;
   private newMusic = false;
   private tidying?: Promise<void>;
-  /** Called with new downloads in the music folder before Navidrome scans them (genres.ts tidies their genres). */
-  onNewMusic?: () => Promise<void>;
+  /**
+   * Run on new downloads in the music folder before Navidrome scans them: genres.ts tidies their genres,
+   * cleanDownloads.ts marks clean versions.
+   */
+  onNewMusic: (() => Promise<void>)[] = [];
 
   constructor(db: Db, key: Buffer, ytdlp: YtdlpRunner) {
     this.db = db;
@@ -173,10 +176,12 @@ export class Library {
 
   /** Run onNewMusic once for the downloads that finished since it last ran (and wait for one already running). */
   async tidy() {
-    if (this.newMusic && this.onNewMusic) {
+    if (this.newMusic && this.onNewMusic.length) {
       this.newMusic = false;
-      const run = this.onNewMusic;
-      this.tidying = (this.tidying ?? Promise.resolve()).then(() => run()).catch(() => undefined);
+      const hooks = [...this.onNewMusic];
+      this.tidying = (this.tidying ?? Promise.resolve()).then(async () => {
+        for (const run of hooks) await run().catch(() => undefined);
+      });
     }
     await this.tidying;
   }

@@ -2,7 +2,7 @@
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons), the **equalizer**,
-**skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations** and
+**skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
@@ -498,6 +498,30 @@ and the heart removes one.
 > Wavelength Hub arrives (see [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)) the hidden list and order are
 > meant to sync per user; today they're per device.
 
+## Song titles on radio
+
+While a station plays, the player shows the song it's on instead of just the station's name, wherever the
+station tells us:
+
+1. **The station's now-playing page** (SUB/WAVE, AzuraCast, Icecast's status page), which can also bring
+   cover art.
+2. **The title inside the stream.** Most Shoutcast and Icecast stations send the current song inside the
+   audio stream itself, even when they have no now-playing page. The desktop and Android apps read it
+   straight from the station. In a **browser**, the page isn't allowed to, so it asks your **Wavelength Hub**
+   instead: sign in to a Hub to get titles there.
+
+The title is checked every 15 seconds, so a new song can take that long to appear.
+
+**Still only the station name?** Then the station doesn't send song titles at all. That's common for DJ mix
+and "sessions" stations, which play one long mix rather than separate songs. Nothing in the stream says
+what's playing, so the only way to name the song is to recognise the audio, like Shazam does.
+
+> **Developer notes.** `watchNowPlaying` in `store/player.ts` tries the now-playing page, then
+> `streamTitle()` in `sources/radio.ts`, and keeps using whichever gave a title first. The ICY parser is
+> `lib/icy.ts` (apps) and `hub/src/radio.ts` (Hub, `GET /api/radio/now-playing`); `hub/test/radio.test.ts`
+> checks they agree. HLS (`.m3u8`) streams carry no ICY titles and are skipped. A title equal to the
+> station's own name is ignored.
+
 ## Profiles with a Wavelength Hub
 
 If your household runs a [Wavelength Hub](HUB.md), everyone gets their own profile. Without one, nothing
@@ -688,6 +712,17 @@ button that previews the clean album's 30-second clips, and **Download** (or **R
 already have a clean copy. Albums already in your library or already sent are skipped, and Wavelength remembers
 what it sent on this device, so you won't download one twice. The tab shows up once the check has found at
 least one clean version, for anyone who can download or request music (not on kid profiles).
+
+**Where clean versions go.** Deezer gives a clean album the same name as the explicit one, so deemix would
+normally save it to the same folder and skip every song as already there. When your Hub runs deemix, Wavelength
+saves each clean version to its own folder instead, named like the explicit one with **(Clean)** on the end
+(*Rihanna - Loud (Clean)*), and your explicit copy stays where it is. To do that, the Hub waits until deemix
+has nothing else to do (the row says **Waiting for deemix**), adds " (Clean)" to deemix's album folder name
+while that one album starts, then puts deemix's setting back. With a music folder on the Hub, the songs' album
+tag gets " (Clean)" too, so Navidrome shows the two versions as separate albums, the album page gets its
+Explicit / Clean switch, and kid profiles play the clean one. **Get clean version** on an album page works the
+same way. If deemix runs on your device instead of the Hub, clean versions go wherever deemix's own settings
+put them.
 
 So that new downloads carry the tag, open deemix, go to **Settings → Tags** and tick **Explicit lyrics**.
 

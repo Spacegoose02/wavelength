@@ -248,6 +248,12 @@ export interface HubRating {
   cleanLink: string | null;
   checkedAt: number;
 }
+export interface HubCleanJob {
+  link: string;
+  state: 'waiting' | 'queued' | 'failed';
+  error?: string;
+  at: number;
+}
 export interface HubAlbumRating {
   artist: string;
   album: string;
@@ -516,6 +522,9 @@ export class HubClient {
   deemixStatus = () => this.call<{ user: string | null }>('GET', '/api/downloads/deemix');
   deemixQueue = () => this.call<any>('GET', '/api/downloads/deemix/queue');
   deemixAdd = (link: string, bitrate?: number) => this.call<any>('POST', '/api/downloads/deemix/queue', { link, bitrate });
+  /** A clean version, into its own "… (Clean)" folder once deemix is free (hub/src/cleanDownloads.ts). */
+  deemixClean = (link: string, bitrate?: number) => this.call<{ job: HubCleanJob }>('POST', '/api/downloads/deemix/clean', { link, bitrate });
+  deemixCleanJobs = () => this.call<{ jobs: HubCleanJob[] }>('GET', '/api/downloads/deemix/clean');
   ytSearch = (query: string) => this.call<{ results: { id: string; title: string; channel: string; url: string; duration?: number; thumbnail?: string }[] }>('POST', '/api/downloads/ytdlp/search', { query });
   ytJobs = () => this.call<{ jobs: HubYtJob[] }>('GET', '/api/downloads/ytdlp/jobs');
   ytStart = (r: { url: string; title?: string; channel?: string }) => this.call<{ job: HubYtJob }>('POST', '/api/downloads/ytdlp/jobs', r);

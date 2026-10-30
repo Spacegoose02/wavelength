@@ -42,7 +42,8 @@ Project: <https://github.com/perminder-klair/subwave>. Ports: web `:7700` (API m
 
 ## Radio — `src/sources/radio.ts`
 - Directory: radio-browser.info (`/json/stations/search`, `/topclick`). Free, no key.
-- Now playing: tries the station's Icecast `/status-json.xsl`; understands AzuraCast and simple `{title, artist}` shapes; SUB/WAVE has its own endpoint.
+- Now playing, every 15 s (`watchNowPlaying` in `store/player.ts`): first the station's now-playing page (Icecast `/status-json.xsl` is guessed; understands AzuraCast and simple `{title, artist}` shapes; SUB/WAVE has its own endpoint), then the **ICY title inside the stream** (`streamTitle()`): request with `Icy-MetaData: 1`, skip `icy-metaint` bytes of audio, read one metadata block (`StreamTitle='…';`), hang up. Parser in `lib/icy.ts`. The apps read the stream directly through the Rust HTTP client; a browser can't (no CORS, `icy-metaint` not exposed), so it asks the signed-in Hub (`GET /api/radio/now-playing?url=`, `hub/src/radio.ts`). The Hub also covers old Shoutcast v1 servers that answer `ICY 200 OK`, which reqwest refuses. Whichever source gives a title first is kept for that play.
+- Stations that send no titles (DJ mixes, many "sessions" streams) can only be named by audio fingerprinting; not built in.
 
 ## Downloads
 

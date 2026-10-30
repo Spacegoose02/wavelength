@@ -407,7 +407,13 @@ bigger menu; per-kid bedtime and minutes a day, counted across devices; a househ
 explicit songs and the clean version's link on the Hub, which covers untagged files and Plex; explicit albums
 get **Get clean version**, and **Inbox → Clean versions** (`src/lib/cleanVersions.ts`, `src/views/CleanVersions.tsx`)
 lists all of them with a preview, per-album download, and select / download all; deemix's queue gives each row
-its status, and what was sent is remembered on the device so it isn't sent twice. Versions (`src/lib/versions.ts`): an Explicit / Clean switch on albums the library has
+its status, and what was sent is remembered on the device so it isn't sent twice. Clean downloads through the Hub
+(`hub/src/cleanDownloads.ts`, `POST`/`GET /api/downloads/deemix/clean`) land in their own "… (Clean)" folder:
+deemix has no folder setting per download, but it reads its settings when each download starts and downloads one
+at a time, so the Hub waits for an empty queue, adds " (Clean)" to `albumNameTemplate` over deemix's websocket
+(its HTTP route can't save settings intact), queues the album, and restores the template once it has started (also
+on the next start if the Hub stopped half way). New files in a "(Clean)" folder get " (Clean)" on their album tag
+before Navidrome scans them, so the versions don't merge. Approved "(clean)" album requests go the same way. Versions (`src/lib/versions.ts`): an Explicit / Clean switch on albums the library has
 in both versions, and a synced per-person preference (Settings → Playback) that shows only the preferred
 version in album lists; kids always get clean. Navidrome relay (`hub/src/routes/relay.ts`): kids' devices
 (everyone's, if the admin chooses) get a per-device relay login instead of their Navidrome password, and the

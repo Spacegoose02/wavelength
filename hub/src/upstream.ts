@@ -112,6 +112,38 @@ export class DeemixClient {
     return this.req('GET', '/api/getQueue');
   }
 
+  /** deemix's settings, and its Spotify ones (saving has to send those back too). */
+  getSettings(): Promise<{ settings: Record<string, unknown>; spotifySettings?: unknown }> {
+    return this.req('GET', '/api/getSettings');
+  }
+
+  /**
+   * Save deemix's settings. deemix's own page saves them over its websocket (its HTTP route reads them from
+   * the query string, which turns every value into text), so the Hub does the same, then reads them back to
+   * be sure they took.
+   */
+  async saveSettings(settings: Record<string, unknown>, spotifySettings: unknown, check: (s: Record<string, unknown>) => boolean) {
+    const ws = new WebSocket(this.url.replace(/^http/i, 'ws'));
+    try {
+      await new Promise<void>((ok, fail) => {
+        const t = setTimeout(() => fail(new Error('timeout')), 10_000);
+        ws.onopen = () => (clearTimeout(t), ok());
+        ws.onerror = () => (clearTimeout(t), fail(new Error('refused')));
+      });
+      ws.send(JSON.stringify({ key: 'saveSettings', data: { settings, spotifySettings, spotifyUser: false } }));
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 250));
+        if (check((await this.getSettings()).settings ?? {})) return;
+      }
+      throw new HttpError(502, "deemix didn't take the new settings");
+    } catch (e) {
+      if (e instanceof HttpError) throw e;
+      throw new HttpError(502, `The Hub couldn't change deemix's settings (${(e as Error).message})`);
+    } finally {
+      ws.close();
+    }
+  }
+
   /** Who deemix is logged in as, logging in with the Hub's ARL if needed. */
   async status(): Promise<{ user: string | null }> {
     let r = await this.req('GET', '/api/connect');
