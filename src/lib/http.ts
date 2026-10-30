@@ -6,7 +6,7 @@ export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in
  * Public music APIs that refuse browser requests from other sites (no CORS). In a browser, a signed-in Hub
  * fetches them instead (hub/src/routes/webfetch.ts keeps the same list).
  */
-const NO_CORS_HOSTS = new Set(['api.deezer.com', 'us.api.iheart.com', 'www.billboard.com', 'rss.applemarketingtools.com', 'www.radiowavemonitor.com', 'open.spotify.com']);
+const NO_CORS_HOSTS = new Set(['api.deezer.com', 'us.api.iheart.com', 'www.billboard.com', 'rss.applemarketingtools.com', 'rss.marketingtools.apple.com', 'www.radiowavemonitor.com', 'open.spotify.com']);
 
 let hubFetch: (() => { url: string; token: string } | undefined) | undefined;
 /** store/hub.ts tells this module how to reach the signed-in Hub (set here to avoid an import cycle). */

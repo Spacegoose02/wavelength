@@ -93,3 +93,20 @@ test('the Hub refreshes charts people opened, and forgets ones nobody opens', as
   await cache.refreshAll();
   assert.equal(cache.size, 0);
 });
+
+test("follows Apple's chart feed to its new host", async (t) => {
+  const { app, tokens } = await seeded();
+  const calls = fakeFetch(t, (u) =>
+    u.startsWith('https://rss.applemarketingtools.com/')
+      ? new Response(null, { status: 302, headers: { location: u.replace('rss.applemarketingtools.com', 'rss.marketingtools.apple.com') } })
+      : page({ feed: { results: [{ name: 'Song' }] } }),
+  );
+  const res = await app.inject({
+    method: 'GET',
+    url: `/api/discover/fetch?url=${encodeURIComponent('https://rss.applemarketingtools.com/api/v2/us/music/most-played/100/songs.json')}`,
+    headers: { authorization: `Bearer ${tokens.member}` },
+  });
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.json(), { feed: { results: [{ name: 'Song' }] } });
+  assert.equal(calls.length, 2);
+});
