@@ -86,17 +86,25 @@ browser (dev preview). The capability file `src-tauri/capabilities/default.json`
 
 ## 3. Playback (`player/engine.ts` + `store/player.ts`)
 
-**Engine.** Two `<audio>` elements:
+**Engine.** Three `<audio>` elements:
 
-- `visual` has `crossOrigin="anonymous"` and is routed through Web Audio:
-  element → preamp `GainNode` → 10 `BiquadFilterNode` EQ bands → `AnalyserNode` (feeds the spectrum
-  visualiser) → speakers. The EQ (`player/eq.ts` for bands and presets, `engine.setEq`) sits before the
-  analyser, so the visualiser shows the equalised sound. When the EQ is off, every gain is 0 dB, which
-  leaves the audio unchanged.
+- Two **decks** have `crossOrigin="anonymous"` and are routed through Web Audio:
+  deck → its own `GainNode` (ReplayGain × crossfade) → preamp `GainNode` → 10 `BiquadFilterNode` EQ bands →
+  `AnalyserNode` (feeds the spectrum visualiser) → speakers. The EQ (`player/eq.ts` for bands and presets,
+  `engine.setEq`) sits before the analyser, so the visualiser shows the equalised sound. When the EQ is off,
+  every gain is 0 dB, which leaves the audio unchanged. While one deck plays, the other **preloads** the next
+  song (`engine.preload`, started by `prepareAhead` in `store/player.ts` 20 s before the end). When the song
+  ends, `engine.load` with that URL just switches decks (gapless); with crossfade on, `engine.crossfade` ramps
+  the two deck gains against each other and the store moves to the next song without a reload.
 - `plain` has no CORS. If a host fails CORS, the engine remembers the host and uses `plain` from then
   on (the visualiser falls back to an idle animation). Many radio streams need this. Web Audio can't
   read audio from these hosts, so the EQ doesn't affect them either (`engine.eqAvailable()` is false and
-  the EQ panel says so).
+  the EQ panel says so), there's no preloading or crossfade, and ReplayGain can only turn them down (through
+  the element's volume).
+
+**ReplayGain** (`player/replayGain.ts`): `replayGainFactor` turns a song's tags (`Track.replayGain`, from
+OpenSubsonic) and Settings → Playback into a linear gain, capped by the song's peak. `applyLevel` in
+`store/player.ts` sets it as each song starts.
 
 **Lifecycle** (`loadCurrent` in `store/player.ts`):
 

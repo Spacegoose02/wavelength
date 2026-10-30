@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Synced lyrics** in Now Playing (**Lyrics** chip): the line being sung lights up, tap a line to jump there,
+  big text on TVs. From your Navidrome server's own lyrics when it has them, else LRCLIB. Kid profiles see
+  strong words hidden.
+- **Sleep timer** (**Now Playing → Sleep**): 15 minutes to 1½ hours with a gentle fade-out, or the end of this song.
+- **Gapless playback:** the next song is loaded ahead and starts the moment this one ends.
+- **Crossfade** (Settings → Playback, 1–12 s) and **ReplayGain** volume levelling (Track or Album, from your
+  files' loudness tags via Navidrome). Both sync between devices with a Hub.
 
 ## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your
