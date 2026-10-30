@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Faster start:** Settings, Discover, SUB/WAVE, Downloads, Inbox, Rewind, the tag editors and playlist import
+  now load the first time you open them, which halves the code parsed at startup (noticeable on TV boxes).
+- **Builds:** React 19 and zustand 5; the app has unit tests (`npm test`, Vitest).
 - **Security:** the app now has a Content-Security-Policy (so does its browser version on the Hub): text from
   the internet can't run scripts inside Wavelength.
 - **Hub:** the Docker image checks yt-dlp against its published checksum, rebuilds every week for a fresh
