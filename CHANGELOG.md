@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.15.0
 - **Tidy genres** (Hub admins): one genre per kind of music, so "Hip Hop", "Trap" and "Rap/Hip Hop" all become
   **Rap; Hip-Hop**, "Dance Pop" becomes **Pop**, and "EDM", "House" and "Techno" become **Electronic**. New downloads
   get the tidy genre before Navidrome adds them. **Settings → Server → Genres → Review library genres** lists the
@@ -23,6 +23,7 @@
 - If you picked your own charts for a genre in **Settings → Discover charts**, that genre keeps your pick; tick
   the new lists there, or **Reset to defaults**.
 - **Hub:** `GET /api/discover/fetch?url=` (the chart cache).
+
 ## 0.14.0
 - **Clean versions list:** **Inbox → Clean versions** lists every explicit album the library check found a
   clean version of on Deezer. Preview each one, download it on its own, or tick several (or **Select all**)
