@@ -650,6 +650,15 @@ only looks up albums it hasn't seen. Albums Deezer doesn't have stay as they are
 needed. When Deezer has a clean version of an explicit album, the album page shows **Get clean version**
 (**Request clean version** for people without Autodownload).
 
+**Getting the clean versions in one go.** **Inbox → Clean versions** lists every explicit album the library
+check found a clean version of (the summary under **Library check** links to it). Each row has a **play**
+button that previews the clean album's 30-second clips, and **Download** (or **Request**). Tick albums, or
+**Select all**, and press **Download selected**, or **Download all** for the lot. Each row shows where it is:
+**Queued**, **Downloading 40%**, **Downloaded**, **Failed** (with **Retry**), or **In your library** when you
+already have a clean copy. Albums already in your library or already sent are skipped, and Wavelength remembers
+what it sent on this device, so you won't download one twice. The tab shows up once the check has found at
+least one clean version, for anyone who can download or request music (not on kid profiles).
+
 So that new downloads carry the tag, open deemix, go to **Settings → Tags** and tick **Explicit lyrics**.
 
 **Explicit and clean versions.** When your library has both versions of an album (for example *Loud* and

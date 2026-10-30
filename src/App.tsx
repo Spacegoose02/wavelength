@@ -92,7 +92,7 @@ function View({ route }: { route: Route }) {
     case 'offline': return <Offline />;
     case 'offlineCollection': return <OfflineCollectionView key={route.id} id={route.id} />;
     case 'downloads': return <Downloads key={route.soulseek ? `sl:${route.soulseek.requestId}:${route.soulseek.q}` : ''} soulseek={route.soulseek} />;
-    case 'inbox': return <Inbox />;
+    case 'inbox': return <Inbox key={route.tab ?? ''} tab={route.tab} />;
     case 'settings': return useHub.getState().user?.role === 'kid' ? <KidSettings /> : <Settings tab={route.tab} />;
   }
 }

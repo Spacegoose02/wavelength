@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **Clean versions list:** **Inbox → Clean versions** lists every explicit album the library check found a
+  clean version of on Deezer. Preview each one, download it on its own, or tick several (or **Select all**)
+  and **Download selected** / **Download all**. Each row shows Queued, Downloading, Downloaded or Failed, and
+  albums already in your library or already sent are skipped. **Settings → Users → Kid-safe music** links to it.
+
 ## 0.13.1
 - **Fixed:** 0.13.0 didn't start on Windows or Android. The notification icon setting in `tauri.conf.json`
   made the notification plugin fail to load; the icon is now set on each notification instead.
