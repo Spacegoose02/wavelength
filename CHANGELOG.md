@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Fixed:** Favorites showed "getFavorites is not a function" when a SUB/WAVE server with a login (or Hub
+  admin access) was connected. Favorites lists Navidrome stars only again; SUB/WAVE likes are already in them.
 - **Discover loads from your Hub.** With a Hub, every device reads the charts from the Hub's copy instead of
   pulling Billboard, Deezer, iHeart, Spotify and the rest each time Discover opens. The Hub fetches the charts
   people use again every 30 minutes, and when a chart service is down or rate limiting (Deezer often is) you

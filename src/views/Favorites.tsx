@@ -15,7 +15,8 @@ import { useHub } from '../store/hub';
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
 export function Favorites() {
-  const sources = useSettings((s) => s.sources.filter((x) => x.enabled && (x.kind === 'navidrome' || (x.kind === 'subwave' && (x.username || x.hubAdmin)))));
+  // Only Navidrome stars: SUB/WAVE likes are mirrored there, and SUB/WAVE has no getFavorites of its own.
+  const sources = useSettings((s) => s.sources.filter((x) => x.enabled && x.kind === 'navidrome'));
   const [tab, setTab] = useState(sources[0]?.id);
   const cfg = sources.find((s) => s.id === tab) ?? sources[0];
 
@@ -58,7 +59,9 @@ function NavidromeFavs({ sourceId }: { sourceId: string }) {
   const [favs, setFavs] = useState<Favs>();
   const [error, setError] = useState<string>();
   useEffect(() => {
-    sourceFor(cfg).getFavorites!().then(setFavs).catch((e) => setError(String(e.message ?? e)));
+    const src = sourceFor(cfg);
+    if (!src.getFavorites) return setError(`${cfg.name} has no favorites.`);
+    src.getFavorites().then(setFavs).catch((e) => setError(String(e.message ?? e)));
   }, [sourceId]);
   if (error) return <div className="errors">{error}</div>;
   if (!favs) return <Spinner />;
