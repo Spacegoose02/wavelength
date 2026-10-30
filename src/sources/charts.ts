@@ -1,10 +1,13 @@
-import { getJson, http, qs } from '../lib/http';
+import { chartFetch, getJson, qs } from '../lib/http';
+import { readSpotifyEmbed } from '../lib/spotifyEmbed';
 import { primaryArtist } from '../lib/match';
 import { norm } from './registry';
 
 export type Genre = 'all' | 'new' | 'hiphop' | 'pop' | 'country' | 'rock' | 'edm' | 'rnb';
 export type ChartSource =
   | 'billboard' | 'apple' | 'deezer'
+  | 'spNewMusicFriday'
+  | 'dzRadarWeekly' | 'dzFreshRap' | 'dzFreshPop' | 'dzFreshRnb' | 'dzMetalRadar'
   | 'dzElectronic' | 'dzNewDance' | 'dzDanceHits'
   | 'rwRhythmic' | 'rwPop' | 'rwCountry' | 'rwAltRock' | 'rwBigRock'
   | 'ihHitsNow' | 'ihPopPulse' | 'ihRapRising' | 'ihBreakingCountry' | 'ihNewlyReleased' | 'ihFreshPicks' | 'ihEverydayGroove'
@@ -14,10 +17,10 @@ export const GENRES: { id: Genre; label: string }[] = [
   { id: 'all', label: 'Top overall' },
   { id: 'new', label: 'New releases' },
   { id: 'hiphop', label: 'Rap / Hip-Hop' },
-  { id: 'pop', label: 'Pop' },
-  { id: 'country', label: 'Country' },
-  { id: 'rock', label: 'Rock' },
   { id: 'edm', label: 'EDM / Dance' },
+  { id: 'rock', label: 'Rock' },
+  { id: 'country', label: 'Country' },
+  { id: 'pop', label: 'Pop' },
   { id: 'rnb', label: 'R&B' },
 ];
 
@@ -25,6 +28,12 @@ export const CHART_LABELS: Record<ChartSource, string> = {
   billboard: 'Billboard',
   apple: 'Apple Music',
   deezer: 'Deezer',
+  spNewMusicFriday: 'New Music Friday',
+  dzRadarWeekly: 'Radar Weekly',
+  dzFreshRap: 'Fresh Rap',
+  dzFreshPop: 'Fresh Pop',
+  dzFreshRnb: 'Fresh R&B',
+  dzMetalRadar: 'Metal Radar',
   dzElectronic: 'Electronic Hits',
   dzNewDance: 'New Dance',
   dzDanceHits: 'Global Dance Hits',
@@ -50,19 +59,40 @@ export const CHART_LABELS: Record<ChartSource, string> = {
 };
 /** 1–2 letter badge for the Mix view. */
 export const CHART_SHORT: Record<ChartSource, string> = {
-  billboard: 'B', apple: 'A', deezer: 'D', dzElectronic: 'EH', dzNewDance: 'ND', dzDanceHits: 'DH',
+  billboard: 'B', apple: 'A', deezer: 'D', spNewMusicFriday: 'NF',
+  dzRadarWeekly: 'RW', dzFreshRap: 'FR', dzFreshPop: 'FP', dzFreshRnb: 'FB', dzMetalRadar: 'MR', dzElectronic: 'EH', dzNewDance: 'ND', dzDanceHits: 'DH',
   rwRhythmic: 'R', rwPop: 'R', rwCountry: 'R', rwAltRock: 'R', rwBigRock: 'R',
   ihHitsNow: 'iH', ihPopPulse: 'iH', ihRapRising: 'iH', ihBreakingCountry: 'iH', ihNewlyReleased: 'iH', ihFreshPicks: 'iH', ihEverydayGroove: 'iH', ihPopTop40: 'iH', ihCountryTop40: 'iH', ihHotAcTop40: 'iH', ihHipHopRnbTop40: 'iH', ihRockTop40: 'iH', ihDanceTop40: 'iH', ihRnbHits: 'iH',
 };
 export const CHART_COLORS: Record<ChartSource, string> = {
-  billboard: '#ff3b3b', apple: '#fa2d48', deezer: '#a238ff',
+  billboard: '#ff3b3b', apple: '#fa2d48', deezer: '#a238ff', spNewMusicFriday: '#1a9e4b',
+  dzRadarWeekly: '#a238ff', dzFreshRap: '#a238ff', dzFreshPop: '#a238ff', dzFreshRnb: '#a238ff', dzMetalRadar: '#a238ff',
   dzElectronic: '#7a3cff', dzNewDance: '#c13cff', dzDanceHits: '#ff3cc7',
   rwRhythmic: '#1f9d55', rwPop: '#1f9d55', rwCountry: '#1f9d55', rwAltRock: '#1f9d55', rwBigRock: '#1f9d55',
   ihHitsNow: '#c6002b', ihPopPulse: '#c6002b', ihRapRising: '#c6002b', ihBreakingCountry: '#c6002b', ihNewlyReleased: '#c6002b', ihFreshPicks: '#c6002b', ihEverydayGroove: '#c6002b', ihPopTop40: '#c6002b', ihCountryTop40: '#c6002b', ihHotAcTop40: '#c6002b', ihHipHopRnbTop40: '#c6002b', ihRockTop40: '#c6002b', ihDanceTop40: '#c6002b', ihRnbHits: '#c6002b',
 };
 
-/** Deezer editors' dance/EDM playlists (kept current weekly by "Deezer Dance & EDM Editor"). */
-const DEEZER_PLAYLISTS: Partial<Record<ChartSource, number>> = { dzElectronic: 1902101402, dzNewDance: 2249258602, dzDanceHits: 706093725 };
+/**
+ * Deezer editors' playlists, each kept current by one of Deezer's genre editors (checked Oct 2026):
+ * Radar Weekly (the week's biggest new releases, every Friday), Fresh Rap (daily), Fresh Pop, Fresh R&B and
+ * Metal Radar (weekly), and the Dance & EDM editor's three.
+ */
+const DEEZER_PLAYLISTS: Partial<Record<ChartSource, number>> = {
+  dzRadarWeekly: 1282495565,
+  dzFreshRap: 6682665064,
+  dzFreshPop: 2228601362,
+  dzFreshRnb: 2021225582,
+  dzMetalRadar: 1050179021,
+  dzElectronic: 1902101402,
+  dzNewDance: 2249258602,
+  dzDanceHits: 706093725,
+};
+
+/**
+ * Spotify's editorial playlists, read from the public embed page (lib/spotifyEmbed.ts). Spotify's Web API
+ * stopped serving its own editorial playlists to new apps in Nov 2024, but the embed page needs no login.
+ */
+const SPOTIFY_PLAYLISTS: Partial<Record<ChartSource, string>> = { spNewMusicFriday: '37i9dQZF1DX4JAvHpjipBk' };
 
 /** RadioWave Monitor (airplay + streaming + sales) chart pages. */
 const RADIOWAVE: Partial<Record<ChartSource, number>> = { rwAltRock: 1, rwPop: 4, rwCountry: 6, rwBigRock: 8, rwRhythmic: 9 };
@@ -126,13 +156,13 @@ const APPLE: Partial<Record<Genre, RegExp | null>> = {
 
 const BY_GENRE: Record<Genre, ChartSource[]> = {
   all: ['billboard', 'apple', 'deezer', 'ihHitsNow', 'ihHotAcTop40'],
-  new: ['ihNewlyReleased', 'ihFreshPicks', 'ihEverydayGroove'],
-  hiphop: ['apple', 'rwRhythmic', 'ihHipHopRnbTop40', 'ihRapRising'],
-  pop: ['billboard', 'apple', 'rwPop', 'ihPopTop40', 'ihPopPulse'],
+  new: ['spNewMusicFriday', 'dzRadarWeekly', 'ihNewlyReleased', 'ihFreshPicks'],
+  hiphop: ['dzFreshRap', 'ihRapRising', 'apple', 'rwRhythmic', 'ihHipHopRnbTop40'],
+  pop: ['billboard', 'apple', 'rwPop', 'ihPopTop40', 'ihPopPulse', 'dzFreshPop'],
   country: ['billboard', 'apple', 'rwCountry', 'ihCountryTop40', 'ihBreakingCountry'],
-  rock: ['billboard', 'apple', 'rwAltRock', 'rwBigRock', 'ihRockTop40'],
-  edm: ['ihDanceTop40', 'dzElectronic', 'dzNewDance', 'dzDanceHits'],
-  rnb: ['ihRnbHits', 'apple', 'ihHipHopRnbTop40', 'rwRhythmic'],
+  rock: ['billboard', 'apple', 'rwAltRock', 'rwBigRock', 'ihRockTop40', 'dzMetalRadar'],
+  edm: ['dzNewDance', 'ihDanceTop40', 'dzElectronic', 'dzDanceHits'],
+  rnb: ['ihRnbHits', 'dzFreshRnb', 'apple', 'ihHipHopRnbTop40', 'rwRhythmic'],
 };
 
 /** The charts each genre uses out of the box (Settings → Discover charts can override them). */
@@ -161,6 +191,7 @@ export function chartProvider(s: ChartSource): string {
   if (s.startsWith('ih')) return 'iHeartRadio';
   if (s.startsWith('rw')) return 'RadioWave';
   if (s.startsWith('dz')) return 'Deezer editors';
+  if (s.startsWith('sp')) return 'Spotify editors';
   return CHART_LABELS[s];
 }
 
@@ -174,6 +205,27 @@ function assertFresh(source: ChartSource, when: Date | undefined) {
   }
 }
 
+/** Filled in while a chart is fetched: set when the Hub's source failed and it sent its last good copy. */
+interface Got {
+  stale?: Date;
+}
+
+/** A chart page, from the Hub's copy when signed in to one (lib/http.ts chartFetch). */
+async function page(url: string, got: Got, init?: RequestInit): Promise<Response> {
+  const { res, stale } = await chartFetch(url, init);
+  if (stale && (!got.stale || stale < got.stale)) got.stale = stale;
+  return res;
+}
+
+async function pageJson(url: string, got: Got): Promise<any> {
+  const res = await page(url, got);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText || 'error'} — ${url.split('?')[0]}`);
+  const body = await res.json();
+  // Deezer answers rate limits with a 200 and an error object
+  if (body?.error && url.startsWith('https://api.deezer.com/')) throw new Error(`Deezer: ${body.error.message ?? 'error'}`);
+  return body;
+}
+
 /** "ALL MY EXES (W/ CHASE MATTHEW)" → "All My Exes (w/ Chase Matthew)" */
 function titleCase(s: string) {
   return s.toLowerCase().replace(/(^|[\s(\-/"'])([a-z])/g, (_, p, c) => p + c.toUpperCase()).replace(/\bW\//g, 'w/');
@@ -184,8 +236,8 @@ function decodeEntities(s: string) {
 }
 
 function radiowave(source: ChartSource) {
-  return async (): Promise<Chart> => {
-    const res = await http(`https://www.radiowavemonitor.com/pub_charts/r100_${RADIOWAVE[source]}.aspx`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0) Wavelength' } });
+  return async (_g: Genre, got: Got): Promise<Chart> => {
+    const res = await page(`https://www.radiowavemonitor.com/pub_charts/r100_${RADIOWAVE[source]}.aspx`, got, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0) Wavelength' } });
     if (!res.ok) throw new Error(`RadioWave ${res.status}`);
     const html = await res.text();
     // strip tags: the page flattens to "...| #1 | TITLE | ARTIST | LABEL | #2 | ..."
@@ -213,14 +265,14 @@ function radiowave(source: ChartSource) {
 }
 
 function iheart(source: ChartSource) {
-  return async (): Promise<Chart> => {
-    const c = await getJson(`https://us.api.iheart.com/api/v3/collection/user/${IHEART_OWNER}/collection/${IHEART[source]}`);
+  return async (_g: Genre, got: Got): Promise<Chart> => {
+    const c = await pageJson(`https://us.api.iheart.com/api/v3/collection/user/${IHEART_OWNER}/collection/${IHEART[source]}`, got);
     const updated = c.lastUpdated ? new Date(c.lastUpdated) : undefined;
     assertFresh(source, updated);
     const ids: number[] = (c.tracks ?? []).map((t: any) => t.trackId).filter(Boolean);
     const details: any[] = [];
     for (let i = 0; i < ids.length; i += 50) {
-      const r = await getJson(`https://us.api.iheart.com/api/v3/catalog/tracks/${ids.slice(i, i + 50).join(',')}`);
+      const r = await pageJson(`https://us.api.iheart.com/api/v3/catalog/tracks/${ids.slice(i, i + 50).join(',')}`, got);
       details.push(...(r.tracks ?? []));
     }
     const byId = new Map(details.map((t) => [t.id, t]));
@@ -238,8 +290,8 @@ function iheart(source: ChartSource) {
   };
 }
 
-async function billboard(g: Genre): Promise<Chart> {
-  const res = await http(`https://www.billboard.com/charts/${BILLBOARD[g]}/`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0) Wavelength' } });
+async function billboard(g: Genre, got: Got): Promise<Chart> {
+  const res = await page(`https://www.billboard.com/charts/${BILLBOARD[g]}/`, got, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0) Wavelength' } });
   if (!res.ok) throw new Error(`Billboard ${res.status}`);
   const html = await res.text();
   const week = html.match(/Week of ([A-Z][a-z]+ \d{1,2}, \d{4})/)?.[1];
@@ -260,18 +312,21 @@ async function billboard(g: Genre): Promise<Chart> {
 }
 
 /** One Apple feed serves every genre (filtered below) — fetch it once, not once per genre. */
-let appleFeed: { at: number; data: Promise<any> } | undefined;
+let appleFeed: { at: number; got: Got; data: Promise<any> } | undefined;
 function appleMostPlayed() {
   if (!appleFeed || Date.now() - appleFeed.at > 30 * 60_000) {
-    const data = getJson('https://rss.applemarketingtools.com/api/v2/us/music/most-played/100/songs.json');
-    appleFeed = { at: Date.now(), data };
+    const got: Got = {};
+    const data = pageJson('https://rss.applemarketingtools.com/api/v2/us/music/most-played/100/songs.json', got);
+    appleFeed = { at: Date.now(), got, data };
     data.catch(() => (appleFeed = undefined));
   }
-  return appleFeed.data;
+  return appleFeed;
 }
 
-async function apple(g: Genre): Promise<Chart> {
-  const r = await appleMostPlayed();
+async function apple(g: Genre, got: Got): Promise<Chart> {
+  const feed = appleMostPlayed();
+  const r = await feed.data;
+  got.stale ??= feed.got.stale;
   const updated = r.feed?.updated ? new Date(r.feed.updated) : undefined;
   assertFresh('apple', updated);
   const filter = APPLE[g] ?? null;
@@ -287,9 +342,9 @@ async function apple(g: Genre): Promise<Chart> {
   return { entries, asOf: updated?.toLocaleDateString() };
 }
 
-async function deezer(): Promise<Chart> {
+async function deezer(_g: Genre, got: Got): Promise<Chart> {
   // Global chart (the genre charts are frozen on Deezer's side). No date in the API, but it's live.
-  const r = await getJson(`https://api.deezer.com/chart/0/tracks?${qs({ limit: 100 })}`);
+  const r = await pageJson(`https://api.deezer.com/chart/0/tracks?${qs({ limit: 100 })}`, got);
   const entries = (r.data ?? []).map((t: any, i: number) => ({
     rank: i + 1,
     title: t.title,
@@ -304,8 +359,8 @@ async function deezer(): Promise<Chart> {
 
 /** A Deezer editors' playlist as a chart; fresh = an editor added tracks in the last 3 weeks. */
 function deezerPlaylist(source: ChartSource) {
-  return async (): Promise<Chart> => {
-    const p = await getJson(`https://api.deezer.com/playlist/${DEEZER_PLAYLISTS[source]}`);
+  return async (_g: Genre, got: Got): Promise<Chart> => {
+    const p = await pageJson(`https://api.deezer.com/playlist/${DEEZER_PLAYLISTS[source]}`, got);
     const tracks: any[] = p.tracks?.data ?? [];
     const newest = Math.max(0, ...tracks.map((t) => t.time_add ?? 0));
     assertFresh(source, newest ? new Date(newest * 1000) : undefined);
@@ -322,10 +377,31 @@ function deezerPlaylist(source: ChartSource) {
   };
 }
 
-const FETCHERS: Record<ChartSource, (g: Genre) => Promise<Chart>> = {
+/**
+ * A Spotify editorial playlist (New Music Friday). The embed page has no dates, but Spotify replaces the
+ * list every Friday, so it's treated as live like the Deezer chart.
+ */
+function spotifyPlaylist(source: ChartSource) {
+  return async (_g: Genre, got: Got): Promise<Chart> => {
+    const res = await page(`https://open.spotify.com/embed/playlist/${SPOTIFY_PLAYLISTS[source]}`, got);
+    if (!res.ok) throw new Error(`Spotify ${res.status}`);
+    const { songs } = readSpotifyEmbed(await res.text());
+    if (!songs.length) throw new Error("Spotify's page layout changed — no songs found");
+    const entries = songs.map((t, i) => ({ rank: i + 1, title: t.title, artist: t.artist, sources: [{ source, rank: i + 1 }] }));
+    return { entries, asOf: 'Spotify editors · new every Friday' };
+  };
+}
+
+const FETCHERS: Record<ChartSource, (g: Genre, got: Got) => Promise<Chart>> = {
   billboard,
   apple,
   deezer,
+  spNewMusicFriday: spotifyPlaylist('spNewMusicFriday'),
+  dzRadarWeekly: deezerPlaylist('dzRadarWeekly'),
+  dzFreshRap: deezerPlaylist('dzFreshRap'),
+  dzFreshPop: deezerPlaylist('dzFreshPop'),
+  dzFreshRnb: deezerPlaylist('dzFreshRnb'),
+  dzMetalRadar: deezerPlaylist('dzMetalRadar'),
   dzElectronic: deezerPlaylist('dzElectronic'),
   dzNewDance: deezerPlaylist('dzNewDance'),
   dzDanceHits: deezerPlaylist('dzDanceHits'),
@@ -362,18 +438,34 @@ export async function deezerLookup(e: { title: string; artist: string }): Promis
   return {};
 }
 const cache = new Map<string, { at: number; data: Promise<Chart> }>();
+/** The last copy of each chart that loaded, shown (marked as older) when fetching it again fails. */
+const lastGood = new Map<string, Chart>();
 
-export function getChart(source: ChartSource, g: Genre): Promise<Chart> {
+const shortTime = (d: Date) => d.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+
+/** One chart, kept for 30 minutes. `fresh` skips this app's copy (the Hub still answers from its own). */
+export function getChart(source: ChartSource, g: Genre, fresh = false): Promise<Chart> {
   const key = `${source}:${g}`;
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < 30 * 60_000) return hit.data;
+  if (hit && !fresh && Date.now() - hit.at < 30 * 60_000) return hit.data;
+  const got: Got = {};
   // a slow chart service shouldn't stall the whole Mix — give each 20s
   const data = Promise.race([
-    FETCHERS[source](g),
+    FETCHERS[source](g, got),
     new Promise<never>((_, rej) => setTimeout(() => rej(new Error(`${CHART_LABELS[source]} timed out`)), 20_000)),
-  ]);
+  ]).then(
+    (c): Chart => {
+      lastGood.set(key, c);
+      return got.stale ? { ...c, asOf: `${c.asOf ? `${c.asOf} · ` : ''}couldn't refresh, showing the Hub's copy from ${shortTime(got.stale)}` } : c;
+    },
+    (err) => {
+      cache.delete(key);
+      const old = lastGood.get(key);
+      if (!old) throw err;
+      return { ...old, asOf: `${old.asOf ? `${old.asOf} · ` : ''}couldn't refresh (${String((err as Error)?.message ?? err)}), showing the last copy` };
+    },
+  );
   cache.set(key, { at: Date.now(), data });
-  data.catch(() => cache.delete(key));
   return data;
 }
 
@@ -381,8 +473,8 @@ export function getChart(source: ChartSource, g: Genre): Promise<Chart> {
  * Aggregate every live chart for a genre: songs score higher the more charts they're on and
  * the higher they rank there (Borda-style), so cross-platform hits float to the top.
  */
-export async function getMix(g: Genre, sources: ChartSource[] = sourcesFor(g)): Promise<{ entries: ChartEntry[]; failed: { source: ChartSource; reason: string }[]; used: ChartSource[] }> {
-  const results = await Promise.allSettled(sources.map((s) => getChart(s, g)));
+export async function getMix(g: Genre, sources: ChartSource[] = sourcesFor(g), fresh = false): Promise<{ entries: ChartEntry[]; failed: { source: ChartSource; reason: string }[]; used: ChartSource[] }> {
+  const results = await Promise.allSettled(sources.map((s) => getChart(s, g, fresh)));
   const map = new Map<string, ChartEntry & { score: number }>();
   const failed: { source: ChartSource; reason: string }[] = [];
   const used: ChartSource[] = [];

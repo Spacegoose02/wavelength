@@ -31,6 +31,8 @@ import { serverRoutes } from './routes/server.ts';
 import { serviceRoutes } from './routes/services.ts';
 import { shareRoutes } from './routes/shares.ts';
 import { webFetchRoutes } from './routes/webfetch.ts';
+import { discoverRoutes } from './routes/discover.ts';
+import { ChartCache } from './discover.ts';
 import { getUser } from './users.ts';
 import { Library } from './library.ts';
 import { webRoutes } from './web.ts';
@@ -50,6 +52,8 @@ export interface Ctx {
   limits: { login: RateLimiter; pairing: RateLimiter; poll: RateLimiter };
   ytdlp: YtdlpRunner;
   library: Library;
+  /** Discover's charts, fetched and kept by the Hub so the apps don't each pull them (discover.ts). */
+  charts: ChartCache;
   /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
   restart: () => void;
 }
@@ -65,11 +69,14 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
       poll: new RateLimiter(120, 60_000), // per IP
     },
     ytdlp: new YtdlpRunner(config.ytdlpBin, config.musicDir),
+    charts: new ChartCache(),
     restart: opts.restart ?? (() => undefined),
   } as Omit<Ctx, 'library'> as Ctx;
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   if (opts.watchLibrary ?? true) ctx.library.start();
   app.addHook('onClose', async () => ctx.library.stop());
+  ctx.charts.start();
+  app.addHook('onClose', async () => ctx.charts.stop());
   app.decorate('hubLibrary', ctx.library);
 
   // database backups, for restore (routes/server.ts); the route sets how big
@@ -142,6 +149,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   genreRoutes(app, ctx);
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
+  discoverRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

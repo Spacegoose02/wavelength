@@ -12,7 +12,13 @@ export const WEB_FETCH_HOSTS = new Set(['api.deezer.com', 'us.api.iheart.com', '
 const MAX_BYTES = 8 * 1024 * 1024;
 const TIMEOUT_MS = 20_000;
 
-function allowed(raw: string): URL {
+export interface Fetched {
+  status: number;
+  contentType: string;
+  body: Buffer;
+}
+
+export function allowedUrl(raw: string): URL {
   let u: URL;
   try {
     u = new URL(raw);
@@ -25,31 +31,32 @@ function allowed(raw: string): URL {
   return u;
 }
 
+/** GET one of the listed sites, following redirects by hand so each hop has to be on the list too. */
+export async function fetchAllowed(raw: string): Promise<Fetched> {
+  let url = allowedUrl(raw);
+  let res: Response | undefined;
+  for (let hop = 0; hop < 4; hop++) {
+    res = await fetch(url, {
+      redirect: 'manual',
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0) Wavelength', accept: 'application/json, text/html;q=0.9, */*;q=0.5' },
+    }).catch(() => {
+      throw new HttpError(502, `Couldn't reach ${url.hostname}`);
+    });
+    const next = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
+    if (!next) break;
+    url = allowedUrl(new URL(next, url).toString());
+  }
+  if (!res || (res.status >= 300 && res.status < 400)) throw new HttpError(502, 'Too many redirects');
+  const body = Buffer.from(await res.arrayBuffer());
+  if (body.length > MAX_BYTES) throw new HttpError(502, 'That page is too big');
+  return { status: res.status, contentType: res.headers.get('content-type') ?? 'application/octet-stream', body };
+}
+
 export function webFetchRoutes(app: FastifyInstance, _ctx: Ctx) {
   app.get('/api/fetch', async (req, reply) => {
     signedIn(req);
-    let url = allowed(String((req.query as Record<string, unknown>).url ?? ''));
-    let res: Response | undefined;
-    // follow redirects by hand, so each hop has to be on the list too
-    for (let hop = 0; hop < 4; hop++) {
-      res = await fetch(url, {
-        redirect: 'manual',
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-        headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0) Wavelength', accept: 'application/json, text/html;q=0.9, */*;q=0.5' },
-      }).catch(() => {
-        throw new HttpError(502, `Couldn't reach ${url.hostname}`);
-      });
-      const next = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
-      if (!next) break;
-      url = allowed(new URL(next, url).toString());
-    }
-    if (!res || (res.status >= 300 && res.status < 400)) throw new HttpError(502, 'Too many redirects');
-    const body = Buffer.from(await res.arrayBuffer());
-    if (body.length > MAX_BYTES) throw new HttpError(502, 'That page is too big');
-    return reply
-      .code(res.status)
-      .header('content-type', res.headers.get('content-type') ?? 'application/octet-stream')
-      .header('cache-control', 'no-store')
-      .send(body);
+    const r = await fetchAllowed(String((req.query as Record<string, unknown>).url ?? ''));
+    return reply.code(r.status).header('content-type', r.contentType).header('cache-control', 'no-store').send(r.body);
   });
 }
