@@ -1669,3 +1669,8 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .slskd-folder .track-main { cursor: pointer; }
 .slskd-files { margin: 0 0 8px 18px; padding: 0 12px 8px 22px; font-size: 13px; columns: 2 260px; }
 .slskd-files li { break-inside: avoid; padding: 1px 0; }
+
+/* Inbox → Clean versions */
+.clean-bar { gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.clean-row > input[type='checkbox'] { flex: none; }
+.clean-row .share-actions .btn svg { width: 14px; height: 14px; }

@@ -13,15 +13,21 @@ import { enabledSources } from '../store/settings';
 import { useUi } from '../store/ui';
 import { Cover, Empty, Spinner, timeAgo } from '../components/common';
 import { IconPlay, IconX } from '../components/Icons';
+import { useCleanOffers } from '../lib/cleanVersions';
+import { CleanVersions } from './CleanVersions';
 
-type Tab = 'shared' | 'requests' | 'approve' | 'sent';
+export type InboxTab = 'shared' | 'requests' | 'approve' | 'sent' | 'clean';
+type Tab = InboxTab;
 
 /** Everything the household sends you: things shared with you, answers to your requests, and (admins) requests to approve. */
-export function Inbox() {
+export function Inbox({ tab: start }: { tab?: InboxTab } = {}) {
   const signedIn = useHub((s) => !!s.token);
   const approver = useHub((s) => s.permissions.includes('requests.approve'));
+  // Clean versions: for people who can download or request, once the library check found any
+  const getter = useHub((s) => s.user?.role !== 'kid' && (s.permissions.includes('downloads.run') || s.permissions.includes('requests.create')));
+  const cleanCount = useCleanOffers().length;
   const counts = useInbox();
-  const [tab, setTab] = useState<Tab>(counts.shared || (!counts.decided && !counts.pending) ? 'shared' : counts.decided ? 'requests' : 'approve');
+  const [tab, setTab] = useState<Tab>(start ?? (counts.shared || (!counts.decided && !counts.pending) ? 'shared' : counts.decided ? 'requests' : 'approve'));
 
   if (!signedIn) return <div className="page"><header className="page-head"><h1>Inbox</h1></header><Empty title="Sign in to your Hub">Requests and sharing go through your Wavelength Hub. Sign in under Settings → Hub.</Empty></div>;
 
@@ -33,8 +39,9 @@ export function Inbox() {
         <button className={tab === 'requests' ? 'on' : ''} onClick={() => setTab('requests')}>My requests {counts.decided > 0 && <span className="badge">{counts.decided}</span>}</button>
         {approver && <button className={tab === 'approve' ? 'on' : ''} onClick={() => setTab('approve')}>To approve {counts.pending > 0 && <span className="badge">{counts.pending}</span>}</button>}
         <button className={tab === 'sent' ? 'on' : ''} onClick={() => setTab('sent')}>You shared</button>
+        {getter && (cleanCount > 0 || tab === 'clean') && <button className={tab === 'clean' ? 'on' : ''} onClick={() => setTab('clean')}>Clean versions <small>{cleanCount}</small></button>}
       </div>
-      {tab === 'shared' ? <SharedWithYou /> : tab === 'requests' ? <MyRequests /> : tab === 'approve' ? <Approve /> : <Sent />}
+      {tab === 'shared' ? <SharedWithYou /> : tab === 'requests' ? <MyRequests /> : tab === 'approve' ? <Approve /> : tab === 'clean' && getter ? <CleanVersions /> : <Sent />}
     </div>
   );
 }
