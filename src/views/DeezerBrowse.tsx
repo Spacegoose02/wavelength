@@ -12,6 +12,7 @@ import { usePlayer } from '../store/player';
 import { Cover, Rating, Spinner, fmtTime } from '../components/common';
 import { useHidden } from '../lib/kids';
 import { IconBack, IconDownload, IconPause, IconPlay } from '../components/Icons';
+import { FollowButton } from '../components/FollowButton';
 
 export type Browse = { type: 'artist' | 'album' | 'playlist'; id: number; title: string };
 export type SendStatus = { s: 'queued' | 'error' | 'sending'; msg?: string };
@@ -142,6 +143,7 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
           <h2>{artist.title}</h2>
           <div className="muted small">{artist.fans ? `${artist.fans.toLocaleString()} fans · ` : ''}{albums.length} releases</div>
           <div className="hero-actions">
+            <FollowButton id={artist.id} name={artist.title} picture={artist.cover} className="btn small" />
             <GetButton r={artist} send={(r) => confirm(`Send ${artist.title}'s whole discography (${albums.length} releases) to ${mustRequest() ? 'your Hub admin' : 'deemix'}?`) && p.send(r)} status={p.status} label="Get discography" />
           </div>
           {p.status[statusKey(artist)]?.s === 'error' && <div className="card-err">{p.status[statusKey(artist)].msg}</div>}

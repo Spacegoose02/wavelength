@@ -204,7 +204,7 @@ export interface SharePayload {
 /** Something the Hub tells this person about (hub/src/notify.ts), shown as a system notification. */
 export interface HubNotice {
   id: number;
-  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share';
+  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar';
   title: string;
   body: string;
   createdAt: number;
@@ -399,6 +399,51 @@ export interface HubRewind {
   playlist: Track[];
 }
 
+/** An artist this person follows for Release Radar (hub/src/radar.ts), by Deezer artist id. */
+export interface HubFollow {
+  id: number;
+  name: string;
+  picture: string | null;
+  followedAt: number;
+}
+
+/** A new release from a followed artist, found by the Hub on Deezer. */
+export interface HubRadarRelease {
+  id: number;
+  artistId: number;
+  artist: string;
+  title: string;
+  /** album, ep, single or compile */
+  type: string;
+  /** YYYY-MM-DD */
+  released: string;
+  cover: string | null;
+  link: string;
+  explicit: boolean;
+  foundAt: number;
+}
+
+export interface HubRadar {
+  follows: HubFollow[];
+  releases: HubRadarRelease[];
+  windowDays: number;
+  /** When the Hub last looked any of them up; null before the first look. */
+  checkedAt: number | null;
+  /** Followed artists not looked up yet, and ones whose last look failed. */
+  pending: number;
+  failed: number;
+}
+
+/** An artist to follow: like ones you follow or play (`because`), or one you play a lot (`plays`). */
+export interface HubSuggestion {
+  id: number;
+  name: string;
+  picture: string | null;
+  fans: number | null;
+  because: string[];
+  plays?: number;
+}
+
 export interface HubInvite {
   id: number;
   role: HubRole;
@@ -492,6 +537,15 @@ export class HubClient {
   sharesSeen = (ids?: number[]) => this.call('POST', '/api/shares/seen', ids ? { ids } : {});
   hideShare = (id: number) => this.call('POST', `/api/shares/${id}/hide`, {});
   unshare = (id: number) => this.call('DELETE', `/api/shares/${id}`);
+
+  // Release Radar (lib/follows.ts): artists this person follows and their new releases
+  radar = () => this.call<HubRadar>('GET', '/api/radar');
+  radarCheck = () => this.call<Pick<HubRadar, 'releases' | 'checkedAt' | 'pending' | 'failed'>>('POST', '/api/radar/check', {});
+  /** By Deezer id, or by name alone (the Hub finds them on Deezer; HubError 404 when it can't). */
+  follow = (a: { id?: number; name: string; picture?: string | null }) => this.call<{ follow: HubFollow }>('POST', '/api/radar/follows', a);
+  unfollow = (id: number) => this.call('DELETE', `/api/radar/follows/${id}`);
+  radarSuggestions = (fresh = false) => this.call<{ suggestions: HubSuggestion[] }>('GET', `/api/radar/suggestions${fresh ? '?fresh=1' : ''}`);
+  hideSuggestion = (id: number) => this.call('POST', `/api/radar/suggestions/${id}/hide`, {});
 
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
   server = () => this.call<HubServerStatus>('GET', '/api/admin/server');

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+- **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your
+  library's or Deezer's) and their new albums, EPs and singles from the last 6 weeks show up under **Discover →
+  New releases → Release Radar → Following**, with preview and Get / Request. The Hub checks the artists you
+  follow about every 12 hours and sends a notification when one of them puts something out. **Manage** lists
+  who you follow and lets you follow an artist by name.
+- **Artists you might like:** suggestions of who to follow, from Deezer's related artists for the ones you follow
+  and play, plus artists you play a lot but don't follow yet. Follow them in one click, or **×** to stop seeing
+  one. The old radar is still there as **Artists you play**, and is all you see without a Hub.
+- Release Radar now hides explicit releases from kid profiles.
+- **Hub:** `/api/radar`, `/api/radar/follows`, `/api/radar/check`, `/api/radar/suggestions`; notification kind
+  `radar`. See [docs/RELEASE-RADAR.md](docs/RELEASE-RADAR.md).
+
 ## 0.15.0
 - **Tidy genres** (Hub admins): one genre per kind of music, so "Hip Hop", "Trap" and "Rap/Hip Hop" all become
   **Rap; Hip-Hop**, "Dance Pop" becomes **Pop**, and "EDM", "House" and "Techno" become **Electronic**. New downloads

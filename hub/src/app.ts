@@ -33,6 +33,8 @@ import { shareRoutes } from './routes/shares.ts';
 import { webFetchRoutes } from './routes/webfetch.ts';
 import { discoverRoutes } from './routes/discover.ts';
 import { ChartCache } from './discover.ts';
+import { ReleaseRadar } from './radar.ts';
+import { radarRoutes } from './routes/radar.ts';
 import { getUser } from './users.ts';
 import { Library } from './library.ts';
 import { webRoutes } from './web.ts';
@@ -54,6 +56,8 @@ export interface Ctx {
   library: Library;
   /** Discover's charts, fetched and kept by the Hub so the apps don't each pull them (discover.ts). */
   charts: ChartCache;
+  /** Release Radar: followed artists and their new releases, looked up in the background (radar.ts). */
+  radar: ReleaseRadar;
   /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
   restart: () => void;
 }
@@ -77,6 +81,9 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   app.addHook('onClose', async () => ctx.library.stop());
   ctx.charts.start();
   app.addHook('onClose', async () => ctx.charts.stop());
+  ctx.radar = new ReleaseRadar(db);
+  if (opts.watchLibrary ?? true) ctx.radar.start();
+  app.addHook('onClose', async () => ctx.radar.stop());
   app.decorate('hubLibrary', ctx.library);
 
   // database backups, for restore (routes/server.ts); the route sets how big
@@ -150,6 +157,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
   discoverRoutes(app, ctx);
+  radarRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

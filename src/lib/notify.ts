@@ -7,7 +7,8 @@ import { isAndroid } from './platform';
 
 /**
  * Inbox news as system notifications (docs/USERS-AND-ADMIN.md §6.8): a request that's ready or was turned
- * down, something shared with you, and (admins) a new request. The Hub keeps a list per person
+ * down, something shared with you, a new release from an artist you follow (docs/RELEASE-RADAR.md), and
+ * (admins) a new request. The Hub keeps a list per person
  * (hub/src/notify.ts); each device remembers the last one it saw and asks for newer ones whenever the
  * Inbox badge is refreshed. Nothing pops up while Wavelength is in front: the badge says it then.
  *
@@ -90,7 +91,8 @@ async function show(list: HubNotice[]) {
     const w = new Notification(n.title, { body: n.body, tag: 'id' in n ? `wl-${n.id}` : 'wl-many' });
     w.onclick = () => {
       window.focus();
-      useUi.getState().go({ view: 'inbox' });
+      // "New from …" opens Release Radar, the rest the Inbox
+      useUi.getState().go('kind' in n && n.kind === 'radar' ? { view: 'discover', genre: 'new' } : { view: 'inbox' });
       w.close();
     };
   }

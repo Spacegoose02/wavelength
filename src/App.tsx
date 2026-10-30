@@ -82,7 +82,7 @@ function View({ route }: { route: Route }) {
     case 'playlist': return <PlaylistView key={route.id} id={route.id} />;
     case 'serverPlaylist': return <ServerPlaylistView key={`${route.playlist.sourceId}:${route.playlist.id}`} playlist={route.playlist} />;
     case 'subwave': return <SubWave key={route.sourceId ?? ''} sourceId={route.sourceId} />;
-    case 'discover': return <Discover />;
+    case 'discover': return <Discover key={route.genre ?? ''} initialGenre={route.genre} />;
     case 'import': return <ImportPlaylist />;
     case 'tags': return <TagEditor key={route.album.id} album={route.album} />;
     case 'artistTags': return <ArtistTagEditor key={route.artist.name} artist={route.artist} />;

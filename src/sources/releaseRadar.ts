@@ -13,6 +13,8 @@ export interface Release {
   released: string;
   cover?: string;
   deezerLink: string;
+  /** Explicit lyrics, as Deezer marks them (kid profiles don't see these). */
+  explicit?: boolean;
 }
 
 const WINDOW_DAYS = 42;
@@ -59,6 +61,7 @@ async function releasesFor(artist: string): Promise<Release[]> {
       released: a.release_date,
       cover: a.cover_medium,
       deezerLink: a.link,
+      explicit: !!a.explicit_lyrics,
     }));
 }
 

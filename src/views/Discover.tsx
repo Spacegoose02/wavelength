@@ -30,8 +30,8 @@ function previewTrack(r: ChartEntry, url: string): Track {
   return { id: `preview:${url}`, sourceId: 'preview', kind: 'track', title: r.title, artist: r.artist, album: '30-second preview', coverUrl: r.cover, streamUrl: url, duration: 30 };
 }
 
-export function Discover() {
-  const [genre, setGenre] = useState<Genre>('all');
+export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
+  const [genre, setGenre] = useState<Genre>(initialGenre ?? 'all');
   const [view, setView] = useState<View>('mix');
   const [rows, setRows] = useState<Row[]>();
   const [error, setError] = useState<string>();

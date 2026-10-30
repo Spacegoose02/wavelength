@@ -323,6 +323,42 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX notifications_user ON notifications(user_id, id);
   `,
+  `
+  -- Release Radar (radar.ts): the artists each person follows (by Deezer artist id), the new releases the Hub
+  -- found for them, when it last looked each artist up, and suggestions someone said no to.
+  CREATE TABLE follows (
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    artist_id   INTEGER NOT NULL,              -- Deezer artist id
+    name        TEXT NOT NULL,
+    picture     TEXT,
+    followed_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, artist_id)
+  );
+  CREATE INDEX follows_artist ON follows(artist_id);
+  CREATE TABLE radar_artists (
+    artist_id  INTEGER PRIMARY KEY,
+    checked_at INTEGER NOT NULL,
+    error      TEXT                            -- why the last look failed; null when it worked
+  );
+  CREATE TABLE radar_releases (
+    id         INTEGER PRIMARY KEY,            -- Deezer album id
+    artist_id  INTEGER NOT NULL,
+    artist     TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    type       TEXT NOT NULL,                  -- album, ep, single, compile
+    released   TEXT NOT NULL,                  -- YYYY-MM-DD
+    cover      TEXT,
+    link       TEXT NOT NULL,
+    explicit   INTEGER NOT NULL DEFAULT 0,
+    found_at   INTEGER NOT NULL
+  );
+  CREATE INDEX radar_releases_artist ON radar_releases(artist_id, released);
+  CREATE TABLE radar_hidden (
+    user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    artist_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, artist_id)
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

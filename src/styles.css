@@ -838,6 +838,17 @@ h2 .link.small { margin-left: 8px; font-weight: 600; }
 .radar-card .btn { margin-top: 4px; justify-content: center; }
 .radar-play { position: absolute; right: 8px; bottom: 8px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); opacity: 0; transition: opacity 0.15s; box-shadow: 0 4px 12px rgb(0 0 0 / 0.4); }
 .radar-card:hover .radar-play { opacity: 1; }
+.radar h2 .chips.inline { margin: 0; }
+.radar-status { margin: -4px 0 12px; flex-wrap: wrap; }
+.radar-manage { margin-bottom: 14px; display: grid; gap: 12px; }
+.radar-manage form { flex-wrap: wrap; }
+.radar-manage input { max-width: 280px; }
+.chip-x { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: -6px; border-radius: 50%; color: var(--muted); }
+.chip-x:hover { color: var(--text); background: var(--panel-2); }
+.chip-x svg { width: 12px; height: 12px; }
+.radar-suggest .cover.round { width: 100%; aspect-ratio: 1; }
+.radar-suggest .row { align-items: center; }
+.btn.following { color: var(--accent); }
 @media (max-width: 760px) { .radar-play { opacity: 1; } }
 
 /* ============ retro skins v2: normal-colour artwork + a second accent; five new themes ============ */
