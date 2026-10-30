@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Tidy genres** (Hub admins): one genre per kind of music, so "Hip Hop", "Trap" and "Rap/Hip Hop" all become
+  **Rap; Hip-Hop**, "Dance Pop" becomes **Pop**, and "EDM", "House" and "Techno" become **Electronic**. New downloads
+  get the tidy genre before Navidrome adds them. **Settings → Server → Genres → Review library genres** lists the
+  albums already in your library whose genre isn't tidy: apply one, the ones you tick, or all, with **Undo**. Genres
+  the Hub doesn't know yet are listed so you can pick what each becomes. The rules can be edited there.
+- **Hub:** `/api/admin/genres`, `/api/admin/genres/review`, `/api/admin/genres/apply`, `/api/admin/genres/keep`.
 - **Fixed:** Favorites showed "getFavorites is not a function" when a SUB/WAVE server with a login (or Hub
   admin access) was connected. Favorites lists Navidrome stars only again; SUB/WAVE likes are already in them.
 - **Discover loads from your Hub.** With a Hub, every device reads the charts from the Hub's copy instead of

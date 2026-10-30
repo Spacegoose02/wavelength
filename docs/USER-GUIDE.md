@@ -710,6 +710,24 @@ that will change is listed first, by album; untick an album to leave it alone. *
 
 Your Hub needs your music at `/music`, read-write, and the Navidrome admin login (Settings → Server).
 
+### Tidying genres (admins)
+
+New music often comes in with messy genres: one album says "Hip Hop", the next "Trap", another "Rap/Hip Hop". Your
+Hub keeps one genre per kind of music instead: **Rap; Hip-Hop** for rap, **Pop** for pop, **Electronic** for EDM,
+house and techno, and so on.
+
+- **New downloads** get the tidy genre before they show up in your library. Turn this off under **Settings →
+  Server → Genres** if you'd rather not.
+- **Review library genres** (same place) lists the albums already in your library whose genre isn't tidy, with
+  what it would become. Change the suggestion if you like, then **Apply** one album, tick some and **Apply
+  selected**, or **Apply all**. **Undo** puts them back (also later, under **Tag edits**). **Keep** leaves an album
+  as it is.
+- **Genres without a rule** are ones your Hub doesn't know yet, like "Afrobeats" or "Christmas". Type or pick what
+  each becomes and **Save rule**, or **Keep** it as a genre of its own. New downloads follow the rule from then on.
+- **Rules** shows what becomes what. Remove one with ×, add your own, or **Reset to defaults**.
+
+It needs the same setup as fixing tags: your music at `/music`, read-write, and the Navidrome admin login.
+
 ### Deleting an album (admins)
 
 **Delete album** on a Navidrome album's page removes it from your server. The files aren't deleted straight
