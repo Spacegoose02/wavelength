@@ -311,12 +311,15 @@ async function billboard(g: Genre, got: Got): Promise<Chart> {
   return { entries, asOf: `Week of ${week}` };
 }
 
-/** One Apple feed serves every genre (filtered below) — fetch it once, not once per genre. */
+/**
+ * One Apple feed serves every genre (filtered below) — fetch it once, not once per genre. Apple moved the
+ * feed from rss.applemarketingtools.com to rss.marketingtools.apple.com (Oct 2026; the old host redirects).
+ */
 let appleFeed: { at: number; got: Got; data: Promise<any> } | undefined;
 function appleMostPlayed() {
   if (!appleFeed || Date.now() - appleFeed.at > 30 * 60_000) {
     const got: Got = {};
-    const data = pageJson('https://rss.applemarketingtools.com/api/v2/us/music/most-played/100/songs.json', got);
+    const data = pageJson('https://rss.marketingtools.apple.com/api/v2/us/music/most-played/100/songs.json', got);
     appleFeed = { at: Date.now(), got, data };
     data.catch(() => (appleFeed = undefined));
   }
