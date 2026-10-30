@@ -23,7 +23,7 @@ base64 = "0.22"
 minisign-verify = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_NetworkManagement_WNet", "Win32_Foundation"] }
+windows-sys = { version = "0.61", features = ["Win32_NetworkManagement_WNet", "Win32_Foundation"] }
 windows-native-keyring-store = "1"
 
 [target.'cfg(target_os = "android")'.dependencies]
