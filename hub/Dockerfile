@@ -2,7 +2,7 @@
 
 # The app's web build, which the Hub serves at / so Wavelength works in a browser. Built once on the build
 # machine's own platform: the output is plain files, the same for every image platform.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS web
+FROM --platform=$BUILDPLATFORM node:25-alpine AS web
 WORKDIR /web
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
@@ -10,7 +10,7 @@ COPY index.html vite.config.ts tsconfig.json ./
 COPY src ./src
 RUN npx vite build --outDir /web/dist
 
-FROM node:22-alpine
+FROM node:25-alpine
 
 # su-exec drops from root to PUID/PGID after fixing /data ownership (Unraid uses 99:100).
 # python3 + ffmpeg run yt-dlp, which the Hub uses to download into /music. yt-dlp is fetched fresh on
