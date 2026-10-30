@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- **Fixed:** Favorites showed "getFavorites is not a function" when a SUB/WAVE server with a login (or Hub
+  admin access) was connected. Favorites lists Navidrome stars only again; SUB/WAVE likes are already in them.
+
 ## 0.13.1
 - **Fixed:** 0.13.0 didn't start on Windows or Android. The notification icon setting in `tauri.conf.json`
   made the notification plugin fail to load; the icon is now set on each notification instead.
