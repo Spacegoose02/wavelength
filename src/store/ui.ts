@@ -29,7 +29,7 @@ export type Route =
   | { view: 'offline' }
   | { view: 'offlineCollection'; id: string }
   | { view: 'downloads'; soulseek?: { q: string; requestId?: number } }
-  | { view: 'inbox' }
+  | { view: 'inbox'; tab?: 'clean' }
   | { view: 'settings'; tab?: SettingsTab };
 
 /** The tabs of the Settings page (views/Settings.tsx). */
