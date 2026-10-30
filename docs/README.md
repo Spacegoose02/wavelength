@@ -20,6 +20,8 @@ around in an afternoon, fix bugs without archaeology, and add features in the ho
    the Wavelength Hub server, and the phased roadmap for the planned board cards.
 10. **[HUB.md](HUB.md)** — the Wavelength Hub server: install on Unraid, Nginx Proxy Manager + tinyauth,
    settings, API, developing it.
+11. **[RELEASE-RADAR.md](RELEASE-RADAR.md)** — following artists, new-release lookups on the Hub,
+   suggestions: how it works and its API.
 
 ## The 60-second tour
 

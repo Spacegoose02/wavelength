@@ -139,6 +139,16 @@ use **Reset to defaults** to get the new default list.
   and **Fresh R&B** under R&B. Country uses iHeart's Breaking Country and Country Top 40.
 - Click a list's tab to see just that list, or **Mix** to combine them.
 
+### Release Radar: follow artists
+
+Signed in to a Hub, Release Radar (top of **New releases**) has a **Following** list: new albums, EPs and
+singles from the artists you follow. Press **Follow** on an artist's page (in your library or under
+**Downloads → Deezer**), or **Manage → Follow an artist by name**. You get a notification when one of them puts
+something out. **Artists you might like** below suggests more: ones like the artists you follow and play, and
+ones you play a lot but don't follow yet. **×** hides a suggestion for good. **Artists you play** is the radar
+the app works out from your listening, and is the only one without a Hub. More in
+[RELEASE-RADAR.md](RELEASE-RADAR.md).
+
 ### Charts with a Hub
 
 When you're signed in to a Hub, Discover reads the charts from the Hub instead of every device pulling them

@@ -32,7 +32,7 @@ spectrum bars, the skins.
 |---|---|
 | **One catalog** | Albums and artists from Navidrome and Plex merged into one library. The same album on two servers shows once, with source dots. Search covers every source at once. |
 | **Everything that plays** | Music, audiobooks (with resume + progress sync), podcasts, internet radio (50k-station directory), and [SUB/WAVE](https://github.com/perminder-klair/subwave) AI radio. |
-| **Discover** | Live charts per genre from Billboard, Apple Music, Deezer, RadioWave and iHeartRadio, combined into a "Mix" — and you pick which charts each genre uses. **Release Radar** finds new albums from the artists *you* play. 30-second previews; one-click **Get** sends songs to deemix (yt-dlp as backup). |
+| **Discover** | Live charts per genre from Billboard, Apple Music, Deezer, RadioWave and iHeartRadio, combined into a "Mix" — and you pick which charts each genre uses. **Release Radar** finds new albums from the artists *you* play, and with a Hub you can **follow artists** (get notified of their new releases) and get suggestions of who else to follow. 30-second previews; one-click **Get** sends songs to deemix (yt-dlp as backup). |
 | **Browse Deezer** | Search Deezer by artist, album, playlist or song, open an artist's full discography or an album's or playlist's tracklist, preview, and send a song, an album, a playlist or a whole discography to deemix. |
 | **Playlists everywhere** | Mixed-source playlists, plus two-way sync with Navidrome and Plex (Plexamp) playlists. |
 | **SUB/WAVE station control** | On-air view, song requests, likes, queue/cancel songs, DJ controls, a paint-the-hours schedule editor, shows and stats. |

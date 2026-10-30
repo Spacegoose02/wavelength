@@ -19,7 +19,7 @@ export type Route =
   | { view: 'playlist'; id: string }
   | { view: 'serverPlaylist'; playlist: ServerPlaylist }
   | { view: 'subwave'; sourceId?: string }
-  | { view: 'discover' }
+  | { view: 'discover'; genre?: 'new' }
   | { view: 'import' }
   | { view: 'tags'; album: Album }
   | { view: 'artistTags'; artist: Artist }

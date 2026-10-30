@@ -95,9 +95,13 @@ Hub older than this, it fetches directly as before. On top of that the app keeps
 
 Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others).
 
-### Release Radar — `src/sources/releaseRadar.ts`
-Your top ~60 artists (Navidrome play counts + stars + local history) → Deezer artist search → albums
-released in the last 42 days. Cached per day (`tonearm.releaseRadar`).
+### Release Radar — `src/sources/releaseRadar.ts`, `hub/src/radar.ts`
+**Artists you play** (any device, no Hub): your top ~60 artists (Navidrome play counts + stars + local
+history) → Deezer artist search → albums released in the last 42 days. Cached per day (`tonearm.releaseRadar`).
+
+**Following** (Hub): the Hub calls `GET /artist/:id/albums?limit=50` for each followed artist every 12 hours,
+one at a time, and `GET /artist/:id/related?limit=20` + `GET /search/artist?q=` for suggestions. Deezer's
+`200 {"error": …}` answers count as failures. Details in [RELEASE-RADAR.md](RELEASE-RADAR.md).
 
 ## Matching the same song across services — `src/lib/match.ts`
 `findTrackOnSource()` searches a library for `artist + title`, compares normalised titles (dropping

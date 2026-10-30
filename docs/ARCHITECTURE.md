@@ -32,7 +32,7 @@ admin-only controls. It's a control plane only: audio never goes through it. See
 | `main.tsx` | Boot: enables TV remote navigation and the Android media bridge, renders `<App/>`. |
 | `App.tsx` | Layout (sidebar or phone tab bar), keyboard shortcuts, back-button handling, the `View` router switch. |
 | `views/` | One file per page. Pages read stores and call source adapters; they don't fetch directly. |
-| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Scenes` (Now Playing visualizers), `raccoon/` (the SVG raccoon scenes: DJ, country, rapper and rocker, sharing one animation rig and the theme outfits), `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar`, `Visualizer`, `ErrorBoundary`. |
+| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Scenes` (Now Playing visualizers), `raccoon/` (the SVG raccoon scenes: DJ, country, rapper and rocker, sharing one animation rig and the theme outfits), `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar` (+ `FollowButton`), `Visualizer`, `ErrorBoundary`. |
 | `store/` | Global state (zustand). See §4. |
 | `sources/` | Adapters for each backend + chart/radio/download helpers. See [SOURCES.md](SOURCES.md). |
 | `player/engine.ts` | The audio engine. See §3. |
@@ -132,7 +132,7 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 | `store/downloads.ts` | yt-dlp job progress | memory |
 | `store/hub.ts` | Wavelength Hub address, device token, signed-in profile and permissions | `tonearm.hub` |
 | `lib/hubSync.ts` | When each synced setting last changed here, and which are waiting to upload | `tonearm.hubStamps` |
-| misc | `tonearm.plexClientId`, `tonearm.releaseRadar` (daily cache), `tonearm.swName` | localStorage |
+| misc | `tonearm.plexClientId`, `tonearm.releaseRadar` (daily cache), `tonearm.radarMode` (Following / Artists you play), `tonearm.swName` | localStorage |
 
 > ⚠️ **Credentials are stored in plain localStorage.** Fine for a personal device; moving them to the OS
 > keychain (e.g. `tauri-plugin-stronghold` / Android Keystore) is on the roadmap

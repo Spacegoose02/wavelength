@@ -34,6 +34,8 @@ import { webFetchRoutes } from './routes/webfetch.ts';
 import { radioRoutes } from './routes/radio.ts';
 import { discoverRoutes } from './routes/discover.ts';
 import { ChartCache } from './discover.ts';
+import { ReleaseRadar } from './radar.ts';
+import { radarRoutes } from './routes/radar.ts';
 import { getUser } from './users.ts';
 import { Library } from './library.ts';
 import { CleanDownloads } from './cleanDownloads.ts';
@@ -59,6 +61,8 @@ export interface Ctx {
   clean: CleanDownloads;
   /** Discover's charts, fetched and kept by the Hub so the apps don't each pull them (discover.ts). */
   charts: ChartCache;
+  /** Release Radar: followed artists and their new releases, looked up in the background (radar.ts). */
+  radar: ReleaseRadar;
   /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
   restart: () => void;
 }
@@ -83,6 +87,9 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   app.addHook('onClose', async () => ctx.library.stop());
   ctx.charts.start();
   app.addHook('onClose', async () => ctx.charts.stop());
+  ctx.radar = new ReleaseRadar(db);
+  if (opts.watchLibrary ?? true) ctx.radar.start();
+  app.addHook('onClose', async () => ctx.radar.stop());
   app.decorate('hubLibrary', ctx.library);
   app.decorate('hubClean', ctx.clean);
 
@@ -158,6 +165,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   webFetchRoutes(app, ctx);
   radioRoutes(app, ctx);
   discoverRoutes(app, ctx);
+  radarRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

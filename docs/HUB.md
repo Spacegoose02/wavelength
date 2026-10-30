@@ -500,7 +500,7 @@ with a 4xx status.
 | `GET /api/shares?sent=1` | signed in | shared with you (or `sent=1`: what you shared), newest first |
 | `GET /api/shares/counts`, `POST /api/shares/seen` | signed in | `{ unseen }` / mark `{ ids? }` (or all) as seen |
 | `POST /api/shares/:id/hide`, `DELETE /api/shares/:id` | signed in | take one off your list / unshare (the sender, or an admin) |
-| `GET /api/notifications?after=<id>` | signed in | yours after `after`, oldest first (20 at most): `{ notifications: [{ id, kind, title, body, createdAt }], last }`; `kind` is request.new (admins), request.ready, request.rejected, request.have, request.failed or share. Without `after`: none, only `last` to start from. Kept 30 days |
+| `GET /api/notifications?after=<id>` | signed in | yours after `after`, oldest first (20 at most): `{ notifications: [{ id, kind, title, body, createdAt }], last }`; `kind` is request.new (admins), request.ready, request.rejected, request.have, request.failed, share or radar (a new release from an artist you follow). Without `after`: none, only `last` to start from. Kept 30 days |
 | `GET /api/flags` | signed in | `{ flags: [{ id, kind, artist, title, verdict, setBy, createdAt }] }`: kid-safe flags |
 | `POST /api/admin/flags`, `DELETE /api/admin/flags/:id` | `library.edit` | set `{ kind: track/album/artist, artist, title?, verdict: block/allow }` (the same item again replaces its verdict) / remove |
 | `GET /api/ratings` | signed in | `{ ratings: [{ kind: album/track, artist, album, title, rating: explicit/clean/unknown, cleanLink, checkedAt }] }`: the library check's results |
@@ -531,6 +531,10 @@ with a 4xx status.
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
+| `GET /api/radar` | signed in | Release Radar: who you follow and their releases from the last 42 days, `{ follows, releases, windowDays, checkedAt, pending, failed }`. See [RELEASE-RADAR.md](RELEASE-RADAR.md) |
+| `POST /api/radar/follows`, `DELETE /api/radar/follows/:id` | signed in | follow a Deezer artist (`{ id, name, picture? }`, or `{ name }` and the Hub finds them; 404 if Deezer has nobody by that name) / stop following |
+| `POST /api/radar/check` | signed in | look your followed artists up now (ones looked at in the last 10 minutes are skipped) |
+| `GET /api/radar/suggestions[?fresh=1]`, `POST /api/radar/suggestions/:id/hide` | signed in | artists you might like (`{ id, name, picture, fans, because, plays? }`) / never suggest this one again |
 | `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
 | `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }] }` writes tags (only those given) → `{ batch, changed, failed }` |
