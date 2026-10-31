@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { radioBrowser, stationToTrack } from '../sources/radio';
 import { sourceFor } from '../sources/registry';
 import type { Station } from '../sources/types';
@@ -9,6 +9,7 @@ import { IconHeart, IconPlay } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfStation } from '../lib/inbox';
+import { stationsForYou } from '../lib/radioPicks';
 
 /** Key for a server station in `hiddenStations` / `stationOrder`. Ids are only unique per server. */
 const keyOf = (s: Station) => `${s.sourceId}:${s.id}`;
@@ -198,11 +199,37 @@ export function Radio() {
         </form>
       </section>
 
+      {!q.trim() && <StationsForYou Row={Row} />}
+
       <section>
         <h2>Directory {busy && <Spinner />}</h2>
         <input className="filter wide" placeholder="Search 50,000+ stations by name…" value={q} onChange={(e) => setQ(e.target.value)} />
         {results.map((s) => <Row key={s.id} s={s} />)}
       </section>
     </div>
+  );
+}
+
+/** Stations in the genres you have the most music in (lib/radioPicks.ts). Hidden without a Navidrome server. */
+function StationsForYou({ Row }: { Row: (p: { s: Station }) => ReactElement }) {
+  const [picks, setPicks] = useState<{ genre: string; stations: Station[] }[]>();
+  useEffect(() => {
+    let alive = true;
+    stationsForYou().then((p) => alive && setPicks(p), () => alive && setPicks([]));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!picks?.length) return null;
+  return (
+    <section>
+      <h2>Stations for you <small className="muted">in the genres you have the most music in</small></h2>
+      {picks.map((g) => (
+        <div key={g.genre}>
+          <h3 className="dz-section">{g.genre}</h3>
+          {g.stations.map((s) => <Row key={s.id} s={s} />)}
+        </div>
+      ))}
+    </section>
   );
 }

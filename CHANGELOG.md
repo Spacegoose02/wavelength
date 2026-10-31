@@ -11,6 +11,9 @@
 - **Household playlists** (Playlists → Household): playlists the whole house adds to, showing who added what.
 - **Hub:** `/api/me/2fa…`, `DELETE /api/admin/users/:id/2fa`, `PUT /api/admin/users/:id/guardians`,
   `/api/household/playlists…`; `GET /api/me` adds `twoFactor` and `kids`; notification kinds `report` and `rewind`.
+- **Get the song you hear on the radio:** Now Playing shows **Queue from library** when you have it, or **Get this
+  song** (Get or Request) when you don't, whenever the station's title names a song.
+- **Stations for you** (Radio): popular stations in the genres you have the most music in.
 - **Smart playlists** (Playlists): rules like "Rap; Hip-Hop, rated 4+, not played in 90 days" that pick songs from
   your Navidrome library each time you play them. **Save copy** puts today's songs on your server. Synced with a Hub.
 - **Library care** (Albums → Library care): **Duplicates** lists albums your server has more than once (editions
@@ -55,6 +58,9 @@
   advisories.
 - **Builds:** a new `App` check runs TypeScript, Rust tests, clippy and dependency audits on every pull
   request and weekly; Dependabot keeps npm, Cargo, Docker and Actions dependencies current.
+- **Android:** music no longer stops when the screen locks. Playback also carries on into the next song with
+  the screen off, holds the CPU and Wi-Fi awake while streaming, and pauses when headphones are unplugged.
+  docs/USER-GUIDE.md "Listening with the screen off" covers phones whose battery saver still closes the app.
 
 ## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your

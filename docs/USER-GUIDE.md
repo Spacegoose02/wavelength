@@ -597,6 +597,18 @@ what's playing, so the only way to name the song is to recognise the audio, like
 > checks they agree. HLS (`.m3u8`) streams carry no ICY titles and are skipped. A title equal to the
 > station's own name is ignored.
 
+### Get the song you hear
+
+When a station's title reads like "Artist - Song", **Now Playing** shows a button for it. If the song is in
+your library, it says **Queue from library** and plays it after the station. If not, it says **Get this song**,
+which sends it to deemix (or yt-dlp when Deezer doesn't have it) or, without Autodownload, requests it, like
+**Get** in Discover.
+
+### Stations for you
+
+Above the directory, **Radio → Stations for you** lists popular stations in the three genres you have the most
+music in (from your Navidrome library's genre counts, so tidy genres help). It shows when you're not searching.
+
 ## Profiles with a Wavelength Hub
 
 If your household runs a [Wavelength Hub](HUB.md), everyone gets their own profile. Without one, nothing
@@ -932,6 +944,22 @@ most-played artist). Tap it to open **Rewind**.
 > everything when no Hub is signed in), `src/lib/hubSync.ts` (settings sync: per-key last-writer-wins with
 > change times in `tonearm.hubStamps`, pushed 2 s after a change). Add a setting to sync by adding its
 > `useSettings` key to `SYNCED`. The Hub side is documented in [HUB.md](HUB.md).
+
+## Listening with the screen off (Android)
+
+Music keeps playing when you lock your phone or switch to another app, and moves on to the next song as
+usual. While something is playing, Wavelength shows a playback notification with previous, play/pause and
+next; the same controls appear on the lock screen, in your car and on Bluetooth headphones. Unplugging
+headphones (or a Bluetooth headset disconnecting) pauses the music instead of switching to the speaker.
+
+If the music still stops a few minutes after you lock the phone, the phone's battery saver is closing
+Wavelength. Open **Settings → Apps → Wavelength → Battery** and choose **Unrestricted** (on Samsung, also take
+Wavelength off the **Sleeping apps** and **Deep sleeping apps** lists). Keep Wavelength's notifications
+allowed: Android needs the playback notification to keep a music app running. Swiping the notification away
+pauses the music.
+
+> **For developers:** see `src-tauri/gen/android` in [ARCHITECTURE.md](ARCHITECTURE.md) §5 (`PlaybackHost`,
+> `MediaPlaybackService`, `PlaybackPolicy`).
 
 ## Updates
 

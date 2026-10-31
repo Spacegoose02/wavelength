@@ -23,6 +23,11 @@ export const radioBrowser = {
     const r = await getJson<any[]>(`${RB}/stations/search?${qs({ name, tag, limit: 60, hidebroken: true, order: 'clickcount', reverse: true })}`);
     return r.map(fromRB);
   },
+  /** Popular stations with this tag ("hip hop", "jazz"…). */
+  async byTag(tag: string, limit = 8) {
+    const r = await getJson<any[]>(`${RB}/stations/bytag/${encodeURIComponent(tag)}?${qs({ limit, hidebroken: true, order: 'clickcount', reverse: true })}`);
+    return r.map(fromRB);
+  },
   async top() {
     const r = await getJson<any[]>(`${RB}/stations/topclick/60?hidebroken=true`);
     return r.map(fromRB);
