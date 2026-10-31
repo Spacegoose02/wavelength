@@ -138,7 +138,7 @@ function verdictFor(i: { artist?: string; album?: string; title?: string; versio
 /** Kid profiles get a shorter, bigger menu, with these labels. */
 export const KID_VIEWS: Partial<Record<Route['view'], string>> = {
   home: 'Home', search: 'Search', discover: 'Discover', albums: 'Albums', artists: 'Artists', favorites: 'Favorites',
-  radio: 'Radio', books: 'Audiobooks', downloads: 'Ask for music', inbox: 'Inbox', settings: 'Me', playlists: 'Playlists',
+  radio: 'Radio', books: 'Audiobooks', downloads: 'Ask for music', inbox: 'Inbox', settings: 'Me', playlists: 'Playlists', dj: 'DJ',
 };
 
 export const isKid = () => useHub.getState().user?.role === 'kid';

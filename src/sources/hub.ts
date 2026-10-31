@@ -559,6 +559,37 @@ export class HubError extends Error {
   }
 }
 
+/** AI DJ (hub/src/dj/, docs/AI-DJ.md): the chat runs on the Hub, which keeps the API key. */
+export interface HubDjStatus { available: boolean; reason: string | null; model: string; spent: number; limit: number | null }
+export interface HubDjChat { id: number; title: string; createdAt: number; updatedAt: number; turns: number }
+export interface HubDjCall { id: string; name: string; input: unknown }
+export interface HubDjTurn { chat: HubDjChat; status: 'done' | 'tools'; reply: string; calls?: HubDjCall[]; full?: boolean; spent: number; limit: number | null }
+export interface HubDjEntry { role: 'user' | 'assistant'; text: string; tools?: string[] }
+export interface HubDjPrice { input: number; output: number; cacheRead: number; cacheWrite: number }
+export interface HubDjSettings {
+  enabled: boolean;
+  provider: string;
+  model: string;
+  effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+  baseUrl: string;
+  fallback: boolean;
+  prices: Record<string, HubDjPrice>;
+  householdLimit: number | null;
+  defaultUserLimit: number | null;
+}
+export interface HubDjAdmin {
+  settings: HubDjSettings;
+  key: { set: boolean; hint: string | null; unreadable: boolean };
+  providers: string[];
+  efforts: HubDjSettings['effort'][];
+  models: { id: string; label: string; blurb: string; price: HubDjPrice }[];
+  defaultModel: string;
+  price: HubDjPrice | null;
+  users: { id: number; displayName: string; username: string; role: HubRole; disabled: boolean; enabled: boolean; monthlyLimit: number | null; spent: number; calls: number }[];
+  month: { spent: number; byModel: { model: string; calls: number; inputTokens: number; outputTokens: number; cost: number }[]; byDay: { day: string; cost: number; calls: number }[] };
+  allTime: number;
+}
+
 export class HubClient {
   url: string;
   token?: string;
@@ -805,5 +836,17 @@ export class HubClient {
   adminKids = (day: string) => this.call<{ pinSet: boolean; kids: { userId: number; displayName: string; rules: KidRules; usedSeconds: number }[] }>('GET', `/api/admin/kids?day=${day}`);
   setKidRules = (userId: number, rules: Partial<KidRules>) => this.call<{ rules: KidRules }>('PUT', `/api/admin/kids/${userId}`, rules);
   setKidPin = (pin: string | null) => this.call<{ pinSet: boolean }>('PUT', '/api/admin/kid-pin', { pin });
+  // AI DJ
+  djStatus = () => this.call<HubDjStatus>('GET', '/api/dj');
+  djChats = () => this.call<{ chats: HubDjChat[]; spent: number; limit: number | null }>('GET', '/api/dj/chats');
+  djChat = (id: number) => this.call<{ chat: HubDjChat; messages: HubDjEntry[]; calls: HubDjCall[] | null; full: boolean }>('GET', `/api/dj/chats/${id}`);
+  djDeleteChat = (id: number) => this.call('DELETE', `/api/dj/chats/${id}`);
+  djSend = (chatId: number | null, message: string) => this.call<HubDjTurn>('POST', '/api/dj/chat', { chatId: chatId ?? undefined, message });
+  djToolResults = (chatId: number, results: { id: string; content: string; isError?: boolean }[]) => this.call<HubDjTurn>('POST', `/api/dj/chats/${chatId}/tools`, { results });
+  djAdmin = () => this.call<HubDjAdmin>('GET', '/api/admin/dj');
+  /** `apiKey`: a new key, '' to remove it, left out to keep it. */
+  saveDjAdmin = (b: Partial<HubDjSettings> & { apiKey?: string }) => this.call<HubDjAdmin>('PUT', '/api/admin/dj', b);
+  setDjAccess = (userId: number, b: { enabled?: boolean; monthlyLimit?: number | null }) => this.call('PUT', `/api/admin/dj/users/${userId}`, b);
+  testDj = () => this.call<{ message: string }>('POST', '/api/admin/dj/test', {});
   audit = (limit = 50) => this.call<{ entries: HubAuditEntry[] }>('GET', `/api/admin/audit?limit=${limit}`);
 }

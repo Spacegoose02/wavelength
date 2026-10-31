@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **AI DJ.** A chat in the app that knows your library: ask for a playlist, a mood or "more like this" and it
+  searches, plays, queues and saves playlists for you; ask which albums you're missing and it compares the
+  artist's discography with your library and requests the ones you pick. It runs on the Hub with your AI
+  provider's API key (Anthropic Claude: Opus 5.5 by default, Sonnet 5.5 or Haiku 5.5), which never leaves the
+  Hub. **Settings → AI DJ** (admins) holds the key, model, effort and prices, counts every person's tokens and
+  estimated spend, and sets monthly limits per person and for the household. Off until an admin turns it on for
+  the Hub and for each account; kids stay off unless turned on, and then get family-friendly picks only. See
+  [AI-DJ.md](docs/AI-DJ.md) for the setup guide.
 
 ## 0.17.10
 Fixes from a bug sweep (the full list is in the PR):

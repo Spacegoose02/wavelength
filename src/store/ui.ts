@@ -33,10 +33,11 @@ export type Route =
   | { view: 'offlineCollection'; id: string }
   | { view: 'downloads'; soulseek?: { q: string; requestId?: number } }
   | { view: 'inbox'; tab?: 'clean' }
+  | { view: 'dj' }
   | { view: 'settings'; tab?: SettingsTab };
 
 /** The tabs of the Settings page (views/Settings.tsx). */
-export type SettingsTab = 'account' | 'users' | 'server' | 'sources' | 'playback' | 'downloads' | 'themes' | 'discover' | 'updates';
+export type SettingsTab = 'account' | 'users' | 'server' | 'dj' | 'sources' | 'playback' | 'downloads' | 'themes' | 'discover' | 'updates';
 
 interface UiState {
   route: Route;

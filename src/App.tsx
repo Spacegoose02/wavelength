@@ -12,12 +12,13 @@ import { WebSignIn } from './components/WebSignIn';
 import { startKidTime } from './lib/kidTime';
 import { KidLockScreen, KidSettings, KidSignedOutScreen } from './components/KidLock';
 import { useHub } from './store/hub';
+import { useDjAvailable } from './lib/djStatus';
 import { skinGroup, useSettings } from './store/settings';
 import { useUi, type Route } from './store/ui';
 import { usePlayer } from './store/player';
 import { PlayerBar } from './components/PlayerBar';
 import { NowPlaying, QueuePanel } from './components/NowPlaying';
-import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart, IconInbox } from './components/Icons';
+import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart, IconInbox, IconDj } from './components/Icons';
 import { Podcasts, PodcastView } from './views/Podcasts';
 import { History } from './views/History';
 import { HouseholdPlaylistView } from './views/Household';
@@ -53,10 +54,12 @@ const ArtistTagEditor = page(() => import('./views/ArtistTagEditor'), 'ArtistTag
 const Downloads = page(() => import('./views/Downloads'), 'Downloads');
 const Inbox = page(() => import('./views/Inbox'), 'Inbox');
 const Settings = page(() => import('./views/Settings'), 'Settings');
+const DJ = page(() => import('./views/DJ'), 'DJ');
 
 const NAV: { view: Route['view']; label: string; icon: ReactNode }[] = [
   { view: 'home', label: 'Home', icon: <IconHome /> },
   { view: 'search', label: 'Search', icon: <IconSearch /> },
+  { view: 'dj', label: 'AI DJ', icon: <IconDj /> },
   { view: 'discover', label: 'Discover', icon: <IconCompass /> },
   { view: 'recent', label: 'Recently added', icon: <IconSparkle /> },
   { view: 'albums', label: 'Albums', icon: <IconAlbum /> },
@@ -104,6 +107,7 @@ function View({ route }: { route: Route }) {
     case 'offlineCollection': return <OfflineCollectionView key={route.id} id={route.id} />;
     case 'downloads': return <Downloads key={route.soulseek ? `sl:${route.soulseek.requestId}:${route.soulseek.q}` : ''} soulseek={route.soulseek} />;
     case 'inbox': return <Inbox key={route.tab ?? ''} tab={route.tab} />;
+    case 'dj': return <DJ />;
     case 'settings': return useHub.getState().user?.role === 'kid' ? <KidSettings /> : <Settings tab={route.tab} />;
   }
 }
@@ -220,6 +224,7 @@ export default function App() {
   const hubOn = useHub((s) => !!s.token);
   const kid = useIsKid();
   const badge = useInbox(inboxBadge);
+  const dj = useDjAvailable();
   const tabRoot = ['home', 'discover', 'search', 'subwave', 'library'].includes(route.view);
 
   return (
@@ -227,7 +232,7 @@ export default function App() {
       {!phone && (
         <nav className="sidebar">
           <div className="brand"><span className="brand-mark" />Wavelength</div>
-          {NAV.filter((n) => (n.view !== 'inbox' || hubOn) && (!kid || KID_VIEWS[n.view])).map((n) => (
+          {NAV.filter((n) => (n.view !== 'inbox' || hubOn) && (n.view !== 'dj' || dj) && (!kid || KID_VIEWS[n.view])).map((n) => (
             <button key={n.view} className={`nav ${route.view === n.view ? 'on' : ''}`} onClick={() => go({ view: n.view } as Route)}>
               {n.icon}<span>{kid ? KID_VIEWS[n.view] : n.label}</span>
               {n.view === 'inbox' && badge > 0 && <span className="badge">{badge}</span>}

@@ -14,6 +14,7 @@ import { hubClient, useCan, useHub } from '../store/hub';
 import { deemixClient, hubKeeps, loadHubServices, saveDownloaderToHub, saveSourceToHub, useHubRuns } from '../lib/hubServices';
 import { AccountTab, HubAccess, UsersTab } from './HubSettings';
 import { ServerTab } from './ServerTab';
+import { DjAdminTab } from './DjAdmin';
 import { UpdatesTab } from '../components/Updates';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
@@ -579,6 +580,7 @@ const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
   { id: 'account', label: 'Account' },
   { id: 'users', label: 'Users', admin: true },
   { id: 'server', label: 'Server', admin: true },
+  { id: 'dj', label: 'AI DJ', admin: true },
   { id: 'sources', label: 'Sources' },
   { id: 'playback', label: 'Playback' },
   { id: 'downloads', label: 'Downloads' },
@@ -662,6 +664,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'account' && <AccountTab />}
       {tab === 'users' && isAdmin && <UsersTab />}
       {tab === 'server' && isAdmin && <ServerTab />}
+      {tab === 'dj' && isAdmin && <DjAdminTab />}
       {tab === 'sources' && <SourcesTab />}
       {tab === 'playback' && (
         <>
