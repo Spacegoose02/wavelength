@@ -129,6 +129,7 @@ export function Albums() {
   const [filter, setFilter] = useState('');
   const [only, setOnly] = useState<string | null>(null);
   const hidden = useHidden();
+  const kid = useIsKid();
   const shown = useMemo(() => {
     const f = filter.toLowerCase();
     return albums.filter(
@@ -143,6 +144,7 @@ export function Albums() {
       <header className="page-head">
         <h1>Albums <small>{shown.length}</small></h1>
         {loading && <Spinner />}
+        {!kid && <button className="btn small" title="Duplicates and missing albums" onClick={() => useUi.getState().go({ view: 'libraryCare' })}>Library care</button>}
         <input className="filter" placeholder="Filter albums…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
       {musicSources.length > 1 && (

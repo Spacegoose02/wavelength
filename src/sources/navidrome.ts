@@ -1,5 +1,6 @@
 import SparkMD5 from 'spark-md5';
 import { getJson, http, qs, trimSlash } from '../lib/http';
+import type { SongFacts } from '../lib/smartPlaylists';
 import type { Album, Artist, HistoryEntry, MusicSource, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
 
 /** Navidrome (or any Subsonic-compatible server) via the Subsonic REST API. */
@@ -95,6 +96,43 @@ export class NavidromeSource implements MusicSource {
   /** Build a playable track from just an id (e.g. a SubWave like — same Navidrome library). */
   trackFromId(id: string, meta: { title?: string; artist?: string; album?: string; duration?: number } = {}): Track {
     return this.track({ id, coverArt: id, title: meta.title ?? 'Unknown', artist: meta.artist, album: meta.album, duration: meta.duration });
+  }
+
+  /**
+   * Songs with what smart playlists filter on (lib/smartPlaylists.ts): every song in a genre, or without one a
+   * random sample of the library (Subsonic allows 500 at a time). At most `max`.
+   */
+  async songsWithFacts(q: { genre?: string; fromYear?: number; toYear?: number }, max = 3000): Promise<{ track: Track; facts: SongFacts }[]> {
+    const raw: any[] = [];
+    if (q.genre) {
+      for (let offset = 0; offset < max; offset += 500) {
+        const page = (await this.call('getSongsByGenre', { genre: q.genre, count: 500, offset })).songsByGenre?.song ?? [];
+        raw.push(...page);
+        if (page.length < 500) break;
+      }
+    } else {
+      const seen = new Set<string>();
+      // a few random draws, so a big library gets a fair sample
+      for (let i = 0; i < Math.ceil(max / 500) && raw.length < max; i++) {
+        const page = (await this.call('getRandomSongs', { size: 500, fromYear: q.fromYear, toYear: q.toYear })).randomSongs?.song ?? [];
+        const fresh = page.filter((s: any) => !seen.has(s.id) && seen.add(s.id));
+        raw.push(...fresh);
+        if (fresh.length < 50) break;
+      }
+    }
+    const time = (v: unknown) => (typeof v === 'string' && v ? Date.parse(v) || undefined : undefined);
+    return raw.map((s) => ({
+      track: this.track(s),
+      facts: {
+        rating: Number(s.userRating) || 0,
+        starred: !!s.starred,
+        plays: Number(s.playCount) || 0,
+        playedAt: time(s.played),
+        addedAt: time(s.created),
+        year: Number(s.year) || undefined,
+        genre: typeof s.genre === 'string' ? s.genre : Array.isArray(s.genres) ? s.genres.map((g: { name: string }) => g.name).join('; ') : undefined,
+      },
+    }));
   }
 
   async getFavorites() {

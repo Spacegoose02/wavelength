@@ -1699,3 +1699,5 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
   .genre-row { flex-wrap: wrap; }
   .genre-row .genre-input { flex: 1 1 140px; }
 }
+.smart-list { display: grid; gap: 6px; justify-items: start; } .smart-list .source-row { width: 100%; }
+.dup-group { margin-bottom: 14px; } .dup-group h3 { margin: 10px 0 6px; } .dup-group .cover, .dup-group img { width: 44px; height: 44px; border-radius: 6px; }

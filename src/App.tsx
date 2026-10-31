@@ -21,6 +21,7 @@ import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, I
 import { Podcasts, PodcastView } from './views/Podcasts';
 import { History } from './views/History';
 import { Rewind } from './views/Rewind';
+import { LibraryCare } from './views/LibraryCare';
 import { PlaylistView, Playlists, ServerPlaylistView } from './views/Playlists';
 import { SubWave } from './views/SubWave';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -89,6 +90,7 @@ function View({ route }: { route: Route }) {
     case 'favorites': return <Favorites />;
     case 'recent': return <RecentlyAdded />;
     case 'library': return <LibraryHub />;
+    case 'libraryCare': return <LibraryCare />;
     case 'offline': return <Offline />;
     case 'offlineCollection': return <OfflineCollectionView key={route.id} id={route.id} />;
     case 'downloads': return <Downloads key={route.soulseek ? `sl:${route.soulseek.requestId}:${route.soulseek.q}` : ''} soulseek={route.soulseek} />;

@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Smart playlists** (Playlists): rules like "Rap; Hip-Hop, rated 4+, not played in 90 days" that pick songs from
+  your Navidrome library each time you play them. **Save copy** puts today's songs on your server. Synced with a Hub.
+- **Library care** (Albums → Library care): **Duplicates** lists albums your server has more than once (editions
+  folded in), and admins can send the extra copies to the trash; **Missing albums** lists studio albums by your
+  top artists that you don't have, with Get / Request.
+- **Weekly genre check:** the Hub reviews the library's genres once a week and notifies admins when there's
+  something new to tidy.
+- **Hub:** `POST /api/admin/genres/check`; notification kind `library`.
 - **Security:** the app now has a Content-Security-Policy (so does its browser version on the Hub): text from
   the internet can't run scripts inside Wavelength.
 - **Hub:** the Docker image checks yt-dlp against its published checksum, rebuilds every week for a fresh

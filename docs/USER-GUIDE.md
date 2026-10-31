@@ -393,6 +393,25 @@ vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day
 > a hash of the local date). `App` re-checks every 10 minutes while either mode is on, so it rolls over at
 > midnight. Everything uses the device's local date; nothing needs a server.
 
+## Smart playlists
+
+**Playlists → Smart playlists** are rules instead of a list of songs: genres, your star rating, ♥ only, not
+played in N days, added in the last N days, a range of years, and how many songs at most. Press play and
+Wavelength picks matching songs from your Navidrome library at random, so the playlist changes as you add, rate
+and play music. **Save copy** saves today's songs as an ordinary playlist on your server, for other apps. The
+rules follow you to every device with a Hub. Genres match your tags, so tidy genres help (below).
+
+## Library care
+
+**Albums → Library care** (on a phone, Library → Library care) has two lists:
+
+- **Duplicates:** albums your server has more than once, counting editions like "Deluxe" or "25th Anniversary"
+  as the same album, with the most complete copy first. Explicit and clean versions don't count, nor does the
+  same album on two different servers. Hub admins can **Delete** the extra copies; they go to the Hub's trash
+  for 30 days.
+- **Missing albums:** for the 40 artists you have the most albums by, the studio albums Deezer lists that you
+  don't have, with preview and **Get** / **Request**. Live albums, compilations and remix albums are left out.
+
 ## Searching your playlists
 
 When you have lots of playlists, use the search box at the top of **Playlists**. Type part of a playlist's
@@ -770,6 +789,10 @@ house and techno, and so on.
 - **Genres without a rule** are ones your Hub doesn't know yet, like "Afrobeats" or "Christmas". Type or pick what
   each becomes and **Save rule**, or **Keep** it as a genre of its own. New downloads follow the rule from then on.
 - **Rules** shows what becomes what. Remove one with ×, add your own, or **Reset to defaults**.
+
+Once a week the Hub looks over the library's genres by itself. When it finds albums or genres that need
+tidying that it hasn't told you about, admins get one **Genres to tidy** notification; clicking it opens the
+review.
 
 It needs the same setup as fixing tags: your music at `/music`, read-write, and the Navidrome admin login.
 
