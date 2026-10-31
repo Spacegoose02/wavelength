@@ -25,6 +25,9 @@ const noCorsHosts = new Set<string>();
 let current: HTMLAudioElement = decks[0];
 let ctx: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
+/** mid (L+R) and side (L−R) spectra for finding the lead vocal (player/voice.ts) */
+let midTap: AnalyserNode | null = null;
+let sideTap: AnalyserNode | null = null;
 let preamp: GainNode | null = null;
 let bands: BiquadFilterNode[] = [];
 /** per deck: ReplayGain for its song, and the crossfade */
@@ -72,6 +75,37 @@ function ensureGraph() {
     return f;
   });
   [preamp, ...bands, analyser, c.destination].reduce((a: AudioNode, b) => (a.connect(b), b));
+  // vocal taps: split the EQ'd signal into mid and side, each into its own analyser, then into a muted gain so
+  // the browser keeps pulling them. Mono sources upmix to L = R (side silent).
+  // (a splitter is always 'discrete', so a 2-channel 'speakers' gain in front does the mono → L = R upmix)
+  const stereo = c.createGain();
+  stereo.channelCount = 2;
+  stereo.channelCountMode = 'explicit';
+  stereo.channelInterpretation = 'speakers';
+  const split = c.createChannelSplitter(2);
+  stereo.connect(split);
+  const mute = c.createGain();
+  mute.gain.value = 0;
+  mute.connect(c.destination);
+  const tap = () => {
+    const a = c.createAnalyser();
+    a.fftSize = 2048;
+    a.smoothingTimeConstant = 0.3;
+    a.connect(mute);
+    return a;
+  };
+  midTap = tap();
+  sideTap = tap();
+  const mix = (ch: number, k: number, to: AnalyserNode) => {
+    const g = c.createGain();
+    g.gain.value = k;
+    split.connect(g, ch).connect(to);
+  };
+  mix(0, 0.5, midTap);
+  mix(1, 0.5, midTap);
+  mix(0, 0.5, sideTap);
+  mix(1, -0.5, sideTap);
+  analyser.connect(stereo);
   for (const d of decks) {
     const g = c.createGain();
     g.gain.value = d === current ? levelValue : 0;
@@ -173,6 +207,10 @@ export const engine = {
   },
   analyser() {
     return isDeck(current) ? analyser : null;
+  },
+  /** Mid and side spectra for vocal detection (player/voice.ts), or null when the song can't be read. */
+  voiceTaps() {
+    return isDeck(current) && midTap && sideTap ? { mid: midTap, side: sideTap, sampleRate: ctx!.sampleRate } : null;
   },
   on(type: string, fn: Listener) {
     listeners.set(type, [...(listeners.get(type) ?? []), fn]);

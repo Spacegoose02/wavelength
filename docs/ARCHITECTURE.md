@@ -102,7 +102,10 @@ commands. Pictures, audio and requests may go to any address, because every musi
   deck → its own `GainNode` (ReplayGain × crossfade) → preamp `GainNode` → 10 `BiquadFilterNode` EQ bands →
   `AnalyserNode` (feeds the spectrum visualiser) → speakers. The EQ (`player/eq.ts` for bands and presets,
   `engine.setEq`) sits before the analyser, so the visualiser shows the equalised sound. When the EQ is off,
-  every gain is 0 dB, which leaves the audio unchanged. While one deck plays, the other **preloads** the next
+  every gain is 0 dB, which leaves the audio unchanged. The analyser also feeds two **vocal taps**: a
+  channel splitter makes mid (L+R) and side (L−R) signals, each into its own `AnalyserNode` (`engine.voiceTaps`,
+  2048-point, read by `player/voice.ts` for the critters' singing) and then into a muted gain so they keep
+  running. While one deck plays, the other **preloads** the next
   song (`engine.preload`, started by `prepareAhead` in `store/player.ts` 20 s before the end). When the song
   ends, `engine.load` with that URL just switches decks (gapless); with crossfade on, `engine.crossfade` ramps
   the two deck gains against each other and the store moves to the next song without a reload.

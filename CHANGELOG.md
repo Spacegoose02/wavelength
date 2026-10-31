@@ -22,6 +22,11 @@ Fixes from a bug sweep (the full list is in the PR):
   so they don't land in a "(Clean)" folder.
 - An album whose server was removed from this device says so instead of loading for ever, and Search stops
   spinning when you clear the box.
+- **Critters sing with the voice, not the beat.** Their mouths now listen for the lead vocal: sound in the voice
+  range that sits in the centre of the mix and is tonal, ignoring drum hits and guitars panned to the sides.
+  When a song has synced lyrics (Navidrome or LRCLIB, as in the Lyrics panel) they also keep their mouths shut
+  through intros, solos and gaps, and on streams the app can't read they mouth along in time with each line's
+  words. See the [user guide](docs/USER-GUIDE.md#critters).
 
 ## 0.17.9
 - **Any critter, any act.** Pick who plays and what they play separately: the raccoon, shark, alien, grey

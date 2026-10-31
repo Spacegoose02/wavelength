@@ -11,11 +11,6 @@ export interface AudioSample {
   beat: boolean;
   /** highs jumped well above their recent average (a snare, a clap, a scratch) */
   transient: boolean;
-  /**
-   * 0..1, how far the vocal band (about 250 Hz to 3 kHz) sits above its recent average: rises on sung or
-   * spoken syllables and falls between them. The critters' mouths follow it. Made up while not `live`.
-   */
-  voice: number;
   /** false when the numbers are made up: paused, or a stream the WebView can't read (no CORS) */
   live: boolean;
   playing: boolean;
@@ -33,7 +28,6 @@ export function createAudioReader() {
   let wave = new Float32Array(512);
   let avgBass = 0;
   let avgTreble = 0;
-  let avgVocal = 0;
   let lastBeat = 0;
   let lastTransient = 0;
 
@@ -81,14 +75,6 @@ export function createAudioReader() {
     if (transient) lastTransient = t;
     avgTreble = avgTreble * 0.9 + treble * 0.1;
 
-    const vocal = band(0.012, 0.14);
-    const voice = live
-      ? Math.min(1, Math.max(0, vocal - avgVocal * 0.92) / Math.max(0.04, avgVocal * 0.35))
-      : playing
-        ? Math.max(0, Math.sin(t * 7.5) * Math.sin(t * 2.3 + 1)) * 0.9
-        : 0;
-    avgVocal = avgVocal * 0.96 + vocal * 0.04;
-
-    return { freq, wave, bass, mid: band(0.06, 0.3), treble, beat, transient, voice, live, playing };
+    return { freq, wave, bass, mid: band(0.06, 0.3), treble, beat, transient, live, playing };
   };
 }
