@@ -24,6 +24,7 @@ test('the Hub serves the web app at / and leaves its own pages alone', async () 
   assert.match(index.headers['content-type'] as string, /text\/html/);
   assert.match(index.body, /id="root"/);
   assert.equal(index.headers['cache-control'], 'no-cache');
+  assert.match(index.headers['content-security-policy'] as string, /script-src 'self'(;|$)/);
 
   const js = await get('/assets/index-abc123.js');
   assert.equal(js.statusCode, 200);

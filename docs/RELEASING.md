@@ -45,6 +45,26 @@ Since in-app updates, installed apps find new releases on their own (Settings â†
   another key, so a test APK from option A can't be pushed through the updater.
 - The version that introduced the updater (and anything older) has to be installed by hand once. Say so in
   that release's notes.
+- **Every update is checked before it installs** (`src-tauri/src/update.rs`). The app looks the file up in
+  GitHub's releases list and compares its SHA-256 with the `digest` GitHub publishes for it, so a download
+  that was corrupted or swapped on the way is refused. Don't re-upload a file by hand after publishing unless
+  it's the same build: GitHub recomputes the digest, which is fine, but a different file is a different build.
+
+### Update signing
+
+The checksum proves the file is the one on the release, not that you made the release. For that, sign
+updates with a key that never sits in the repo:
+
+1. On your PC: `npx tauri signer generate -w %USERPROFILE%\.wavelength\update.key` (pick a password).
+   Back up the `.key` file and the password somewhere safe: losing them means a key rotation, below.
+2. Add two repository secrets: `TAURI_SIGNING_PRIVATE_KEY` (the contents of `update.key`) and
+   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. From then on `release.yml` attaches a `.sig` next to every file.
+3. Put the contents of `update.key.pub` into `src-tauri/update-key.pub` and release. Apps from **that
+   release on** refuse any update without a valid `.sig`; older apps keep checking only the SHA-256.
+
+Order matters: add the secrets (step 2) before the release that ships the key (step 3), or that release has no
+signatures and its successors can't be installed by the updater. An empty `update-key.pub` turns signature
+checks off. To rotate the key, release one version signed with the old key that ships the new public key.
 
 ## Test builds (before a release)
 
@@ -102,7 +122,18 @@ Encode the keystore on Windows (copies it to the clipboard):
 ```powershell
 [Convert]::ToBase64String([IO.File]::ReadAllBytes('src-tauri\gen\android\wavelength-release.jks')) | Set-Clipboard
 ```
-(macOS/Linux: `base64 -w0 wavelength-release.jks`.) The Windows job needs no secrets.
+(macOS/Linux: `base64 -w0 wavelength-release.jks`.) The Windows job needs no secrets, apart from the optional
+update-signing ones ([Update signing](#update-signing)).
+
+## Dependencies
+
+- **`app.yml`** checks every pull request and push to main: TypeScript, a web build, Rust tests and
+  `clippy`, and known vulnerabilities (`npm audit` for what ships, `cargo audit` for the Rust shell). It also
+  runs every Monday, so a newly published advisory turns it red even when nothing changed.
+- **Dependabot** (`.github/dependabot.yml`) opens one grouped pull request a week per ecosystem (app npm,
+  Hub npm, Cargo, the Hub's Docker base image, GitHub Actions); security fixes arrive straight away. Major
+  versions come as separate PRs because they usually need code changes.
+- Before a release, run `cargo audit` in `src-tauri` and `npm audit` in the root and `hub/`.
 
 ## Checklist
 

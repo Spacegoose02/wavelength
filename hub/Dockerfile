@@ -2,7 +2,7 @@
 
 # The app's web build, which the Hub serves at / so Wavelength works in a browser. Built once on the build
 # machine's own platform: the output is plain files, the same for every image platform.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS web
+FROM --platform=$BUILDPLATFORM node:25-alpine AS web
 WORKDIR /web
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
@@ -10,14 +10,17 @@ COPY index.html vite.config.ts tsconfig.json ./
 COPY src ./src
 RUN npx vite build --outDir /web/dist
 
-FROM node:22-alpine
+FROM node:25-alpine
 
 # su-exec drops from root to PUID/PGID after fixing /data ownership (Unraid uses 99:100).
 # python3 + ffmpeg run yt-dlp, which the Hub uses to download into /music. yt-dlp is fetched fresh on
-# every image build (YouTube breaks old versions); it uses Node, already here, for YouTube's player code.
+# every image build (YouTube breaks old versions; hub.yml rebuilds weekly) and checked against the release's
+# SHA2-256SUMS. It uses Node, already here, for YouTube's player code.
 RUN apk add --no-cache su-exec python3 ffmpeg \
- && wget -qO /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
- && chmod 755 /usr/local/bin/yt-dlp \
+ && wget -qO /tmp/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+ && wget -qO /tmp/SHA2-256SUMS https://github.com/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS \
+ && (cd /tmp && grep ' yt-dlp$' SHA2-256SUMS | sha256sum -c -) \
+ && install -m 755 /tmp/yt-dlp /usr/local/bin/yt-dlp && rm /tmp/yt-dlp /tmp/SHA2-256SUMS \
  && printf -- '--js-runtimes node\n' > /etc/yt-dlp.conf \
  && yt-dlp --version
 WORKDIR /app
