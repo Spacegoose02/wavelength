@@ -80,40 +80,51 @@ genre names cover it).
 - Both must keep moving with no readable audio (paused, or a stream without CORS): the reader gives a calm
   made-up signal with `live: false`.
 
-## Add a critter or an outfit
+## Add a critter, an act or an outfit
 
-The critters (raccoons, shark, aliens, bears) live in `components/critters/`. See the
-[user guide's developer notes](USER-GUIDE.md#critters) for how the pieces fit.
+The critters live in `components/critters/`. A critter on screen is a **species** (raccoon, shark, alien,
+grey alien, black or brown bear) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
+Accordion), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
+for how the pieces fit.
 
-- **A critter:** copy the nearest one (`Shark.tsx` for an animal with its own face, `Country.tsx` for
-  another raccoon) to `components/critters/MyCritter.tsx`, then:
-  1. Wrap it in `CritterFrame` with a `kind` (it becomes the `critter-<kind>` class for its colours).
-  2. Draw it on the shared skeleton so the rig and every outfit fit: head centred on 200,178 (about 160
-     wide, 130 tall, top near y 112 where the hats sit), shoulders at 138,268 and 262,268, a tail (if any)
-     rooted at 268,292 with `data-part="tail"`, and `TORSO` for the top inside its `data-part="body"`
-     group, followed by `BodyOutfits`.
-  3. Use `Head`. A raccoon gets the raccoon face; anything else passes `face={<MyFace />}` with
-     `data-part="eyes"` centred on y 166, `data-part="smile"` and `data-part="yawn"` (an open mouth around
-     y 212 to 232, starting `transform="scale(1 0)"`). Pass its headwear as `own`, with
-     `className="own-hat"` (and `data-part="adjust"` to have it set straight when paused), or
-     `own-eyewear` for glasses.
-  4. Arms with `Arm` (classes `sleeve` and `hand`), which can hold a prop as children.
-  5. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Write
-     attributes straight onto `data-part` elements; don't set React state per frame. Keep it moving
-     with `a.live` false (made-up signal) and calm when `idle`.
-  6. Colours: CSS classes, in a block for it at the end of `styles.css` beside the shark, aliens and bears.
-     Body colours stay fixed; clothes, instruments and lights use `--accent` / `--viz-*`. Override
-     `.critter-<kind> .sleeve`, `.hand` and `.thumb` if its arms aren't in a sleeve.
-  7. A colour variant (like the black and brown bears) needs no new drawing: take the colour as a prop,
-     set it through a CSS variable on `.critter-<kind>`, and export one small wrapper per colour.
-  8. Add its id to `CritterKind` (`store/settings.ts`) and an entry to `CRITTERS` (`Critter.tsx`). That's
-     all the wiring: **Switch critter** and the Settings cards read the list.
-  9. Add a row to the critter table in the [user guide](USER-GUIDE.md#critters).
+Everything is drawn on one skeleton so faces, acts, the rig and the outfits all fit together: head centred on
+200,178 (about 160 wide, 130 tall, top near y 112 where the hats sit), eyes on y 166, mouth around y 212,
+shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
+
+- **A critter (species):** in `species.tsx`,
+  1. Write a `MyFace` component: everything from ears to mouth, with `data-part="eyes"` centred on y 166,
+     `data-part="smile"` and `data-part="yawn"` (an open mouth around y 212 to 232, starting
+     `transform="scale(1 0)"`; the rig opens it to sing and yawn). Features that stick out (fins,
+     antennae) go in the face too; hats are drawn over them.
+  2. Optionally a `MyTail` with `data-part="tail"`, rooted at 268,292 (the rig wags it).
+  3. Add an entry to `SPECIES` and its id to `Species` (`store/settings.ts`).
+  4. In `styles.css`, `.species-<id> { --skin: …; --skin-dark: …; }` (hands, thumbs and bare arms) and its
+     face colours beside the others. Face colours stay fixed on every skin.
+  5. A colour variant (like the black and brown bears) is another `SPECIES` entry with the same face and
+     different CSS variables on its `.species-<id>`.
+  6. Check it in every act (they all show it), and add a row to the critter table in the
+     [user guide](USER-GUIDE.md#critters).
+- **An act:** copy the nearest one (`Drums.tsx`, say) to `components/critters/MyAct.tsx`, then:
+  1. Take `ActProps` (`{ species, still }`) and wrap the scene in `CritterFrame` with `kind="myact"` (the
+     `critter-myact` class for its colours) and `species={species.id}`.
+  2. Draw behind to front: background, `{Tail && <Tail />}`, legs, the `data-part="body"` group (`TORSO`
+     clothes, then `BodyOutfits`), `<Head face={<Face />} own={…} />` with the act's headwear as `own`
+     (`className="own-hat"`, and `data-part="adjust"` to have it set straight when paused, or `own-eyewear`
+     for glasses), then the instrument and arms (`Arm`, classes `sleeve` and `hand`, can hold a prop).
+  3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Write
+     attributes straight onto `data-part` elements; don't set React state per frame. Keep it moving with
+     `a.live` false (made-up signal) and calm when `idle`. Mouths sing on their own; pass `talk: false`
+     only if the act covers the mouth.
+  4. Colours: `.critter-myact …` rules at the end of `styles.css`. Clothes, instruments and lights use
+     `--accent` / `--viz-*`; use `var(--skin)` for bare arms (`.critter-myact .sleeve`).
+  5. Add its id to `Act` (`store/settings.ts`) and an entry to `ACTS` (`Critter.tsx`). That's all the
+     wiring: **Switch act** and the Settings cards read the list. Add a row to the act table in the
+     [user guide](USER-GUIDE.md#critters).
 - **An outfit for a skin group:** a `<g className="outfit outfit-mygroup">` in `Head` and/or `BodyOutfits`
   (`parts.tsx`) and a `:root[data-skin-group='mygroup'] .critter .outfit-mygroup` line in the "skin-group
   outfits" rule. The group slug is the first word of the group name, lower-case (`skinGroup()` in
   `store/settings.ts`). If it replaces headwear or glasses, hide `.own-hat` / `.own-eyewear` for that group.
-  Check it on every critter: they share the skeleton, but faces differ.
+  Check it on every species: they share the skeleton, but faces differ.
 
 ## Add a native (Rust) command
 

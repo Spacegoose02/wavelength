@@ -1,28 +1,7 @@
 import { useRef } from 'react';
 import { Arm, BodyOutfits, CritterFrame, Head, TORSO } from './parts';
+import type { ActProps } from './species';
 import { useCritterRig } from './rig';
-
-/** The alien's face for `Head`: a bulb-shaped green head with big black eyes, on the shared skeleton. */
-function AlienFace() {
-  return (
-    <>
-      <path className="alien-skin" d="M200 104 C 268 104 290 150 282 182 C 274 222 238 246 200 246 C 162 246 126 222 118 182 C 110 150 132 104 200 104 Z" />
-      <path className="alien-dark" d="M150 124 q 6 -4 12 0 M238 124 q 6 -4 12 0 M196 116 q 4 -3 8 0" fill="none" strokeWidth="3" strokeLinecap="round" />
-      <circle className="alien-dark" cx="138" cy="200" r="4" /><circle className="alien-dark" cx="262" cy="200" r="4" />
-      <g data-part="eyes">
-        <path d="M130 150 Q 162 142 186 166 Q 180 188 160 186 Q 134 180 130 150 Z" fill="#111" />
-        <path d="M270 150 Q 238 142 214 166 Q 220 188 240 186 Q 266 180 270 150 Z" fill="#111" />
-        <circle cx="150" cy="158" r="4.5" fill="#fff" />
-        <circle cx="232" cy="162" r="4.5" fill="#fff" />
-        <circle cx="168" cy="176" r="1.8" fill="#fff" />
-        <circle cx="250" cy="176" r="1.8" fill="#fff" />
-      </g>
-      <circle cx="195" cy="198" r="2.2" fill="#2b4a1f" /><circle cx="205" cy="198" r="2.2" fill="#2b4a1f" />
-      <path data-part="smile" d="M184 214 Q 200 226 216 214" fill="none" stroke="#2b4a1f" strokeWidth="3" strokeLinecap="round" />
-      <ellipse data-part="yawn" cx="200" cy="220" rx="10" ry="10" fill="#3a1030" transform="scale(1 0)" />
-    </>
-  );
-}
 
 const STARS: [number, number, number][] = [
   [24, 140, 1.6], [130, 36, 1.4], [176, 18, 2], [214, 54, 1.2], [264, 22, 1.6], [290, 120, 1.3],
@@ -35,7 +14,8 @@ const STARS: [number, number, number][] = [
  * pitch antenna with the highs and wobbles on sharp hits, waves pour off the antenna, the antennae glow with
  * the bass and the stars twinkle. Paused, the hands drop and the antennae perk up now and then.
  */
-export function Alien({ still }: { still?: boolean }) {
+export function Theremin({ species, still }: ActProps) {
+  const { Face, Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ pulse: 0, vol: 0, pitch: 0 });
 
@@ -76,7 +56,7 @@ export function Alien({ still }: { still?: boolean }) {
   );
 
   return (
-    <CritterFrame ref={root} kind="alien" label="An alien playing a theremin on the moon">
+    <CritterFrame ref={root} kind="theremin" species={species.id} label={`A ${species.noun} playing a theremin on the moon`}>
       {/* space: stars, a ringed planet, the UFO, the moon's surface */}
       {STARS.map(([cx, cy, r]) => <circle key={`${cx},${cy}`} data-star="" cx={cx} cy={cy} r={r} fill="#fff" />)}
       <circle className="planet" cx="336" cy="74" r="22" />
@@ -92,6 +72,8 @@ export function Alien({ still }: { still?: boolean }) {
       <ellipse className="crater" cx="330" cy="384" rx="30" ry="7" />
       <ellipse className="crater" cx="250" cy="364" rx="12" ry="3.5" />
 
+      {Tail && <Tail />}
+
       {/* space-suit trousers and moon boots */}
       <path className="legs" d="M160 296 H188 V348 H160 Z M212 296 H240 V348 H212 Z" />
       <path className="moon-boot" d="M152 342 H192 V364 H146 Q 146 348 152 342 Z" />
@@ -106,14 +88,7 @@ export function Alien({ still }: { still?: boolean }) {
       </g>
 
       <Head
-        face={<AlienFace />}
-        own={
-          <g data-part="adjust" className="own-hat">
-            <path className="alien-dark" d="M178 110 Q 168 82 154 66 M222 110 Q 232 82 246 66" fill="none" strokeWidth="4" strokeLinecap="round" />
-            <circle data-glow="" className="antenna" cx="154" cy="64" r="8" filter="url(#critter-glow)" />
-            <circle data-glow="" className="antenna" cx="246" cy="64" r="8" filter="url(#critter-glow)" />
-          </g>
-        }
+        face={<Face />}
       />
 
       {/* the theremin: a cabinet on a stand, volume loop on the left, pitch antenna on the right */}

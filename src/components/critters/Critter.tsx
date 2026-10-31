@@ -1,54 +1,61 @@
 import type { ComponentType } from 'react';
-import type { CritterKind } from '../../store/settings';
-import { Alien } from './Alien';
-import { BlackBear, BrownBear } from './Bear';
+import type { Act, Species } from '../../store/settings';
+import { Accordion } from './Accordion';
 import { Country } from './Country';
 import { DJ } from './DJ';
-import { Grey } from './Grey';
+import { Drums } from './Drums';
 import { Rapper } from './Rapper';
 import { Rocker } from './Rocker';
-import { Shark } from './Shark';
+import { SPECIES, type ActProps, type SpeciesInfo } from './species';
+import { Synth } from './Synth';
+import { Theremin } from './Theremin';
 
-export interface CritterInfo {
-  id: CritterKind;
-  /** shown on the Settings card and in the hint when you switch */
+export { SPECIES, type SpeciesInfo };
+
+export interface ActInfo {
+  id: Act;
+  /** goes in front of the species ("Rocker shark") and on the Settings card */
   label: string;
   /** one line under the label on the Settings card */
   blurb: string;
-  /** the scene; `still` draws one paused frame (Settings cards) */
-  Scene: ComponentType<{ still?: boolean }>;
+  /** the scene: background, clothes, instrument and hands, with the species' face and tail */
+  Scene: ComponentType<ActProps>;
 }
 
 /**
- * Every critter the critter scene can show, in picker order ("Switch critter" steps through this list).
- * To add one: draw it in this folder (see CONTRIBUTING.md, "Add a critter"), add its id to `CritterKind`
- * in store/settings.ts and an entry here. Nothing else needs to change.
+ * What the critter does, in picker order ("Switch act" steps through this list). Any species can play any
+ * act (species.tsx). To add an act: a component in this folder (see CONTRIBUTING.md, "Add a critter, an
+ * act or an outfit"), its id in `Act` in store/settings.ts and an entry here.
  */
-export const CRITTERS: CritterInfo[] = [
-  { id: 'dj', label: 'DJ raccoon', blurb: 'Scratches records behind two decks', Scene: DJ },
-  { id: 'country', label: 'Country raccoon', blurb: 'Cowboy hat, acoustic guitar, taps his boot', Scene: Country },
-  { id: 'rapper', label: 'Rapper raccoon', blurb: 'Cap, shades and chain, raps into the mic', Scene: Rapper },
-  { id: 'rocker', label: 'Rocker raccoon', blurb: 'Mohawk, flying-V, headbangs in front of the amps', Scene: Rocker },
-  { id: 'shark', label: 'Drummer shark', blurb: 'Sailor tee, drum kit, bubbles on the bass, under the sea', Scene: Shark },
-  { id: 'alien', label: 'Theremin alien', blurb: 'Antennae, space suit, plays a theremin under a UFO', Scene: Alien },
-  { id: 'grey', label: 'Grey alien', blurb: 'Big head, huge black eyes, plays a synth in a crop circle', Scene: Grey },
-  { id: 'bear-black', label: 'Black bear', blurb: 'Beanie and sweater, squeezes an accordion by the campfire', Scene: BlackBear },
-  { id: 'bear-brown', label: 'Brown bear', blurb: 'The same bear in brown fur, accordion and campfire', Scene: BrownBear },
+export const ACTS: ActInfo[] = [
+  { id: 'dj', label: 'DJ', blurb: 'Scratches records behind two decks', Scene: DJ },
+  { id: 'country', label: 'Country', blurb: 'Cowboy hat, acoustic guitar, taps a boot on the porch', Scene: Country },
+  { id: 'rapper', label: 'Rapper', blurb: 'Cap, shades and chain, raps into the mic', Scene: Rapper },
+  { id: 'rocker', label: 'Rocker', blurb: 'Mohawk, flying-V, headbangs in front of the amps', Scene: Rocker },
+  { id: 'drums', label: 'Drummer', blurb: 'Sailor tee, drum kit and bubbles, under the sea', Scene: Drums },
+  { id: 'theremin', label: 'Theremin', blurb: 'Space suit, plays a theremin on the moon under a UFO', Scene: Theremin },
+  { id: 'synth', label: 'Synth', blurb: 'Plays a synth in a crop circle under a tractor beam', Scene: Synth },
+  { id: 'accordion', label: 'Accordion', blurb: 'Beanie and sweater, squeezes an accordion by the campfire', Scene: Accordion },
 ];
 
-const find = (kind: CritterKind) => CRITTERS.find((c) => c.id === kind) ?? CRITTERS[0];
+/** Unknown ids (e.g. synced from a newer app) fall back to the first entry. */
+export const findSpecies = (id: Species) => SPECIES.find((s) => s.id === id) ?? SPECIES[0];
+export const findAct = (id: Act) => ACTS.find((a) => a.id === id) ?? ACTS[0];
 
-export const critterLabel = (kind: CritterKind) => find(kind).label;
+/** "Rocker shark", "DJ raccoon", "Synth grey alien" */
+export const critterLabel = (species: Species, act: Act) => `${findAct(act).label} ${findSpecies(species).noun}`;
 
-/** The critter after `kind` in picker order, wrapping round. */
-export const nextCritter = (kind: CritterKind) => CRITTERS[(CRITTERS.indexOf(find(kind)) + 1) % CRITTERS.length];
+const after = <T,>(list: T[], item: T) => list[(list.indexOf(item) + 1) % list.length];
+export const nextSpecies = (id: Species) => after(SPECIES, findSpecies(id));
+export const nextAct = (id: Act) => after(ACTS, findAct(id));
 
 /**
- * Now Playing critter scene. Every critter shares one rig (`rig.ts`: bob to the beat, blink, yawn when
- * paused) and one head (`parts.tsx`: holiday hats and skin-group outfits over each critter's own face).
- * An unknown id (e.g. synced from a newer app) shows the first critter.
+ * Now Playing critter scene: `species` playing `act`. Every act shares one rig (`rig.ts`: bob to the beat,
+ * blink, sing along, yawn when paused) and one head (`parts.tsx`: holiday hats and skin-group outfits over
+ * the species' face). `still` draws one paused frame, for the Settings cards.
  */
-export function Critter({ kind, still }: { kind: CritterKind; still?: boolean }) {
-  const { Scene } = find(kind);
-  return <Scene still={still} />;
+export function Critter({ species, act, still }: { species: Species; act: Act; still?: boolean }) {
+  const { Scene } = findAct(act);
+  // keyed by species so the rig picks up the new face's parts when only the species changes
+  return <Scene key={species} species={findSpecies(species)} still={still} />;
 }

@@ -1,32 +1,7 @@
 import { useRef } from 'react';
 import { Arm, BodyOutfits, CritterFrame, Head, TORSO } from './parts';
+import type { ActProps } from './species';
 import { useCritterRig } from './rig';
-
-/** The bear's face for `Head`: round ears, a pale muzzle and a big nose. Fur colour comes from `--bear-fur`. */
-function BearFace() {
-  return (
-    <>
-      <circle className="bear-fur" cx="140" cy="122" r="24" />
-      <circle className="bear-fur" cx="260" cy="122" r="24" />
-      <circle className="bear-muzzle" cx="140" cy="122" r="12" />
-      <circle className="bear-muzzle" cx="260" cy="122" r="12" />
-      <ellipse className="bear-fur" cx="200" cy="178" rx="82" ry="68" />
-      <ellipse className="bear-fur-dark" cx="200" cy="226" rx="56" ry="18" />
-      <ellipse className="bear-muzzle" cx="200" cy="208" rx="36" ry="27" />
-      <g data-part="eyes">
-        <circle cx="168" cy="166" r="7" fill="#111" />
-        <circle cx="232" cy="166" r="7" fill="#111" />
-        <circle cx="170" cy="163" r="2" fill="#fff" />
-        <circle cx="234" cy="163" r="2" fill="#fff" />
-      </g>
-      <ellipse cx="200" cy="194" rx="13" ry="9" fill="#111" />
-      <ellipse cx="196" cy="191" rx="4" ry="2" fill="rgb(255 255 255 / 0.5)" />
-      <path d="M200 203 V212" stroke="#2b1d12" strokeWidth="2.5" strokeLinecap="round" />
-      <path data-part="smile" d="M186 212 Q 200 224 214 212" fill="none" stroke="#2b1d12" strokeWidth="3" strokeLinecap="round" />
-      <ellipse data-part="yawn" cx="200" cy="222" rx="12" ry="12" fill="#5a1a24" transform="scale(1 0)" />
-    </>
-  );
-}
 
 /** Pines: x, height, half-width at the base. */
 const PINES = [[34, 230, 46], [96, 170, 36], [286, 130, 28], [372, 210, 42]];
@@ -39,7 +14,8 @@ const FIREFLIES = [[40, 230], [96, 180], [300, 200], [360, 250], [70, 290], [340
  * with the bass and puff on the beat, the campfire flares with the bass, fireflies blink with the highs.
  * Paused, the bellows breathe slowly and he pulls his beanie straight now and then.
  */
-function Bear({ fur, still }: { fur: 'black' | 'brown'; still?: boolean }) {
+export function Accordion({ species, still }: ActProps) {
+  const { Face, Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ ph: 0 });
 
@@ -70,7 +46,7 @@ function Bear({ fur, still }: { fur: 'black' | 'brown'; still?: boolean }) {
   );
 
   return (
-    <CritterFrame ref={root} kind={`bear-${fur}`} label={`A ${fur} bear playing the accordion by a campfire`}>
+    <CritterFrame ref={root} kind="accordion" species={species.id} label={`A ${species.noun} playing the accordion by a campfire`}>
       {/* moon, pines, ground, campfire, fireflies */}
       <circle className="moon-disc" cx="330" cy="68" r="24" />
       {PINES.map(([x, h, w]) => (
@@ -84,6 +60,8 @@ function Bear({ fur, still }: { fur: 'black' | 'brown'; still?: boolean }) {
         <path className="flame-b" d="M332 352 C 322 344 324 330 330 320 C 332 330 338 330 338 322 C 346 334 342 348 332 352 Z" />
       </g>
       {FIREFLIES.map(([x, y]) => <circle key={`${x},${y}`} data-fly="" className="firefly" cx={x} cy={y} r="2.6" />)}
+
+      {Tail && <Tail />}
 
       {/* legs and big paws */}
       <path className="bear-fur" d="M158 296 H190 V350 H158 Z M210 296 H242 V350 H210 Z" />
@@ -99,7 +77,7 @@ function Bear({ fur, still }: { fur: 'black' | 'brown'; still?: boolean }) {
       </g>
 
       <Head
-        face={<BearFace />}
+        face={<Face />}
         own={
           <g data-part="adjust" className="own-hat">
             <path className="beanie" d="M134 132 Q 134 72 200 70 Q 266 72 266 132 Z" />
@@ -132,6 +110,3 @@ function Bear({ fur, still }: { fur: 'black' | 'brown'; still?: boolean }) {
     </CritterFrame>
   );
 }
-
-export const BlackBear = ({ still }: { still?: boolean }) => <Bear fur="black" still={still} />;
-export const BrownBear = ({ still }: { still?: boolean }) => <Bear fur="brown" still={still} />;

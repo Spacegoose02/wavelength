@@ -12,7 +12,7 @@ import { startLibrarySync, syncLibrary } from './librarySync';
  * timestamps) and sent when the Hub is reachable again. Server logins come from the Hub separately
  * (hubServices.ts), and playlists and play history from librarySync.ts.
  */
-const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'raccoon', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'versions', 'playback', 'smartPlaylists'] as const;
+const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'critter', 'act', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'versions', 'playback', 'smartPlaylists'] as const;
 type SyncedKey = (typeof SYNCED)[number];
 const prefKey = (k: SyncedKey) => `settings.${k}`;
 

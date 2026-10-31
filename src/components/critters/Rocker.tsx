@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, BodyOutfits, Head, CritterFrame, Tail, TORSO } from './parts';
+import { Arm, BodyOutfits, Head, CritterFrame, TORSO } from './parts';
+import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
@@ -8,7 +9,8 @@ import { useCritterRig } from './rig';
  * leather jacket, and a proper headbang on the beat. The amp lights follow the bass, mids and highs.
  * Paused, he pushes his hair back up now and then.
  */
-export function Rocker({ still }: { still?: boolean }) {
+export function Rocker({ species, still }: ActProps) {
+  const { Face, Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const hands = useRef(newGuitarHands());
 
@@ -26,7 +28,7 @@ export function Rocker({ still }: { still?: boolean }) {
   );
 
   return (
-    <CritterFrame ref={root} kind="rocker" label="A rocker raccoon playing electric guitar">
+    <CritterFrame ref={root} kind="rocker" species={species.id} label={`A rocker ${species.noun} playing electric guitar`}>
       {/* amp stacks and stage */}
       {[12, 308].map((x) => (
         <g key={x}>
@@ -45,7 +47,7 @@ export function Rocker({ still }: { still?: boolean }) {
         )),
       )}
 
-      <Tail />
+      {Tail && <Tail />}
 
       {/* ripped black jeans and boots */}
       <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
@@ -63,6 +65,7 @@ export function Rocker({ still }: { still?: boolean }) {
       </g>
 
       <Head
+        face={<Face />}
         own={
           <g data-part="adjust" className="own-hat">
             <path className="mohawk" d="M166 124 L 172 74 L 184 112 L 194 50 L 204 108 L 216 56 L 222 112 L 234 78 L 236 124 Z" />

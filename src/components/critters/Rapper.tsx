@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, Head, CritterFrame, Tail, TORSO } from './parts';
+import { Arm, BodyOutfits, Head, CritterFrame, TORSO } from './parts';
+import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
@@ -7,7 +8,8 @@ import { useCritterRig } from './rig';
  * other hand riding the beat. His mouth moves with the mids while playing and the speaker cones pump with
  * the bass. Paused, the mic and hand drop and he straightens his cap now and then.
  */
-export function Rapper({ still }: { still?: boolean }) {
+export function Rapper({ species, still }: ActProps) {
+  const { Face, Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ down: 1, pulse: 0 });
 
@@ -30,11 +32,11 @@ export function Rapper({ still }: { still?: boolean }) {
       if (a.beat) s.pulse = (s.pulse + 1) % strip.length;
       strip.forEach((el, i) => (el.style.opacity = a.playing ? ((i + s.pulse) % 3 === 0 ? '1' : '0.3') : '0.15'));
     },
-    { still, talk: true, nod: 12 },
+    { still, nod: 12 },
   );
 
   return (
-    <CritterFrame ref={root} kind="rapper" label="A rapper raccoon with a microphone">
+    <CritterFrame ref={root} kind="rapper" species={species.id} label={`A rapper ${species.noun} with a microphone`}>
       {/* speaker stacks and stage */}
       {[14, 316].map((x) => (
         <g key={x}>
@@ -53,7 +55,7 @@ export function Rapper({ still }: { still?: boolean }) {
         <rect key={i} data-strip="" className={`led led-${i % 3}`} x={26 + i * 30} y="378" width="18" height="6" rx="3" />
       ))}
 
-      <Tail />
+      {Tail && <Tail />}
 
       {/* baggy jeans and sneakers */}
       <path className="legs" d="M154 296 H190 L188 352 H156 Z M210 296 H246 L244 352 H212 Z" />
@@ -71,6 +73,7 @@ export function Rapper({ still }: { still?: boolean }) {
       </g>
 
       <Head
+        face={<Face />}
         own={
           <>
             <g data-part="adjust" className="own-hat">

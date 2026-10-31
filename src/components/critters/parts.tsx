@@ -10,10 +10,10 @@ import { forwardRef, type ReactNode } from 'react';
  * y 212, shoulders at 138,268 and 262,268, tail root at 268,292, torso `TORSO`.
  */
 
-/** The <svg> with the shared defs and the backlight. */
-export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; label: string; children: ReactNode }>(function CritterFrame({ kind, label, children }, ref) {
+/** The <svg> with the shared defs and the backlight. `kind` is the act (`critter-<act>` class), `species` who plays it. */
+export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: string; label: string; children: ReactNode }>(function CritterFrame({ kind, species, label, children }, ref) {
   return (
-    <svg ref={ref} className={`np-scene-canvas critter critter-${kind}`} viewBox="0 0 400 400" role="img" aria-label={label}>
+    <svg ref={ref} className={`np-scene-canvas critter critter-${kind} species-${species}`} viewBox="0 0 400 400" role="img" aria-label={label}>
       <defs>
         <radialGradient id="critter-spot">
           <stop offset="0" className="spot-stop" />

@@ -19,11 +19,23 @@ export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber'
 /** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
 export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' | 'raccoon';
 
-/**
- * Which critter the critter scene (`npScene: 'raccoon'`) shows: components/critters/Critter.tsx.
- * The scene id and the `raccoon` setting keep their old names so saved and Hub-synced settings carry over.
- */
-export type CritterKind = 'dj' | 'country' | 'rapper' | 'rocker' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown';
+/** Who plays in the critter scene (`npScene: 'raccoon'`, named before there were other critters): components/critters/species.tsx. */
+export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown';
+
+/** What the critter plays: components/critters/Critter.tsx (`ACTS`). Any species can play any act. */
+export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion';
+
+/** The single critter pick from 0.17.7–0.17.8 (`raccoon` setting), as a species and an act. */
+export function critterFromOldPick(old: unknown): { critter: Species; act: Act } {
+  switch (old) {
+    case 'country': case 'rapper': case 'rocker': return { critter: 'raccoon', act: old };
+    case 'shark': return { critter: 'shark', act: 'drums' };
+    case 'alien': return { critter: 'alien', act: 'theremin' };
+    case 'grey': return { critter: 'grey', act: 'synth' };
+    case 'bear-black': case 'bear-brown': return { critter: old, act: 'accordion' };
+    default: return { critter: 'raccoon', act: 'dj' };
+  }
+}
 
 /** Headings in Settings → Themes, in display order. */
 export const SKIN_GROUPS = ['Classic', 'Retro', 'Neon', 'Lasers', 'Nuclear', 'Editor palettes', 'Holidays', 'Accessibility'] as const;
@@ -116,9 +128,11 @@ interface SettingsState {
   discoverCharts: Partial<Record<Genre, ChartSource[]>>;
   npScene: NpScene;
   setNpScene(s: NpScene): void;
-  /** the critter the critter scene shows (named before there were other critters) */
-  raccoon: CritterKind;
-  setRaccoon(r: CritterKind): void;
+  /** the critter scene's pick: who plays (`critter`) and what (`act`) */
+  critter: Species;
+  setCritter(c: Species): void;
+  act: Act;
+  setAct(a: Act): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
   /** Settings → Playback: ReplayGain (player/replayGain.ts) and crossfade between songs (seconds, 0 = off). */
@@ -171,8 +185,10 @@ export const useSettings = create<SettingsState>()(
       discoverCharts: {},
       npScene: 'art',
       setNpScene: (npScene) => set({ npScene }),
-      raccoon: 'dj',
-      setRaccoon: (raccoon) => set({ raccoon }),
+      critter: 'raccoon',
+      setCritter: (critter) => set({ critter }),
+      act: 'dj',
+      setAct: (act) => set({ act }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       playback: { replayGain: 'off', replayGainPreamp: 0, crossfade: 0 },
@@ -269,10 +285,15 @@ export const useSettings = create<SettingsState>()(
         }),
       ),
       // v1: Wavelength rebrand — move the old default skin onto the new Neon default once
-      version: 1,
+      // v2: the one `raccoon` pick becomes a species (`critter`) and an `act`
+      version: 2,
       migrate: (saved, version) => {
-        const s = (saved ?? {}) as Partial<SettingsState>;
+        const s = (saved ?? {}) as Partial<SettingsState> & { raccoon?: unknown };
         if (version < 1 && (!s.skin || s.skin === 'plexamp')) s.skin = 'neon';
+        if (version < 2 && s.raccoon !== undefined) {
+          Object.assign(s, critterFromOldPick(s.raccoon));
+          delete s.raccoon;
+        }
         return s as SettingsState;
       },
       // fill in defaults for settings added after someone's first run

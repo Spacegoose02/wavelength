@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Any critter, any act.** Pick who plays and what they play separately: the raccoon, shark, alien, grey
+  alien and black or brown bear can each be a **DJ**, **Country** picker, **Rapper**, **Rocker**,
+  **Drummer**, **Theremin** player, **Synth** player or **Accordion** player (48 combinations). Now Playing has
+  **Switch critter** and a new **Switch act** button, and **Settings → Playback** has a Critters row and an Act
+  row. Your current pick carries over. See the [user guide](docs/USER-GUIDE.md#critters).
+- **Critters sing along.** Every critter's mouth now opens and closes with the vocals, not just the rapper's,
+  and follows the singing more closely than before.
 
 ## 0.17.8
 - **A grey alien and a bear join the critters** in Now Playing. The **grey alien** is the classic big-headed

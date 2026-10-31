@@ -1,13 +1,15 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, BodyOutfits, Head, CritterFrame, Tail, TORSO } from './parts';
+import { Arm, BodyOutfits, Head, CritterFrame, TORSO } from './parts';
+import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
  * Country raccoon on a porch in front of a fence: cowboy hat, plaid shirt and bandana in the skin's colours,
  * an acoustic guitar, and a boot that taps the beat. Paused, he tips his hat now and then.
  */
-export function Country({ still }: { still?: boolean }) {
+export function Country({ species, still }: ActProps) {
+  const { Face, Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const hands = useRef(newGuitarHands());
 
@@ -21,7 +23,7 @@ export function Country({ still }: { still?: boolean }) {
   );
 
   return (
-    <CritterFrame ref={root} kind="country" label="A country raccoon playing guitar">
+    <CritterFrame ref={root} kind="country" species={species.id} label={`A country ${species.noun} playing guitar`}>
       <defs>
         <pattern id="raccoon-plaid" width="18" height="18" patternUnits="userSpaceOnUse">
           <rect x="0" y="0" width="18" height="6" fill="rgb(0 0 0 / 0.22)" />
@@ -41,7 +43,7 @@ export function Country({ still }: { still?: boolean }) {
         <path key={y} d={`M0 ${y} H400`} className="porch-line" strokeWidth="2" />
       ))}
 
-      <Tail />
+      {Tail && <Tail />}
 
       {/* legs and boots */}
       <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
@@ -58,6 +60,7 @@ export function Country({ still }: { still?: boolean }) {
       </g>
 
       <Head
+        face={<Face />}
         own={
           <g data-part="adjust" className="own-hat">
             <path className="cowboy" d="M150 118 Q 148 78 172 72 Q 186 70 200 82 Q 214 70 228 72 Q 252 78 250 118 Z" />

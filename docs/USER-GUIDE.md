@@ -274,27 +274,41 @@ spectrum under the title does the same.
 ### Critters
 
 <a id="raccoons"></a>
-The last visualizer is a critter who plays along with the music. There are nine to choose from: four
-raccoons, a shark, two aliens and a bear in black or brown fur.
+The last visualizer is a critter who plays along with the music. You pick **who** plays and **what** they
+play, and any critter can play any act: 6 critters × 8 acts. A rocker shark, a DJ bear and a country grey
+alien are all possible.
 
-<img src="screenshots/critters.png" alt="The nine critters in the Neon synth skin: DJ, country, rapper and rocker raccoons, the drummer shark, the theremin alien, the grey alien and the black and brown bears" width="100%">
+<img src="screenshots/critters.png" alt="Every critter in every act in the Neon synth skin: rows are the raccoon, shark, alien, grey alien, black bear and brown bear; columns are DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth and Accordion" width="100%">
 
-| Critter | Look | While the music plays |
+| Critter | Look |
+|---|---|
+| **Raccoon** | Grey fur, a black mask and a striped tail |
+| **Shark** | Blue-grey with a dorsal fin, gills, a white jaw, a toothy grin and a tail fin |
+| **Alien** | Green, with big black eyes and glowing antennae that pulse with the bass |
+| **Grey alien** | The classic grey: a big bulb head with a pointed chin and huge black eyes |
+| **Black bear** / **Brown bear** | Round ears and a pale muzzle, in black or brown fur |
+
+| Act | Scene and outfit | While the music plays |
 |---|---|---|
-| **DJ raccoon** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
-| **Country raccoon** | Cowboy hat, plaid shirt, bandana, acoustic guitar, on a porch | Strums on the beat, changes chords, taps his boot |
-| **Rapper raccoon** | Snapback, shades, gold chain, mic, between two speaker stacks | Raps (his mouth follows the vocals and mids), throws his hand up on the beat, the speaker cones pump with the bass |
-| **Rocker raccoon** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
-| **Drummer shark** | Striped sailor tee and a toothy grin, behind a drum kit on the sea floor | Hits the snare on the beat, crashes the cymbal on sharp hits, the kick drum thumps, the tail wags, bubbles rise faster with the bass and the seaweed sways |
-| **Theremin alien** | Antennae and a space suit, on the moon under a hovering UFO | One hand rises over the volume loop with the bass, the other moves toward the pitch antenna with the highs, glowing sound waves pour off the antenna, the UFO lights chase on the beat and the stars twinkle |
-| **Grey alien** | The classic grey: a big bulb head, huge black eyes and a slim grey body, in a wheat field with a crop circle under its saucer's tractor beam | Plays a synth: the keys light up with the music, one hand hops on the beat, the other glides along the keys with the highs, the beam brightens with the bass |
-| **Black bear** / **Brown bear** | A beanie with a pom-pom and a chunky sweater, by a campfire in the pines (the same bear, in black or brown fur) | Squeezes an accordion: the bellows pump faster with the bass and puff out on the beat, the campfire flares with the bass, fireflies blink with the highs |
+| **DJ** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
+| **Country** | Cowboy hat, plaid shirt, bandana, acoustic guitar, on a porch | Strums on the beat, changes chords, taps a boot |
+| **Rapper** | Snapback, shades, gold chain, mic, between two speaker stacks | Throws a hand up on the beat, the speaker cones pump with the bass |
+| **Rocker** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
+| **Drummer** | Striped sailor tee, behind a drum kit on the sea floor | Hits the snare on the beat, crashes the cymbal on sharp hits, the kick drum thumps, bubbles rise faster with the bass and the seaweed sways |
+| **Theremin** | Space suit and moon boots, on the moon under a hovering UFO | One hand rises over the volume loop with the bass, the other moves toward the pitch antenna with the highs, glowing sound waves pour off the antenna, the UFO lights chase on the beat |
+| **Synth** | Turtleneck, a synth on an X stand in a crop circle, under a saucer's tractor beam | The keys light up with the music, one hand hops on the beat, the other glides along the keys with the highs, the beam brightens with the bass |
+| **Accordion** | A beanie with a pom-pom and a sweater, by a campfire in the pines | The bellows pump faster with the bass and puff out on the beat, the campfire flares with the bass, fireflies blink with the highs |
 
-**Switching critters.** On the critter visualizer, tap **Switch critter** in its top-right corner to go to
-the next one. Or go to **Settings → Playback → Now Playing visualizer** and pick one under **Critters**; that
-also switches Now Playing to the critter. Tapping the critter itself still moves on to the next visualizer, as
-on the others. If you're signed in to a [Wavelength Hub](HUB.md), your pick follows you to your other devices
-(an older app that doesn't know a newer critter yet shows the DJ raccoon instead).
+**They sing along.** Every critter's mouth opens and closes with the vocals: it follows the singing (or
+rapping) part of the sound, so it moves on syllables and closes between lines.
+
+**Switching.** On the critter visualizer, tap **Switch critter** in its top-right corner for the next critter
+(keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
+Playback → Now Playing visualizer**: the **Critters** cards show each critter in your current act, and the
+**Act** cards show your current critter in each act. Picking either also switches Now Playing to the
+critter. Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
+signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
+0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
 **They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
@@ -309,9 +323,9 @@ Some groups of skins give them a whole outfit:
 | **Editor palettes** | Thick-rimmed coder glasses |
 | **Holidays** | A hat in place of their own: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an Uncle Sam hat for July 4th and heart boppers for Valentine's Day |
 
-Outfits swap out what they'd clash with: the hazmat hood replaces hats, caps, the mohawk and the alien's
-antennae (the DJ keeps his headphones on over it), holiday hats replace the alien's antennae too, and visors
-and glasses replace the rapper's shades. The outfit follows the skin on screen, so it changes with Seasonal
+Outfits swap out what they'd clash with: the hazmat hood and holiday hats replace the act's hat, cap,
+mohawk or beanie (the DJ keeps the headphones on over the hood), and visors and glasses replace the rapper's
+shades. The alien's antennae and the shark's fin poke out from under any hat. The outfit follows the skin on screen, so it changes with Seasonal
 and Random daily too.
 
 <img src="screenshots/raccoon-outfits.png" alt="All four raccoons in six skins: Cherenkov (hazmat suits), Laser show (visors), Outrun (glow sticks), Game Boy Color (8-bit shades), Dracula (coder glasses) and Christmas (Santa hats)" width="100%">
@@ -328,36 +342,38 @@ The original critter, behind two decks:
 
 All the critters behave the same way around the music:
 
-- **Playing:** the head bobs on each beat (the rocker headbangs harder), and the hands and instrument
-  follow the music as in the table above.
-- **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ his
-  headphones, the country raccoon tips his hat, the rapper fixes his cap, the rocker pushes his mohawk up,
-  the alien perks up its antennae, the bear pulls his beanie straight). The rapper lowers his mic, the shark rests its sticks, the alien
-  drops its hands from the theremin, the grey rests its hands on the keys and the bear's bellows breathe slowly.
+- **Playing:** the head bobs on each beat (the rocker headbangs harder), the mouth sings along with the
+  vocals, and the hands and instrument follow the music as in the act table above.
+- **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ the
+  headphones, the country act tips the hat, the rapper fixes the cap, the rocker pushes the mohawk up, the
+  accordion player pulls the beanie straight). The rapper lowers the mic, the drummer rests the sticks, the
+  theremin hands drop, the synth hands rest on the keys and the bellows breathe slowly.
 - **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.
 
 > **Developer notes.** `src/components/critters/`. Unlike the other scenes the critters are inline SVG, not
-> canvas drawings, so the drawings stay editable. To add one, see
-> [CONTRIBUTING.md](CONTRIBUTING.md#add-a-critter-or-an-outfit).
+> canvas drawings, so the drawings stay editable. To add a critter or an act, see
+> [CONTRIBUTING.md](CONTRIBUTING.md#add-a-critter-an-act-or-an-outfit).
 >
-> - `Critter.tsx` has the `CRITTERS` list (id, label, blurb, component), in picker order. **Switch critter**,
->   the Settings cards and the scene all read it, so a new critter is one entry there plus its id in
->   `CritterKind` (`store/settings.ts`). The pick is stored in the `raccoon` setting and the scene id is
->   still `raccoon`, the names from before there were other critters, so saved and Hub-synced settings
->   carry over.
-> - `rig.ts` (`useCritterRig`) is the shared animation: head bob, sway, blink, yawn, the `adjust` part
->   (headwear), tail, backlight and `[data-glow]` pulses. Every frame writes `transform`/`opacity` straight
->   onto named parts (`data-part="head"`, `arm-r`, …), with no React re-render. Each critter passes a
->   `frame` callback for its own hands and instrument; `guitar.ts` is the strum/fret/string-buzz shared by
->   the country and rocker raccoons.
-> - `parts.tsx` has what they share: the frame and defs, the raccoon tail, the head (with the holiday hats
->   and the skin-group outfits), the body outfits and `Arm` (which can hold a drumstick). `Head` draws the
->   raccoon's face unless given a `face`: `Shark.tsx`, `Alien.tsx`, `Grey.tsx` and `Bear.tsx` pass their own, drawn on the same
->   skeleton (head centred on 200,178, eyes on y 166, mouth on y 212, shoulders at 138,268 and 262,268) so
->   the rig and every outfit fit them. `DJ.tsx`, `Country.tsx`, `Rapper.tsx`, `Rocker.tsx`, `Shark.tsx`,
->   `Alien.tsx`, `Grey.tsx` and `Bear.tsx` draw the rest. `Bear.tsx` is one drawing used for two picks:
->   `BlackBear` and `BrownBear` only set the fur colour (CSS `--bear-fur` on `.critter-bear-black` /
->   `.critter-bear-brown`), which is the cheap way to add a colour variant of any critter.
+> - A critter is a **species** (who) playing an **act** (what). `species.tsx` has `SPECIES`: each is a
+>   `Face` (and maybe a `Tail`), plus skin colours in CSS (`--skin`, `--skin-dark` on `.species-<id>`) for
+>   hands and bare arms. `Critter.tsx` has `ACTS`: each act component (`DJ.tsx`, `Country.tsx`,
+>   `Rapper.tsx`, `Rocker.tsx`, `Drums.tsx`, `Theremin.tsx`, `Synth.tsx`, `Accordion.tsx`) draws the
+>   scene, clothes, headwear, instrument and hands, and puts `species.Face` in `Head` and `species.Tail`
+>   behind the body. So every species can play every act with no per-pair drawing.
+> - The picks are `critter` (`Species`) and `act` (`Act`) in the settings store, both synced to the Hub.
+>   Before 0.17.9 there was one `raccoon` pick; the store's v2 migration turns it into the pair
+>   (`critterFromOldPick`). The scene id is still `raccoon`.
+> - `rig.ts` (`useCritterRig`) is the shared animation: head bob, sway, blink, singing, yawn, the `adjust`
+>   part (headwear), tail, backlight and `[data-glow]` pulses. Every frame writes `transform`/`opacity`
+>   straight onto named parts (`data-part="head"`, `arm-r`, …), with no React re-render. The mouth (`yawn`)
+>   follows `AudioSample.voice` from `player/analysis.ts`: how far the vocal band (about 250 Hz to 3 kHz)
+>   is above its recent average. Each act passes a `frame` callback for its own hands and instrument;
+>   `guitar.ts` is the strum/fret/string-buzz shared by the country and rocker acts.
+> - `parts.tsx` has what they share: the frame and defs, the raccoon face and tail, the head (with the
+>   holiday hats and the skin-group outfits), the body outfits and `Arm` (which can hold a drumstick).
+>   Every face is drawn on the same skeleton (head centred on 200,178, eyes on y 166, mouth on y 212,
+>   shoulders at 138,268 and 262,268, tail root at 268,292), so every act, the rig and every outfit fit
+>   every species.
 > - Colours are CSS at the end of `styles.css` (`.critter .top { fill: var(--accent) }`, …). Hats and
 >   outfits are all in the SVG and hidden. Hats show per skin (`:root[data-skin='halloween'] .critter .hat-witch`);
 >   outfits per skin group, from `data-skin-group` on `<html>`, which `App.tsx` sets from `skinGroup()`
