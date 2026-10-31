@@ -1,6 +1,23 @@
 # Changelog
 
 ## Unreleased
+- **AI DJ.** A chat in the app that knows your library: ask for a playlist, a mood or "more like this" and it
+  searches, plays, queues and saves playlists for you; ask which albums you're missing and it compares the
+  artist's discography with your library and requests the ones you pick. It runs on the Hub with your AI
+  provider's API key (Anthropic Claude: Opus 5.5 by default, Sonnet 5.5 or Haiku 5.5), which never leaves the
+  Hub. **Settings → AI DJ** (admins) holds the key, model, effort and prices, counts every person's tokens and
+  estimated spend, and sets monthly limits per person and for the household. Off until an admin turns it on for
+  the Hub and for each account; kids stay off unless turned on, and then get family-friendly picks only. See
+  [AI-DJ.md](docs/AI-DJ.md) for the setup guide.
+- **Browse an artist's releases from your library.** Artist pages have a **Browse releases** button with the
+  artist's whole Deezer discography (the same page as Downloads → Deezer, with E / C badges and Clean only).
+  Releases you already have say **✓ In library**, and **Not in library** hides them, so it's easy to see what's
+  left to get. Downloads → Deezer artist pages mark them the same way.
+- **Newest release banner.** Under the artist's name: **New release** (the last 6 weeks) or **Latest release**,
+  with a preview, **Get** or **Request** when you don't have it, and **Coming soon** when Deezer lists an
+  announced release. Kid profiles see the newest release they may have, and the explicit releases, songs and
+  related artists on Deezer artist pages are now hidden for them as everywhere else.
+  See the [user guide](docs/USER-GUIDE.md#browse-an-artists-releases).
 - **Playlist covers.** Give any playlist your own picture: press **Change cover** on a Wavelength, Navidrome,
   Plex or household playlist, then pick one of the album covers in it, upload a picture or paste an image link.
   Wavelength crops it square. Signed in to a Hub, the cover is kept there and shows on all your devices

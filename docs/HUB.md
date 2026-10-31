@@ -505,7 +505,14 @@ The Hub checks the permission on **every** request (`need(req, …)` in `hub/src
 the list from `GET /api/me` only to decide what to show. A role change applies on the user's next request,
 no re-login. The Hub refuses to demote, disable or delete the last admin.
 
+## AI DJ
+
+The Hub runs the AI DJ chat and keeps its API key, model choice, prices, per-account switch and spending limits.
+Setup guide, costs, how it works and its API: [AI-DJ.md](AI-DJ.md).
+
 ## API
+
+The AI DJ's routes (`/api/dj…`, `/api/admin/dj…`) are listed in [AI-DJ.md](AI-DJ.md#api).
 
 JSON in and out. Authenticated calls send `Authorization: Bearer wlh_…`. Errors are `{ "error": "…" }`
 with a 4xx status.

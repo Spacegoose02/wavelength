@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 import type { Album, Artist, Podcast, ServerPlaylist } from '../sources/types';
 import type { Skin } from './settings';
+import type { Browse } from '../views/DeezerBrowse';
 
 export type Route =
   | { view: 'home' }
   | { view: 'albums' }
   | { view: 'artists' }
   | { view: 'artist'; artist: Artist }
+  /** Browse releases: the artist's Deezer discography (views/ArtistReleases.tsx), optionally with one release open. */
+  | { view: 'artistReleases'; artist: Artist; open?: Browse }
   /** `track`: the song to scroll to and flash (Now Playing's song title link). */
   | { view: 'album'; album: Album; track?: { id: string; sourceId: string; title?: string } }
   | { view: 'search'; q?: string }
@@ -33,10 +36,11 @@ export type Route =
   | { view: 'offlineCollection'; id: string }
   | { view: 'downloads'; soulseek?: { q: string; requestId?: number } }
   | { view: 'inbox'; tab?: 'clean' }
+  | { view: 'dj' }
   | { view: 'settings'; tab?: SettingsTab };
 
 /** The tabs of the Settings page (views/Settings.tsx). */
-export type SettingsTab = 'account' | 'users' | 'server' | 'sources' | 'playback' | 'downloads' | 'themes' | 'discover' | 'updates';
+export type SettingsTab = 'account' | 'users' | 'server' | 'dj' | 'sources' | 'playback' | 'downloads' | 'themes' | 'discover' | 'updates';
 
 interface UiState {
   route: Route;

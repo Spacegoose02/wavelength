@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { deemixClient, useHubRuns } from '../lib/hubServices';
+import { useHubRuns } from '../lib/hubServices';
 import { requestMusic, requestStatus, useMustRequest } from '../lib/inbox';
 import type { HubRequest } from '../sources/hub';
 import { hubClient } from '../store/hub';
@@ -13,13 +13,11 @@ import { useUi } from '../store/ui';
 import { useCan } from '../store/hub';
 import { Spinner, fmtTime } from '../components/common';
 import { DeemixQueuePanel } from '../components/DeemixQueue';
-import { refreshDeemix } from '../lib/deemixQueue';
 import { IconDownload, IconRefresh } from '../components/Icons';
 import { isAndroid } from '../lib/platform';
 import { SoulseekTab } from './SoulseekTab';
-import { BrowseBar, CleanChips, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, type Browse, type SendStatus } from './DeezerBrowse';
+import { BrowseBar, CleanChips, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, useDeezerBrowse } from './DeezerBrowse';
 import { cleanOnly, withVersions } from '../lib/deezerVersions';
-import { useVersionPref } from '../lib/versions';
 
 type Tab = 'deezer' | 'ytdlp' | 'slskd';
 
@@ -73,13 +71,9 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
   const [results, setResults] = useState<DeezerResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [status, setStatus] = useState<Record<string, SendStatus>>({});
-  // Clean only starts on for people who prefer clean versions (Settings → Playback; kid profiles always do)
-  const pref = useVersionPref();
-  const [clean, setClean] = useState(pref === 'clean');
   // artist/album pages opened from the results; a new search starts back at the results
-  const [stack, setStack] = useState<Browse[]>([]);
-  const open = (b: Browse) => setStack((st) => [...st, b]);
+  const { stack, setStack, browse } = useDeezerBrowse({ request });
+  const { clean, setClean } = browse;
   useEffect(() => setStack([]), [q]);
 
   useEffect(() => {
@@ -109,26 +103,7 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
     };
   }, [q]);
 
-
-  const send = async (r: DeezerResult) => {
-    const key = statusKey(r);
-    setStatus((s) => ({ ...s, [key]: { s: 'sending' } }));
-    try {
-      if (request) {
-        await requestMusic({ link: r.link, kind: r.type, title: r.title, artist: r.artist, cover: r.cover });
-        setStatus((s) => ({ ...s, [key]: { s: 'queued' } }));
-        return;
-      }
-      await deemixClient().addToQueue(r.link, deemix.bitrate);
-      setStatus((s) => ({ ...s, [key]: { s: 'queued' } }));
-      void refreshDeemix();
-    } catch (e) {
-      setStatus((s) => ({ ...s, [key]: { s: 'error', msg: String((e as Error).message ?? e) } }));
-    }
-  };
-
   const current = stack[stack.length - 1];
-  const browse = { open, send, status, clean, setClean };
   const shown = clean ? cleanOnly(results) : results;
 
   if (!deemix.url && !request) return <p className="muted">Set your deemix server URL in Settings — or use the yt-dlp tab.</p>;
