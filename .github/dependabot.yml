@@ -5,6 +5,10 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule: { interval: weekly }
+    # @types/node follows the Node version we run (22), not the newest Node
+    ignore:
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
     groups:
       app:
         patterns: ['*']
@@ -12,6 +16,10 @@ updates:
   - package-ecosystem: npm
     directory: /hub
     schedule: { interval: weekly }
+    # @types/node follows the Node version we run (22), not the newest Node
+    ignore:
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
     groups:
       hub:
         patterns: ['*']
