@@ -1,4 +1,4 @@
-import { useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { useSettings } from '../store/settings';
 import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
 import { explicitOfAlbum, explicitOfTrack, trackVersion, useHidden, useRatings } from '../lib/kids';
@@ -12,6 +12,7 @@ import { AddToPlaylist } from './AddToPlaylist';
 import { FavButton, QueueOnSubwave } from './TrackButtons';
 import { ShareButton } from './ShareButton';
 import { shareOfTracks } from '../lib/inbox';
+import { focusIndex } from '../lib/trackLinks';
 
 export function fmtTime(s?: number) {
   if (!s || !Number.isFinite(s)) return '0:00';
@@ -125,10 +126,15 @@ interface TrackListProps {
   sub?: (t: Track) => ReactNode;
   onRemove?: (i: number) => void;
   onMove?: (i: number, to: number) => void;
+  /** A song to scroll to and flash once (Now Playing's song title link); matched by id, else by title. */
+  focus?: { id: string; sourceId: string; title?: string };
 }
 
-export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, onMove }: TrackListProps) {
+export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, onMove, focus }: TrackListProps) {
   const phone = useIsPhone();
+  const focusIdx = focusIndex(tracks, focus);
+  const focusRef = useRef<HTMLDivElement>(null);
+  useEffect(() => focusRef.current?.scrollIntoView({ block: 'center' }), [focusIdx]);
   const [openRow, setOpenRow] = useState<number | null>(null);
   const playTracks = usePlayer((s) => s.playTracks);
   const playNext = usePlayer((s) => s.playNext);
@@ -140,7 +146,8 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
   return (
     <div className="tracklist">
       {tracks.map((t, i) => hidden.track(t) ? null : (
-        <div key={`${i}:${t.sourceId}:${t.id}`} className={`track-row ${current?.id === t.id && current.sourceId === t.sourceId ? 'active' : ''} ${openRow === i ? 'open' : ''}`}
+        <div key={`${i}:${t.sourceId}:${t.id}`} ref={i === focusIdx ? focusRef : undefined}
+          className={`track-row ${current?.id === t.id && current.sourceId === t.sourceId ? 'active' : ''} ${openRow === i ? 'open' : ''} ${i === focusIdx ? 'focus' : ''}`}
           onDoubleClick={() => playTracks(tracks, i)}
           // phones: tap the row to play; the ⋯ button reveals the actions
           onClick={phone ? (e) => !(e.target as HTMLElement).closest('button, .menu') && playTracks(tracks, i) : undefined}>

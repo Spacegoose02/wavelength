@@ -385,10 +385,18 @@ input[type='range']:hover::-webkit-slider-thumb { opacity: 1; }
 .np .tbtn.play { background: #fff; color: #000; }
 .np .tbtn.on { color: var(--accent); }
 .np-next { margin-top: 18px; display: flex; flex-direction: column; gap: 2px; }
-.np-next-row { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; padding: 5px 8px; border-radius: 8px; text-align: left; }
+.np-next-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 5px 8px; border-radius: 8px; }
 .np-next-row:hover { background: rgb(255 255 255 / 0.08); }
+.np-next-play { display: grid; grid-template-columns: 40px 1fr; align-items: center; gap: 12px; min-width: 0; text-align: left; color: inherit; }
 .np-next-row span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .np-next-row small { opacity: 0.6; }
+/* Now Playing: album, song and artist open their pages */
+.np-link { color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; padding: 0; background: none; border: 0; cursor: pointer; }
+.np-link:hover, .np-link:focus-visible { text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 0.06em; }
+.np-next-row .np-link:hover small { opacity: 0.9; }
+/* the song Now Playing's title link opened the album at */
+.track-row.focus { animation: track-focus 2.4s ease-out; }
+@keyframes track-focus { 0%, 40% { background: color-mix(in srgb, var(--accent) 22%, transparent); } }
 .lyrics { position: relative; margin-top: 14px; max-height: 38vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 4px 2px 12px; scrollbar-width: thin; mask-image: linear-gradient(transparent, #000 10%, #000 85%, transparent); }
 .lyrics.empty { opacity: 0.6; font-style: italic; mask-image: none; }
 .lyric { display: block; text-align: left; font-size: 17px; line-height: 1.45; font-weight: 600; padding: 3px 6px; border-radius: 6px; margin: 0; color: inherit; }

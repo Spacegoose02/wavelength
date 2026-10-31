@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Go to the song, artist or album from Now Playing.** The album name, song title and artist on Now Playing open
+  the album, the album scrolled to the song (which flashes), and the artist's page. In **Up next**, a song's artist
+  opens their page. Now Playing closes, and Back returns to the page you were on before it.
 
 ## 0.17.3
 - **Select several albums or artists, like Plex.** **Albums**, **Artists** and an artist's page have **Select**;

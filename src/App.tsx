@@ -79,7 +79,7 @@ function View({ route }: { route: Route }) {
     case 'albums': return <Albums />;
     case 'artists': return <Artists />;
     case 'artist': return <ArtistView key={route.artist.id} artist={route.artist} />;
-    case 'album': return <AlbumView key={route.album.id} album={route.album} />;
+    case 'album': return <AlbumView key={route.album.id} album={route.album} focus={route.track} />;
     case 'search': return <Search initial={route.q} />;
     case 'radio': return <Radio />;
     case 'books': return <Books />;

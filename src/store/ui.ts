@@ -7,7 +7,8 @@ export type Route =
   | { view: 'albums' }
   | { view: 'artists' }
   | { view: 'artist'; artist: Artist }
-  | { view: 'album'; album: Album }
+  /** `track`: the song to scroll to and flash (Now Playing's song title link). */
+  | { view: 'album'; album: Album; track?: { id: string; sourceId: string; title?: string } }
   | { view: 'search'; q?: string }
   | { view: 'radio' }
   | { view: 'books' }
@@ -59,8 +60,10 @@ export const useUi = create<UiState>()((set) => ({
   previewSkin: undefined,
   setPreviewSkin: (previewSkin) => set({ previewSkin }),
   go: (route) => {
-    // a history entry per page so the Android back button / mouse back walk back through pages
-    window.history.pushState(null, '');
+    // a history entry per page so the Android back button / mouse back walk back through pages. Leaving Now
+    // Playing for a page (its album / artist links) reuses the entry opening it pushed, so Back goes to the
+    // page under Now Playing in one step
+    if (!useUi.getState().nowPlayingOpen) window.history.pushState(null, '');
     set((s) => ({ route, history: [...s.history.slice(-30), s.route], nowPlayingOpen: false }));
   },
   back: () => set((s) => (s.history.length ? { route: s.history[s.history.length - 1], history: s.history.slice(0, -1) } : s)),
