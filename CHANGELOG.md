@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- **Release Radar: Coming soon.** Releases the artists you follow have announced but not put out yet show under
+  **Coming soon**, and you get a notification when one is announced.
+- **Get new releases automatically.** Turn on **Auto** for an artist in **Manage** and the Hub fetches each new
+  release as it comes out: straight to deemix if you can download, otherwise as a request for approval.
+- **Weekly Mix:** about 30 songs every Friday from new releases by the artists you follow and artists you might
+  like, with previews, Get / Request, and full songs for the ones already in your library.
+- **Song radio:** on Now Playing, and **Artist radio** on a library artist's page, fills the queue with songs
+  from your library like the one playing (Deezer's related artists and top songs).
+- **Scrobbling** (with a Hub): connect ListenBrainz or Last.fm in Settings → Account and the Hub sends your
+  plays from every device. Last.fm needs `WAVELENGTH_LASTFM_KEY` / `_SECRET` on the Hub.
+- **Hub:** `PATCH /api/radar/follows/:id`, `GET /api/radar/mix`, `upcoming` in `GET /api/radar`,
+  `GET`/`POST`/`DELETE /api/me/scrobble[/:service]`. Migration 17.
 
 ## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your

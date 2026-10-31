@@ -146,8 +146,17 @@ singles from the artists you follow. Press **Follow** on an artist's page (in yo
 **Downloads → Deezer**), or **Manage → Follow an artist by name**. You get a notification when one of them puts
 something out. **Artists you might like** below suggests more: ones like the artists you follow and play, and
 ones you play a lot but don't follow yet. **×** hides a suggestion for good. **Artists you play** is the radar
-the app works out from your listening, and is the only one without a Hub. More in
+the app works out from your listening, and is the only one without a Hub. **Coming soon** lists releases
+they've announced, **Auto** (in Manage) has the Hub fetch an artist's new releases for you as they come out,
+and **Weekly Mix** is a new playlist every Friday from new releases and artists you might like. More in
 [RELEASE-RADAR.md](RELEASE-RADAR.md).
+
+### Song radio
+
+**Song radio** on Now Playing (and **Artist radio** on a library artist's page) fills your queue with songs
+from your own library that sound like the one playing: the artist's best-known songs and those of artists
+Deezer lists as related, mixed so the same artist doesn't play twice in a row. The song playing keeps playing;
+what comes after it is replaced. It never downloads anything, so the more music you have, the better it gets.
 
 ### Charts with a Hub
 
@@ -448,6 +457,15 @@ joins hears the same song at the same moment on their own device, wherever they 
 see it under the same button with **Join**. As the host you play music as usual. Guests' **+ Queue** and
 **Next** on any song add it to the party (you can turn that off), and you can let guests skip and pause too.
 **Leave** or **End party** when you're done.
+
+## Scrobbling
+
+**Settings → Account → Scrobbling** (with a Hub) sends every song you play to
+[ListenBrainz](https://listenbrainz.org) and, if your Hub admin has set it up, Last.fm. For ListenBrainz paste
+your user token from listenbrainz.org/settings; for Last.fm enter your username and password once (the Hub
+keeps only the session Last.fm gives back). Plays from all your devices are sent, about once a minute, and ones
+made offline go when the device reaches the Hub again. Radio, audiobooks and podcasts aren't sent. If a
+service stops accepting your login, the row says so: disconnect and connect again.
 
 ## Rewind
 
