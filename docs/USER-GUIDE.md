@@ -312,6 +312,44 @@ also show the idle visualiser animation.
 > The curve comes from `BiquadFilterNode.getFrequencyResponse` on a throwaway `OfflineAudioContext`. To
 > add a preset, add an entry to `EQ_PRESETS` (10 gains, low to high).
 
+## Lyrics
+
+In **Now Playing**, the **Lyrics** chip swaps the "Up next" list for the song's lyrics. Synced lyrics follow the
+song: the line being sung lights up and stays in the middle, and tapping a line jumps the song there. On a TV
+they're shown in big text. Songs with only plain lyrics just scroll; instrumentals say so.
+
+Lyrics come from your **Navidrome** server when it has them (from the files' tags or a `.lrc` file next to the
+song, Navidrome 0.53 or newer), otherwise from **LRCLIB** (lrclib.net, free and open, no account). **Kid
+profiles** see lyrics with strong words hidden (`f•••`), since clean versions of songs only have the original
+words online.
+
+> **Developer notes.** `src/lib/lyrics.ts` (LRC parsing, LRCLIB lookup with a search fallback that prefers synced
+> lyrics with a matching length, the kid filter), `NavidromeSource.getLyrics` (OpenSubsonic
+> `getLyricsBySongId`), and `src/components/Lyrics.tsx`. Lyrics are cached per song for the session.
+
+## Sleep timer
+
+**Now Playing → Sleep** stops playback after 15, 30 or 45 minutes, 1 hour, 1½ hours, or at the end of the
+current song (or audiobook file). Timed sleeps fade out over the last 20 seconds. The chip shows the time left;
+tap it again to change it or **Turn off**. The timer belongs to this device and is forgotten on restart.
+
+## Volume levelling, gapless and crossfade
+
+**Settings → Playback → Volume levelling and crossfade**:
+
+- **ReplayGain** plays every song at about the same loudness, from the loudness tags in your files (Navidrome
+  passes them on; tag your library with a tool like beets, foobar2000 or MusicBrainz Picard if it has none).
+  **Track** levels each song on its own, good for shuffle and playlists; **Album** keeps an album's quiet and
+  loud songs as they were meant. Songs without tags are turned down 6 dB so they sit near the tagged ones.
+  **Boost** raises everything that's levelled; Wavelength never lets a song clip past its peak.
+- **Gapless.** Near the end of a song, the next one is loaded ahead, so live albums and DJ mixes play straight
+  through without a gap. This is always on.
+- **Crossfade** (1–12 seconds) fades the next song in over the end of this one.
+
+Levelling, gapless and crossfade are for music. Radio, audiobooks and podcasts play as they are, and songs
+from a server that doesn't let the app process its audio (the same ones the EQ can't reach) play without
+crossfade. These settings sync between your devices with a Hub.
+
 ## Skins and themes
 
 **Settings → Themes** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
@@ -588,7 +626,7 @@ restarts, and keeps the database it replaced on the server just in case.
 
 ### What follows you between devices
 
-Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **Now Playing scene** and **raccoon**,
+Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **volume levelling and crossfade**, **Now Playing scene** and **raccoon**,
 **radio stations** (favorites, hidden and order) and **Discover chart picks** sync to your profile. Change the
 skin on the TV and your phone has it next time it checks in (at start, when the window gets focus, and every
 few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and

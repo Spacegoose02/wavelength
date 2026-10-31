@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { sourceFor } from '../sources/registry';
 import { stationToTrack } from '../sources/radio';
 import { list, swTrack, txt, type SubWaveSource, type SwTrack } from '../sources/subwave';
+import { useShallow } from 'zustand/react/shallow';
 import { useSettings } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
@@ -13,7 +14,7 @@ import { SwList, usePoll } from './subwaveShared';
 type Tab = 'air' | 'control' | 'schedule' | 'shows' | 'stats';
 
 export function SubWave({ sourceId }: { sourceId?: string }) {
-  const sources = useSettings((s) => s.sources.filter((x) => x.kind === 'subwave' && x.enabled));
+  const sources = useSettings(useShallow((s) => s.sources.filter((x) => x.kind === 'subwave' && x.enabled)));
   const cfg = sources.find((s) => s.id === sourceId) ?? sources[0];
   const [tab, setTab] = useState<Tab>('air');
   const sw = useMemo(() => (cfg ? (sourceFor(cfg) as SubWaveSource) : undefined), [cfg]);

@@ -57,7 +57,7 @@ async function fakeDeemix() {
   srv.on('upgrade', (req, socket: Socket) => {
     const accept = createHash('sha1').update(`${req.headers['sec-websocket-key']}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest('base64');
     socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
-    socket.on('data', (buf) => {
+    socket.on('data', (buf: Buffer) => {
       if ((buf[0] & 0x0f) !== 1) return socket.end();
       const msg = JSON.parse(frame(buf));
       if (msg.key === 'saveSettings') {
