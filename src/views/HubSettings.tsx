@@ -8,7 +8,7 @@ import { loadFlags, setFlag, useFlags, useRatings } from '../lib/kids';
 import { today } from '../lib/kidTime';
 import { notifyAllowed, notifySupported } from '../lib/notify';
 import { isAndroid } from '../lib/platform';
-import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type KidRules } from '../sources/hub';
+import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
@@ -306,6 +306,69 @@ function SsoLink() {
   );
 }
 
+/**
+ * Scrobbling (hub/src/scrobble.ts): the Hub sends every song you play to ListenBrainz and, when the Hub has a
+ * Last.fm API account, Last.fm. Older Hubs have no such route, so this hides itself there.
+ */
+function ScrobbleSetting() {
+  const [state, setState] = useState<{ accounts: HubScrobbleAccount[]; lastfmAvailable: boolean } | null>();
+  const [lb, setLb] = useState('');
+  const [fm, setFm] = useState({ username: '', password: '' });
+  const [msg, setMsg] = useState('');
+  const c = hubClient()!;
+  const load = () => c.scrobbleAccounts().then(setState, (e) => setState(e instanceof HubError && e.status === 404 ? null : undefined));
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!state) return null;
+
+  const run = async (f: () => Promise<unknown>, done: string) => {
+    setMsg('…');
+    try {
+      await f();
+      await load();
+      setMsg(done);
+    } catch (e) {
+      setMsg(errText(e));
+    }
+  };
+  const account = (service: HubScrobbleAccount['service']) => state.accounts.find((a) => a.service === service);
+  const row = (a: HubScrobbleAccount, label: string) => (
+    <div className="source-row">
+      <div className="track-main">
+        <div className="track-title">{label} · {a.username}</div>
+        <div className="track-sub">{a.error ? <span className="error-text">{a.error}</span> : `Sending your plays since ${new Date(a.connectedAt).toLocaleDateString()}`}</div>
+      </div>
+      <button className="btn small ghost" onClick={() => run(() => c.disconnectScrobble(a.service), `✓ ${label} disconnected`)}>Disconnect</button>
+    </div>
+  );
+  const listenbrainz = account('listenbrainz');
+  const lastfm = account('lastfm');
+
+  return (
+    <div className="editor">
+      <h3>Scrobbling</h3>
+      <p className="muted small">Your Hub sends each song you play (not radio, podcasts or books) to these, about once a minute. Plays made offline are sent when this device next reaches the Hub.</p>
+      {listenbrainz ? row(listenbrainz, 'ListenBrainz') : (
+        <form className="row gap" onSubmit={(e) => { e.preventDefault(); void run(() => c.connectListenBrainz(lb.trim()).then(() => setLb('')), '✓ ListenBrainz connected'); }}>
+          <input type="password" placeholder="ListenBrainz user token" value={lb} onChange={(e) => setLb(e.target.value)} autoComplete="off" />
+          <button className="btn small" disabled={!lb.trim()}>Connect ListenBrainz</button>
+          <a className="link small" href="https://listenbrainz.org/settings/" target="_blank" rel="noreferrer">Get your token</a>
+        </form>
+      )}
+      {lastfm ? row(lastfm, 'Last.fm') : state.lastfmAvailable ? (
+        <form className="row gap" onSubmit={(e) => { e.preventDefault(); void run(() => c.connectLastfm(fm.username.trim(), fm.password).then(() => setFm({ username: '', password: '' })), '✓ Last.fm connected'); }}>
+          <input placeholder="Last.fm username" value={fm.username} onChange={(e) => setFm({ ...fm, username: e.target.value })} autoComplete="off" />
+          <input type="password" placeholder="Password" value={fm.password} onChange={(e) => setFm({ ...fm, password: e.target.value })} autoComplete="off" />
+          <button className="btn small" disabled={!fm.username.trim() || !fm.password}>Connect Last.fm</button>
+        </form>
+      ) : <p className="muted small">Last.fm: your Hub admin needs to add a Last.fm API account first (docs/HUB.md).</p>}
+      {lastfm || state.lastfmAvailable ? <p className="muted small">The Hub logs in to Last.fm once and keeps only the session it gets back, never your password.</p> : null}
+      {msg && <span className="muted small">{msg}</span>}
+    </div>
+  );
+}
+
 function SignedIn() {
   const { url, user, permissions, offline, lastSeen, signOut, refresh } = useHub();
   const [devices, setDevices] = useState<(HubDevice & { current: boolean })[]>([]);
@@ -350,6 +413,7 @@ function SignedIn() {
 
       <RemoteSetting />
       <NotifySetting />
+      <ScrobbleSetting />
 
       <SsoLink />
 

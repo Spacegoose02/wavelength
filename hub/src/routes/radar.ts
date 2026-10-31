@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { HttpError, signedIn } from '../http.ts';
-import { WINDOW_DAYS } from '../radar.ts';
+import { UPCOMING_DAYS, WINDOW_DAYS } from '../radar.ts';
 
 /**
  * Release Radar (radar.ts, docs/RELEASE-RADAR.md). Everything here is the caller's own: who they follow,
@@ -21,10 +21,32 @@ const picture = (v: unknown) => {
 };
 
 export function radarRoutes(app: FastifyInstance, { radar }: Ctx) {
-  /** `{ follows, releases, windowDays, checkedAt, pending, failed }` */
+  /** `{ follows, releases, upcoming, windowDays, upcomingDays, checkedAt, pending, failed }` */
   app.get('/api/radar', async (req) => {
     const { user } = signedIn(req);
-    return { follows: radar.follows(user.id), releases: radar.releases(user.id), windowDays: WINDOW_DAYS, ...radar.status(user.id) };
+    return {
+      follows: radar.follows(user.id), releases: radar.releases(user.id), upcoming: radar.upcoming(user.id),
+      windowDays: WINDOW_DAYS, upcomingDays: UPCOMING_DAYS, ...radar.status(user.id),
+    };
+  });
+
+  /**
+   * `{ autoGet: true }`: new releases from this artist are requested automatically (downloaded straight away
+   * with Autodownload), from now on. Kid profiles' auto-get skips explicit releases.
+   */
+  app.patch<{ Params: { id: string } }>('/api/radar/follows/:id', async (req) => {
+    const { user, permissions } = signedIn(req);
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    if (typeof b.autoGet !== 'boolean') throw new HttpError(400, 'Send { autoGet: true } or false');
+    if (b.autoGet && !permissions.includes('requests.create')) throw new HttpError(403, 'Your profile can’t request music');
+    if (!radar.setAutoGet(user.id, artistId(req.params.id), b.autoGet)) throw new HttpError(404, 'You don’t follow that artist');
+    return { follow: radar.follows(user.id).find((f) => f.id === Number(req.params.id)) };
+  });
+
+  /** This week's Weekly Mix (made each Friday); `?fresh=1` makes it again. */
+  app.get('/api/radar/mix', async (req) => {
+    const { user } = signedIn(req);
+    return radar.weeklyMix(user.id, (req.query as Record<string, unknown>).fresh === '1');
   });
 
   /**

@@ -1712,3 +1712,11 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
   .genre-row { flex-wrap: wrap; }
   .genre-row .genre-input { flex: 1 1 140px; }
 }
+.chip-auto { margin-left: 6px; padding: 0 6px; border-radius: 8px; font-size: 11px; color: var(--muted); border: 1px solid var(--line); background: none; }
+.chip-auto.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.mix-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.mix-row { display: grid; grid-template-columns: auto 44px 1fr auto; gap: 10px; align-items: center; }
+.mix-row img, .mix-row .cover { width: 44px; height: 44px; border-radius: 6px; }
+.mix-text { min-width: 0; }
+.mix-text .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.error-text { color: #ff9b9b; }

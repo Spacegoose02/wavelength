@@ -80,3 +80,11 @@ export async function unfollow(id: number) {
     radar: s.radar && { ...s.radar, follows: s.radar.follows.filter((x) => x.id !== id), releases: s.radar.releases.filter((r) => r.artistId !== id) },
   }));
 }
+
+/** "Get new releases automatically" for an artist you follow (the Hub requests each one as it comes out). */
+export async function setAutoGet(id: number, on: boolean) {
+  const c = hubClient();
+  if (!c) return;
+  const { follow: f } = await c.setAutoGet(id, on);
+  useFollows.setState((s) => ({ follows: s.follows.map((x) => (x.id === id ? { ...x, ...f } : x)) }));
+}
