@@ -25,6 +25,9 @@ npm run tauri dev
 - **After big multi-file edits, press Ctrl+R in the app window.** Hot reload can catch files mid-edit
   and keep a broken module around (symptoms: blank page, "X is not defined" on the error screen).
 - Type-check only: `npx tsc`. Rust only: `cargo check --manifest-path src-tauri/Cargo.toml`.
+- Tests: `npm test` (Vitest, files in `src/test/` and any `src/**/*.test.ts`), `cargo test` in `src-tauri`,
+  and `npm test` in `hub/`. App tests cover pure logic (matching, merging, skins, ICY titles, update picks);
+  keep anything that needs a WebView or a server out of them.
 
 ### UI-only preview in a browser
 
@@ -123,6 +126,11 @@ npx tauri android dev      # needs a device with USB debugging, or an emulator
 ## Code style
 
 - TypeScript strict mode; `npx tsc` must be clean before committing.
+- **Zustand selectors must return something stable.** `useSettings((s) => s.sources.filter(…))` makes a new
+  array every render, which zustand 5 treats as a change and loops forever. Wrap it in `useShallow`
+  (`zustand/react/shallow`), select the raw value and derive it with `useMemo`, or return a primitive.
+- Big pages that aren't on the startup path are lazy-loaded in `App.tsx` (`page(() => import(…), 'Name')`).
+  A new page that's only opened sometimes should be added there too.
 - Match the surrounding code: small functions, a one-line comment explaining *why* when it isn't obvious.
 - New UI text: short, friendly, and say what to do next on errors ("Couldn't reach deemix — check its URL in Settings").
 - Keep the `MusicSource` contract: pages don't call servers directly.
