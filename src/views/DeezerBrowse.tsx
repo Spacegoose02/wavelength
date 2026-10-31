@@ -4,10 +4,18 @@
  * buttons that go to deemix.
  * Navigation is a small stack owned by the Deezer tab, so Back walks back through what you opened.
  * Songs and albums carry an E (explicit) or C (clean) badge, and Clean only hides explicit ones
- * (lib/deezerVersions.ts says which is which).
+ * (lib/deezerVersions.ts says which is which). Releases you already have say **In library** instead of Get
+ * (lib/artistReleases.ts). The library artist page's **Browse releases** (views/ArtistReleases.tsx) opens the
+ * same pages.
  */
 import { useEffect, useState } from 'react';
-import { mustRequest, useMustRequest } from '../lib/inbox';
+import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
+import { deemixClient } from '../lib/hubServices';
+import { refreshDeemix } from '../lib/deemixQueue';
+import { useOwnedRelease } from '../lib/artistReleases';
+import { useVersionPref } from '../lib/versions';
+import { useSettings } from '../store/settings';
+import { useUi } from '../store/ui';
 import { getDeezerAlbum, getDeezerArtist, getDeezerPlaylist, type DeezerAlbumPage, type DeezerArtistPage, type DeezerPlaylistPage, type DeezerResult } from '../sources/deemix';
 import type { Track } from '../sources/types';
 import { usePlayer } from '../store/player';
@@ -31,6 +39,40 @@ export interface BrowseProps {
   setClean?(on: boolean): void;
 }
 
+/**
+ * The state behind a browse stack: the pages opened, what's been sent, and Clean only. `send` gets with deemix,
+ * or asks the Hub admin (`request`, for people without Autodownload).
+ */
+export function useDeezerBrowse({ request, initial = [] }: { request?: boolean; initial?: Browse[] } = {}) {
+  const deemix = useSettings((s) => s.deemix);
+  const [status, setStatus] = useState<Record<string, SendStatus>>({});
+  // Clean only starts on for people who prefer clean versions (Settings → Playback; kid profiles always do)
+  const pref = useVersionPref();
+  const [clean, setClean] = useState(pref === 'clean');
+  const [stack, setStack] = useState<Browse[]>(initial);
+  const open = (b: Browse) => setStack((st) => [...st, b]);
+
+  const send = async (r: DeezerResult) => {
+    const key = statusKey(r);
+    setStatus((s) => ({ ...s, [key]: { s: 'sending' } }));
+    try {
+      if (request) {
+        await requestMusic({ link: r.link, kind: r.type, title: r.title, artist: r.artist, cover: r.cover });
+        setStatus((s) => ({ ...s, [key]: { s: 'queued' } }));
+        return;
+      }
+      await deemixClient().addToQueue(r.link, deemix.bitrate);
+      setStatus((s) => ({ ...s, [key]: { s: 'queued' } }));
+      void refreshDeemix();
+    } catch (e) {
+      setStatus((s) => ({ ...s, [key]: { s: 'error', msg: String((e as Error).message ?? e) } }));
+    }
+  };
+
+  const browse: BrowseProps = { open, send, status, clean, setClean };
+  return { stack, setStack, browse };
+}
+
 /** All / Clean only switch, with how many explicit results it's hiding. */
 export function CleanChips({ clean, setClean, hidden }: Pick<BrowseProps, 'clean' | 'setClean'> & { hidden?: number }) {
   if (!setClean) return null;
@@ -49,6 +91,12 @@ export function CleanChips({ clean, setClean, hidden }: Pick<BrowseProps, 'clean
 const versionLabel = (r: DeezerResult) => (r.version === 'explicit' ? 'Explicit' : r.version === 'clean' ? 'Clean' : undefined);
 
 export const statusKey = (r: DeezerResult) => `${r.type}:${r.id}`;
+
+/** "Out Mar 14" for a release Deezer lists ahead of its date. */
+export function upcomingLabel(r: DeezerResult, today = new Date().toISOString().slice(0, 10)) {
+  if (!r.releaseDate || r.releaseDate <= today) return undefined;
+  return `Out ${new Date(r.releaseDate + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: r.releaseDate.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric' })}`;
+}
 
 /** A 30s Deezer clip as a playable (unsaveable) track — same shape Discover uses. */
 function previewTrack(r: DeezerResult): Track {
@@ -154,14 +202,22 @@ const SECTIONS: { id: string; label: string; match(t?: string): boolean }[] = [
 
 export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
   const { data, error } = useLoad<DeezerArtistPage>(() => getDeezerArtist(id), [id]);
+  const owned = useOwnedRelease();
+  const kidHidden = useHidden();
+  // Not in library: only what you could still get
+  const [missing, setMissing] = useState(false);
   if (error) return <div className="errors">{error}</div>;
   if (!data) return <Spinner />;
-  const { artist, related, playlists } = data;
+  const { artist, playlists } = data;
+  const related = data.related.filter((a) => !kidHidden.deezer(a));
   const allTop = withVersions(data.top);
-  const allAlbums = withVersions(data.albums);
+  // a kid profile doesn't see what it mustn't, whichever chip is on
+  const allAlbums = withVersions(data.albums).filter((a) => !kidHidden.deezer(a));
   const top = p.clean ? cleanOnly(allTop) : allTop;
-  const albums = p.clean ? cleanOnly(allAlbums) : allAlbums;
-  const hidden = allTop.length - top.length + allAlbums.length - albums.length;
+  const versioned = p.clean ? cleanOnly(allAlbums) : allAlbums;
+  const hidden = allTop.length - top.length + allAlbums.length - versioned.length;
+  const have = allAlbums.filter((a) => owned(a)).length;
+  const albums = missing ? versioned.filter((a) => !owned(a)) : versioned;
   return (
     <div className="dz-page">
       <div className="dz-head">
@@ -169,7 +225,7 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
         <div>
           <div className="kicker">Artist on Deezer</div>
           <h2>{artist.title}</h2>
-          <div className="muted small">{artist.fans ? `${artist.fans.toLocaleString()} fans · ` : ''}{allAlbums.length} releases</div>
+          <div className="muted small">{artist.fans ? `${artist.fans.toLocaleString()} fans · ` : ''}{allAlbums.length} releases{have ? ` · ${have} in your library` : ''}</div>
           <div className="hero-actions">
             <FollowButton id={artist.id} name={artist.title} picture={artist.cover} className="btn small" />
             <GetButton r={artist} send={(r) => confirm(`Send ${artist.title}'s whole discography (${allAlbums.length} releases) to ${mustRequest() ? 'your Hub admin' : 'deemix'}?`) && p.send(r)} status={p.status} label="Get discography" />
@@ -177,9 +233,17 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
           {p.status[statusKey(artist)]?.s === 'error' && <div className="card-err">{p.status[statusKey(artist)].msg}</div>}
         </div>
       </div>
-      <CleanChips clean={p.clean} setClean={p.setClean} hidden={hidden} />
+      <div className="row gap dz-filters">
+        <CleanChips clean={p.clean} setClean={p.setClean} hidden={hidden} />
+        {have > 0 && (
+          <div className="chips" role="group" aria-label="In your library or not">
+            <button className={`chip ${!missing ? 'on' : ''}`} onClick={() => setMissing(false)}>Everything</button>
+            <button className={`chip ${missing ? 'on' : ''}`} title="Hide the releases you already have" onClick={() => setMissing(true)}>Not in library</button>
+          </div>
+        )}
+      </div>
 
-      {top.length > 0 && <>
+      {top.length > 0 && !missing && <>
         <h3 className="dz-section">Top songs</h3>
         {top.map((t) => <DzRow key={statusKey(t)} r={t} {...p} />)}
       </>}
@@ -191,20 +255,28 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
           <div key={s.id}>
             <h3 className="dz-section">{s.label} <small className="muted">{list.length}</small></h3>
             <div className="grid dz-grid">
-              {list.map((a) => (
-                <div key={a.id} className="dz-card">
-                  <button className="card" onClick={() => p.open({ type: 'album', id: a.id, title: a.title })}>
-                    <Cover src={a.cover} alt={a.title} />
-                    <div className="card-title dz-title" title={a.title}><Rating explicit={a.version ?? a.explicit} />{a.title}</div>
-                    <div className="card-sub"><span>{[a.releaseDate?.slice(0, 4), versionLabel(a)].filter(Boolean).join(' · ')}</span></div>
-                  </button>
-                  <GetButton r={a} send={p.send} status={p.status} />
-                </div>
-              ))}
+              {list.map((a) => {
+                const mine = owned(a);
+                return (
+                  <div key={a.id} className={`dz-card ${mine ? 'owned' : ''}`}>
+                    <button className="card" onClick={() => p.open({ type: 'album', id: a.id, title: a.title })}>
+                      <Cover src={a.cover} alt={a.title} />
+                      <div className="card-title dz-title" title={a.title}><Rating explicit={a.version ?? a.explicit} />{a.title}</div>
+                      <div className="card-sub"><span>{[upcomingLabel(a) ?? a.releaseDate?.slice(0, 4), versionLabel(a)].filter(Boolean).join(' · ')}</span></div>
+                    </button>
+                    {mine
+                      ? <button className="btn small ghost" title="You have this one. Open it in your library" onClick={() => useUi.getState().go({ view: 'album', album: mine })}>✓ In library</button>
+                      : upcomingLabel(a) ? null
+                      : <GetButton r={a} send={p.send} status={p.status} />}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
       })}
+
+      {missing && !albums.length && <p className="muted">You have everything {artist.title} has put out{p.clean ? ' in clean versions' : ''}.</p>}
 
       {playlists.length > 0 && <>
         <h3 className="dz-section">Playlists with {artist.title}</h3>

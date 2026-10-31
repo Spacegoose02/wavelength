@@ -52,6 +52,7 @@ const ImportPlaylist = page(() => import('./views/ImportPlaylist'), 'ImportPlayl
 const TagEditor = page(() => import('./views/TagEditor'), 'TagEditor');
 const ArtistTagEditor = page(() => import('./views/ArtistTagEditor'), 'ArtistTagEditor');
 const Downloads = page(() => import('./views/Downloads'), 'Downloads');
+const ArtistReleases = page(() => import('./views/ArtistReleases'), 'ArtistReleases');
 const Inbox = page(() => import('./views/Inbox'), 'Inbox');
 const Settings = page(() => import('./views/Settings'), 'Settings');
 
@@ -80,6 +81,7 @@ function View({ route }: { route: Route }) {
     case 'albums': return <Albums />;
     case 'artists': return <Artists />;
     case 'artist': return <ArtistView key={route.artist.id} artist={route.artist} />;
+    case 'artistReleases': return <ArtistReleases key={`${route.artist.id}:${route.open?.id ?? ''}`} artist={route.artist} open={route.open} />;
     case 'album': return <AlbumView key={route.album.id} album={route.album} focus={route.track} />;
     case 'search': return <Search initial={route.q} />;
     case 'radio': return <Radio />;
