@@ -8,6 +8,7 @@ import { AddToPlaylist } from './AddToPlaylist';
 import { EqButton } from './Equalizer';
 import { DevicesButton } from './Devices';
 import { TogetherButton } from './Together';
+import { RadioGetButton } from './RadioGetButton';
 import { SongRadioButton } from './SongRadioButton';
 import { SleepButton } from './SleepButton';
 import { LyricsPanel } from './Lyrics';
@@ -40,6 +41,7 @@ export function NowPlaying() {
             <EqButton className="chip" />
             <DevicesButton className="chip" />
             <TogetherButton className="chip" />
+            {live && <RadioGetButton text={p.liveTitle} />}
             {t.kind === 'track' && t.sourceId !== 'preview' && <SongRadioButton artist={t.artist} track={t} className="chip" />}
             {t.kind === 'track' && (
               <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>

@@ -123,6 +123,12 @@ export class NavidromeSource implements MusicSource {
     return this.track({ id, coverArt: id, title: meta.title ?? 'Unknown', artist: meta.artist, album: meta.album, duration: meta.duration });
   }
 
+  /** The library's genres, most songs first (Subsonic getGenres). */
+  async getGenres(): Promise<{ name: string; songs: number }[]> {
+    const list = ((await this.call('getGenres')).genres?.genre ?? []) as { value: string; songCount?: number }[];
+    return list.map((g) => ({ name: g.value, songs: g.songCount ?? 0 })).filter((g) => g.name).sort((a, b) => b.songs - a.songs);
+  }
+
   /**
    * Songs with what smart playlists filter on (lib/smartPlaylists.ts): every song in a genre, or without one a
    * random sample of the library (Subsonic allows 500 at a time). At most `max`.
