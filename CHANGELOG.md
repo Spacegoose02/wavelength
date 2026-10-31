@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **AI DJ.** A chat in the app that knows your library: ask for a playlist, a mood or "more like this" and it
+  searches, plays, queues and saves playlists for you; ask which albums you're missing and it compares the
+  artist's discography with your library and requests the ones you pick. It runs on the Hub with your AI
+  provider's API key (Anthropic Claude: Opus 5.5 by default, Sonnet 5.5 or Haiku 5.5), which never leaves the
+  Hub. **Settings → AI DJ** (admins) holds the key, model, effort and prices, counts every person's tokens and
+  estimated spend, and sets monthly limits per person and for the household. Off until an admin turns it on for
+  the Hub and for each account; kids stay off unless turned on, and then get family-friendly picks only. See
+  [AI-DJ.md](docs/AI-DJ.md) for the setup guide.
 - **Browse an artist's releases from your library.** Artist pages have a **Browse releases** button with the
   artist's whole Deezer discography (the same page as Downloads → Deezer, with E / C badges and Clean only).
   Releases you already have say **✓ In library**, and **Not in library** hides them, so it's easy to see what's
@@ -22,6 +30,16 @@
   - The theremin player's pitch hand plays by the antenna instead of resting on its chin, the accordion act's
     legs match the critter (they were black for everyone but the bears), the drummer's neckline shows the
     critter's own chest, and the shark's tail goes behind the campfire.
+- **Playlist covers.** Give any playlist your own picture: press **Change cover** on a Wavelength, Navidrome,
+  Plex or household playlist, then pick one of the album covers in it, upload a picture or paste an image link.
+  Wavelength crops it square. Signed in to a Hub, the cover is kept there and shows on all your devices
+  (Windows, Android, Android Auto and the browser); with no Hub it stays on that device. **Use the automatic
+  cover** goes back to the default. See the [user guide](docs/USER-GUIDE.md#playlist-covers).
+- **Better automatic covers.** A Wavelength playlist's mosaic now shows its first four different *albums*, so
+  four songs from one album no longer fill all four squares, and uses the Hub's cover art when an admin changed
+  it. Household playlists get the same mosaic.
+- **Hub:** new `playlist_covers` table and `GET/PUT/DELETE /api/playlist-covers` (see
+  [docs/HUB.md](docs/HUB.md#playlist-covers)).
 
 ## 0.17.10
 Fixes from a bug sweep (the full list is in the PR):

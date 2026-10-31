@@ -1861,6 +1861,26 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .dl-queue .errors.small { font-size: 12px; margin-bottom: 8px; }
 .req-progress { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; max-width: 320px; }
 
+/* AI DJ (views/DJ.tsx, views/DjAdmin.tsx) */
+.dj { display: flex; flex-direction: column; min-height: calc(100vh - 140px); max-width: 860px; }
+.dj-chats { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.dj-chats select { max-width: 260px; }
+.dj-log { flex: 1; display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; }
+.dj-ideas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dj-ideas p { flex-basis: 100%; }
+.dj-msg { display: flex; flex-direction: column; gap: 4px; max-width: 80%; }
+.dj-msg.user { align-self: flex-end; align-items: flex-end; }
+.dj-bubble { white-space: pre-wrap; user-select: text; padding: 10px 14px; border-radius: var(--radius); background: var(--panel); box-shadow: var(--bevel); line-height: 1.45; }
+.dj-msg.user .dj-bubble { background: var(--accent); color: var(--accent-ink); }
+.dj-tools, .dj-busy { display: flex; align-items: center; gap: 8px; padding: 0 4px; }
+.dj-busy .spinner { width: 16px; height: 16px; margin: 0; }
+.dj-input { display: flex; gap: 8px; align-items: flex-end; position: sticky; bottom: 0; padding: 8px 0; background: var(--bg); }
+.dj-input textarea { resize: none; }
+.dj-spend { margin-top: 4px; }
+.dj-prices { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dj-limit { display: flex; align-items: center; gap: 4px; }
+.dj-limit input { width: 72px; }
+@media (max-width: 700px) { .dj-msg { max-width: 92%; } .dj-prices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* ============ artist page: newest release banner (components/ArtistNews.tsx) ============ */
 .artist-news { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 8px 12px 8px 8px; max-width: 560px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line, transparent); }
 .artist-news.new { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }

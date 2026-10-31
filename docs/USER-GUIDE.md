@@ -3,7 +3,7 @@
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens and bears), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
-**searching your playlists**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
+**searching your playlists**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -694,6 +694,41 @@ name matches, so you can click the one you want. Press **Enter** instead to make
 > fetching every playlist; that's left out on purpose. The **+ Playlist** filter is in
 > `src/components/AddToPlaylist.tsx`.
 
+## Playlist covers
+
+Every playlist can have its own picture. Open the playlist and press **Change cover**:
+
+- **From this playlist** shows the album covers of the songs in it. Click one to use it.
+- **Upload a picture** from your computer or phone (JPEG, PNG, WebP or GIF, 15 MB at most), or paste an image
+  link and press **Use link**. Wavelength crops it to a square from the middle and makes it 600×600.
+- **Use the automatic cover** (or **Use the server's cover** on a Navidrome or Plex playlist) removes your
+  picture again.
+
+Which playlists:
+
+- **Wavelength playlists:** your own, always. With no picture they show a **mosaic of their first four
+  albums** (four different albums, not four songs from the same one). With fewer than four albums they show
+  the first album's cover.
+- **Navidrome and Plex playlists** you can edit (not read-only ones). With no picture they show the server's
+  own cover. Your picture is only shown in Wavelength: Navidrome, Plex and other apps keep their cover.
+- **Household playlists:** whoever started it, or an admin. With no picture they show a mosaic of their
+  albums too.
+
+**Where it's kept.** Signed in to a Hub, the cover is saved on your Hub, so it shows on every device you sign
+in on: Windows, Android (and Android Auto's playlist list), the TV and the browser. Your own playlists' covers
+only you see. Covers on Navidrome, Plex and household playlists everyone on the Hub sees, and only whoever set
+one (or an admin) can change it. Kid profiles can change their own playlists' covers only. With no Hub the
+cover stays on that one device.
+
+Deleting a playlist deletes its cover too.
+
+> **Developer notes:** `src/lib/playlistCovers.ts` keeps the covers (`usePlaylistCovers`, persisted as
+> `tonearm.playlistCovers`), makes the square JPEG (`squareImage`, `imageFromLink`, which downloads through
+> `http()` so the app isn't stopped by CORS) and picks the mosaic (`mosaicOf`). Covers are found by key:
+> `wavelength:<id>`, `household:<id>`, `navidrome:<id>` or `plex:<id>` (the server's playlist id).
+> `src/components/PlaylistCoverButton.tsx` has `PlaylistArt` (picked cover → mosaic → server cover) and the
+> picker. The Hub side is `hub/src/routes/playlistCovers.ts`.
+
 ## Import a playlist
 
 **Playlists → Import** brings a playlist over from somewhere else. Paste a link, or choose a file:
@@ -772,6 +807,21 @@ queue any more** and can be sent again, and the bar at the top shows how busy de
 > **Developer notes.** `src/lib/deemixQueue.ts` (reading the queue, stuck detection, Cancel / Retry), `src/components/DeemixQueue.tsx`,
 > and on the Hub `hub/src/deemixQueue.ts`. Without a Hub, the app reads deemix itself with the same rules.
 
+## AI DJ
+
+With a Hub where an admin turned it on for you, **AI DJ** is in the menu (under **Library** on phones). Chat with
+it: ask for a playlist ("25 songs for a road trip"), a mood ("chill music for dinner"), more like an artist or what
+you played this week, or "which Radiohead albums am I missing?". It searches your library, plays or queues what it
+finds, saves playlists (**Open the playlist** jumps to one) and, when you say yes, requests missing albums like the
+Request button does. **This month** under the box shows how much of your allowance you've used.
+
+Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only), the model, prices, monthly limits
+and who can use it. The full setup guide is [AI-DJ.md](AI-DJ.md).
+
+> **Developer notes.** `src/views/DJ.tsx` (chat), `src/lib/dj.ts` (the tools that run in the app),
+> `src/views/DjAdmin.tsx` (admin tab), `hub/src/dj/` and `hub/src/routes/dj.ts` on the Hub. See
+> [AI-DJ.md](AI-DJ.md#how-it-works).
+
 ## Containers (Hub admins)
 
 If your Hub is set up for it, **Settings → Server → Containers** lists the household's other services, like
@@ -781,7 +831,7 @@ Hub was told about show up. Setting it up is in `docs/HUB.md`, "Docker control".
 
 ## Settings tabs
 
-Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** and **Server** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
+Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users**, **Server** and **AI DJ** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
 yt-dlp), **Themes**, **Discover** (charts) and **Updates**. Links elsewhere open the right tab: **Edit charts** on
 Discover opens Discover, and the Settings link in Downloads opens Downloads.
 
@@ -897,7 +947,7 @@ restarts, and keeps the database it replaced on the server just in case.
 ### What follows you between devices
 
 Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **volume levelling and crossfade**, **Now Playing scene** and **critter**,
-**radio stations** (favorites, hidden and order) and **Discover chart picks** sync to your profile. Change the
+**radio stations** (favorites, hidden and order), **Discover chart picks** and **playlist covers** sync to your profile. Change the
 skin on the TV and your phone has it next time it checks in (at start, when the window gets focus, and every
 few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and
 the skin on another never overwrite each other. Changes made with no connection are kept and sent later.

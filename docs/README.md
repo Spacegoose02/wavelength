@@ -22,6 +22,8 @@ around in an afternoon, fix bugs without archaeology, and add features in the ho
    settings, API, developing it.
 11. **[RELEASE-RADAR.md](RELEASE-RADAR.md)** — following artists, new-release lookups on the Hub,
    suggestions: how it works and its API.
+12. **[AI-DJ.md](AI-DJ.md)** — the AI DJ chat: setup guide for admins (API key, model, costs, limits,
+   per-account switch), how the agent loop splits work between the Hub and the app, and its API.
 
 ## The 60-second tour
 
@@ -32,7 +34,7 @@ src/                React + TypeScript UI (Vite). Almost all features live here.
   player/engine.ts  The audio engine (two <audio> elements + Web Audio visualiser)
   views/            Pages (Discover, SubWave, Playlists, Settings, …)
   components/       Shared UI (player bar, track list, buttons)
-  lib/              http, matching, platform detection, TV remote, Android media bridge, seasonal themes
+  lib/              dj (the AI DJ's app tools), http, matching, platform detection, TV remote, Android media bridge, seasonal themes
   styles.css        All styling + all 62 skins (CSS variables per [data-skin])
 src-tauri/          Rust shell (Tauri 2): http plugin, yt-dlp, SMB login, offline files, in-app updates
 hub/                Wavelength Hub (Node + SQLite, Docker): accounts, roles, sign-in, admin-only API

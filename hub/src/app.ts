@@ -6,6 +6,7 @@ import { HttpError, RateLimiter } from './http.ts';
 import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { artworkRoutes } from './routes/artwork.ts';
+import { playlistCoverRoutes } from './routes/playlistCovers.ts';
 import { authRoutes } from './routes/auth.ts';
 import { listeningRoutes } from './routes/listening.ts';
 import { meRoutes } from './routes/me.ts';
@@ -46,6 +47,9 @@ import { Library } from './library.ts';
 import { CleanDownloads } from './cleanDownloads.ts';
 import { webRoutes } from './web.ts';
 import { YtdlpRunner } from './ytdlp.ts';
+import { DjAgent } from './dj/agent.ts';
+import { anthropicProvider, type ProviderFactory } from './dj/provider.ts';
+import { djRoutes } from './routes/dj.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -75,9 +79,11 @@ export interface Ctx {
   digests: Digests;
   /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
   restart: () => void;
+  /** The AI DJ's chats and agent loop (dj/agent.ts). */
+  dj: DjAgent;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -90,6 +96,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     ytdlp: new YtdlpRunner(config.ytdlpBin, config.musicDir),
     charts: new ChartCache(),
     restart: opts.restart ?? (() => undefined),
+    dj: new DjAgent(db, config, opts.djProvider ?? anthropicProvider),
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
@@ -165,6 +172,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   kidRoutes(app, ctx);
   ratingRoutes(app, ctx);
   artworkRoutes(app, ctx);
+  playlistCoverRoutes(app, ctx);
   listeningRoutes(app, ctx);
   remoteRoutes(app, ctx);
   togetherRoutes(app, ctx);
@@ -186,6 +194,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   scrobbleRoutes(app, ctx);
   pushRoutes(app, ctx);
   householdRoutes(app, ctx);
+  djRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

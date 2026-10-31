@@ -86,10 +86,10 @@ test('Release Radar: a kid’s auto-get skips explicit releases and ones hidden 
 test('upgrading repairs flags saved before versions', () => {
   const file = join(mkdtempSync(join(tmpdir(), 'wl-flags-')), 'hub.db');
   const db = openDb(file);
-  // back to how 0.17.1 left it (the two migrations since run again)
+  // back to how 0.17.1 left it (the four migrations since run again)
   const { user_version: now } = db.prepare('PRAGMA user_version').get() as { user_version: number };
-  db.exec(`DROP INDEX content_flags_key; ALTER TABLE content_flags DROP COLUMN version;
-    CREATE UNIQUE INDEX content_flags_key ON content_flags(kind, artist COLLATE NOCASE, title COLLATE NOCASE); PRAGMA user_version = ${now - 2}`);
+  db.exec(`DROP INDEX content_flags_key; ALTER TABLE content_flags DROP COLUMN version; DROP TABLE dj_access; DROP TABLE dj_usage; DROP TABLE dj_conversations; DROP TABLE playlist_covers;
+    CREATE UNIQUE INDEX content_flags_key ON content_flags(kind, artist COLLATE NOCASE, title COLLATE NOCASE); PRAGMA user_version = ${now - 4}`);
   const flag = db.prepare("INSERT INTO content_flags (kind, artist, title, verdict, created_at) VALUES (?, ?, ?, ?, 0)");
   flag.run('album', 'Rihanna', 'Loud', 'allow'); // set on the clean version, saved under the explicit name
   flag.run('track', 'Rihanna', 'S&M', 'allow');
