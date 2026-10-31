@@ -173,7 +173,7 @@ from Billboard, Deezer, Spotify and the rest each time. The Hub fetches the ones
 
 ---
 
-## Getting to the song, artist and album from Now Playing
+## Getting to the song, artist and album from Now Playing and song lists
 
 In **Now Playing**, the album name above the song, the song title and the artist under it are links:
 
@@ -185,6 +185,10 @@ In **Now Playing**, the album name above the song, the song title and the artist
 Now Playing closes as the page opens, and **Back** goes to the page you were on before Now Playing.
 For "Artist A feat. Artist B", the link goes to the first artist that's in your library. Live radio,
 audiobooks, podcasts and Deezer previews have no library page, so they show plain text.
+
+Song lists work the same way: in search results, playlists, favorites, history and the other lists that show
+"Artist — Album" under a song, the artist opens the artist's page and the album opens the album scrolled to the
+song. On an album page, the artist under each song is a link too.
 
 ## Now Playing visualizers
 

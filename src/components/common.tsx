@@ -12,7 +12,9 @@ import { AddToPlaylist } from './AddToPlaylist';
 import { FavButton, QueueOnSubwave } from './TrackButtons';
 import { ShareButton } from './ShareButton';
 import { shareOfTracks } from '../lib/inbox';
-import { focusIndex } from '../lib/trackLinks';
+import { albumOfTrack, artistOfTrack, focusIndex } from '../lib/trackLinks';
+import { useCatalog } from '../store/catalog';
+import { useUi } from '../store/ui';
 
 export function fmtTime(s?: number) {
   if (!s || !Number.isFinite(s)) return '0:00';
@@ -158,7 +160,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
           </button>
           <div className="track-main">
             <div className="track-title"><Rating explicit={explicitOfTrack(t)} />{t.title}</div>
-            <div className="track-sub">{sub ? sub(t) : <>{t.artist}{showAlbum && t.album ? ` — ${t.album}` : ''}</>}</div>
+            <div className="track-sub">{sub ? sub(t) : <TrackSub track={t} showAlbum={showAlbum} />}</div>
             {t.progress ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
           </div>
           <SourceDots sourceIds={[t.sourceId]} />
@@ -180,6 +182,28 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * A song row's "Artist — Album" line, each a link to its library page when the library has it. The album link
+ * opens the album scrolled to the song.
+ */
+function TrackSub({ track: t, showAlbum }: { track: Track; showAlbum?: boolean }) {
+  const albums = useCatalog((s) => s.albums);
+  const artists = useCatalog((s) => s.artists);
+  const album = showAlbum && t.album ? albumOfTrack(t, albums) : undefined;
+  const artist = artistOfTrack(t, artists, album);
+  const go = useUi.getState().go;
+  return (
+    <>
+      {artist
+        ? <button className="sub-link" title="Go to artist" onClick={() => go({ view: 'artist', artist })}>{t.artist}</button>
+        : t.artist}
+      {showAlbum && t.album ? <>{' — '}{album
+        ? <button className="sub-link" title="Go to album" onClick={() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } })}>{t.album}</button>
+        : t.album}</> : null}
+    </>
   );
 }
 

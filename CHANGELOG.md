@@ -4,6 +4,8 @@
 - **Go to the song, artist or album from Now Playing.** The album name, song title and artist on Now Playing open
   the album, the album scrolled to the song (which flashes), and the artist's page. In **Up next**, a song's artist
   opens their page. Now Playing closes, and Back returns to the page you were on before it.
+- **Artist and album links in song lists.** In search results, playlists, favorites, history and other song lists,
+  the artist and album under a song's title open their pages; the album opens scrolled to the song.
 
 ## 0.17.3
 - **Select several albums or artists, like Plex.** **Albums**, **Artists** and an artist's page have **Select**;
