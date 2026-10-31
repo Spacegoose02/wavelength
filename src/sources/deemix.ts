@@ -16,6 +16,13 @@ export interface DeezerResult {
   albumId?: number;
   /** Explicit lyrics, as Deezer marks them. */
   explicit?: boolean;
+  /**
+   * Deezer's `explicit_content_lyrics` when the listing has it: 0 not explicit, 1 explicit, 2 unknown, 3 edited
+   * (the clean version), 4 partly explicit, 6 no advice. Search and album pages have it; artist discographies don't.
+   */
+  explicitContent?: number;
+  /** Explicit or clean version, worked out by lib/deezerVersions.ts (the badge and the Clean only filter use it). */
+  version?: 'explicit' | 'clean';
   /** Songs: 30-second clip. */
   preview?: string;
   /** Songs on an album page: position on the album. */
@@ -32,6 +39,7 @@ const DZ = 'https://api.deezer.com';
 
 /** Deezer's `explicit_lyrics` (true / false), or undefined when the listing leaves it out. */
 const explicitOf = (x: any): boolean | undefined => (typeof x?.explicit_lyrics === 'boolean' ? x.explicit_lyrics : undefined);
+const contentOf = (x: any): number | undefined => (typeof x?.explicit_content_lyrics === 'number' ? x.explicit_content_lyrics : undefined);
 
 function toTrack(t: any, album?: any): DeezerResult {
   const al = t.album ?? album;
@@ -49,6 +57,7 @@ function toTrack(t: any, album?: any): DeezerResult {
     preview: t.preview || undefined,
     trackNumber: t.track_position,
     explicit: explicitOf(t),
+    explicitContent: contentOf(t),
   };
 }
 
@@ -66,6 +75,7 @@ function toAlbum(a: any, artist?: any): DeezerResult {
     recordType: a.record_type,
     releaseDate: a.release_date,
     explicit: explicitOf(a),
+    explicitContent: contentOf(a),
   };
 }
 
