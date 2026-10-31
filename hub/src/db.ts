@@ -359,6 +359,39 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (user_id, artist_id)
   );
   `,
+  `
+  -- Release Radar extras (radar.ts): "Get new releases automatically" per followed artist, as the time it was
+  -- turned on (only releases after that are fetched), and which releases were already fetched that way.
+  ALTER TABLE follows ADD COLUMN auto_get_at INTEGER;
+  CREATE TABLE radar_autoget (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    release_id INTEGER NOT NULL,
+    at         INTEGER NOT NULL,
+    PRIMARY KEY (user_id, release_id)
+  );
+  -- Scrobbling (scrobble.ts): each person's ListenBrainz / Last.fm account and the plays waiting to be sent.
+  CREATE TABLE scrobble_accounts (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    service    TEXT NOT NULL CHECK (service IN ('listenbrainz', 'lastfm')),
+    username   TEXT NOT NULL,
+    secret     TEXT NOT NULL,                  -- sealed (crypto.ts): ListenBrainz token or Last.fm session key
+    created_at INTEGER NOT NULL,
+    error      TEXT,                           -- why the last send failed for good (bad token), shown in the app
+    PRIMARY KEY (user_id, service)
+  );
+  CREATE TABLE scrobble_queue (
+    id        INTEGER PRIMARY KEY,
+    user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    service   TEXT NOT NULL,
+    played_at INTEGER NOT NULL,
+    artist    TEXT NOT NULL,
+    title     TEXT NOT NULL,
+    album     TEXT NOT NULL,
+    seconds   INTEGER NOT NULL,
+    tries     INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX scrobble_queue_user ON scrobble_queue(user_id, service, id);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

@@ -33,6 +33,31 @@ Follow buttons are hidden.
   they came out are listed, but don't notify. Nothing notifies for the releases already out when you follow
   someone.
 
+### Coming soon
+
+Releases an artist you follow has announced but not put out yet (Deezer lists some up to a few months ahead)
+show under **Coming soon**, with their release date. When one is first spotted you get a notification:
+**Coming soon from Daft Punk — Title (album), out Mar 14**. It moves up to the main list on the day it comes
+out.
+
+### Get new releases automatically
+
+In **Manage**, each artist you follow has an **Auto** switch. With it on, the Hub fetches every new release
+from that artist as soon as it finds it, with no button to press:
+
+- If you can download (Autodownload, or an admin), it's sent to deemix straight away and shows in your Inbox
+  as a request marked "Release Radar: got automatically".
+- Otherwise it becomes a request for your Hub admin to approve, like pressing **Request**.
+- Only releases that come out after you turn it on are fetched, each one once. Kid profiles never auto-get
+  an explicit release.
+
+### Weekly Mix
+
+**Weekly Mix** (next to Following) is a playlist of about 30 songs, new every Friday: two songs from each of the
+newest releases by artists you follow, alternating with the best-known songs of artists suggested for you.
+Each row says why it's there. Songs you already have play in full from your library; the rest play a
+30-second preview and have **Get** / **Request**. **Refresh** puts a new one together.
+
 ### Artists you might like
 
 Below the releases, **Artists you might like** suggests who to follow:
@@ -57,6 +82,8 @@ app (Follow)  ──POST /api/radar/follows──▶  Hub: follows table
                                           notifications ("New from …") ──▶ every device (lib/notify.ts)
 app (Discover) ──GET /api/radar────────────▶ follows + releases from the last 42 days
 app (Discover) ──GET /api/radar/suggestions▶ Deezer /artist/:id/related (cached 7 days) + plays table
+app (Discover) ──GET /api/radar/mix────────▶ Deezer /album/:id/tracks + /artist/:id/top (kept for the week)
+                                          Auto on: new release ──▶ request (auto-approved with downloads.run)
 ```
 
 - **One lookup per artist, not per person.** The Hub keeps when it last looked at each Deezer artist
@@ -68,7 +95,11 @@ app (Discover) ──GET /api/radar/suggestions▶ Deezer /artist/:id/related (c
 - **Stored in the Hub's database** (migration 16): `follows`, `radar_artists`, `radar_releases` (kept 120
   days, so a release doesn't count as new twice), `radar_hidden` (Not interested). Releases and lookups for
   artists nobody follows any more are dropped. Everything is in the Hub's backups.
-- **Kept in memory:** Deezer's related artists and name lookups (7 days), each person's suggestions (6 hours).
+- **Migration 17** adds `follows.auto_get_at` (when **Auto** was turned on) and `radar_autoget` (releases
+  already fetched automatically, so none is fetched twice). Upcoming releases are just rows in
+  `radar_releases` with a date in the future; they're kept up to 120 days ahead.
+- **Kept in memory:** Deezer's related artists and name lookups (7 days), each person's suggestions (6 hours),
+  each person's Weekly Mix (until the next Friday).
   A Hub restart just asks Deezer again.
 - **Suggestions use Rewind's `plays` table**, so they need the app to report plays to the Hub (it does when
   signed in). Feature credits are folded in: "Drake feat. Future" counts as Drake.
@@ -82,7 +113,8 @@ app (Discover) ──GET /api/radar/suggestions▶ Deezer /artist/:id/related (c
 | `hub/test/radar.test.ts` | tests, with a pretend Deezer |
 | `src/lib/follows.ts` | the app's follows store (`useFollows`), `follow()`, `unfollow()`, `loadRadar()` |
 | `src/components/FollowButton.tsx` | Follow / ✓ Following |
-| `src/components/ReleaseRadar.tsx` | the Discover section: both lists, Manage, suggestions |
+| `src/components/ReleaseRadar.tsx` | the Discover section: both lists, Coming soon, Manage (with Auto), suggestions, Weekly Mix |
+| `hub/src/routes/requests.ts` | turns an auto-get release into a request (`radar.autoGet`) |
 | `src/sources/releaseRadar.ts` | **Artists you play** (no Hub needed) |
 
 ### API
@@ -91,7 +123,9 @@ All signed in; everything is the caller's own.
 
 | Route | Does |
 |---|---|
-| `GET /api/radar` | `{ follows: [{ id, name, picture, followedAt }], releases: [{ id, artistId, artist, title, type, released, cover, link, explicit, foundAt }], windowDays, checkedAt, pending, failed }` |
+| `GET /api/radar` | `{ follows: [{ id, name, picture, followedAt, autoGetAt }], releases: [{ id, artistId, artist, title, type, released, cover, link, explicit, foundAt }], upcoming: [same], windowDays, upcomingDays, checkedAt, pending, failed }` |
+| `PATCH /api/radar/follows/:id` | `{ autoGet: boolean }` → `{ follow }` |
+| `GET /api/radar/mix[?fresh=1]` | `{ week: "YYYY-MM-DD" (the Friday), tracks: [{ id, title, artist, album, cover, link, preview, explicit, duration, because }] }` |
 | `POST /api/radar/follows` | `{ id, name, picture? }` (Deezer artist id) or `{ name }` (the Hub finds an exact match on Deezer; 404 if none) → 201 `{ follow }`. Up to 1000 per person |
 | `DELETE /api/radar/follows/:id` | stop following (404 if you weren't) |
 | `POST /api/radar/check` | look your artists up now (skips ones looked at in the last 10 minutes) → `{ releases, checkedAt, pending, failed }` |

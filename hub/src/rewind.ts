@@ -12,14 +12,17 @@ const MAX_SECONDS = 30 * 60;
 
 const text = (v: unknown, max = 300) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
+/** Keep a music play for Rewind. Returns it when it's new (not a play the Hub already had), for scrobbling. */
 export function recordPlay(db: Db, userId: number, at: number, track: Record<string, unknown>, json: string) {
-  if ((track.kind ?? 'track') !== 'track') return;
+  if ((track.kind ?? 'track') !== 'track') return null;
   const title = text(track.title), artist = text(track.artist);
-  if (!title) return;
+  if (!title) return null;
   const seconds = Math.min(Math.max(Math.round(Number(track.duration) || 0), 0), MAX_SECONDS);
-  db.prepare('INSERT OR IGNORE INTO plays (user_id, played_at, title, artist, album, seconds, track) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(userId, at, title, artist, text(track.album), seconds, json);
+  const album = text(track.album);
+  const { changes } = db.prepare('INSERT OR IGNORE INTO plays (user_id, played_at, title, artist, album, seconds, track) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(userId, at, title, artist, album, seconds, json);
   db.prepare('DELETE FROM plays WHERE user_id = ? AND played_at < ?').run(userId, Date.now() - KEEP_MS);
+  return changes ? { title, artist, album, seconds } : null;
 }
 
 /** Years and months that have plays, newest first, in the person's time zone (`tz` = getTimezoneOffset()). */

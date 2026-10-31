@@ -5,6 +5,8 @@ import type { Db } from '../db.ts';
 import { clientIp, HttpError, need, signedIn, str, type Auth } from '../http.ts';
 import { deemixJobIds } from '../library.ts';
 import { approvers, notify, notifyRequester } from '../notify.ts';
+import { permissionsFor } from '../roles.ts';
+import { getUser } from '../users.ts';
 import { hubSlskd } from '../slskd.ts';
 import { hubDeemix, hubYtSettings, isDeezerLink } from './proxy.ts';
 import { readFiles } from './slskd.ts';
@@ -64,8 +66,29 @@ const getRequest = (db: Db, id: number) => {
 
 const KINDS = ['track', 'album', 'playlist', 'artist', 'video'];
 
-export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library, clean }: Ctx) {
+export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library, clean, radar }: Ctx) {
   const key = config.secretKey;
+
+  /**
+   * Release Radar's "Get new releases automatically" (radar.ts): the release becomes this person's request, which
+   * downloads straight away with Autodownload and otherwise waits in the admins' queue like any other.
+   */
+  radar.autoGet = async (userId, rel) => {
+    const user = getUser(db, userId);
+    if (!user || user.disabled) return;
+    const permissions = permissionsFor(user);
+    if (!permissions.includes('requests.create') || (user.role === 'kid' && rel.explicit)) return;
+    const open = db.prepare("SELECT 1 FROM requests WHERE user_id = ? AND link = ? AND status IN ('pending', 'approved')").get(userId, rel.link);
+    if (open) return;
+    const kind = 'album'; // singles and EPs are albums on Deezer too
+    const { lastInsertRowid } = db
+      .prepare('INSERT INTO requests (user_id, link, kind, title, artist, cover, note, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(userId, rel.link, kind, rel.title, rel.artist, rel.cover, 'Release Radar: got automatically', 'pending', Date.now());
+    const r = getRequest(db, Number(lastInsertRowid))!;
+    audit(db, { actorId: userId, action: 'request.created', target: `${r.artist} – ${r.title}`, detail: { link: r.link, kind, auto: true } });
+    if (permissions.includes('downloads.run')) await approve(r, user, '');
+    else notify(db, approvers(db, userId), 'request.new', `New request from ${user.displayName}`, `${r.title} by ${r.artist} (Release Radar)`);
+  };
 
   /**
    * Hand an approved request to deemix or yt-dlp. Returns how, and which download to follow (library.ts),

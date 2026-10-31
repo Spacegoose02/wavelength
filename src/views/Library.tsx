@@ -22,6 +22,7 @@ import { ArtworkButton } from '../components/ArtworkButton';
 import { hubClient } from '../store/hub';
 import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
 import { FollowButton } from '../components/FollowButton';
+import { SongRadioButton } from '../components/SongRadioButton';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -219,6 +220,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
           <SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} />
           <div className="hero-actions">
             <FollowButton name={artist.name} />
+            <SongRadioButton artist={artist.name} />
             <ShareButton what={() => shareOfArtist(artist.name, artistArt(artist))} />
             <KidFlagButton kind="artist" artist={artist.name} />
             <ArtworkButton kind="artist" artist={artist.name} current={artistArt(artist)} />
