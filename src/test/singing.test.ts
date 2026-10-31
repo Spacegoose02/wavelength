@@ -1,0 +1,75 @@
+import { describe, expect, it } from 'vitest';
+import { lineAt, sungLines, syllables } from '../lib/singAlong';
+import { newVoiceState, voiceFrame } from '../player/voice';
+
+const BINS = 1024;
+const BIN_HZ = 48000 / 2048;
+
+/** A sung vowel: harmonics of `f0` under a couple of formant bumps, plus a faint noise floor. */
+function voice(f0: number, amp = 0.2) {
+  const s = new Float32Array(BINS).fill(1e-4);
+  for (let h = 1; h * f0 < 5000; h++) {
+    const f = h * f0;
+    const formant = Math.exp(-(((f - 700) / 300) ** 2)) + 0.6 * Math.exp(-(((f - 1200) / 400) ** 2)) + 0.15;
+    s[Math.round(f / BIN_HZ)] += amp * formant;
+  }
+  return s;
+}
+/** A drum hit: broadband noise, strongest in the lows and highs. */
+function drum(amp = 0.2) {
+  const s = new Float32Array(BINS);
+  for (let i = 0; i < BINS; i++) s[i] = amp * (0.5 + 0.5 * ((i * 7919) % 13) / 13);
+  return s;
+}
+const silence = () => new Float32Array(BINS).fill(1e-6);
+const zero = () => new Float32Array(BINS);
+
+/** Run a few warm-up frames of `warm`, then return the output for `frame`. */
+function run(frames: [Float32Array, Float32Array][]) {
+  const st = newVoiceState();
+  let v = 0;
+  frames.forEach(([m, s], i) => (v = voiceFrame(st, m, s, BIN_HZ, i / 60)));
+  return v;
+}
+
+describe('voiceFrame', () => {
+  it('opens for a centred sung vowel', () => {
+    expect(run(Array.from({ length: 20 }, () => [voice(220), zero()]))).toBeGreaterThan(0.6);
+  });
+  it('stays shut for silence', () => {
+    expect(run(Array.from({ length: 20 }, () => [silence(), zero()]))).toBe(0);
+  });
+  it('ignores a drum hit', () => {
+    const quiet: [Float32Array, Float32Array][] = Array.from({ length: 20 }, () => [silence(), zero()]);
+    expect(run([...quiet, [drum(), zero()], [drum(0.1), zero()]])).toBeLessThan(0.15);
+  });
+  it('ignores a tone panned to one side (side as strong as mid)', () => {
+    expect(run(Array.from({ length: 20 }, () => [voice(220), voice(220)]))).toBeLessThan(0.1);
+  });
+  it('closes again when the voice stops', () => {
+    const sing: [Float32Array, Float32Array][] = Array.from({ length: 20 }, () => [voice(220), zero()]);
+    const rest: [Float32Array, Float32Array][] = Array.from({ length: 10 }, () => [voice(220, 0.002), zero()]);
+    expect(run([...sing, ...rest])).toBeLessThan(0.1);
+  });
+});
+
+describe('sing-along lyrics', () => {
+  it('counts syllables roughly', () => {
+    expect(syllables('Never gonna give you up')).toBe(7);
+    expect(syllables('love')).toBe(1);
+  });
+  it('treats long gaps after a line as quiet, and empty lines as breaks', () => {
+    const sung = sungLines([
+      { time: 10, text: 'Hello darkness my old friend' },
+      { time: 30, text: '' },
+      { time: 40, text: 'I have come to talk' },
+    ]);
+    expect(sung).toHaveLength(2);
+    expect(lineAt(sung, 11)?.start).toBe(10);
+    expect(lineAt(sung, 20)).toBeNull(); // the line ended long before the next one
+    expect(lineAt(sung, 35)).toBeNull();
+    expect(lineAt(sung, 40.5)?.start).toBe(40);
+    expect(lineAt(undefined, 5)).toBeUndefined();
+    expect(lineAt([], 5)).toBeNull(); // instrumental
+  });
+});
