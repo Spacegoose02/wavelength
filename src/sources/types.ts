@@ -1,3 +1,4 @@
+import type { Lyrics } from '../lib/lyrics';
 export type SourceKind = 'navidrome' | 'plex' | 'audiobookshelf' | 'subwave';
 
 export interface SourceConfig {
@@ -53,6 +54,16 @@ export interface Track {
   playlistItemId?: string;
   /** Navidrome: starred / favorited on the server. */
   starred?: boolean;
+  /** Loudness tags (OpenSubsonic `replayGain`), in dB; see player/replayGain.ts. */
+  replayGain?: ReplayGain;
+}
+
+export interface ReplayGain {
+  trackGain?: number;
+  albumGain?: number;
+  /** linear sample peaks (1 = full scale) */
+  trackPeak?: number;
+  albumPeak?: number;
 }
 
 export interface Favorites {
@@ -183,6 +194,8 @@ export interface MusicSource {
   prepare?(track: Track): Promise<{ track: Track; startAt?: number }>;
   scrobble?(track: Track, submission: boolean): Promise<void>;
   rescan?(): Promise<void>;
+  /** The server's own lyrics for a song (lib/lyrics.ts falls back to LRCLIB). */
+  getLyrics?(track: Track): Promise<Lyrics | undefined>;
 
   // ---- server playlists (two-way: edits show up in Navidrome clients / Plexamp) ----
   getPlaylists?(): Promise<ServerPlaylist[]>;
