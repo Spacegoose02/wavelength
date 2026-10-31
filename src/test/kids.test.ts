@@ -51,12 +51,21 @@ describe('explicit and clean copies of the same album, flagged separately', () =
     expect(trackNotForKids(t('Loud', 'S&M', 'explicit'))).toBe(true);
   });
 
-  test('same-named copies told apart by their tags: marking the clean one doesn’t mark the explicit one', () => {
-    useFlags.setState({ flags: [flag(1, 'track', 'S&M', 'allow', 'clean'), flag(2, 'album', 'Loud', 'allow', 'clean')] });
-    expect(trackNotForKids(t('Loud', 'S&M', 'clean'))).toBe(false);
-    expect(trackNotForKids(t('Loud', 'S&M', 'explicit'))).toBe(true);
-    expect(albumNotForKids({ artist: 'Rihanna', title: 'Loud', explicit: 'clean' } as Album)).toBe(false);
-    expect(albumNotForKids({ artist: 'Rihanna', title: 'Loud', explicit: 'explicit' } as Album)).toBe(true);
+  test('one album with songs tagged explicit and clean is one album: a flag on it covers all its songs', () => {
+    expect(trackVersion(t('Underground Luxury', 'One Day', 'clean'))).toBe('');
+    expect(trackVersion(t('Underground Luxury', 'Ready', 'explicit'))).toBe('');
+    useFlags.setState({ flags: [flag(1, 'album', 'Underground Luxury', 'block', '')] });
+    expect(trackNotForKids(t('Underground Luxury', 'One Day', 'clean'))).toBe(true);
+    useFlags.setState({ flags: [] });
+    // and its clean song is fine for kids on its own
+    expect(trackNotForKids(t('Underground Luxury', 'One Day', 'clean'))).toBe(false);
+  });
+
+  test('a flag 0.17.2 saved as "explicit" counts for the song as a whole', () => {
+    useFlags.setState({ flags: [flag(1, 'track', 'S&M', 'allow', 'explicit')] });
+    expect(trackNotForKids(t('Loud', 'S&M', 'explicit'))).toBe(false);
+    expect(trackNotForKids(t('Loud (Clean)', 'S&M'))).toBe(false);
+    expect(flagOn('track', 'Rihanna', 'S&M', '')?.id).toBe(1);
   });
 
   test('hiding the clean version hides only it; "every version" hides both', () => {
@@ -103,9 +112,19 @@ describe('the library check’s clean version', () => {
   });
 });
 
-describe('versions on different servers', () => {
-  test('same-named albums tagged explicit and clean aren’t merged into one', () => {
+describe('albums Navidrome lists in parts', () => {
+  const part = (id: string, explicit?: 'explicit' | 'clean', title = 'Underground Luxury') => ({ id, sourceId: 'nd', artist: 'B.o.B', title, explicit }) as Album;
+  test('a part tagged clean (its only song is clean) stays with the explicit album, and isn’t a clean version', () => {
+    useRatings.setState({ ratings: [] });
+    const merged = mergeAlbums([[part('a', 'explicit'), part('b', 'clean')]]);
+    expect(merged.map((x) => x.refs!.length)).toEqual([2]);
+    expect(versionOf(part('b', 'clean'))).toBeUndefined();
+    expect(versionOf(part('a', 'explicit'))).toBe('explicit');
+    expect(versionOf(part('c', undefined, 'Underground Luxury (Clean)'))).toBe('clean');
+    expect(albumVersion(part('b', 'clean'))).toBe('');
+  });
+  test('across servers too', () => {
     const a = (sourceId: string, explicit?: 'explicit' | 'clean') => ({ id: sourceId, sourceId, artist: 'Rihanna', title: 'Loud', explicit }) as Album;
-    expect(mergeAlbums([[a('nd', 'explicit')], [a('plex')], [a('nd2', 'clean')]]).map((x) => x.refs!.length)).toEqual([2, 1]);
+    expect(mergeAlbums([[a('nd', 'explicit')], [a('plex')], [a('nd2', 'clean')]]).map((x) => x.refs!.length)).toEqual([3]);
   });
 });

@@ -15,7 +15,7 @@ const KINDS = ['track', 'album', 'artist'];
 
 interface Row { id: number; kind: string; artist: string; title: string; version: string; verdict: string; set_by_name: string | null; created_at: number }
 const toFlag = (r: Row) => ({ id: r.id, kind: r.kind, artist: r.artist, title: r.title, version: r.version, verdict: r.verdict, setBy: r.set_by_name, createdAt: r.created_at });
-const VERSION_LABEL: Record<string, string> = { explicit: ' (explicit version)', clean: ' (clean version)', any: ' (every version)' };
+const VERSION_LABEL: Record<string, string> = { clean: ' (clean version)', any: ' (every version)' };
 
 export function flagRoutes(app: FastifyInstance, { db }: Ctx) {
   const SELECT = 'SELECT f.*, u.display_name AS set_by_name FROM content_flags f LEFT JOIN users u ON u.id = f.set_by';
@@ -42,7 +42,8 @@ export function flagRoutes(app: FastifyInstance, { db }: Ctx) {
     if (!artist || (kind !== 'artist' && !title)) throw new HttpError(400, kind === 'artist' ? 'Send the artist' : 'Send the artist and title');
     const sent = (b as { version?: unknown } | null)?.version;
     if (sent !== undefined && !VERSIONS.includes(sent as Version)) throw new HttpError(400, "version is '', 'explicit', 'clean' or 'any'");
-    const version = kind === 'artist' ? 'any' : sent === undefined ? versionFromTitle(kind, title) : (sent as Version);
+    // 'explicit' (from 0.17.2 apps) isn't a version of its own any more (kidSafe.ts)
+    const version = kind === 'artist' ? 'any' : sent === undefined ? versionFromTitle(kind, title) : sent === 'explicit' ? '' : (sent as Version);
     db.prepare(`INSERT INTO content_flags (kind, artist, title, version, verdict, set_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT (kind, artist COLLATE NOCASE, title COLLATE NOCASE, version) DO UPDATE SET verdict = excluded.verdict, set_by = excluded.set_by, created_at = excluded.created_at`)
       .run(kind, artist, title, version, verdict, user.id, Date.now());

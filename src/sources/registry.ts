@@ -40,16 +40,16 @@ export function norm(s = '') {
 }
 
 /**
- * Lists must be passed in source priority order — earlier sources win. Copies with the same name whose tags
- * say one is explicit and the other clean stay apart: they're two versions (lib/versions.ts), not one album.
+ * Lists must be passed in source priority order — earlier sources win. Copies with the same name are one album
+ * whatever their explicit tags say: an album's tag only sums up its songs (Navidrome calls a part of an album
+ * holding just its clean songs "clean"), so it doesn't make a clean version. Clean versions have "(Clean)" in
+ * their name (lib/versions.ts).
  */
 export function mergeAlbums(lists: Album[][]): Album[] {
   const map = new Map<string, Album>();
   for (const list of lists) {
     for (const a of list) {
-      let key = `${norm(a.artist)}|${norm(a.title)}`;
-      const first = map.get(key);
-      if (first?.explicit && a.explicit && first.explicit !== a.explicit) key += `|${a.explicit}`;
+      const key = `${norm(a.artist)}|${norm(a.title)}`;
       const existing = map.get(key);
       if (existing) existing.refs!.push(a);
       else map.set(key, { ...a, refs: [a] });

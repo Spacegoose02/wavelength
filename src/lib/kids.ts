@@ -17,9 +17,8 @@ import { cleanTitle, primaryArtist } from './match';
  * An album's clean version ("Loud (Clean)") and the explicit one have the same name once the mark is dropped,
  * and their songs have the same titles. So a song or album flag also says which version it's for, and only
  * applies to that version (`FlagVersion`, the same rules as the Hub's hub/src/kidSafe.ts):
- *   'explicit'  the file's own tag says explicit (Deezer: explicit lyrics)
- *   'clean'     "(Clean)", "(Edited)" or "(Censored)" in the album's or song's title, or the file's tag says clean
- *   ''          neither: untagged files, Plex
+ *   'clean'     "(Clean)", "(Edited)" or "(Censored)" in the album's or song's title
+ *   ''          anything else, whatever its explicit tag says (one album holds songs tagged both ways)
  *   'any'       every version: artists, and "Hide every version"
  */
 
@@ -59,18 +58,23 @@ export function startFlagChecks() {
 const artistKey = (a = '') => norm(primaryArtist(a));
 const key = (kind: string, artist = '', title = '') => `${kind}|${artistKey(artist)}|${kind === 'artist' ? '' : cleanTitle(title)}`;
 const flagKey = (kind: string, artist: string, title: string, version: FlagVersion) => `${key(kind, artist, title)}|${kind === 'artist' ? 'any' : version}`;
-/** A flag from a Hub older than versions: the title says whether it's the clean version. */
-const versionOfFlag = (f: HubFlag): FlagVersion => f.version ?? (f.kind === 'artist' ? 'any' : CLEAN_MARK.test(f.title) ? 'clean' : '');
+/**
+ * A flag's version. From a Hub older than versions, the title says whether it's the clean version. 'explicit'
+ * (saved by 0.17.2 for songs tagged explicit) counts as '': the tag doesn't make another version.
+ */
+const versionOfFlag = (f: HubFlag): FlagVersion =>
+  f.kind === 'artist' ? 'any' : f.version === 'explicit' ? '' : f.version ?? (CLEAN_MARK.test(f.title) ? 'clean' : '');
 
-/** Which version a song is, for kid-safe flags. */
-export function trackVersion(t: Pick<Track, 'album' | 'title' | 'explicit'>): Exclude<FlagVersion, 'any'> {
-  if (t.explicit === 'explicit') return 'explicit';
-  return t.explicit === 'clean' || CLEAN_MARK.test(t.album ?? '') || CLEAN_MARK.test(t.title) ? 'clean' : '';
+/**
+ * Which version a song is, for kid-safe flags: the clean version when its album's name (or its own) has
+ * "(Clean)" in it. Not from its tag: on an explicit album the songs without bad words are tagged clean too.
+ */
+export function trackVersion(t: Pick<Track, 'album' | 'title'>): Exclude<FlagVersion, 'any' | 'explicit'> {
+  return CLEAN_MARK.test(t.album ?? '') || CLEAN_MARK.test(t.title) ? 'clean' : '';
 }
-/** Which version an album is, for kid-safe flags. */
-export function albumVersion(a: Pick<Album, 'title' | 'explicit'>): Exclude<FlagVersion, 'any'> {
-  if (a.explicit === 'explicit') return 'explicit';
-  return a.explicit === 'clean' || CLEAN_MARK.test(a.title) ? 'clean' : '';
+/** Which version an album is, for kid-safe flags: "(Clean)" in its name. */
+export function albumVersion(a: Pick<Album, 'title'>): Exclude<FlagVersion, 'any' | 'explicit'> {
+  return CLEAN_MARK.test(a.title) ? 'clean' : '';
 }
 
 let indexed: HubFlag[] | undefined;
@@ -125,7 +129,7 @@ export function explicitOfAlbum(a: Pick<Album, 'artist' | 'title' | 'explicit'>)
  * Most specific flag wins: song, then album, then artist. A flag on this version counts, then one on every
  * version; a flag on another version of the same song or album doesn't.
  */
-function verdictFor(i: { artist?: string; album?: string; title?: string; version: Exclude<FlagVersion, 'any'> }): HubFlag['verdict'] | undefined {
+function verdictFor(i: { artist?: string; album?: string; title?: string; version: '' | 'clean' }): HubFlag['verdict'] | undefined {
   const v = verdicts();
   const get = (kind: string, title = '') => v.get(flagKey(kind, i.artist ?? '', title, i.version)) ?? v.get(flagKey(kind, i.artist ?? '', title, 'any'));
   return (i.title ? get('track', i.title) : undefined) ?? (i.album ? get('album', i.album) : undefined) ?? v.get(flagKey('artist', i.artist ?? '', '', 'any'));
@@ -141,7 +145,7 @@ export const isKid = () => useHub.getState().user?.role === 'kid';
 export const useIsKid = () => useHub((s) => s.user?.role === 'kid');
 
 /** Whether this would be hidden from a kid. `explicit` is the item's own rating, `version` which version it is. */
-export function notForKids(i: { artist?: string; album?: string; title?: string; explicit?: boolean; version?: Exclude<FlagVersion, 'any'> }): boolean {
+export function notForKids(i: { artist?: string; album?: string; title?: string; explicit?: boolean; version?: '' | 'clean' }): boolean {
   const v = verdictFor({ ...i, version: i.version ?? '' });
   if (v) return v === 'block';
   return !!i.explicit;
@@ -151,10 +155,10 @@ export const trackNotForKids = (t: Track) =>
   t.kind === 'track' && notForKids({ artist: t.artist, album: t.album, title: t.title, explicit: explicitOfTrack(t) === 'explicit', version: trackVersion(t) });
 export const albumNotForKids = (a: Album) => notForKids({ artist: a.artist, album: a.title, explicit: explicitOfAlbum(a) === 'explicit', version: albumVersion(a) });
 export const artistNotForKids = (a: Artist) => notForKids({ artist: a.name });
-/** Deezer: explicit lyrics, or "(Clean)" in the title. "Not explicit" isn't the clean version, it's untagged. */
+/** Deezer: "(Clean)" in the title makes the clean version. */
 export const deezerNotForKids = (r: DeezerResult) => {
   const album = r.type === 'album' ? r.title : r.album;
-  const version = r.explicit ? 'explicit' : CLEAN_MARK.test(album ?? '') || (r.type === 'track' && CLEAN_MARK.test(r.title)) ? 'clean' : '';
+  const version = CLEAN_MARK.test(album ?? '') || (r.type === 'track' && CLEAN_MARK.test(r.title)) ? 'clean' : '';
   return notForKids({ artist: r.type === 'artist' ? r.title : r.artist, album, title: r.type === 'track' ? r.title : undefined, explicit: r.explicit, version });
 };
 
@@ -222,5 +226,5 @@ export async function removeFlag(id: number) {
 /** How to name a flag's version in lists. */
 export const flagVersionLabel = (f: HubFlag) => {
   const v = versionOfFlag(f);
-  return f.kind === 'artist' ? '' : v === 'clean' ? 'clean version' : v === 'explicit' ? 'explicit version' : v === 'any' ? 'every version' : '';
+  return f.kind === 'artist' ? '' : v === 'clean' ? 'clean version' : v === 'any' ? 'every version' : '';
 };

@@ -442,6 +442,11 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     const { moved, dropped } = repairOldFlags(db);
     if (moved || dropped) audit(db, { action: 'kids.flagsRepaired', detail: { okForKidsMovedToClean: moved, cleanRatingsDropped: dropped } });
   },
+  `
+  -- A song's or album's explicit tag doesn't make another version of it (an album holds songs tagged explicit and
+  -- clean), so flags 0.17.2 saved as 'explicit' are for the album or song as a whole again (kidSafe.ts).
+  UPDATE OR REPLACE content_flags SET version = '' WHERE version = 'explicit';
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

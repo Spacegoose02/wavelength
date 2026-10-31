@@ -459,19 +459,24 @@ export function AlbumView({ album }: { album: Album }) {
   const canEditTags = useCan('library.edit');
   const kid = useIsKid();
 
+  // Navidrome can list one album as two, e.g. when a song was downloaded on its own into another folder: the
+  // parts on this server (of the same version) are shown, played and counted together
+  const parts = splitParts(ref, both ? [ref, ...versions.map((v) => v.ref)] : refs);
+  const partsKey = parts.map((p) => `${p.sourceId}:${p.id}`).join(',');
   useEffect(() => {
     let alive = true;
     setTracks(null);
     setError(undefined);
     const cfg = cfgOf(ref.sourceId);
     if (!cfg) return;
-    sourceFor(cfg).getAlbumTracks!(ref.id)
-      .then((t) => alive && setTracks(t))
+    const src = sourceFor(cfg);
+    Promise.all(parts.map((p) => src.getAlbumTracks!(p.id)))
+      .then((lists) => alive && setTracks(parts.length > 1 ? byPosition(lists.flat()) : lists[0]))
       .catch((e) => alive && setError(String(e.message ?? e)));
     return () => {
       alive = false;
     };
-  }, [ref]);
+  }, [ref, partsKey]);
 
   const total = tracks?.reduce((s, t) => s + (t.duration ?? 0), 0) ?? 0;
   // the copy on screen: the version picked on the switch, or the album opened
@@ -521,9 +526,9 @@ export function AlbumView({ album }: { album: Album }) {
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
                 cover={art} tracks={tracks} />
             ) : null}
-            {refs.length > 1 && (
+            {new Set(refs.map((r) => r.sourceId)).size > 1 && (
               <div className="chips inline">
-                {refs.map((r, i) => (
+                {refs.map((r, i) => refs.findIndex((x) => x.sourceId === r.sourceId) !== i ? null : (
                   <button key={`${r.sourceId}:${r.id}`} className={`chip ${!pick && i === refIdx ? 'on' : ''}`} onClick={() => { setPick(undefined); setRefIdx(i); }}>
                     <i className="dot" style={{ background: SOURCE_COLORS[cfgOf(r.sourceId)?.kind ?? 'radio'] }} />
                     {cfgOf(r.sourceId)?.name}
@@ -538,6 +543,26 @@ export function AlbumView({ album }: { album: Album }) {
       {!tracks && !error ? <Spinner /> : tracks && <TrackList tracks={tracks} />}
     </div>
   );
+}
+
+/** The copies of `ref`'s album on its server with the same version: Navidrome's parts of one album. */
+function splitParts(ref: Album, copies: Album[]): Album[] {
+  const clean = versionOf(ref) === 'clean';
+  const seen = new Set<string>();
+  return [ref, ...copies].filter((r) => {
+    const id = `${r.sourceId}:${r.id}`;
+    if (seen.has(id) || r.sourceId !== ref.sourceId || (versionOf(r) === 'clean') !== clean) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+/** Songs from several parts of one album, in disc and track order, each once. */
+export function byPosition(tracks: Track[]): Track[] {
+  const seen = new Set<string>();
+  return tracks
+    .filter((t) => !seen.has(t.id) && !!seen.add(t.id))
+    .sort((a, b) => (a.discNumber ?? 1) - (b.discNumber ?? 1) || (a.trackNumber ?? 999) - (b.trackNumber ?? 999));
 }
 
 /**

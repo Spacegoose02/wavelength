@@ -11,7 +11,7 @@ import { useHub } from '../store/hub';
  * flagged for the version on screen (`version`, from lib/kids.ts `trackVersion` / `albumVersion`), so marking
  * the clean version doesn't touch the explicit one; "Hide every version" covers both.
  */
-export function KidFlagButton({ kind, artist, title = '', version = '', explicit, className = 'btn' }: { kind: HubFlag['kind']; artist: string; title?: string; version?: Exclude<FlagVersion, 'any'>; explicit?: boolean; className?: string }) {
+export function KidFlagButton({ kind, artist, title = '', version = '', explicit, className = 'btn' }: { kind: HubFlag['kind']; artist: string; title?: string; version?: '' | 'clean'; explicit?: boolean; className?: string }) {
   const can = useHub((s) => !!s.token && s.permissions.includes('library.edit'));
   useFlags((s) => s.flags);
   const [open, setOpen] = useState(false);
@@ -42,7 +42,7 @@ export function KidFlagButton({ kind, artist, title = '', version = '', explicit
     }
   };
   const what = kind === 'track' ? 'song' : kind;
-  const which = kind === 'artist' ? '' : version === 'clean' ? ' (clean version)' : version === 'explicit' ? ' (explicit version)' : '';
+  const which = kind === 'artist' ? '' : version === 'clean' ? ' (clean version)' : '';
 
   return (
     <div className={`menu-wrap ${open ? 'open' : ''}`} ref={ref} onDoubleClick={(e) => e.stopPropagation()}>

@@ -7,10 +7,10 @@ import type { Db } from './db.ts';
  * An album's clean version ("Loud (Clean)", saved so by cleanDownloads.ts) and its explicit one share a title
  * once the mark is dropped, and their songs share titles. So every song or album flag says which version it
  * is for (`version`), and a flag only applies to that version:
- *   'explicit'  the file's own tag says explicit
- *   'clean'     "(Clean)", "(Edited)" or "(Censored)" in the album or song title, or the file's own tag says clean
- *   ''          neither (most files, and anything on Plex)
+ *   'clean'     "(Clean)", "(Edited)" or "(Censored)" in the album or song title
+ *   ''          anything else, whatever its explicit tag says: one album holds songs tagged explicit and clean
  *   'any'       every version: artist flags, and "Hide every version"
+ * 'explicit' was saved by 0.17.2 for songs and albums tagged explicit; it counts as '' (and is turned into it).
  */
 
 export type Version = '' | 'explicit' | 'clean' | 'any';
@@ -31,20 +31,10 @@ export const primaryArtist = (s = '') => s.split(/\s+(?:featuring|feat\.?|ft\.?|
 
 const tagOf = (s?: string) => (s ?? '').trim().toLowerCase();
 
-/** Which version a song is, from its own tag and its album's and its own title. */
-export function songVersion(s: { title?: string; album?: string; explicitStatus?: string }): Exclude<Version, 'any'> {
-  const tag = tagOf(s.explicitStatus);
-  if (tag === 'explicit') return 'explicit';
-  if (tag === 'clean' || CLEAN_MARK.test(s.album ?? '') || CLEAN_MARK.test(s.title ?? '')) return 'clean';
-  return '';
-}
-/** Which version an album is. */
-export function albumVersion(a: { title?: string; explicitStatus?: string }): Exclude<Version, 'any'> {
-  const tag = tagOf(a.explicitStatus);
-  if (tag === 'explicit') return 'explicit';
-  if (tag === 'clean' || CLEAN_MARK.test(a.title ?? '')) return 'clean';
-  return '';
-}
+/** Which version a song is: from its album's title and its own, never its tag. */
+export const songVersion = (s: { title?: string; album?: string }): '' | 'clean' => (CLEAN_MARK.test(s.album ?? '') || CLEAN_MARK.test(s.title ?? '') ? 'clean' : '');
+/** Which version an album is: from its title. */
+export const albumVersion = (a: { title?: string }): '' | 'clean' => (CLEAN_MARK.test(a.title ?? '') ? 'clean' : '');
 
 /** The version a flag sent without one is for (apps from before versions): its title says, or none. */
 export const versionFromTitle = (kind: string, title: string): Version => (kind === 'artist' ? 'any' : CLEAN_MARK.test(title) ? 'clean' : '');
@@ -60,10 +50,11 @@ export function flagVerdict(db: Db, s: { artist?: string; album?: string; title?
   if (!artist) return undefined;
   const rows = (db.prepare('SELECT kind, artist, title, verdict, version FROM content_flags').all() as unknown as FlagRow[])
     .filter((f) => norm(primaryArtist(f.artist)) === artist);
-  const version = kind === 'track' ? songVersion(s) : albumVersion({ title: s.album, explicitStatus: s.explicitStatus });
+  const version = kind === 'track' ? songVersion(s) : albumVersion({ title: s.album });
+  const versionOfRow = (f: FlagRow) => (f.version === 'explicit' ? '' : f.version);
   const find = (k: string, title: string) => {
     const same = rows.filter((f) => f.kind === k && (k === 'artist' || cleanTitle(f.title) === cleanTitle(title)));
-    return same.find((f) => f.version === version) ?? same.find((f) => f.version === 'any');
+    return same.find((f) => versionOfRow(f) === version) ?? same.find((f) => f.version === 'any');
   };
   const hit = (kind === 'track' && s.title ? find('track', s.title) : undefined) ?? (s.album ? find('album', s.album) : undefined) ?? find('artist', '');
   return hit?.verdict === 'block' ? 'block' : hit?.verdict === 'allow' ? 'allow' : undefined;
