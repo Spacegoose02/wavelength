@@ -13,6 +13,10 @@ import { SongRadioButton } from './SongRadioButton';
 import { SleepButton } from './SleepButton';
 import { LyricsPanel } from './Lyrics';
 import { useState } from 'react';
+import { useCatalog } from '../store/catalog';
+import { useUi } from '../store/ui';
+import { albumOfTrack, artistOfTrack } from '../lib/trackLinks';
+import type { Track } from '../sources/types';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
 export function NowPlaying() {
@@ -20,11 +24,16 @@ export function NowPlaying() {
   const [showLyrics, setShowLyrics] = useState(false);
   const close = () => window.history.back(); // pops the entry setNowPlaying(true) pushed
   const t = p.current();
+  const albums = useCatalog((s) => s.albums);
+  const artists = useCatalog((s) => s.artists);
   useArtworkList();
   if (!t) return null;
   const live = t.kind === 'radio';
   const art = p.liveCover ?? trackArt(t);
   const upNext = p.queue.slice(p.index + 1, p.index + 8);
+  const album = albumOfTrack(t, albums);
+  const artist = artistOfTrack(t, artists, album);
+  const go = useUi.getState().go; // closes Now Playing
 
   return (
     <div className="np">
@@ -33,9 +42,16 @@ export function NowPlaying() {
       <div className="np-body">
         <NowPlayingStage art={art} alt={t.title} />
         <div className="np-side">
-          <div className="np-kicker">{live ? 'Live radio' : t.kind === 'book' ? 'Audiobook' : t.album}</div>
-          <h1 className="np-title">{live ? p.liveTitle ?? t.title : t.title}</h1>
-          <div className="np-artist">{live ? t.title : t.artist}</div>
+          {/* the album, song and artist open their library pages (and close Now Playing) */}
+          <div className="np-kicker">{live ? 'Live radio' : t.kind === 'book' ? 'Audiobook' : album
+            ? <button className="np-link" title="Go to album" onClick={() => go({ view: 'album', album })}>{t.album}</button>
+            : t.album}</div>
+          <h1 className="np-title">{album && !live
+            ? <button className="np-link" title="Show in album" onClick={() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } })}>{t.title}</button>
+            : live ? p.liveTitle ?? t.title : t.title}</h1>
+          <div className="np-artist">{artist && !live
+            ? <button className="np-link" title="Go to artist" onClick={() => go({ view: 'artist', artist })}>{t.artist}</button>
+            : live ? t.title : t.artist}</div>
           <div className="np-actions">
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} label="Add to playlist" />}
             <EqButton className="chip" />
@@ -68,17 +84,28 @@ export function NowPlaying() {
           {!(showLyrics && t.kind === 'track') && upNext.length > 0 && (
             <div className="np-next">
               <div className="np-kicker">Up next</div>
-              {upNext.map((q, i) => (
-                <button key={i} className="np-next-row" onClick={() => p.jump(p.index + 1 + i)}>
-                  <Cover src={trackArt(q)} alt={q.title} className="tiny" />
-                  <span>{q.title}</span>
-                  <small>{q.artist}</small>
-                </button>
-              ))}
+              {upNext.map((q, i) => <UpNextRow key={i} track={q} onPlay={() => p.jump(p.index + 1 + i)} />)}
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** An "Up next" row: plays the song; its artist opens the artist's page. */
+function UpNextRow({ track: q, onPlay }: { track: Track; onPlay(): void }) {
+  const artists = useCatalog((s) => s.artists);
+  const artist = artistOfTrack(q, artists);
+  return (
+    <div className="np-next-row">
+      <button className="np-next-play" onClick={onPlay} title="Play">
+        <Cover src={trackArt(q)} alt={q.title} className="tiny" />
+        <span>{q.title}</span>
+      </button>
+      {artist
+        ? <button className="np-link" title="Go to artist" onClick={() => useUi.getState().go({ view: 'artist', artist })}><small>{q.artist}</small></button>
+        : <small>{q.artist}</small>}
     </div>
   );
 }

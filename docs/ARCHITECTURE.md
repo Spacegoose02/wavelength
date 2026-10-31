@@ -36,14 +36,16 @@ admin-only controls. It's a control plane only: audio never goes through it. See
 | `store/` | Global state (zustand). See §4. |
 | `sources/` | Adapters for each backend + chart/radio/download helpers. See [SOURCES.md](SOURCES.md). |
 | `player/engine.ts` | The audio engine. See §3. |
-| `lib/` | `http.ts` (fetch through Rust), `merge.ts` (merge albums or artists by retagging through the Hub), `match.ts` (find "the same song" across servers), `platform.ts` (Android/phone detection), `tvNav.ts` (D-pad), `nativeMedia.ts` (Android media session bridge), `seasons.ts` (Seasonal holiday windows, Random daily, `activeSkin`). |
+| `lib/` | `http.ts` (fetch through Rust), `merge.ts` (merge albums or artists by retagging through the Hub), `match.ts` (find "the same song" across servers), `trackLinks.ts` (the library album and artist of a playing song, for Now Playing's links), `platform.ts` (Android/phone detection), `tvNav.ts` (D-pad), `nativeMedia.ts` (Android media session bridge), `seasons.ts` (Seasonal holiday windows, Random daily, `activeSkin`). |
 | `styles.css` | All CSS. Skins are blocks of CSS variables on `:root[data-skin='…']`. |
 
 ### Routing
 
 There's no router library. `store/ui.ts` holds a `Route` union (`{ view: 'album', album } | …`) and a
 history stack. `go(route)` pushes a browser history entry too, so the **Android back button** and
-mouse back button walk back through pages (`App.tsx` listens for `popstate`).
+mouse back button walk back through pages (`App.tsx` listens for `popstate`). When Now Playing is open,
+`go` reuses the history entry that opening it pushed, so a link out of Now Playing is one Back step from the page
+under it.
 
 ### The source abstraction
 

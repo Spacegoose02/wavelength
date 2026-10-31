@@ -437,7 +437,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
   );
 }
 
-export function AlbumView({ album }: { album: Album }) {
+export function AlbumView({ album, focus }: { album: Album; focus?: { id: string; sourceId: string; title?: string } }) {
   const cfgOf = useSourceCfg();
   const refs = album.refs ?? [album];
   const [refIdx, setRefIdx] = useState(0);
@@ -540,7 +540,7 @@ export function AlbumView({ album }: { album: Album }) {
         </div>
       </header>
       {error && <div className="errors">{error}</div>}
-      {!tracks && !error ? <Spinner /> : tracks && <TrackList tracks={tracks} />}
+      {!tracks && !error ? <Spinner /> : tracks && <TrackList tracks={tracks} focus={focus} />}
     </div>
   );
 }
