@@ -124,6 +124,8 @@ export interface ChartEntry {
   deezerLink?: string;
   /** 30-second preview clip (Deezer) — looked up on demand for other charts. */
   preview?: string;
+  /** Deezer's explicit-lyrics flag, when known (Deezer charts, or once looked up). Kid profiles need it. */
+  explicit?: boolean;
   /** Which charts it appears on (Mix view), with its rank on each. */
   sources: { source: ChartSource; rank: number }[];
 }
@@ -355,6 +357,7 @@ async function deezer(_g: Genre, got: Got): Promise<Chart> {
     cover: t.album?.cover_medium,
     deezerLink: t.link,
     preview: t.preview || undefined,
+    explicit: typeof t.explicit_lyrics === 'boolean' ? t.explicit_lyrics : undefined,
     sources: [{ source: 'deezer' as const, rank: i + 1 }],
   }));
   return { entries, asOf: 'Global, live' };
@@ -374,6 +377,7 @@ function deezerPlaylist(source: ChartSource) {
       cover: t.album?.cover_medium,
       deezerLink: t.link,
       preview: t.preview || undefined,
+      explicit: typeof t.explicit_lyrics === 'boolean' ? t.explicit_lyrics : undefined,
       sources: [{ source, rank: i + 1 }],
     }));
     return { entries, asOf: `Deezer editors · updated ${new Date(newest * 1000).toLocaleDateString()}` };
@@ -429,14 +433,14 @@ const FETCHERS: Record<ChartSource, (g: Genre, got: Got) => Promise<Chart>> = {
   ihRnbHits: iheart('ihRnbHits'),
 };
 
-/** Look a song up on Deezer: link for deemix + 30s preview clip (strict match, then loose). */
-export async function deezerLookup(e: { title: string; artist: string }): Promise<{ link?: string; preview?: string }> {
+/** Look a song up on Deezer: link for deemix, 30s preview clip and explicit flag (strict match, then loose). */
+export async function deezerLookup(e: { title: string; artist: string }): Promise<{ link?: string; preview?: string; explicit?: boolean }> {
   const artist = primaryArtist(e.artist);
   const title = e.title.replace(/\(.*?\)|\[.*?\]/g, '').trim();
   for (const q of [`artist:"${artist}" track:"${title}"`, `${artist} ${title}`]) {
     const r = await getJson(`https://api.deezer.com/search?${qs({ q, limit: 5 })}`).catch(() => null);
     const hit = (r?.data ?? []).find((t: any) => norm(t.artist?.name ?? '').includes(norm(artist)) || norm(artist).includes(norm(t.artist?.name ?? '')));
-    if (hit) return { link: hit.link, preview: hit.preview || undefined };
+    if (hit) return { link: hit.link, preview: hit.preview || undefined, explicit: typeof hit.explicit_lyrics === 'boolean' ? hit.explicit_lyrics : undefined };
   }
   return {};
 }
@@ -496,6 +500,7 @@ export async function getMix(g: Genre, sources: ChartSource[] = sourcesFor(g), f
         cur.cover ??= e.cover;
         cur.deezerLink ??= e.deezerLink;
         cur.preview ??= e.preview;
+        cur.explicit ??= e.explicit;
       } else map.set(key, { ...e, sources: [...e.sources], score: pts });
     }
   });

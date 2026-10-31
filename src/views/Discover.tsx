@@ -14,7 +14,7 @@ import { QueueAllOnSubwave, QueueOnSubwave } from '../components/TrackButtons';
 import { isAndroid } from '../lib/platform';
 import { useMustRequest } from '../lib/inbox';
 import { getSong, NotOnDeezer, viaYtdlp as ytdlpGet } from '../lib/getSong';
-import { useHidden } from '../lib/kids';
+import { isKid, useHidden, useIsKid } from '../lib/kids';
 import { ReleaseRadar } from '../components/ReleaseRadar';
 
 type View = 'mix' | ChartSource;
@@ -27,7 +27,7 @@ type Row = ChartEntry & {
 
 /** A 30s preview as a playable (unsaveable) track. */
 function previewTrack(r: ChartEntry, url: string): Track {
-  return { id: `preview:${url}`, sourceId: 'preview', kind: 'track', title: r.title, artist: r.artist, album: '30-second preview', coverUrl: r.cover, streamUrl: url, duration: 30 };
+  return { id: `preview:${url}`, sourceId: 'preview', kind: 'track', title: r.title, artist: r.artist, album: '30-second preview', coverUrl: r.cover, streamUrl: url, duration: 30, explicit: r.explicit ? 'explicit' : undefined };
 }
 
 export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
@@ -79,10 +79,18 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
         setRows(entries);
         const find = findInLibrary();
         let done = 0;
+        const kid = isKid();
         await pool(entries, 4, async (e, i) => {
           const hit = await find(e);
           if (id !== run.current) return;
-          setRows((rs) => rs?.map((r, j) => (j === i ? { ...r, lib: hit ?? null } : r)));
+          // kids: a song not in the library has no rating from the server, so ask Deezer before it's shown
+          const look = kid && !hit && e.explicit === undefined ? await deezerLookup(e).catch(() => ({}) as Awaited<ReturnType<typeof deezerLookup>>) : undefined;
+          if (id !== run.current) return;
+          setRows((rs) => rs?.map((r, j) => (j === i ? {
+            ...r,
+            lib: hit ?? null,
+            ...(look && { explicit: look.explicit, preview: r.preview ?? look.preview, hasPreview: look.preview ? true : r.hasPreview }),
+          } : r)));
           setChecked(++done);
         });
       } catch (e) {
@@ -96,6 +104,17 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
   const hubYt = useHubRuns('ytdlp');
   const ask = useMustRequest();
   const hidden = useHidden();
+  const kid = useIsKid();
+  /**
+   * Kid profiles: hidden when explicit or flagged. A song not in the library stays hidden until Deezer has said
+   * whether it's explicit, so nothing unrated slips through while the library check runs.
+   */
+  const rowHidden = (r: Row) => {
+    if (!kid) return false;
+    if (r.lib) return hidden.track(r.lib);
+    if (r.explicit === undefined) return true;
+    return hidden.track({ kind: 'track', id: '', sourceId: '', title: r.title, artist: r.artist, explicit: r.explicit ? 'explicit' : 'clean' });
+  };
   const ytAvailable = hubYt || (!isAndroid && !!yt.outDir);
   const nowPlayingId = usePlayer((s) => s.queue[s.index]?.id);
   const playing = usePlayer((s) => s.playing);
@@ -103,11 +122,13 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
   /** Play (or stop) the 30s Deezer clip for a song you don't own yet. */
   const preview = async (i: number) => {
     const r = rows![i];
-    const url = r.preview ?? (await deezerLookup(r)).preview;
-    if (!url) return patch(i, { hasPreview: false });
-    patch(i, { preview: url, hasPreview: true });
+    const found = r.preview ? undefined : await deezerLookup(r);
+    const url = r.preview ?? found?.preview;
+    const explicit = r.explicit ?? found?.explicit;
+    if (!url) return patch(i, { hasPreview: false, explicit });
+    patch(i, { preview: url, hasPreview: true, explicit });
     if (nowPlayingId === `preview:${url}`) return usePlayer.getState().toggle();
-    playTracks([previewTrack(r, url)]);
+    playTracks([previewTrack({ ...r, explicit }, url)]);
   };
 
   const viaYtdlp = async (i: number) => {
@@ -180,7 +201,7 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
 
       {!rows ? <Spinner /> : (
         <div className="tracklist">
-          {rows.map((r, i) => hidden.track({ kind: 'track', id: '', sourceId: '', title: r.title, artist: r.artist, explicit: r.lib?.explicit }) ? null : (
+          {rows.map((r, i) => rowHidden(r) ? null : (
             <div key={`${i}:${r.title}`} className={`track-row chart-row ${r.lib ? 'owned' : ''}`} onDoubleClick={() => r.lib && playTracks([r.lib])}>
               <div className="chart-rank">{r.rank}</div>
               <Cover src={r.cover ?? r.lib?.coverUrl} alt={r.title} className="tiny" />

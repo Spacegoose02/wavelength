@@ -3,6 +3,7 @@ import { checkPin, unlockKidTime, useKidTime } from '../lib/kidTime';
 import { useIsKid } from '../lib/kids';
 import { useHub } from '../store/hub';
 import { ProfileSwitcher } from './ProfileSwitcher';
+import { SignedOut } from '../views/HubSettings';
 
 /** Ask for the grown-up PIN. `check` throws with the Hub's message when the PIN is wrong. */
 export function PinDialog({ title, note, check, onDone, onCancel }: { title: string; note?: string; check(pin: string): Promise<void>; onDone(): void; onCancel(): void }) {
@@ -61,6 +62,23 @@ export function KidLockScreen() {
       {asking && (
         <PinDialog title="Grown-up PIN" note="Unlocks 30 more minutes." check={unlockKidTime} onDone={() => setAsking(false)} onCancel={() => setAsking(false)} />
       )}
+    </div>
+  );
+}
+
+/**
+ * A kid profile the Hub signed out (store/hub.ts `kidSignedOut`): the app stays covered until a grown-up signs
+ * this device in again, so it never falls back to an app with no kid filters.
+ */
+export function KidSignedOutScreen() {
+  const name = useHub((s) => s.kidSignedOut);
+  const signedIn = useHub((s) => !!s.token);
+  if (name === undefined || signedIn) return null;
+  return (
+    <div className="kid-lock">
+      <h1>{name ? `${name} was signed out` : 'This profile was signed out'}</h1>
+      <p className="muted">Ask a grown-up to sign this device in to the Hub again.</p>
+      <div className="kid-lock-signin"><SignedOut /></div>
     </div>
   );
 }

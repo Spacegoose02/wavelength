@@ -79,7 +79,7 @@ const sourceOf = (t: Track) => {
  * While this device is a guest in a listening party (lib/together.ts), the person's own queue and transport
  * actions go to the host instead. Returns true when it took the action.
  */
-export type PlayerIntercept = (op: 'enqueue' | 'playNext' | 'next' | 'prev' | 'toggle' | 'seek' | 'ended', arg?: Track[] | number) => boolean;
+export type PlayerIntercept = (op: 'play' | 'enqueue' | 'playNext' | 'next' | 'prev' | 'toggle' | 'seek' | 'ended', arg?: Track[] | number) => boolean;
 let intercept: PlayerIntercept | undefined;
 export const setPlayerIntercept = (fn?: PlayerIntercept) => {
   intercept = fn;
@@ -98,10 +98,22 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   current: () => get().queue[get().index],
 
   playTracks(all, start = 0, startAt = 0) {
+    // a listening-party guest playing something: it goes to the host rather than out of step with the party
+    if (intercept?.('play', all.slice(start))) return;
     // kid profiles: drop what they may not play, keeping the chosen song's place when it stays
     const tracks = kidSafe(all);
     if (!tracks.length) return;
-    if (tracks !== all) start = Math.max(0, tracks.indexOf(all[start]));
+    if (tracks !== all) {
+      const chosen = tracks.indexOf(all[start]);
+      if (chosen >= 0) start = chosen;
+      else if (get().shuffle) start = Math.floor(Math.random() * tracks.length); // Shuffle: not always the first song
+      else {
+        // the chosen song is hidden: start at the next one that isn't
+        const kept = new Set(tracks);
+        const after = all.slice(start).find((t) => kept.has(t));
+        start = after ? tracks.indexOf(after) : 0;
+      }
+    }
     let queue = [...tracks];
     let index = start;
     if (get().shuffle && tracks.length > 1) {
@@ -110,6 +122,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       index = 0;
     }
     set({ queue, index });
+    failStreak = 0;
     loadCurrent(startAt);
   },
   enqueue(all) {
@@ -134,6 +147,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   jump(i) {
     if (i < 0 || i >= get().queue.length) return;
     set({ index: i });
+    failStreak = 0;
     loadCurrent();
   },
   removeAt(i) {
@@ -264,8 +278,33 @@ async function loadCurrent(startAt = 0) {
     await engine.load(ready.streamUrl, startAt || prepared.startAt || 0);
     if (ready.kind === 'track') sourceOf(ready)?.scrobble?.(ready, false).catch(() => {});
   } catch (e) {
-    if (token === loadSeq) usePlayer.setState({ error: String((e as Error).message ?? e), buffering: false });
+    if (token === loadSeq) failed(String((e as Error).message ?? e));
   }
+}
+
+// ---- songs that won't play ------------------------------------------------
+
+/** Songs in a row that failed to play; after MAX_FAILS the player stops instead of running through the queue. */
+let failStreak = 0;
+const MAX_FAILS = 3;
+let skipTimer: number | undefined;
+
+/**
+ * A song couldn't load or play: say so, and move on to the next one after a moment (a missing song shouldn't
+ * stop a whole album). Not while a listening party's host is in charge, and not past the end of the queue.
+ */
+function failed(message: string) {
+  window.clearTimeout(skipTimer);
+  const { index, queue, repeat } = usePlayer.getState();
+  const more = index + 1 < queue.length || (repeat === 'all' && queue.length > 1);
+  const skip = more && !intercept && ++failStreak < MAX_FAILS;
+  usePlayer.setState({ error: skip ? `${message} · skipping to the next song` : message, buffering: false, playing: false });
+  if (!skip) return;
+  const seq = loadSeq;
+  skipTimer = window.setTimeout(() => {
+    // the person picked something else meanwhile
+    if (seq === loadSeq) usePlayer.getState().next();
+  }, 2000);
 }
 
 // ---- gapless and crossfade ------------------------------------------------
@@ -369,10 +408,13 @@ engine.on('durationchange', (_, el) => {
   if (Number.isFinite(el.duration)) usePlayer.setState({ duration: el.duration });
 });
 engine.on('play', () => usePlayer.setState({ playing: true }));
-engine.on('playing', () => usePlayer.setState({ playing: true, buffering: false }));
+engine.on('playing', () => {
+  failStreak = 0;
+  usePlayer.setState({ playing: true, buffering: false });
+});
 engine.on('waiting', () => usePlayer.setState({ buffering: true }));
 engine.on('pause', () => usePlayer.setState({ playing: false }));
-engine.on('error', (_, el) => usePlayer.setState({ error: `Playback failed (code ${el.error?.code ?? '?'})`, buffering: false, playing: false }));
+engine.on('error', (_, el) => failed(`Playback failed (code ${el.error?.code ?? '?'})`));
 engine.on('ended', () => {
   if (stopAfterTrack) {
     const done = stopAfterTrack;

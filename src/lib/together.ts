@@ -32,6 +32,8 @@ let offset = 0; // Hub clock minus ours
 let loadedKey = '';
 let pushTimer: ReturnType<typeof setTimeout> | undefined;
 let lastPush = '';
+/** follow() is loading the host's song (that playTracks isn't the guest's own pick) */
+let following = false;
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
 const note = (s: string) => useTogether.setState({ note: s });
@@ -128,7 +130,12 @@ export async function follow() {
       engine.pause();
       return note(`Can't play ${t.title} here: it's on a server this device doesn't have`);
     }
-    usePlayer.getState().playTracks([mine], 0, at);
+    following = true;
+    try {
+      usePlayer.getState().playTracks([mine], 0, at);
+    } finally {
+      following = false;
+    }
     if (!s.playing) setTimeout(() => engine.pause(), 300);
     return;
   }
@@ -146,6 +153,15 @@ function guestIntercept(): Parameters<typeof setPlayerIntercept>[0] {
       c.partyRequest(p.id, r).then(() => note(done), (e) => note(String((e as Error).message ?? e)));
     switch (op) {
       case 'ended': return true; // the host moves on, and this device follows
+      case 'play': {
+        if (following) return false;
+        // a guest picking a song: it plays next for everyone, instead of only here and out of step
+        const picked = (arg as Track[]).slice(0, 50);
+        if (!picked.length) return true;
+        if (!p.guestsAdd) return note('The host is choosing the songs. Leave the party to play your own'), true;
+        void ask({ action: 'playNext', tracks: picked.map(toParty) }, picked.length === 1 ? `${picked[0].title} plays next for everyone` : `${picked.length} songs play next for everyone`);
+        return true;
+      }
       case 'enqueue':
       case 'playNext':
         if (!p.guestsAdd) return note('The host is choosing the songs'), true;

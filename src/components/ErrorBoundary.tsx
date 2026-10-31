@@ -5,7 +5,7 @@ interface State {
 }
 
 /** Keeps one broken page from blanking the whole app — shows the error instead. */
-export class ErrorBoundary extends Component<{ children: ReactNode; onReset?: () => void }, State> {
+export class ErrorBoundary extends Component<{ children: ReactNode; onReset?: () => void; fallback?: (retry: () => void, error: Error) => ReactNode }, State> {
   state: State = {};
 
   static getDerivedStateFromError(error: Error): State {
@@ -19,6 +19,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode; onReset?: ()
   render() {
     const { error } = this.state;
     if (!error) return this.props.children;
+    // smaller parts (the player bar, Now Playing) show their own short note
+    if (this.props.fallback) return this.props.fallback(() => this.setState({ error: undefined }), error);
     return (
       <div className="page">
         <div className="crash">

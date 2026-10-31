@@ -68,13 +68,16 @@ export function songNotForKids(db: Db, song: { title?: string; album?: string; a
   if (tag === 'explicit') return true;
   // the file says clean, or it's on the clean version: the explicit album's library check isn't about it
   if (tag === 'clean' || CLEAN_MARK.test(song.album ?? '')) return false;
-  const artist = song.artist ?? '', album = song.album ?? '', title = song.title ?? '';
-  const rated = db
-    .prepare(`SELECT 1 FROM ratings WHERE rating = 'explicit' AND artist = ? COLLATE NOCASE AND album = ? COLLATE NOCASE AND
-      ((kind = 'track' AND title = ? COLLATE NOCASE) OR (kind = 'album' AND NOT EXISTS
-        (SELECT 1 FROM ratings t WHERE t.kind = 'track' AND t.artist = ratings.artist AND t.album = ratings.album)))`)
-    .get(artist, album, title);
-  return !!rated;
+  // matched as the app matches them (src/lib/kids.ts): primary artist and titles without "(feat. …)" and the
+  // like, so "Artist feat. Someone" on an album the library check rated explicit is caught here too
+  const artist = norm(primaryArtist(song.artist)), album = cleanTitle(song.album), title = cleanTitle(song.title);
+  if (!artist || !album) return false;
+  const rows = (db.prepare('SELECT kind, artist, album, title, rating FROM ratings').all() as unknown as { kind: string; artist: string; album: string; title: string; rating: string }[])
+    .filter((r) => cleanTitle(r.album) === album && norm(primaryArtist(r.artist)) === artist);
+  const tracks = rows.filter((r) => r.kind === 'track');
+  // a song on the explicit list; or, for an album checked without a song list, any song on an explicit album
+  if (tracks.length) return tracks.some((r) => r.rating === 'explicit' && cleanTitle(r.title) === title);
+  return rows.some((r) => r.kind === 'album' && r.rating === 'explicit');
 }
 
 /** Kids: a release from Deezer (Release Radar) that a kid profile mustn't get. */

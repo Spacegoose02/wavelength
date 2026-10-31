@@ -10,7 +10,7 @@ import { startRemote } from './lib/remote';
 import { startTogether } from './lib/together';
 import { WebSignIn } from './components/WebSignIn';
 import { startKidTime } from './lib/kidTime';
-import { KidLockScreen, KidSettings } from './components/KidLock';
+import { KidLockScreen, KidSettings, KidSignedOutScreen } from './components/KidLock';
 import { useHub } from './store/hub';
 import { skinGroup, useSettings } from './store/settings';
 import { useUi, type Route } from './store/ui';
@@ -108,6 +108,27 @@ function View({ route }: { route: Route }) {
   }
 }
 
+/** What the player bar or queue shows when it hits an error: the rest of the app keeps working. */
+const partCrashed = (what: string) => (retry: () => void, error: Error) => (
+  <div className="part-crash" title={`${error.name}: ${error.message}`}>
+    <span>{what} hit an error.</span>
+    <button className="btn small" onClick={retry}>Try again</button>
+  </div>
+);
+
+/** Now Playing covers the screen, so its error note keeps a way out. */
+const nowPlayingCrashed = (retry: () => void, error: Error) => (
+  <div className="np">
+    <button className="np-close" onClick={() => window.history.back()} title="Close"><IconBack /></button>
+    <div className="crash">
+      <h2>Now Playing hit an error</h2>
+      <p className="muted">The music keeps playing. Close this, or try again.</p>
+      <pre>{`${error.name}: ${error.message}`}</pre>
+      <button className="btn primary" onClick={retry}>Try again</button>
+    </div>
+  </div>
+);
+
 function SidebarPlaylists({ route }: { route: Route }) {
   const playlists = useLibrary((s) => s.playlists);
   const go = useUi((s) => s.go);
@@ -188,7 +209,7 @@ export default function App() {
     const onPop = () => {
       const ui = useUi.getState();
       if (ui.nowPlayingOpen) ui.setNowPlaying(false);
-      else if (ui.queueOpen) ui.toggleQueue();
+      else if (ui.queueOpen) useUi.setState({ queueOpen: false });
       else ui.back();
     };
     window.addEventListener('popstate', onPop);
@@ -224,10 +245,11 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </main>
-      {queueOpen && <QueuePanel />}
-      {phone ? <MobileNav /> : <PlayerBar />}
-      {nowPlayingOpen && <NowPlaying />}
+      {queueOpen && <ErrorBoundary fallback={partCrashed('The queue')}><QueuePanel /></ErrorBoundary>}
+      <ErrorBoundary fallback={partCrashed('The player')}>{phone ? <MobileNav /> : <PlayerBar />}</ErrorBoundary>
+      {nowPlayingOpen && <ErrorBoundary fallback={nowPlayingCrashed}><NowPlaying /></ErrorBoundary>}
       <KidLockScreen />
+      <KidSignedOutScreen />
       <WebSignIn />
     </div>
   );

@@ -31,6 +31,11 @@ interface HubState {
   profiles: SavedProfile[];
   /** The active profile's PIN hash, when it has one (SavedProfile.pin). */
   pin?: string;
+  /**
+   * A kid profile the Hub signed out (device revoked, account disabled): their name. The app stays locked
+   * (components/KidLock.tsx KidSignedOutScreen) until someone signs in again, instead of opening unfiltered.
+   */
+  kidSignedOut?: string;
   setUrl(url: string): void;
   signedIn(s: HubSession): void;
   /** Sign in one more person on this device, and switch to them. */
@@ -74,14 +79,14 @@ export const useHub = create<HubState>()(
       kids: [],
       profiles: [],
       setUrl: (url) => set({ url }),
-      signedIn: (s) => set({ token: s.token, user: s.user, permissions: s.permissions, device: s.device, kids: [], lastSeen: Date.now(), offline: false }),
+      signedIn: (s) => set({ token: s.token, user: s.user, permissions: s.permissions, device: s.device, kids: [], lastSeen: Date.now(), offline: false, kidSignedOut: undefined }),
       addProfile: (n) =>
         set((st) => {
           const cur = asProfile(st, st.pin);
           localStorage.removeItem(STAMPS_KEY);
           return {
             profiles: [...st.profiles.filter((p) => p.user.id !== n.user.id && p.user.id !== cur?.user.id), ...(cur ? [cur] : [])],
-            token: n.token, user: n.user, permissions: n.permissions, device: n.device, pin: undefined, kids: [], services: [], lastSeen: Date.now(), offline: false,
+            token: n.token, user: n.user, permissions: n.permissions, device: n.device, pin: undefined, kids: [], services: [], lastSeen: Date.now(), offline: false, kidSignedOut: undefined,
           };
         }),
       switchProfile: (userId) =>
@@ -113,7 +118,11 @@ export const useHub = create<HubState>()(
           const me = await c.me();
           set({ user: me.user, permissions: me.permissions, device: me.device, kids: me.kids ?? [], lastSeen: Date.now(), offline: false });
         } catch (e) {
-          if (e instanceof HubError && e.status === 401) set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false, services: [] });
+          if (e instanceof HubError && e.status === 401) {
+            // a kid's device the Hub signed out stays locked rather than opening with no kid filters
+            const was = useHub.getState().user;
+            set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false, services: [], ...(was?.role === 'kid' && { kidSignedOut: was.displayName }) });
+          }
           else set({ offline: true });
         }
       },
@@ -132,7 +141,7 @@ export const useHub = create<HubState>()(
       name: 'tonearm.hub',
       partialize: (st) => {
         const { url, token, user, permissions, device, lastSeen, services, kids, profiles } = st;
-        return { url, token, user, permissions, device, lastSeen, services, kids, profiles, pin: st.pin };
+        return { url, token, user, permissions, device, lastSeen, services, kids, profiles, pin: st.pin, kidSignedOut: st.kidSignedOut };
       },
       // the device token, and the server logins the Hub hands out, live in the OS keychain (lib/secrets.ts)
       storage: createJSONStorage(() =>
