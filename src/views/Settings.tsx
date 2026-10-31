@@ -567,6 +567,39 @@ const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
 ];
 
 /** Explicit / clean versions (lib/versions.ts). Kid profiles always get the clean one. */
+function PlaybackOptions() {
+  const pb = useSettings((s) => s.playback);
+  const setPlayback = useSettings((s) => s.setPlayback);
+  return (
+    <section id="between-songs">
+      <h2>Volume levelling and crossfade</h2>
+      <p className="muted small">
+        <b>ReplayGain</b> plays every song at about the same loudness, using the loudness tags in your files (Navidrome
+        passes them on). <b>Album</b> keeps an album's quiet and loud songs as they were meant.
+      </p>
+      <div className="chips">
+        {([['off', 'Off'], ['track', 'Track'], ['album', 'Album']] as const).map(([v, label]) => (
+          <button key={v} className={`chip ${pb.replayGain === v ? 'on' : ''}`} onClick={() => setPlayback({ replayGain: v })}>{label}</button>
+        ))}
+      </div>
+      {pb.replayGain !== 'off' && (
+        <label className="range-field">
+          <span>Boost levelled songs by {pb.replayGainPreamp > 0 ? '+' : ''}{pb.replayGainPreamp} dB</span>
+          <input type="range" min={-6} max={6} step={1} value={pb.replayGainPreamp} onChange={(e) => setPlayback({ replayGainPreamp: Number(e.target.value) })} style={{ ['--pct' as string]: `${((pb.replayGainPreamp + 6) / 12) * 100}%` }} />
+        </label>
+      )}
+      <p className="muted small">
+        <b>Crossfade</b> fades the next song in over the end of this one. With it off, the next song is still loaded
+        ahead, so albums play without gaps. Music only, and only from servers that allow it (the equalizer works there too).
+      </p>
+      <label className="range-field">
+        <span>{pb.crossfade ? `Crossfade ${pb.crossfade} s` : 'Crossfade off (gapless)'}</span>
+        <input type="range" min={0} max={12} step={1} value={pb.crossfade} onChange={(e) => setPlayback({ crossfade: Number(e.target.value) })} style={{ ['--pct' as string]: `${(pb.crossfade / 12) * 100}%` }} />
+      </label>
+    </section>
+  );
+}
+
 function VersionsPicker() {
   const versions = useSettings((s) => s.versions);
   const setVersions = useSettings((s) => s.setVersions);
@@ -612,6 +645,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'playback' && (
         <>
           <NowPlayingPicker />
+          <PlaybackOptions />
           <VersionsPicker />
           <section id="equalizer">
             <h2>Equalizer</h2>

@@ -8,10 +8,14 @@ import { AddToPlaylist } from './AddToPlaylist';
 import { EqButton } from './Equalizer';
 import { DevicesButton } from './Devices';
 import { TogetherButton } from './Together';
+import { SleepButton } from './SleepButton';
+import { LyricsPanel } from './Lyrics';
+import { useState } from 'react';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
 export function NowPlaying() {
   const p = usePlayer();
+  const [showLyrics, setShowLyrics] = useState(false);
   const close = () => window.history.back(); // pops the entry setNowPlaying(true) pushed
   const t = p.current();
   useArtworkList();
@@ -35,6 +39,10 @@ export function NowPlaying() {
             <EqButton className="chip" />
             <DevicesButton className="chip" />
             <TogetherButton className="chip" />
+            {t.kind === 'track' && (
+              <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>
+            )}
+            <SleepButton />
           </div>
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && (
@@ -52,7 +60,8 @@ export function NowPlaying() {
             <button className="tbtn" onClick={p.next}><IconNext /></button>
             <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat}><IconRepeat /></button>
           </div>
-          {upNext.length > 0 && (
+          {showLyrics && t.kind === 'track' && <LyricsPanel track={t} />}
+          {!(showLyrics && t.kind === 'track') && upNext.length > 0 && (
             <div className="np-next">
               <div className="np-kicker">Up next</div>
               {upNext.map((q, i) => (
