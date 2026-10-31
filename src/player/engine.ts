@@ -138,6 +138,35 @@ const waitReady = (el: HTMLAudioElement) =>
     el.addEventListener('error', no, { once: true });
   });
 
+/**
+ * A deck couldn't load `url`: CORS, or the song itself is broken (gone, corrupt, the server erred). Try the plain
+ * element, and only remember the host as having no CORS when the plain element then manages it, so one broken
+ * song doesn't turn off the EQ, visualizer, crossfade and gapless for the whole server.
+ */
+async function loadPlain(url: string, startAt: number, autoplay: boolean, token: number) {
+  reset(current);
+  current = plain;
+  applyVolume();
+  plain.src = url;
+  if (startAt > 0) plain.currentTime = startAt;
+  void waitReady(plain).then((ok) => {
+    if (ok && token === loadToken) noCorsHosts.add(host(url));
+  });
+  if (token !== loadToken) return;
+  if (autoplay) await engine.play();
+}
+
+/** Stop the deck still fading out after a crossfade (pause, seek, sleep timer), then do any preload it held up. */
+function endFade() {
+  const old = fading;
+  if (!old) return;
+  fading = undefined;
+  if (old !== current) reset(old);
+  const wanted = pendingPreload;
+  pendingPreload = undefined;
+  if (wanted) engine.preload(wanted);
+}
+
 export const engine = {
   get el() {
     return current;
@@ -182,10 +211,7 @@ export const engine = {
       const ok = await waitReady(el);
       fallbackPending = false;
       if (token !== loadToken) return;
-      if (!ok) {
-        noCorsHosts.add(host(url));
-        return engine.load(url, startAt, autoplay);
-      }
+      if (!ok) return loadPlain(url, startAt, autoplay, token);
     }
     if (startAt > 0 && Math.abs(el.currentTime - startAt) > 1) el.currentTime = startAt;
     if (autoplay) await engine.play();
@@ -234,12 +260,7 @@ export const engine = {
     applyVolume();
     void next.play().catch(() => {});
     window.setTimeout(() => {
-      if (fading !== old) return;
-      fading = undefined;
-      if (old !== current) reset(old);
-      const wanted = pendingPreload;
-      pendingPreload = undefined;
-      if (wanted) engine.preload(wanted);
+      if (fading === old) endFade();
     }, seconds * 1000 + 250);
     return true;
   },
@@ -252,10 +273,14 @@ export const engine = {
     }
   },
   pause() {
+    // a crossfade under way: the old song stops too, not just the new one
+    endFade();
     current.pause();
   },
   seek(t: number) {
-    if (Number.isFinite(t)) current.currentTime = t;
+    if (!Number.isFinite(t)) return;
+    endFade();
+    current.currentTime = t;
   },
   /** Apply equalizer settings now, or as soon as the audio graph exists. */
   setEq(eq: EqSettings) {
@@ -281,6 +306,7 @@ export const engine = {
    * paused; a new load or play in the meantime cancels the fade.
    */
   async fadeOut(seconds: number) {
+    endFade();
     const token = loadToken;
     const el = current;
     const steps = Math.max(1, Math.round(seconds * 10));

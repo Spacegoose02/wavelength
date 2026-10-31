@@ -119,6 +119,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
         clean.add(r.link, bitrate ?? (Number(s.config.bitrate) || 9));
         return { via: 'deemix', job: null };
       }
+      await clean.beforeQueue();
       const answer = await client.addToQueue(r.link, bitrate ?? (Number(s.config.bitrate) || 9));
       const ids = deemixJobIds(answer);
       return { via: 'deemix', job: ids.length ? JSON.stringify(ids) : null };

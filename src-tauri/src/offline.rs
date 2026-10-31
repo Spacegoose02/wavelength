@@ -4,6 +4,7 @@
 use serde::Serialize;
 use std::io::Write;
 use std::path::PathBuf;
+use std::time::Duration;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_http::reqwest;
 
@@ -62,26 +63,60 @@ fn ext_for(content_type: &str, url: &str) -> &'static str {
 #[tauri::command]
 pub async fn offline_save(app: AppHandle, url: String, rel: String) -> Result<OfflineFile, String> {
     let rel = safe_rel(&rel)?;
-    let mut resp = reqwest::get(&url).await.map_err(|e| format!("download failed: {e}"))?;
+    // timeouts so a stalled server can't hold one of the two download slots for ever
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(20))
+        .read_timeout(Duration::from_secs(60))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let mut resp = client.get(&url).send().await.map_err(|e| format!("download failed: {e}"))?;
     if !resp.status().is_success() {
         return Err(format!("server returned {}", resp.status()));
     }
     let ct = resp.headers().get("content-type").and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+    // Subsonic servers (and the Hub's relay) answer errors with 200 and an XML or JSON body: don't save that as a song
+    if is_error_body(&ct) {
+        return Err("the server sent an error instead of the file".into());
+    }
     let path = root(&app)?.join(&rel).with_extension(ext_for(&ct, &url));
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
     // write to a temp name first so a dropped connection never leaves a half file "downloaded"
     let tmp = path.with_extension("part");
-    let mut file = std::fs::File::create(&tmp).map_err(|e| e.to_string())?;
+    let result = write_body(&mut resp, &tmp).await;
+    let size = match result {
+        Ok(size) => size,
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(e);
+        }
+    };
+    if rel.starts_with("tracks") && size < MIN_SONG_BYTES {
+        let _ = std::fs::remove_file(&tmp);
+        return Err("the server sent an empty file".into());
+    }
+    std::fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+    Ok(OfflineFile { path: path.to_string_lossy().into_owned(), size })
+}
+
+/// Smaller than any real song: an error message or an empty reply.
+const MIN_SONG_BYTES: u64 = 2048;
+
+/// A reply that's an error page, not audio or artwork.
+fn is_error_body(content_type: &str) -> bool {
+    let ct = content_type.to_ascii_lowercase();
+    ct.starts_with("text/") || ct.contains("json") || ct.contains("xml")
+}
+
+async fn write_body(resp: &mut reqwest::Response, tmp: &std::path::Path) -> Result<u64, String> {
+    let mut file = std::fs::File::create(tmp).map_err(|e| e.to_string())?;
     let mut size = 0u64;
     while let Some(chunk) = resp.chunk().await.map_err(|e| format!("download interrupted: {e}"))? {
         file.write_all(&chunk).map_err(|e| e.to_string())?;
         size += chunk.len() as u64;
     }
-    drop(file);
-    std::fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
-    Ok(OfflineFile { path: path.to_string_lossy().into_owned(), size })
+    Ok(size)
 }
 
 /// Delete one saved file or a whole folder (an album/playlist) under the offline root.

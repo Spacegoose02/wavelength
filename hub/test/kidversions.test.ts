@@ -122,3 +122,10 @@ test('flags saved as "explicit" by 0.17.2 count for the whole song or album', as
   assert.equal(songNotForKids(db, { artist: 'B.o.B', album: 'Underground Luxury', title: 'One Day', explicitStatus: 'clean' }), true);
   assert.equal(songNotForKids(db, { artist: 'B.o.B', album: 'Underground Luxury', title: 'Ready', explicitStatus: 'explicit' }), false);
 });
+
+test('a "feat." song on a checked explicit album is caught as the app catches it', async () => {
+  const { db } = await seeded();
+  rate(db, 'Loud', ['S&M']);
+  assert.equal(songNotForKids(db, { artist: 'Rihanna feat. Britney Spears', album: 'Loud', title: 'S&M (feat. Britney Spears)' }), true);
+  assert.equal(songNotForKids(db, { artist: 'rihanna', album: 'LOUD', title: 'Only Girl' }), false, 'not in the explicit list');
+});

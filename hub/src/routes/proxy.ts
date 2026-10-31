@@ -81,7 +81,10 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
     await client.removeFromQueue(item.uuid);
     library.activity();
     if (clean.list().some((j) => j.link === link)) clean.add(link, bitrate);
-    else await client.addToQueue(link, bitrate);
+    else {
+      await clean.beforeQueue();
+      await client.addToQueue(link, bitrate);
+    }
     audit(db, { actorId: user.id, action: 'download.queued', target: link, detail: { via: 'deemix', bitrate, retry: true }, ip: clientIp(req) });
     return { ok: true };
   });
@@ -102,6 +105,7 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
     const { s, client } = deemix();
     const bitrate = typeof b.bitrate === 'number' && [1, 3, 9].includes(b.bitrate) ? b.bitrate : Number(s.config.bitrate) || 9;
     library.activity();
+    await clean.beforeQueue();
     const r = await client.addToQueue(link, bitrate);
     audit(db, { actorId: user.id, action: 'download.queued', target: link, detail: { via: 'deemix', bitrate }, ip: clientIp(req) });
     return r ?? { ok: true };

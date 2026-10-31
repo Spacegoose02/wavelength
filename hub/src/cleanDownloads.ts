@@ -62,6 +62,9 @@ export class CleanDownloads {
   readonly watch = new DeemixWatch();
   /** Shorter in tests. */
   pollMs = 3000;
+  /** Set while deemix's folder name has " (Clean)" on it for a clean version that's starting. */
+  private swapping: Promise<void> | null = null;
+  private retryTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(db: Db, key: Buffer, musicDir: string, library: Library) {
     this.db = db;
@@ -142,6 +145,30 @@ export class CleanDownloads {
         return !busy.length;
       }, IDLE_WAIT_MS, 'deemix stayed busy for 12 hours');
       Object.assign(job, { starting: true, stuck: false, detail: 'Starting' });
+      let swapped!: () => void;
+      this.swapping = new Promise<void>((done) => (swapped = done));
+      let template: string;
+      try {
+        template = await this.swap(job, bitrate, client);
+      } finally {
+        this.swapping = null;
+        swapped();
+      }
+      audit(this.db, { action: 'download.clean', target: job.link, detail: { folder: template } });
+    } catch (e) {
+      if (e instanceof Cancelled) return;
+      Object.assign(job, { state: 'failed', error: (e as Error).message.slice(0, 300), at: Date.now() });
+    } finally {
+      delete job.starting;
+      delete job.detail;
+      delete job.stuck;
+      if (this.jobs.get(job.link) === job) this.persist();
+    }
+  }
+
+  /** Put " (Clean)" on deemix's album folder name, queue the clean version, and put the name back once it starts. */
+  private async swap(job: CleanJob, bitrate: number, client: ReturnType<typeof hubDeemix>['client']): Promise<string> {
+    {
       const { settings, spotifySettings } = await client.getSettings();
       const orig = { albumNameTemplate: unmark(String(settings.albumNameTemplate ?? '%artist% - %album%')), createAlbumFolder: settings.createAlbumFolder !== false };
       this.save(orig);
@@ -155,18 +182,35 @@ export class CleanDownloads {
         await this.until(async () => !items(await client.getQueue()).some((i) => i.uuid!.startsWith(prefix) && i.status === 'inQueue'), START_WAIT_MS, "deemix didn't start it");
         Object.assign(job, { state: 'queued', at: Date.now() });
       } finally {
-        await this.restore();
+        // deemix out of reach just now: keep trying in the background, or every later download would land in a
+        // "(Clean)" folder and be tagged clean
+        await this.restore().catch(() => this.retryRestore());
       }
-      audit(this.db, { action: 'download.clean', target: job.link, detail: { folder: template } });
-    } catch (e) {
-      if (e instanceof Cancelled) return;
-      Object.assign(job, { state: 'failed', error: (e as Error).message.slice(0, 300), at: Date.now() });
-    } finally {
-      delete job.starting;
-      delete job.detail;
-      delete job.stuck;
-      if (this.jobs.get(job.link) === job) this.persist();
+      return template;
     }
+  }
+
+  /**
+   * Call before queueing anything else in deemix. Waits (up to a minute) for a clean version that's starting, and
+   * puts deemix's folder name back first if that's still owed, so a normal download never lands in "(Clean)".
+   */
+  async beforeQueue() {
+    if (this.swapping) await Promise.race([this.swapping, new Promise((r) => setTimeout(r, 60_000))]);
+    if (this.swapping || !this.saved()) return;
+    await this.restore().catch((e) => {
+      throw new HttpError(502, `deemix's folder name still has " (Clean)" on it and the Hub couldn't put it back (${(e as Error).message}). Try again in a minute`);
+    });
+  }
+
+  /** Try putting deemix's folder name back every minute until it works. */
+  private retryRestore() {
+    if (this.retryTimer) return;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = undefined;
+      if (this.swapping || !this.saved()) return;
+      this.restore().catch(() => this.retryRestore());
+    }, 60_000);
+    this.retryTimer.unref?.();
   }
 
   private load(): CleanJob[] {

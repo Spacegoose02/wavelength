@@ -64,12 +64,21 @@ export const useUi = create<UiState>()((set) => ({
     // Playing for a page (its album / artist links) reuses the entry opening it pushed, so Back goes to the
     // page under Now Playing in one step
     if (!useUi.getState().nowPlayingOpen) window.history.pushState(null, '');
-    set((s) => ({ route, history: [...s.history.slice(-30), s.route], nowPlayingOpen: false }));
+    // kept long enough that it doesn't run out before the WebView's own history does (Back would do nothing)
+    set((s) => ({ route, history: [...s.history.slice(-500), s.route], nowPlayingOpen: false }));
   },
   back: () => set((s) => (s.history.length ? { route: s.history[s.history.length - 1], history: s.history.slice(0, -1) } : s)),
   setNowPlaying: (nowPlayingOpen) => {
     if (nowPlayingOpen) window.history.pushState(null, '');
     set({ nowPlayingOpen });
   },
-  toggleQueue: () => set((s) => ({ queueOpen: !s.queueOpen })),
+  // like Now Playing, the open queue has its own history entry, so Back closes it without using up a page's
+  // entry (App.tsx onPop closes it); closing it with its button pops that entry
+  toggleQueue: () => {
+    if (useUi.getState().queueOpen) window.history.back();
+    else {
+      window.history.pushState(null, '');
+      set({ queueOpen: true });
+    }
+  },
 }));

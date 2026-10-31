@@ -22,6 +22,7 @@ export function Search({ initial }: { initial?: string }) {
   useEffect(() => {
     if (q.trim().length < 2) {
       setRes(EMPTY);
+      setBusy(false); // a search still running for the old text is dropped
       return;
     }
     let alive = true;

@@ -1,6 +1,27 @@
 # Changelog
 
 ## Unreleased
+Fixes from a bug sweep (the full list is in the PR):
+- **Kid profiles:** Discover no longer shows kids explicit chart songs that aren't in the library, or plays their
+  previews; a song stays hidden until Deezer says it's clean. A kid device the Hub signs out stays locked until a
+  grown-up signs in again, instead of opening with no kid filters. Shuffle on a kid profile no longer always starts
+  on the same song. **Hub:** the kid backstop now catches "feat." songs on albums the library check marked explicit.
+- **Playback:** a song that won't load no longer stops the music: Wavelength says so and moves on to the next song
+  (it stops after 3 in a row). The message now shows on phones and in Now Playing too. One broken song no longer
+  turns off the EQ, visualizer, crossfade and gapless for the rest of the session. Pause, seek and the sleep timer
+  now stop the old song during a crossfade too.
+- **Crashes:** an error in Now Playing, the player bar or the queue shows a short note instead of blanking the app,
+  and any other error shows the error page with **Reload app**.
+- **Back:** opening the queue gets its own Back step, Back after deleting an album goes to the right page, and Back
+  no longer stops working after about 30 pages.
+- **Listening party:** a guest who taps Play sends the songs to play next for everyone, instead of playing them only
+  on their device, out of step.
+- **Downloads:** saving for offline refuses a server's error reply instead of saving it as a song, gives up on a
+  stalled download, and cleans up half-downloaded files. **Hub:** if deemix can't be reached just as a clean
+  version starts, the Hub keeps trying to put deemix's folder name back, and holds other downloads until it has,
+  so they don't land in a "(Clean)" folder.
+- An album whose server was removed from this device says so instead of loading for ever, and Search stops
+  spinning when you clear the box.
 
 ## 0.17.9
 - **Any critter, any act.** Pick who plays and what they play separately: the raccoon, shark, alien, grey

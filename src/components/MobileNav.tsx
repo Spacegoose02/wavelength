@@ -38,7 +38,9 @@ export function MobileNav() {
           <Cover key={art} src={art} alt={t.title} className="tiny" />
           <div className="track-main">
             <div className="track-title">{live ? p.liveTitle ?? t.title : t.title}</div>
-            <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>
+            {p.error
+              ? <div className="track-sub err" title={p.error}>{p.error}</div>
+              : <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>}
           </div>
           <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.toggle(); }}>{p.playing ? <IconPause /> : <IconPlay />}</button>
           {!live && <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.next(); }}><IconNext /></button>}

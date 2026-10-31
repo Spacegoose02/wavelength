@@ -529,7 +529,11 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
     setTracks(null);
     setError(undefined);
     const cfg = cfgOf(ref.sourceId);
-    if (!cfg) return;
+    if (!cfg) {
+      // opened from History, a share or an old link after its server was removed from this device
+      setError("This album's server isn't set up on this device any more.");
+      return;
+    }
     const src = sourceFor(cfg);
     loadParts(parts.map((p) => p.id), (id) => src.getAlbumTracks!(id))
       .then(({ tracks, failed }) => {
@@ -634,7 +638,7 @@ function DeleteAlbumButton({ album }: { album: Album }) {
     try {
       const r = await deleteAlbum(album);
       alert(`Deleted ${r.label} (${r.files} song${r.files === 1 ? '' : 's'})${r.failed.length ? `. ${r.failed.length} couldn't be moved: ${r.failed[0]}` : ''}`);
-      useUi.getState().back();
+      window.history.back(); // pops the album page's history entry too (App.tsx onPop goes back)
     } catch (e) {
       alert(String((e as Error).message ?? e));
     } finally {
