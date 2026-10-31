@@ -125,6 +125,19 @@ export async function deezer(path: string): Promise<any> {
   return body;
 }
 
+/**
+ * The artist with exactly this name (case and accents don't matter) and the most fans, or null. Deezer often has
+ * several artists with the same name (a dozen "Drake"s), and the first one it lists can be a small upload.
+ * Like the app's sameNameArtists() (src/lib/artistMatch.ts).
+ */
+export function sameNameArtist<T extends { name: string; fans?: number | null }>(name: string, list: T[]): T | null {
+  const key = normName(name);
+  if (!key) return null;
+  let best: T | null = null;
+  for (const a of list) if (normName(a.name) === key && (!best || (a.fans ?? 0) > (best.fans ?? 0))) best = a;
+  return best;
+}
+
 const toArtist = (a: any): DzArtist => ({ id: Number(a.id), name: String(a.name ?? ''), picture: a.picture_medium ?? a.picture ?? null, fans: typeof a.nb_fan === 'number' ? a.nb_fan : null });
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -206,14 +219,17 @@ export class ReleaseRadar {
     if (s) s.list = s.list.filter((x) => x.id !== artistId);
   }
 
-  /** Find a Deezer artist by name (an exact match, ignoring case and accents), for following from the library. */
+  /**
+   * Find a Deezer artist by name (an exact match, ignoring case and accents), for following from the library.
+   * Deezer often has several artists with the same name, so it's the one with the most fans.
+   */
   async resolve(name: string): Promise<DzArtist | null> {
     const key = normName(name);
     if (!key) return null;
     const hit = this.names.get(key);
     if (hit && this.now() - hit.at < LOOKUP_MS) return hit.artist;
-    const r = await deezer(`/search/artist?q=${encodeURIComponent(name)}&limit=5`);
-    const found = (r?.data ?? []).map(toArtist).find((a: DzArtist) => normName(a.name) === key) ?? null;
+    const r = await deezer(`/search/artist?q=${encodeURIComponent(name)}&limit=25`);
+    const found = sameNameArtist<DzArtist>(name, (r?.data ?? []).map(toArtist));
     this.names.set(key, { at: this.now(), artist: found });
     return found;
   }

@@ -1,7 +1,7 @@
 import type { Db } from '../db.ts';
 import { HttpError } from '../http.ts';
 import { releaseNotForKids } from '../kidSafe.ts';
-import { deezer } from '../radar.ts';
+import { deezer, sameNameArtist } from '../radar.ts';
 import type { User } from '../users.ts';
 import type { DjTool } from './provider.ts';
 
@@ -151,10 +151,11 @@ interface HubToolCtx {
 }
 
 async function artistId(name: string): Promise<{ id: number; name: string } | null> {
-  const r = await deezer(`/search/artist?${new URLSearchParams({ q: name, limit: '5' })}`);
-  const list = (r?.data ?? []) as { id: number; name: string }[];
-  const n = name.toLowerCase();
-  return list.find((a) => a.name.toLowerCase() === n) ?? list[0] ?? null;
+  const r = await deezer(`/search/artist?${new URLSearchParams({ q: name, limit: '25' })}`);
+  const list = ((r?.data ?? []) as { id: number; name: string; nb_fan?: number }[]).map((a) => ({ id: a.id, name: a.name, fans: a.nb_fan ?? 0 }));
+  // the same-name artist with the most fans, else Deezer's best guess
+  const a = sameNameArtist(name, list) ?? list[0];
+  return a ? { id: a.id, name: a.name } : null;
 }
 
 function since(period: string): number {

@@ -12,7 +12,7 @@ function fakeDeezer(t: { after(fn: () => void): void }) {
   const d = {
     albums: {} as Record<number, unknown[]>,
     related: {} as Record<number, unknown[]>,
-    artists: [] as { id: number; name: string }[],
+    artists: [] as { id: number; name: string; nb_fan?: number }[],
     quota: false,
     calls: [] as string[],
   };
@@ -31,7 +31,7 @@ function fakeDeezer(t: { after(fn: () => void): void }) {
     if (m) return page({ data: d.related[Number(m[1])] ?? [] });
     if (url.pathname === '/search/artist') {
       const q = (url.searchParams.get('q') ?? '').toLowerCase();
-      return page({ data: d.artists.filter((a) => a.name.toLowerCase().includes(q)).map((a) => ({ ...a, picture_medium: `https://img.test/${a.id}.jpg`, nb_fan: 100 })) });
+      return page({ data: d.artists.filter((a) => a.name.toLowerCase().includes(q)).map((a) => ({ ...a, picture_medium: `https://img.test/${a.id}.jpg`, nb_fan: a.nb_fan ?? 100 })) });
     }
     return page({ error: { message: 'no such thing' } });
   }) as typeof fetch;
@@ -40,6 +40,15 @@ function fakeDeezer(t: { after(fn: () => void): void }) {
   });
   return d;
 }
+
+test('following by name picks the same-name artist with the most fans, not the first one Deezer lists', async (t) => {
+  const dz = fakeDeezer(t);
+  dz.artists = [{ id: 501, name: 'Drake', nb_fan: 12 }, { id: 246791, name: 'Drake', nb_fan: 30_000_000 }, { id: 502, name: 'DRAKE', nb_fan: 40 }, { id: 9, name: 'Drake Bell', nb_fan: 90_000_000 }];
+  const { app, tokens } = await seeded();
+  const f = await json(app, 'POST', '/api/radar/follows', { token: tokens.member, body: { name: 'Drake' } });
+  assert.equal(f.status, 201);
+  assert.equal(f.body.follow.id, 246791);
+});
 
 const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const album = (id: number, title: string, released: string, extra: Record<string, unknown> = {}) =>

@@ -258,9 +258,17 @@ Every artist page in your library has two things for getting more of their music
   **Not in library** hides them so only what you could still get is left. Covers open the album page with its
   tracklist, where you can get single songs. **Back** walks back through what you opened, then to the artist.
 
-Deezer has to have an artist with exactly the artist's name (case and accents don't matter). If you follow the
-artist, the one you follow is used. When there's no exact match, **Browse releases** shows the closest Deezer
-artists to pick from, and the banner stays hidden. **Various Artists** has neither.
+Deezer has to have an artist with exactly the artist's name (case and accents don't matter). Deezer often has
+several artists with the same name (there are a dozen "Drake"s, most of them small uploads with a compilation or
+two), so Wavelength checks which one has the albums in your library and uses that one. With none of your albums
+to go on, it's the one with the most fans. If you follow the artist, the one you follow is used, as long as it
+has your albums.
+
+When Wavelength isn't sure it found the right artist (none of their albums are in your library, or several
+same-name artists are close on fans and you have nothing of theirs yet), the banner stays hidden rather than
+show someone else's release, and **Browse releases** says so and lists the other artists with that name to pick
+from. When there's no exact match at all, **Browse releases** shows the closest Deezer artists to pick from, and
+the banner stays hidden. **Various Artists** has neither.
 
 **Browse releases** shows when you can get music: with deemix set up in **Settings → Downloads** (yours or the
 Hub's) and Autodownload, or with **Request**. The banner shows either way; without a way to get music it just
@@ -276,9 +284,15 @@ A release counts as in your library when an album there has the same artist and 
 "(Deluxe)" or "[2015 Remaster]". Versions count separately: having the explicit album doesn't mark the clean
 release as in your library.
 
-> **Developer notes.** `src/components/ArtistNews.tsx` has the banner (`ArtistNews`), `useDeezerArtist()` (the
-> followed artist's Deezer id, else `findDeezerArtist()` in `src/sources/releaseRadar.ts`, which Release Radar's
-> "artists you play" uses too; lookups are kept for the session) and `useCanGet()`. `src/views/ArtistReleases.tsx`
+> **Developer notes.** `src/components/ArtistNews.tsx` has the banner (`ArtistNews`, shown only when the lookup is
+> `sure`), `useDeezerArtist()` and `useCanGet()`. `useDeezerArtist()` takes the followed artist if it has your
+> albums, else the same-name candidates from `deezerArtistsNamed()` in `src/sources/releaseRadar.ts` (a 25-result
+> name search, most fans first, kept for the session; `findDeezerArtist()`, its top pick, is what Release Radar's
+> "artists you play" uses), and picks one with `matchArtist()` in `src/lib/artistMatch.ts`: the discographies of
+> the top three are checked against your albums by that artist (`ownedIndex()`), most matches wins, and it's
+> `sure` when one matched, or, with nothing to check, when the top artist is alone or has 10× the next one's fans.
+> Tests in `src/test/artistMatch.test.ts`. The Hub's name lookup for following (`resolve()` in `hub/src/radar.ts`)
+> and the AI DJ's artist lookup also take the same-name artist with the most fans (`sameNameArtist()`). `src/views/ArtistReleases.tsx`
 > is the **Browse releases** page (route `artistReleases`, optionally with a release open on top). It reuses
 > `DeezerArtist`, `DeezerAlbum` and `useDeezerBrowse()` (the browse stack, Get / Request and Clean only, shared with
 > Downloads → Deezer) from `src/views/DeezerBrowse.tsx`. `src/lib/artistReleases.ts` has `ownedIndex()` (Deezer
@@ -286,7 +300,8 @@ release as in your library.
 > within `WINDOW_DAYS`, the next announced one, kid filter and preferred version); tests in
 > `src/test/artistReleases.test.ts`. The discography call (`/artist/<id>/albums`) is shared by the banner and the
 > page and kept 10 minutes (`getDeezerReleases()` in `src/sources/deemix.ts`), so opening an artist costs two Deezer
-> calls the first time (the name search and the discography).
+> calls the first time (the name search and the discography), plus up to two more discographies when several
+> same-name artists have to be checked against your library.
 
 ## Now Playing visualizers
 

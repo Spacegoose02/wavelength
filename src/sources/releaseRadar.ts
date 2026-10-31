@@ -1,3 +1,4 @@
+import { sameNameArtists, type ArtistCandidate } from '../lib/artistMatch';
 import { getJson, qs } from '../lib/http';
 import { pool, primaryArtist } from '../lib/match';
 import { norm, sourceFor } from './registry';
@@ -54,25 +55,32 @@ export interface DeezerArtistHit {
 }
 
 // name lookups, kept for the session (a miss too, so a library artist Deezer doesn't have isn't asked about again)
-const found = new Map<string, Promise<DeezerArtistHit | undefined>>();
+const found = new Map<string, Promise<ArtistCandidate[]>>();
 
 /**
- * The Deezer artist with exactly this name (case and accents don't matter), or undefined when Deezer has none.
- * Release Radar's "artists you play" and the library artist page (Browse releases, the newest release banner)
- * look artists up this way. A failed lookup isn't kept, so it's tried again next time.
+ * The Deezer artists with exactly this name (case and accents don't matter), most fans first; empty when Deezer
+ * has none. Deezer often has several artists with the same name, so this asks for 25 results, not the first few.
+ * A failed lookup isn't kept, so it's tried again next time.
  */
-export function findDeezerArtist(name: string): Promise<DeezerArtistHit | undefined> {
+export function deezerArtistsNamed(name: string): Promise<ArtistCandidate[]> {
   const key = norm(name);
   let hit = found.get(key);
   if (!hit) {
-    hit = getJson(`https://api.deezer.com/search/artist?${qs({ q: name, limit: 5 })}`).then((s) => {
-      const a = (s?.data ?? []).find((x: any) => norm(x.name) === key);
-      return a ? { id: a.id as number, name: a.name as string, picture: (a.picture_medium as string) || undefined } : undefined;
-    });
+    hit = getJson(`https://api.deezer.com/search/artist?${qs({ q: name, limit: 25 })}`).then((s) => sameNameArtists(name, s?.data ?? []));
     hit.catch(() => found.delete(key));
     found.set(key, hit);
   }
   return hit;
+}
+
+/**
+ * The Deezer artist with exactly this name and the most fans, or undefined when Deezer has none. Release Radar's
+ * "artists you play" looks artists up this way; the library artist page (Browse releases, the newest release
+ * banner) also checks the candidates against your library (lib/artistMatch.ts).
+ */
+export async function findDeezerArtist(name: string): Promise<DeezerArtistHit | undefined> {
+  const [a] = await deezerArtistsNamed(name);
+  return a && { id: a.id, name: a.name, picture: a.picture };
 }
 
 async function releasesFor(artist: string): Promise<Release[]> {
