@@ -1,8 +1,10 @@
 import type { ComponentType } from 'react';
 import type { CritterKind } from '../../store/settings';
 import { Alien } from './Alien';
+import { BlackBear, BrownBear } from './Bear';
 import { Country } from './Country';
 import { DJ } from './DJ';
+import { Grey } from './Grey';
 import { Rapper } from './Rapper';
 import { Rocker } from './Rocker';
 import { Shark } from './Shark';
@@ -29,6 +31,9 @@ export const CRITTERS: CritterInfo[] = [
   { id: 'rocker', label: 'Rocker raccoon', blurb: 'Mohawk, flying-V, headbangs in front of the amps', Scene: Rocker },
   { id: 'shark', label: 'Drummer shark', blurb: 'Sailor tee, drum kit, bubbles on the bass, under the sea', Scene: Shark },
   { id: 'alien', label: 'Theremin alien', blurb: 'Antennae, space suit, plays a theremin under a UFO', Scene: Alien },
+  { id: 'grey', label: 'Grey alien', blurb: 'Big head, huge black eyes, plays a synth in a crop circle', Scene: Grey },
+  { id: 'bear-black', label: 'Black bear', blurb: 'Beanie and sweater, squeezes an accordion by the campfire', Scene: BlackBear },
+  { id: 'bear-brown', label: 'Brown bear', blurb: 'The same bear in brown fur, accordion and campfire', Scene: BrownBear },
 ];
 
 const find = (kind: CritterKind) => CRITTERS.find((c) => c.id === kind) ?? CRITTERS[0];

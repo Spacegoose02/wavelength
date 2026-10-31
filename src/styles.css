@@ -1584,6 +1584,43 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .wave-a { stroke: var(--viz-high); }
 .critter .wave-b { stroke: var(--viz-mid); }
 
+/* grey alien (Grey.tsx): grey skin on every skin; the synth, its lit keys and the tractor beam follow the skin */
+.critter .grey-skin { fill: #a9b4bc; }
+.critter .grey-shade { fill: #7f8c95; }
+.critter .grey-line { stroke: #46505a; }
+.critter .grey-arm, .critter .grey-finger { stroke: #a9b4bc; }
+.critter .synth { fill: var(--accent); }
+.critter .synth-trim { fill: rgb(0 0 0 / 0.25); }
+.critter .synth-lit { fill: var(--viz-high); }
+.critter .beam { fill: var(--viz-low); opacity: 0.15; }
+.critter .field { fill: #2c3320; }
+.critter .wheat { stroke: #b39a4e; }
+.critter .crop-circle { stroke: #6b6232; }
+:root[data-skin-group='nuclear'] .critter .grey-arm { stroke: #f4c20d; }
+:root[data-skin-group='nuclear'] .critter .grey-finger { stroke: #1b1b1f; }
+
+/* bears (Bear.tsx): black or brown fur from --bear-fur; beanie, sweater and bellows follow the skin */
+.critter-bear-black { --bear-fur: #2b2622; --bear-fur-dark: #1c1916; --bear-muzzle: #b48f66; }
+.critter-bear-brown { --bear-fur: #7a4e2d; --bear-fur-dark: #5e3b20; --bear-muzzle: #d6ad7c; }
+.critter .bear-fur { fill: var(--bear-fur); }
+.critter .bear-fur-dark { fill: var(--bear-fur-dark); }
+.critter .bear-muzzle { fill: var(--bear-muzzle); }
+.critter:is(.critter-bear-black, .critter-bear-brown) .hand { fill: var(--bear-fur); }
+.critter:is(.critter-bear-black, .critter-bear-brown) .thumb { fill: var(--bear-fur-dark); }
+.critter .beanie { fill: var(--accent); }
+.critter .beanie-cuff { fill: var(--viz-mid); }
+.critter .beanie-pom { fill: var(--viz-high); }
+.critter .bellows { fill: var(--viz-mid); }
+.critter .acc-box { fill: #8e1f2a; stroke: #4a0f16; stroke-width: 2; }
+.critter .moon-disc { fill: #efe9cf; }
+.critter .pine { fill: #1c3a2b; }
+.critter .forest-floor { fill: #23301f; }
+.critter .log { fill: #6b4626; stroke: #4e321a; stroke-width: 2; }
+.critter .fire-glow { fill: #ff9a3a; opacity: 0.4; filter: blur(8px); }
+.critter .flame-a { fill: #ff7a1a; }
+.critter .flame-b { fill: #ffd34a; }
+.critter .firefly { fill: #f4ff8a; }
+
 /* holiday hats replace the critter's own headwear */
 .critter .hat, .critter .outfit { display: none; }
 :root[data-skin='halloween'] .critter .hat-witch,

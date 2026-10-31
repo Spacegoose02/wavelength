@@ -82,7 +82,7 @@ genre names cover it).
 
 ## Add a critter or an outfit
 
-The critters (raccoons, shark, alien) live in `components/critters/`. See the
+The critters (raccoons, shark, aliens, bears) live in `components/critters/`. See the
 [user guide's developer notes](USER-GUIDE.md#critters) for how the pieces fit.
 
 - **A critter:** copy the nearest one (`Shark.tsx` for an animal with its own face, `Country.tsx` for
@@ -101,12 +101,14 @@ The critters (raccoons, shark, alien) live in `components/critters/`. See the
   5. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Write
      attributes straight onto `data-part` elements; don't set React state per frame. Keep it moving
      with `a.live` false (made-up signal) and calm when `idle`.
-  6. Colours: CSS classes, in a block for it at the end of `styles.css` beside the shark and alien.
+  6. Colours: CSS classes, in a block for it at the end of `styles.css` beside the shark, aliens and bears.
      Body colours stay fixed; clothes, instruments and lights use `--accent` / `--viz-*`. Override
      `.critter-<kind> .sleeve`, `.hand` and `.thumb` if its arms aren't in a sleeve.
-  7. Add its id to `CritterKind` (`store/settings.ts`) and an entry to `CRITTERS` (`Critter.tsx`). That's
+  7. A colour variant (like the black and brown bears) needs no new drawing: take the colour as a prop,
+     set it through a CSS variable on `.critter-<kind>`, and export one small wrapper per colour.
+  8. Add its id to `CritterKind` (`store/settings.ts`) and an entry to `CRITTERS` (`Critter.tsx`). That's
      all the wiring: **Switch critter** and the Settings cards read the list.
-  8. Add a row to the critter table in the [user guide](USER-GUIDE.md#critters).
+  9. Add a row to the critter table in the [user guide](USER-GUIDE.md#critters).
 - **An outfit for a skin group:** a `<g className="outfit outfit-mygroup">` in `Head` and/or `BodyOutfits`
   (`parts.tsx`) and a `:root[data-skin-group='mygroup'] .critter .outfit-mygroup` line in the "skin-group
   outfits" rule. The group slug is the first word of the group name, lower-case (`skinGroup()` in
