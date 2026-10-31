@@ -1,0 +1,63 @@
+# Checks the app on every pull request and push to main: TypeScript, the Rust shell (tests + clippy), and
+# known vulnerabilities in npm and Cargo dependencies. The Hub has its own workflow (hub.yml); releases are
+# built by release.yml.
+name: App
+
+on:
+  pull_request:
+    paths: ['src/**', 'src-tauri/**', 'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts', '.github/workflows/app.yml']
+  push:
+    branches: [main]
+    paths: ['src/**', 'src-tauri/**', 'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts', '.github/workflows/app.yml']
+  # Weekly, so a newly published advisory shows up even when nothing changed
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vite build
+      # Only what ships in the app; dev-server tooling is covered by Dependabot
+      - run: npm audit --omit=dev --audit-level=moderate
+
+  rust:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@v4
+      # Tauri's Linux build needs WebKitGTK even for `cargo test`
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      # tauri::generate_context! wants the frontend folder to exist
+      - run: mkdir -p ../dist
+      - run: cargo test --locked
+      - run: cargo clippy --locked --all-targets -- -D warnings
+
+  audit-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      # RUSTSEC-2024-0429 is in glib, which only the Linux (GTK) build uses; Wavelength ships for Windows and Android.
+      - run: cargo audit --file src-tauri/Cargo.lock --ignore RUSTSEC-2024-0429

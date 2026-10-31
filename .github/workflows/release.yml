@@ -11,6 +11,9 @@
 #   ANDROID_KEYSTORE_PASSWORD storePassword from keystore.properties
 #   ANDROID_KEY_ALIAS         keyAlias from keystore.properties (normally "wavelength")
 #   ANDROID_KEY_PASSWORD      keyPassword from keystore.properties
+# Optional, for update signing (docs/RELEASING.md "Update signing"):
+#   TAURI_SIGNING_PRIVATE_KEY           private key from `npx tauri signer generate`
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password
 name: Release builds
 
 on:
@@ -80,11 +83,16 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           V="${TAG#v}"
-          gh release upload "$TAG" --clobber \
-            "src-tauri/target/release/bundle/nsis/Wavelength_${V}_x64-setup.exe" \
-            "src-tauri/target/release/Wavelength.exe"
+          FILES=("src-tauri/target/release/bundle/nsis/Wavelength_${V}_x64-setup.exe" "src-tauri/target/release/Wavelength.exe")
+          # Apps with a key in src-tauri/update-key.pub only install updates that carry a matching .sig
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            for f in "${FILES[@]}"; do npx tauri signer sign "$f"; FILES+=("$f.sig"); done
+          fi
+          gh release upload "$TAG" --clobber "${FILES[@]}"
 
   android:
     runs-on: ubuntu-latest
@@ -172,6 +180,8 @@ jobs:
       - name: Verify signature and upload to release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           V="${TAG#v}"
           APK="Wavelength-${V}-android.apk"
@@ -183,7 +193,12 @@ jobs:
             echo "::error::APK is not signed with the release certificate (${RELEASE_CERT_SHA256})."
             exit 1
           fi
-          gh release upload "$TAG" --clobber "$APK"
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            npx tauri signer sign "$APK"
+            gh release upload "$TAG" --clobber "$APK" "$APK.sig"
+          else
+            gh release upload "$TAG" --clobber "$APK"
+          fi
 
       - name: Remove signing files
         if: always()
