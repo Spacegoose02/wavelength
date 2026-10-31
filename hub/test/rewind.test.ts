@@ -57,7 +57,7 @@ test('history already on the Hub is carried into Rewind when it upgrades', () =>
   const db = openDb(file);
   // back to how a Hub before Rewind left it
   // (migration 13 added plays; later migrations are undone too, so they run again)
-  db.exec("DROP TABLE plays; DROP TABLE trash; DROP TABLE notifications; DROP TABLE follows; DROP TABLE radar_artists; DROP TABLE radar_releases; DROP TABLE radar_hidden; DROP TABLE radar_autoget; DROP TABLE scrobble_accounts; DROP TABLE scrobble_queue; DROP TABLE user_totp; DROP TABLE guardians; DROP TABLE household_tracks; DROP TABLE household_playlists; PRAGMA user_version = 12");
+  db.exec("DROP TABLE plays; DROP TABLE trash; DROP TABLE notifications; DROP TABLE follows; DROP TABLE radar_artists; DROP TABLE radar_releases; DROP TABLE radar_hidden; DROP TABLE radar_autoget; DROP TABLE scrobble_accounts; DROP TABLE scrobble_queue; DROP TABLE user_totp; DROP TABLE guardians; DROP TABLE household_tracks; DROP TABLE household_playlists; DROP INDEX content_flags_key; ALTER TABLE content_flags DROP COLUMN version; CREATE UNIQUE INDEX content_flags_key ON content_flags(kind, artist COLLATE NOCASE, title COLLATE NOCASE); PRAGMA user_version = 12");
   db.prepare("INSERT INTO users (id, username, display_name, role, created_at, updated_at) VALUES (1, 'a', 'a', 'member', 0, 0)").run();
   db.prepare('INSERT INTO play_history VALUES (1, 5, ?)').run(JSON.stringify(song('Song', 'Band')));
   db.prepare('INSERT INTO play_history VALUES (1, 6, ?)').run(JSON.stringify({ ...song('Live', 'FM'), kind: 'radio' }));

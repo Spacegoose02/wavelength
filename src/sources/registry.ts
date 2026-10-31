@@ -39,12 +39,17 @@ export function norm(s = '') {
     .replace(/[^a-z0-9]+/g, '');
 }
 
-/** Lists must be passed in source priority order — earlier sources win. */
+/**
+ * Lists must be passed in source priority order — earlier sources win. Copies with the same name whose tags
+ * say one is explicit and the other clean stay apart: they're two versions (lib/versions.ts), not one album.
+ */
 export function mergeAlbums(lists: Album[][]): Album[] {
   const map = new Map<string, Album>();
   for (const list of lists) {
     for (const a of list) {
-      const key = `${norm(a.artist)}|${norm(a.title)}`;
+      let key = `${norm(a.artist)}|${norm(a.title)}`;
+      const first = map.get(key);
+      if (first?.explicit && a.explicit && first.explicit !== a.explicit) key += `|${a.explicit}`;
       const existing = map.get(key);
       if (existing) existing.refs!.push(a);
       else map.set(key, { ...a, refs: [a] });

@@ -6,6 +6,7 @@ import { hmac, safeEqual } from '../crypto.ts';
 import { getDevice } from '../devices.ts';
 import { relayPassword, relayTarget } from '../services.ts';
 import { getUser } from '../users.ts';
+import { songNotForKids } from '../kidSafe.ts';
 
 /**
  * Navidrome through the Hub (docs/USERS-AND-ADMIN.md Phase 4). A device gets a Subsonic login for
@@ -43,31 +44,9 @@ function passwordOf(q: Record<string, string>, expected: string): boolean {
 }
 
 const one = (v: unknown) => (Array.isArray(v) ? String(v[0] ?? '') : typeof v === 'string' ? v : '');
-const norm = (s = '') => s.trim().toLowerCase();
 
 export function relayRoutes(app: FastifyInstance, { db, config }: Ctx) {
   const key = config.secretKey;
-
-  /** Kids: is this song explicit (Navidrome's own tag, the library check) or flagged as not for kids? */
-  function notForKids(song: { title?: string; album?: string; artist?: string; explicitStatus?: string }): boolean {
-    const artist = song.artist ?? '', album = song.album ?? '', title = song.title ?? '';
-    const flags = db
-      .prepare(`SELECT kind, verdict FROM content_flags WHERE artist = ? COLLATE NOCASE AND
-        ((kind = 'track' AND title = ? COLLATE NOCASE) OR (kind = 'album' AND title = ? COLLATE NOCASE) OR kind = 'artist')`)
-      .all(artist, title, album) as { kind: string; verdict: string }[];
-    // the most specific flag wins: song, then album, then artist
-    for (const kind of ['track', 'album', 'artist']) {
-      const f = flags.find((x) => x.kind === kind);
-      if (f) return f.verdict === 'block';
-    }
-    if (norm(song.explicitStatus) === 'explicit') return true;
-    const rated = db
-      .prepare(`SELECT 1 FROM ratings WHERE rating = 'explicit' AND artist = ? COLLATE NOCASE AND album = ? COLLATE NOCASE AND
-        ((kind = 'track' AND title = ? COLLATE NOCASE) OR (kind = 'album' AND NOT EXISTS
-          (SELECT 1 FROM ratings t WHERE t.kind = 'track' AND t.artist = ratings.artist AND t.album = ratings.album)))`)
-      .get(artist, album, title);
-    return !!rated;
-  }
 
   /** Check a relay login (`u` is "<hub username>~<device id>") and find the real one behind it. */
   function signIn(serviceId: string, u: string | undefined, check: (expected: string) => boolean) {
@@ -136,7 +115,7 @@ export function relayRoutes(app: FastifyInstance, { db, config }: Ctx) {
       try {
         const r = await call('getSong', { id: q.id, f: 'json' }, { signal: AbortSignal.timeout(15_000) });
         const song = ((await r.json()) as any)?.['subsonic-response']?.song;
-        if (!song || notForKids(song)) return reply.code(403).send({ error: 'Not for kids' });
+        if (!song || songNotForKids(db, song)) return reply.code(403).send({ error: 'Not for kids' });
       } catch {
         return reply.code(502).send({ error: 'Couldn’t reach Navidrome' });
       }

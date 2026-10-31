@@ -5,7 +5,7 @@ import type { HubAlbumRating } from '../sources/hub';
 import { norm } from '../sources/registry';
 import { hubClient } from '../store/hub';
 import { useCatalog } from '../store/catalog';
-import { albumRating, loadFlags } from './kids';
+import { albumRating, albumVersion, loadFlags } from './kids';
 import { cleanTitle, primaryArtist } from './match';
 
 /**
@@ -47,6 +47,27 @@ const sameArtist = (a: string, b: string) => {
   return x === y || (x.length > 2 && y.length > 2 && (x.includes(y) || y.includes(x)));
 };
 
+/** Deezer's `explicit_content_lyrics`: 1 explicit, 3 edited (the clean version), 4 partly explicit. */
+const EDITED = 3;
+const EXPLICIT_CONTENT = [1, 4];
+
+/**
+ * Whether a Deezer album (`/album/{id}`, with its tracks) really is the clean version of an explicit album
+ * whose explicit songs are `explicitSongs`: not explicit, no explicit song on it, and the explicit album's
+ * explicit songs are on it (edited). A different release that happens to share the title, or one Deezer just
+ * doesn't mark, isn't a clean version.
+ */
+export function isCleanEdition(candidate: any, explicitSongs: string[]): boolean {
+  if (!candidate || candidate.error || candidate.explicit_lyrics === true || EXPLICIT_CONTENT.includes(candidate.explicit_content_lyrics)) return false;
+  const tracks: any[] = candidate.tracks?.data ?? [];
+  if (!tracks.length || tracks.some((t) => t.explicit_lyrics === true || EXPLICIT_CONTENT.includes(t.explicit_content_lyrics))) return false;
+  if (candidate.explicit_content_lyrics === EDITED) return true;
+  const titles = new Set(tracks.map((t) => cleanTitle(t.title ?? '')));
+  const wanted = [...new Set(explicitSongs.map(cleanTitle))];
+  // the songs that needed editing are there, edited
+  return wanted.length > 0 && wanted.filter((t) => titles.has(t)).length * 2 >= wanted.length;
+}
+
 /** Look one album up on Deezer. */
 export async function checkAlbum(artist: string, album: string): Promise<HubAlbumRating> {
   const res = await deezer(() => getJson(`${DZ}/search/album?${qs({ q: `${primaryArtist(artist)} ${album.replace(/\(.*?\)|\[.*?\]/g, '')}`, limit: 25 })}`));
@@ -57,15 +78,38 @@ export async function checkAlbum(artist: string, album: string): Promise<HubAlbu
   // Deezer often lists both versions: the explicit one is what most libraries have
   const explicit = same.find((a) => a.explicit_lyrics === true);
   if (!explicit) return { artist, album, rating: same.some((a) => a.explicit_lyrics === false) ? 'clean' : 'unknown' };
-  const clean = same.find((a) => a.explicit_lyrics === false);
   const page = await deezer(() => getDeezerAlbum(explicit.id));
+  const explicitTracks = page.tracks.filter((t) => t.explicit).map((t) => t.title).slice(0, 500);
+  // the clean version: marked edited first, then the others Deezer doesn't call explicit; each one is checked
+  const candidates = same.filter((a) => a.explicit_lyrics === false)
+    .sort((a, b) => Number(b.explicit_content_lyrics === EDITED) - Number(a.explicit_content_lyrics === EDITED)).slice(0, 3);
+  let clean: any;
+  for (const c of candidates) {
+    const full = await deezer(() => getJson(`${DZ}/album/${c.id}`)).catch(() => undefined);
+    if (isCleanEdition(full, explicitTracks)) {
+      clean = c;
+      break;
+    }
+  }
   return {
     artist,
     album,
     rating: 'explicit',
     cleanLink: clean ? clean.link ?? `https://www.deezer.com/album/${clean.id}` : undefined,
-    explicitTracks: page.tracks.filter((t) => t.explicit).map((t) => t.title).slice(0, 500),
+    explicitTracks,
   };
+}
+
+/**
+ * Check a clean version the library check found before it checked them (0.17.1 and older): whether the Deezer
+ * album behind `link` really is the clean version. Undefined when Deezer couldn't be asked.
+ */
+export async function verifyCleanLink(link: string, explicitSongs: string[]): Promise<boolean | undefined> {
+  const id = Number(link.match(/album\/(\d+)/)?.[1]);
+  if (!id) return false;
+  const full = await deezer(() => getJson(`${DZ}/album/${id}`)).catch(() => undefined);
+  if (!full) return undefined;
+  return isCleanEdition(full, explicitSongs);
 }
 
 /** Check every album in the library that hasn't been checked yet. */
@@ -75,6 +119,8 @@ export async function runExplicitCheck() {
   stopRequested = false;
   const seen = new Set<string>();
   const todo = useCatalog.getState().albums.filter((a) => {
+    // a clean copy ("Loud (Clean)") isn't checked: Deezer's answer would be about the explicit album
+    if (albumVersion(a) === 'clean') return false;
     const k = `${norm(primaryArtist(a.artist))}|${cleanTitle(a.title)}`;
     if (!a.artist || !a.title || seen.has(k)) return false;
     seen.add(k);

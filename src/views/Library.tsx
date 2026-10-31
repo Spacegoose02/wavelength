@@ -13,13 +13,13 @@ import { IconPlay, IconShuffle } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfArtist, shareOfTracks } from '../lib/inbox';
-import { explicitOfAlbum, explicitOfTrack, useHidden, useIsKid, useRatings } from '../lib/kids';
-import { hasBoth, preferredRef, useVersionPref, versionOf, versionsOf } from '../lib/versions';
+import { albumVersion, explicitOfAlbum, explicitOfTrack, useHidden, useIsKid, useRatings } from '../lib/kids';
+import { hasBoth, preferredRef, useVersionHidden, useVersionPref, versionOf, versionsOf } from '../lib/versions';
 import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
+import { deleteAlbum, deleteAlbums } from '../lib/deleteAlbums';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 import { ArtworkButton } from '../components/ArtworkButton';
-import { hubClient } from '../store/hub';
 import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
@@ -131,6 +131,10 @@ export function Albums() {
   const [only, setOnly] = useState<string | null>(null);
   const hidden = useHidden();
   const kid = useIsKid();
+  const canDelete = useCan('library.edit');
+  // Select: tick albums to delete several at once (admins, Navidrome copies)
+  const [picked, setPicked] = useState<Set<string> | null>(null);
+  const [deleting, setDeleting] = useState<string>();
   const shown = useMemo(() => {
     const f = filter.toLowerCase();
     return albums.filter(
@@ -139,6 +143,33 @@ export function Albums() {
     );
   }, [albums, filter, only, hidden]);
   const musicSources = sources.filter((s) => s.enabled && (s.kind === 'navidrome' || s.kind === 'plex'));
+  const cardKey = (a: Album) => `${a.sourceId}:${a.id}`;
+  const deletable = (a: Album) => (a.refs ?? [a]).filter((r) => sources.find((s) => s.id === r.sourceId)?.kind === 'navidrome');
+  // what Select all ticks: the cards on screen (a version hidden by Settings → Playback isn't)
+  const otherVersion = useVersionHidden();
+  const selectable = picked ? shown.slice(0, 600).filter((a) => !otherVersion(a)) : [];
+  const chosen = selectable.filter((a) => picked!.has(cardKey(a)));
+  const toggle = (a: Album) => setPicked((p) => {
+    const n = new Set(p);
+    if (n.has(cardKey(a))) n.delete(cardKey(a));
+    else n.add(cardKey(a));
+    return n;
+  });
+  const removeChosen = async () => {
+    const copies = chosen.flatMap(deletable);
+    if (!copies.length) return alert('None of these are on a Navidrome server the Hub can delete from.');
+    const names = chosen.slice(0, 8).map((a) => `• ${a.title} – ${a.artist}`).join('\n') + (chosen.length > 8 ? `\n…and ${chosen.length - 8} more` : '');
+    if (!confirm(`Delete ${chosen.length} album${chosen.length === 1 ? '' : 's'} (${copies.length} cop${copies.length === 1 ? 'y' : 'ies'}) from your server?\n\n${names}\n\nTheir files go to the Hub's trash. You can put them back under Settings → Server → Deleted albums for 30 days.`)) return;
+    const failed: string[] = [];
+    let n = 0;
+    await deleteAlbums(copies, (a, r) => {
+      setDeleting(`Deleting… ${++n} of ${copies.length}`);
+      if ('error' in r) failed.push(`${a.title}: ${r.error}`);
+    });
+    setDeleting(undefined);
+    setPicked(new Set());
+    alert(failed.length ? `Deleted ${copies.length - failed.length} of ${copies.length}. These couldn't be deleted:\n${failed.slice(0, 10).join('\n')}` : `Deleted ${copies.length} album${copies.length === 1 ? '' : 's'}. They're in the Hub's trash for 30 days.`);
+  };
 
   return (
     <div className="page">
@@ -146,8 +177,21 @@ export function Albums() {
         <h1>Albums <small>{shown.length}</small></h1>
         {loading && <Spinner />}
         {!kid && <button className="btn small" title="Duplicates and missing albums" onClick={() => useUi.getState().go({ view: 'libraryCare' })}>Library care</button>}
+        {!kid && canDelete && <button className={`btn small ${picked ? 'primary' : ''}`} onClick={() => setPicked(picked ? null : new Set())}>{picked ? 'Done' : 'Select'}</button>}
         <input className="filter" placeholder="Filter albums…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
+      {picked && (
+        <div className="row select-bar">
+          <label className="check">
+            <input type="checkbox" checked={selectable.length > 0 && chosen.length === selectable.length}
+              onChange={(e) => setPicked(e.target.checked ? new Set(selectable.map(cardKey)) : new Set())} />
+            Select all{filter ? ' matching' : ''}
+          </label>
+          <span className="muted small">{deleting ?? `${chosen.length} selected`}</span>
+          <span className="grow" />
+          <button className="btn danger" disabled={!chosen.length || !!deleting} onClick={() => void removeChosen()}>Delete selected{chosen.length ? ` (${chosen.length})` : ''}</button>
+        </div>
+      )}
       {musicSources.length > 1 && (
         <div className="chips">
           <button className={`chip ${!only ? 'on' : ''}`} onClick={() => setOnly(null)}>All sources</button>
@@ -158,7 +202,7 @@ export function Albums() {
           ))}
         </div>
       )}
-      <Grid>{shown.slice(0, 600).map((a) => <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={openAlbum} />)}</Grid>
+      <Grid>{shown.slice(0, 600).map((a) => <AlbumCard key={cardKey(a)} album={a} onOpen={picked ? toggle : openAlbum} selected={picked ? picked.has(cardKey(a)) : undefined} />)}</Grid>
       {shown.length > 600 && <p className="muted center">Showing 600 of {shown.length} — filter to narrow down.</p>}
     </div>
   );
@@ -274,7 +318,9 @@ export function AlbumView({ album }: { album: Album }) {
   }, [ref]);
 
   const total = tracks?.reduce((s, t) => s + (t.duration ?? 0), 0) ?? 0;
-  if (hidden.album(both ? { ...album, explicit: shown } : album)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
+  // the copy on screen: the version picked on the switch, or the album opened
+  const shownAlbum = both ? ref : album;
+  if (hidden.album(shownAlbum)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
   return (
     <div className="page">
       <header className="hero">
@@ -297,8 +343,10 @@ export function AlbumView({ album }: { album: Album }) {
             {tracks?.length ? <AddToPlaylist tracks={tracks} label="Add to playlist" className="btn" /> : null}
             {tracks?.length ? <QueueAllOnSubwave tracks={tracks} albumBlock /> : null}
             {tracks?.length ? <ShareButton what={() => shareOfTracks('album', album.title, tracks, album.artist, art)} /> : null}
-            <KidFlagButton kind="album" artist={album.artist} title={album.title} explicit={explicitOfAlbum(album) === 'explicit' || tracks?.some((t) => explicitOfTrack(t) === 'explicit')} />
-            {!both && <CleanVersionButton artist={album.artist} album={album.title} />}
+            {/* the version on screen: with the Explicit / Clean switch that can be another album's copy */}
+            <KidFlagButton kind="album" artist={album.artist} title={shownAlbum.title} version={albumVersion(shownAlbum)}
+              explicit={explicitOfAlbum(shownAlbum) === 'explicit' || tracks?.some((t) => explicitOfTrack(t) === 'explicit')} />
+            {!both && albumVersion(album) !== 'clean' && <CleanVersionButton artist={album.artist} album={album.title} />}
             {both && !kid && (
               <div className="chips inline" role="group" aria-label="Version">
                 {(['explicit', 'clean'] as const).map((v) => (
@@ -346,15 +394,7 @@ function DeleteAlbumButton({ album }: { album: Album }) {
     if (!confirm(`Delete ${album.title} by ${album.artist} from your server?\n\nIts files go to the Hub's trash. You can put it back under Settings → Server → Deleted albums for 30 days.`)) return;
     setBusy(true);
     try {
-      const r = await hubClient()!.deleteAlbum(album.id);
-      // gone from this device's library now; Navidrome forgets it on its rescan
-      useCatalog.setState((s) => ({
-        albums: s.albums.flatMap((a) => {
-          const refs = (a.refs ?? [a]).filter((x) => !(x.sourceId === album.sourceId && x.id === album.id));
-          return refs.length === (a.refs ?? [a]).length ? [a] : refs.length ? [{ ...a, ...refs[0], refs }] : [];
-        }),
-        recent: s.recent.filter((a) => !(a.sourceId === album.sourceId && a.id === album.id)),
-      }));
+      const r = await deleteAlbum(album);
       alert(`Deleted ${r.label} (${r.files} song${r.files === 1 ? '' : 's'})${r.failed.length ? `. ${r.failed.length} couldn't be moved: ${r.failed[0]}` : ''}`);
       useUi.getState().back();
     } catch (e) {

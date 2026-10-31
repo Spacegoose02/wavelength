@@ -459,6 +459,13 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
 - **Missing albums:** for the 40 artists you have the most albums by, the studio albums Deezer lists that you
   don't have, with preview and **Get** / **Request**. Live albums, compilations and remix albums are left out.
 
+## Deleting several albums at once
+
+Hub admins get a **Select** button on **Albums**. Tap albums to tick them (or **Select all**, which ticks every
+album the filter shows), then **Delete selected**. Wavelength lists what it's about to delete and asks first.
+The files go to the Hub's trash, and **Settings → Server → Deleted albums** can put them back for 30 days. Only
+copies on a Navidrome server can be deleted this way. Press **Done** to go back to opening albums.
+
 ## Searching your playlists
 
 When you have lots of playlists, use the search box at the top of **Playlists**. Type part of a playlist's
@@ -834,6 +841,18 @@ badge for everyone; that comes from your files' tags (Navidrome reads them) or f
 kids** for something marked explicit that's fine. It applies on every kid's device. **Settings → Users →
 Kid-safe music** lists everything flagged, with **Remove**.
 
+A song or album is marked for **the version you're looking at**. On an album page with the **Explicit** /
+**Clean** switch, flip to the version first: **OK for kids** on the clean version doesn't let the explicit one
+through, and hiding the explicit one doesn't hide the clean one. **Hide every version of this … from kids**
+covers both. A song tagged explicit in its file stays hidden even inside a "(Clean)" album, unless you let that
+song through.
+
+> **After updating to 0.17.2:** earlier versions saved **OK for kids** under the explicit album's name even when
+> you set it on the clean version, and song marks applied to both versions. When the Hub updates, every **OK
+> for kids** on a song or album moves to the clean version, so explicit music is hidden again. If you really
+> meant to let an explicit song or album through, mark it again. **Hide** marks on songs keep covering every
+> version. The audit log records the change (`kids.flagsRepaired`).
+
 **Files without the explicit tag, and Plex.** Under **Settings → Users → Kid-safe music**, **Check my
 library** looks each album up on Deezer and records on your Hub which albums and songs are explicit. Your
 files aren't changed. It takes a few minutes for a big library, can be stopped, and **Check new albums** later
@@ -862,6 +881,15 @@ same way. If deemix runs on your device instead of the Hub, clean versions go wh
 put them.
 
 So that new downloads carry the tag, open deemix, go to **Settings → Tags** and tick **Explicit lyrics**.
+
+**Which Deezer album counts as the clean version.** The library check only offers a Deezer album that Deezer
+marks as edited, or whose songs are all not explicit and include the edited versions of the explicit album's
+explicit songs. Up to 0.17.1 it took any album with the same name that Deezer didn't call explicit, so some
+"clean versions" weren't clean. In **Inbox → Clean versions**, admins can press **Check clean versions** to
+fix that: it checks every clean version on offer on Deezer and drops the ones that aren't (they leave the list),
+then goes through the clean copies already in your library and lists any to look at, either because songs in
+them are tagged explicit or because they came from one of those wrong albums. Tick them (or **Select all**) and
+**Delete selected** (to the Hub's trash for 30 days; the explicit albums stay) or **Hide selected from kids**.
 
 **Explicit and clean versions.** When your library has both versions of an album (for example *Loud* and
 *Loud (Clean)*, or two copies tagged differently), its page has an **Explicit** / **Clean** switch, and **Get

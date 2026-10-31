@@ -4,7 +4,7 @@ import { syncNow } from '../lib/hubSync';
 import { loadHubServices } from '../lib/hubServices';
 import { recheckLibrary, runExplicitCheck, stopExplicitCheck, useExplicitCheck } from '../lib/explicitCheck';
 import { isTauri } from '../lib/http';
-import { loadFlags, setFlag, useFlags, useRatings } from '../lib/kids';
+import { flagVersionLabel, loadFlags, removeFlag, useFlags, useRatings } from '../lib/kids';
 import { today } from '../lib/kidTime';
 import { notifyAllowed, notifySupported } from '../lib/notify';
 import { isAndroid } from '../lib/platform';
@@ -957,7 +957,8 @@ function KidSafeList() {
       <p className="muted small">
         Kid profiles never see music marked explicit (from your files' tags or Deezer), or anything listed here as
         <b> Hidden</b>. <b>OK for kids</b> lets something explicit through. Use the <b>Kids</b> button on any song,
-        album or artist to add to this list.
+        album or artist to add to this list. A song or album is marked for the version you were looking at: the
+        clean version and the explicit one are separate.
       </p>
       <LibraryCheck />
       {!flags.length && <p className="muted">Nothing flagged yet.</p>}
@@ -965,10 +966,10 @@ function KidSafeList() {
         <div key={f.id} className="source-row">
           <div className="track-main">
             <div className="track-title">{f.title || f.artist}</div>
-            <div className="track-sub">{KIND[f.kind]}{f.title ? ` · ${f.artist}` : ''}{f.setBy ? ` · by ${f.setBy}` : ''}</div>
+            <div className="track-sub">{KIND[f.kind]}{f.title ? ` · ${f.artist}` : ''}{flagVersionLabel(f) ? ` · ${flagVersionLabel(f)}` : ''}{f.setBy ? ` · by ${f.setBy}` : ''}</div>
           </div>
           <span className={`small ${f.verdict === 'block' ? 'kid-blocked' : 'ok'}`}>{f.verdict === 'block' ? 'Hidden from kids' : 'OK for kids'}</span>
-          <button className="btn small ghost" onClick={() => setFlag(f.kind, f.artist, f.title, null).catch((e) => alert(errText(e)))}>Remove</button>
+          <button className="btn small ghost" onClick={() => removeFlag(f.id).catch((e) => alert(errText(e)))}>Remove</button>
         </div>
       ))}
     </section>

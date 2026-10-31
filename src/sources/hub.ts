@@ -271,12 +271,18 @@ export interface HubShare {
 export type HubShareInput = { to: number | null; kind: ShareKind; title: string; subtitle?: string; cover?: string; note?: string; payload: SharePayload };
 
 /** A kid-safe flag: `block` hides it from kids, `allow` lets something explicit through. */
+export type FlagVersion = '' | 'explicit' | 'clean' | 'any';
 export interface HubFlag {
   id: number;
   kind: 'track' | 'album' | 'artist';
   artist: string;
   /** Song or album title; '' for an artist. */
   title: string;
+  /**
+   * Which version of the song or album it's for (src/lib/kids.ts `FlagVersion`): '' untagged, 'explicit',
+   * 'clean', or 'any' (artists). Missing from a Hub older than 0.17.2.
+   */
+  version?: FlagVersion;
   verdict: 'block' | 'allow';
   setBy: string | null;
   createdAt: number;
@@ -794,7 +800,7 @@ export class HubClient {
     this.call<{ candidates: HubArtCandidate[]; failed: string[] }>('GET', `/api/admin/artwork/search?${new URLSearchParams({ kind, artist, album })}`);
   setArtwork = (b: HubArtworkInput) => this.call<{ artwork: HubArtwork }>('PUT', '/api/admin/artwork', b);
   deleteArtwork = (id: number) => this.call('DELETE', `/api/admin/artwork/${id}`);
-  setFlag = (b: { kind: HubFlag['kind']; artist: string; title?: string; verdict: HubFlag['verdict'] }) => this.call<{ flag: HubFlag }>('POST', '/api/admin/flags', b);
+  setFlag = (b: { kind: HubFlag['kind']; artist: string; title?: string; version?: FlagVersion; verdict: HubFlag['verdict'] }) => this.call<{ flag: HubFlag }>('POST', '/api/admin/flags', b);
   deleteFlag = (id: number) => this.call('DELETE', `/api/admin/flags/${id}`);
   adminKids = (day: string) => this.call<{ pinSet: boolean; kids: { userId: number; displayName: string; rules: KidRules; usedSeconds: number }[] }>('GET', `/api/admin/kids?day=${day}`);
   setKidRules = (userId: number, rules: Partial<KidRules>) => this.call<{ rules: KidRules }>('PUT', `/api/admin/kids/${userId}`, rules);
