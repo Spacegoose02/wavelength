@@ -134,12 +134,34 @@ export interface DeezerArtistPage {
   playlists: DeezerResult[];
 }
 
+// discographies, kept a few minutes so the artist page's banner and Browse releases share one call
+const RELEASES_MS = 10 * 60_000;
+const releases = new Map<number, { at: number; list: Promise<any[]> }>();
+function rawReleases(id: number): Promise<any[]> {
+  const hit = releases.get(id);
+  if (hit && Date.now() - hit.at < RELEASES_MS) return hit.list;
+  const list = getJson(`${DZ}/artist/${id}/albums?${qs({ limit: 200 })}`).then((r) => {
+    if (r?.error) throw new Error(r.error.message ?? 'Deezer has no such artist');
+    return (r?.data ?? []) as any[];
+  });
+  list.catch(() => releases.delete(id));
+  releases.set(id, { at: Date.now(), list });
+  return list;
+}
+
+/** An artist's releases (albums, EPs, singles, compilations, and some announced ones), newest first. */
+export async function getDeezerReleases(id: number, artist: { id: number; name: string }): Promise<DeezerResult[]> {
+  return (await rawReleases(id))
+    .map((x: any) => toAlbum(x, artist))
+    .sort((x: DeezerResult, y: DeezerResult) => (y.releaseDate ?? '').localeCompare(x.releaseDate ?? ''));
+}
+
 /** Everything for an artist page: top songs, discography, related artists and playlists they're on. */
 export async function getDeezerArtist(id: number): Promise<DeezerArtistPage> {
   const [a, top, albums, related, playlists] = await Promise.all([
     getJson(`${DZ}/artist/${id}`),
     getJson(`${DZ}/artist/${id}/top?${qs({ limit: 10 })}`).catch(() => ({ data: [] })),
-    getJson(`${DZ}/artist/${id}/albums?${qs({ limit: 200 })}`).catch(() => ({ data: [] })),
+    rawReleases(id).then((data) => ({ data }), () => ({ data: [] })),
     getJson(`${DZ}/artist/${id}/related?${qs({ limit: 12 })}`).catch(() => ({ data: [] })),
     getJson(`${DZ}/artist/${id}/playlists?${qs({ limit: 12 })}`).catch(() => ({ data: [] })),
   ]);

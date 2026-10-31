@@ -18,6 +18,9 @@ Follow buttons are hidden.
   Deezer artist pages under **Downloads → Deezer**.
 - **Manage N followed** under the Release Radar heading lists everyone you follow with a × to stop following,
   and a box to follow an artist by name. The name has to match Deezer's (case, accents and "The" don't matter).
+- Every library artist page also shows the artist's newest release under their name, followed or not, with
+  **Get** and **Browse releases** for the whole discography. See
+  [the user guide](USER-GUIDE.md#browse-an-artists-releases).
 - Following is per person and follows you to every device, like your playlists. Kids can follow artists too;
   anything a kid profile mustn't see is hidden from them as everywhere else.
 

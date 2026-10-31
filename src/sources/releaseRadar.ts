@@ -17,7 +17,8 @@ export interface Release {
   explicit?: boolean;
 }
 
-const WINDOW_DAYS = 42;
+/** How far back a release counts as new: Release Radar's list, and "New release" on an artist page. */
+export const WINDOW_DAYS = 42;
 const CACHE_KEY = 'tonearm.releaseRadar';
 
 /** Your artists, most-played first: Navidrome play counts + starred + local history. */
@@ -45,9 +46,37 @@ async function yourArtists(limit = 60): Promise<string[]> {
   return [...score.values()].sort((a, b) => b.pts - a.pts).slice(0, limit).map((x) => x.name);
 }
 
+/** A Deezer artist found by name. */
+export interface DeezerArtistHit {
+  id: number;
+  name: string;
+  picture?: string;
+}
+
+// name lookups, kept for the session (a miss too, so a library artist Deezer doesn't have isn't asked about again)
+const found = new Map<string, Promise<DeezerArtistHit | undefined>>();
+
+/**
+ * The Deezer artist with exactly this name (case and accents don't matter), or undefined when Deezer has none.
+ * Release Radar's "artists you play" and the library artist page (Browse releases, the newest release banner)
+ * look artists up this way. A failed lookup isn't kept, so it's tried again next time.
+ */
+export function findDeezerArtist(name: string): Promise<DeezerArtistHit | undefined> {
+  const key = norm(name);
+  let hit = found.get(key);
+  if (!hit) {
+    hit = getJson(`https://api.deezer.com/search/artist?${qs({ q: name, limit: 5 })}`).then((s) => {
+      const a = (s?.data ?? []).find((x: any) => norm(x.name) === key);
+      return a ? { id: a.id as number, name: a.name as string, picture: (a.picture_medium as string) || undefined } : undefined;
+    });
+    hit.catch(() => found.delete(key));
+    found.set(key, hit);
+  }
+  return hit;
+}
+
 async function releasesFor(artist: string): Promise<Release[]> {
-  const s = await getJson(`https://api.deezer.com/search/artist?${qs({ q: artist, limit: 3 })}`).catch(() => null);
-  const hit = (s?.data ?? []).find((a: any) => norm(a.name) === norm(artist));
+  const hit = await findDeezerArtist(artist).catch(() => undefined);
   if (!hit) return [];
   const albums = await getJson(`https://api.deezer.com/artist/${hit.id}/albums?${qs({ limit: 20 })}`).catch(() => null);
   const cutoff = Date.now() - WINDOW_DAYS * 86_400_000;
