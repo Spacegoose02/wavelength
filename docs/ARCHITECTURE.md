@@ -84,6 +84,13 @@ Small on purpose. The UI does almost everything; Rust only does what a WebView c
 `lib/http.ts` routes every request through Rust (no CORS), and falls back to `window.fetch` in a plain
 browser (dev preview). The capability file `src-tauri/capabilities/default.json` allows any http(s) URL.
 
+**Content-Security-Policy.** `tauri.conf.json` → `app.security.csp` (and the same policy, minus Tauri's own
+schemes, in `hub/src/web.ts` for the browser build). Scripts may only come from the app itself, so text from
+the internet (a song title, station name or tag with HTML in it) can never run code and reach the Rust
+commands. Pictures, audio and requests may go to any address, because every music server is someone's own.
+`devCsp` is off so Vite's hot reload works in `tauri dev`. If a new feature needs another kind of source
+(a web font, an iframe, WebAssembly), add it to both policies.
+
 ## 3. Playback (`player/engine.ts` + `store/player.ts`)
 
 **Engine.** Two `<audio>` elements:
@@ -134,9 +141,9 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 | `lib/hubSync.ts` | When each synced setting last changed here, and which are waiting to upload | `tonearm.hubStamps` |
 | misc | `tonearm.plexClientId`, `tonearm.releaseRadar` (daily cache), `tonearm.radarMode` (Following / Artists you play), `tonearm.swName` | localStorage |
 
-> ⚠️ **Credentials are stored in plain localStorage.** Fine for a personal device; moving them to the OS
-> keychain (e.g. `tauri-plugin-stronghold` / Android Keystore) is on the roadmap
-> ([USERS-AND-ADMIN.md](USERS-AND-ADMIN.md), Phase 1), along with multi-user accounts and admin-only controls.
+> **Passwords and tokens** live in the OS keychain on Windows and Android (`src-tauri/src/secrets.rs`,
+> `lib/secrets.ts`): Windows Credential Manager and the Android Keystore. In a plain browser they stay in
+> localStorage.
 
 ### Why everything still says "tonearm"
 

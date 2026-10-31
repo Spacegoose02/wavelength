@@ -20,6 +20,26 @@ const TYPES: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+/**
+ * The app's Content-Security-Policy, as in src-tauri/tauri.conf.json minus Tauri's own schemes. Scripts only
+ * from the Hub itself, so a song title or station name with HTML in it can never run code; pictures, audio
+ * and requests may go anywhere, since every music server is someone's own address.
+ */
+export const APP_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' * data: blob:",
+  "media-src 'self' * data: blob:",
+  "connect-src 'self' * data: blob:",
+  "font-src 'self' data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-src 'none'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 /** Paths the Hub itself answers; everything else under / is the app. */
 const HUB_PATHS = /^\/(api|auth|setup|link|invite|nd)(\/|$|\?)/;
 
@@ -39,7 +59,8 @@ export function webRoutes(app: FastifyInstance, webDir: string) {
     reply
       .header('x-content-type-options', 'nosniff')
       .header('referrer-policy', 'no-referrer')
-      .header('x-frame-options', 'DENY');
+      .header('x-frame-options', 'DENY')
+      .header('content-security-policy', APP_CSP);
     if (!file) return reply.header('content-type', TYPES['.html']).header('cache-control', 'no-cache').send(index);
     // Vite names built files by content hash, so they never change
     const hashed = file.includes(`${sep}assets${sep}`);
