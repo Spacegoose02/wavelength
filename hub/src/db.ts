@@ -402,6 +402,13 @@ const MIGRATIONS: string[] = [
     last_step  INTEGER NOT NULL DEFAULT 0,
     recovery   TEXT NOT NULL DEFAULT '[]'
   );
+  -- Parents of kid accounts (family.ts): they approve the kid's requests and get the kid's weekly report.
+  CREATE TABLE guardians (
+    kid_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    guardian_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (kid_id, guardian_id)
+  );
+  CREATE INDEX guardians_guardian ON guardians(guardian_id);
   `,
 ];
 

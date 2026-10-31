@@ -8,6 +8,7 @@ import { clientIp, HttpError, need, str } from '../http.ts';
 import { isRole, permissionsFor } from '../roles.ts';
 import { countActiveAdmins, createUser, deleteUser, getUser, getUserBySso, getUserForLogin, listUsers, updateUser, USERNAME_RE, type User, type UserPatch } from '../users.ts';
 import { disableTotp, totpEnabled } from '../totp.ts';
+import { guardiansOf, setGuardians } from '../family.ts';
 import { MIN_PASSWORD } from './auth.ts';
 
 /**
@@ -17,7 +18,7 @@ import { MIN_PASSWORD } from './auth.ts';
 export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
   const withDevices = (u: User) => {
     const devices = listDevices(db, u.id);
-    return { ...u, permissions: permissionsFor(u), devices: devices.length, lastSeenAt: devices[0]?.lastSeenAt ?? null, twoFactor: totpEnabled(db, u.id) };
+    return { ...u, permissions: permissionsFor(u), devices: devices.length, lastSeenAt: devices[0]?.lastSeenAt ?? null, twoFactor: totpEnabled(db, u.id), ...(u.role === 'kid' && { guardians: guardiansOf(db, u.id) }) };
   };
 
   /** Refuse a change that would leave the Hub with no active admin. */
@@ -98,6 +99,24 @@ export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
     });
     audit(db, { actorId: actor.id, action: 'user.deleted', target: target.username, ip: clientIp(req) });
     return { ok: true };
+  });
+
+  /** `{ ids }`: who the parents of this kid are (any grown-up accounts). Empty for none. */
+  app.put<{ Params: { id: string } }>('/api/admin/users/:id/guardians', async (req) => {
+    const { user: actor } = need(req, 'users.manage');
+    const kid = getUser(db, Number(req.params.id));
+    if (!kid) throw new HttpError(404, 'No such user');
+    if (kid.role !== 'kid') throw new HttpError(400, 'Only kid accounts have parents');
+    const raw = (req.body as { ids?: unknown } | null)?.ids;
+    if (!Array.isArray(raw) || raw.length > 20) throw new HttpError(400, 'Send ids: the parents’ user ids');
+    const ids = [...new Set(raw.map(Number))];
+    for (const id of ids) {
+      const g = getUser(db, id);
+      if (!g || g.role === 'kid') throw new HttpError(400, 'A parent has to be a grown-up account');
+    }
+    setGuardians(db, kid.id, ids);
+    audit(db, { actorId: actor.id, action: 'user.guardians', target: kid.username, detail: { guardians: ids.map((id) => getUser(db, id)!.username) }, ip: clientIp(req) });
+    return { user: withDevices(kid) };
   });
 
   /** Someone lost their phone: turn their two-step sign-in off so they can sign in with the password alone. */

@@ -5,7 +5,8 @@ import { hashPassword, verifyPassword } from '../crypto.ts';
 import { getDevice, listDevices, revokeDevice } from '../devices.ts';
 import { clientIp, HttpError, signedIn, str } from '../http.ts';
 import { getPrefs, putPrefs } from '../prefs.ts';
-import { getUserForLogin, updateUser } from '../users.ts';
+import { getUser, getUserForLogin, updateUser } from '../users.ts';
+import { kidsOf } from '../family.ts';
 import { beginTotp, disableTotp, enableTotp, passTotp, recoveryLeft, totpEnabled } from '../totp.ts';
 import { MIN_PASSWORD } from './auth.ts';
 
@@ -13,7 +14,9 @@ import { MIN_PASSWORD } from './auth.ts';
 export function meRoutes(app: FastifyInstance, { db, limits, config }: Ctx) {
   app.get('/api/me', async (req) => {
     const { user, device, permissions } = signedIn(req);
-    return { user, device, permissions, twoFactor: totpEnabled(db, user.id) };
+    // a parent's kids (family.ts), for the Inbox's approvals and reports
+    const kids = kidsOf(db, user.id).map((id) => getUser(db, id)).filter((k) => !!k).map((k) => ({ id: k.id, displayName: k.displayName }));
+    return { user, device, permissions, twoFactor: totpEnabled(db, user.id), kids };
   });
 
   app.patch('/api/me', async (req) => {
