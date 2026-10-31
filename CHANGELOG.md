@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.0
 - **Get the song you hear on the radio:** Now Playing shows **Queue from library** when you have it, or **Get this
   song** (Get or Request) when you don't, whenever the station's title names a song.
 - **Stations for you** (Radio): popular stations in the genres you have the most music in.
@@ -51,6 +53,8 @@
 - **Android:** music no longer stops when the screen locks. Playback also carries on into the next song with
   the screen off, holds the CPU and Wi-Fi awake while streaming, and pauses when headphones are unplugged.
   docs/USER-GUIDE.md "Listening with the screen off" covers phones whose battery saver still closes the app.
+- **Builds:** TypeScript 7, qrcode-generator 2, and updated Rust crates (base64, minisign-verify, windows-sys,
+  sha2) and GitHub Actions. The Hub image is on Node 24 LTS.
 
 ## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your
