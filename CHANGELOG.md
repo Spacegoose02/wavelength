@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.1
 - **Fixed:** clean versions downloaded next to an explicit album (*Loud (Clean)*) showed the **E** badge and
   were hidden from kid profiles. They took the explicit album's library-check result, because "(Clean)" is
   dropped when matching names. An album with "(Clean)", "(Edited)" or "(Censored)" in its title now counts as
