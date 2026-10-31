@@ -3,7 +3,7 @@ import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import type { Db } from '../db.ts';
 import { clientIp, HttpError, need, signedIn, str, type Auth } from '../http.ts';
-import { deemixJobIds } from '../library.ts';
+import { deemixJobIds, type DownloadProgress } from '../library.ts';
 import { approvers, notify, notifyRequester } from '../notify.ts';
 import { permissionsFor } from '../roles.ts';
 import { getUser } from '../users.ts';
@@ -44,12 +44,14 @@ export interface MusicRequest {
   /** In the library: Navidrome scanned it in ("your song is ready"). */
   readyAt: number | null;
   seen: boolean;
+  /** Downloading with deemix: how it's going (library.ts). */
+  progress?: DownloadProgress;
 }
 
 interface Row {
   id: number; user_id: number; username: string; display_name: string; link: string; kind: string; title: string; artist: string;
   cover: string | null; note: string | null; status: RequestStatus; reason: string | null; via: string | null; decider: string | null;
-  created_at: number; decided_at: number | null; downloaded_at: number | null; ready_at: number | null; seen: number;
+  created_at: number; decided_at: number | null; downloaded_at: number | null; ready_at: number | null; seen: number; job?: string | null;
 }
 
 const SELECT = `SELECT r.*, u.username, u.display_name, d.display_name AS decider
@@ -70,6 +72,12 @@ const KINDS = ['track', 'album', 'playlist', 'artist', 'video'];
 
 export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library, clean, radar }: Ctx) {
   const key = config.secretKey;
+  /** A request as sent to devices, with its download's progress while deemix has it. */
+  const withProgress = (r: Row): MusicRequest => {
+    const out = toRequest(r);
+    const progress = library.progressFor({ ...out, job: r.job });
+    return progress ? { ...out, progress } : out;
+  };
 
   /**
    * Release Radar's "Get new releases automatically" (radar.ts): the release becomes this person's request, which
@@ -162,7 +170,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
   app.get('/api/requests', async (req) => {
     const { user } = signedIn(req);
     const rows = db.prepare(`${SELECT} WHERE r.user_id = ? ORDER BY r.created_at DESC LIMIT 200`).all(user.id) as unknown as Row[];
-    return { requests: rows.map(toRequest) };
+    return { requests: rows.map(withProgress) };
   });
 
   /** Numbers for the badge: your decisions you haven't seen, and (admins) requests waiting. */
@@ -210,7 +218,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     const rows = (status
       ? db.prepare(`${SELECT} WHERE ${mine} AND r.status = ? ORDER BY r.created_at DESC LIMIT 300`).all(status)
       : db.prepare(`${SELECT} WHERE ${mine} ORDER BY (r.status = 'pending') DESC, r.created_at DESC LIMIT 300`).all()) as unknown as Row[];
-    return { requests: rows.map(toRequest) };
+    return { requests: rows.map(withProgress) };
   });
 
   /** The request, if the caller may decide it: admins any, parents their kids'. */

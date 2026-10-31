@@ -61,9 +61,11 @@ interface CleanState {
   /** Sending right now, or why sending failed, by link. Not saved. */
   sending: Record<string, string | undefined>;
   /** deemix's queue, by Deezer album id. */
-  queue: Record<number, { status: string; progress: number }>;
+  queue: Record<number, { status: string; progress: number; downloaded?: number; size?: number }>;
   /** Clean versions the Hub holds until deemix is free, or couldn't queue, by link. */
-  hub: Record<string, { state: string; error?: string }>;
+  hub: Record<string, { state: string; error?: string; stuck?: boolean }>;
+  /** deemix's queue (and the Hub's line) has been read, so "not there" means it was lost. Not saved. */
+  queueRead?: boolean;
 }
 
 export const useCleanVersions = create<CleanState>()(
@@ -77,16 +79,18 @@ export function offerStatus(o: CleanOffer, s: CleanState): { label: string; kind
   if (sending === '…') return { label: 'Sending…', kind: 'busy' };
   if (sending) return { label: sending, kind: 'error' };
   const held = s.hub[o.link];
-  if (held?.state === 'waiting') return { label: 'Waiting for deemix', kind: 'queued' };
+  if (held?.state === 'waiting') return { label: held.stuck ? 'Waiting · deemix looks stuck' : 'Waiting for deemix', kind: 'queued' };
   if (held?.state === 'failed') return { label: held.error ?? 'Couldn’t queue it', kind: 'error' };
   const q = o.deezerId ? s.queue[o.deezerId] : undefined;
   if (q) {
     if (q.status === 'completed') return { label: 'Downloaded', kind: 'done' };
     if (q.status === 'failed') return { label: 'Download failed', kind: 'error' };
-    if (q.status === 'downloading') return { label: `Downloading ${Math.round(q.progress)}%`, kind: 'busy' };
+    if (q.status === 'downloading') return { label: q.size && q.size > 1 ? `Downloading ${q.downloaded ?? 0} of ${q.size}` : `Downloading ${Math.round(q.progress)}%`, kind: 'busy' };
     return { label: 'Queued', kind: 'queued' };
   }
   const sent = s.sent[o.link];
+  // sent, but neither deemix nor the Hub has it any more (deemix's list was cleared, or the Hub restarted): send it again
+  if (sent?.via === 'deemix' && s.queueRead && !held && Date.now() - sent.at > 2 * 60_000) return { label: 'Not in deemix’s queue any more', kind: 'error' };
   if (sent) return { label: sent.via === 'request' ? 'Requested' : 'Sent to deemix', kind: 'queued' };
   return { label: '', kind: 'new' };
 }
@@ -129,10 +133,11 @@ export async function refreshCleanQueue() {
     const queue: CleanState['queue'] = {};
     for (const item of Object.values<any>(r?.queue ?? {})) {
       if (item?.type !== 'album' || !item.id) continue;
-      queue[Number(item.id)] = { status: String(item.status ?? ''), progress: Number(item.progress ?? 0) };
+      queue[Number(item.id)] = { status: String(item.status ?? ''), progress: Number(item.progress ?? 0), downloaded: Number(item.downloaded ?? 0), size: Number(item.size ?? 0) };
     }
-    const jobs = hubRuns('deemix') ? (await hubClient()!.deemixCleanJobs().catch(() => undefined))?.jobs : undefined;
-    useCleanVersions.setState((s) => ({ queue, hub: jobs ? Object.fromEntries(jobs.map((j) => [j.link, j])) : s.hub }));
+    const hub = hubRuns('deemix');
+    const jobs = hub ? (await hubClient()!.deemixCleanJobs().catch(() => undefined))?.jobs : undefined;
+    useCleanVersions.setState((s) => ({ queue, hub: jobs ? Object.fromEntries(jobs.map((j) => [j.link, j])) : s.hub, queueRead: !hub || !!jobs }));
   } catch {
     /* deemix not reachable: keep showing what was sent */
   }

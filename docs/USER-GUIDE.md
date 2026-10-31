@@ -540,6 +540,27 @@ busiest day and longest streak, and when you listen most. **Play your top songs*
 from every device you're signed in on, not radio, audiobooks or podcasts, and starts from the history your
 Hub already has.
 
+## Following downloads
+
+**Downloads → deemix queue** shows everything deemix has, as it happens:
+
+- **Downloading · 5 of 12 songs**, with a bar, and **Waiting · 3 in line** for the ones behind it.
+- **Done, but 2 of 12 songs failed**: press **Why?** to see which songs and deemix's reason (for example "Not
+  available at the chosen quality").
+- **Stuck · no progress for 20 min**, in red, when deemix has stopped moving. **Cancel** it (or **Retry**) and the
+  rest carry on. If that doesn't help, restart deemix.
+- **Clean versions held by your Hub** wait at the top until deemix is free, saying what they're waiting for. You
+  can cancel them there.
+- **Clear finished** tidies deemix's list.
+
+Inbox shows the same for requests, including the ones Release Radar gets automatically: a bar, the songs that
+couldn't be got and why. A request deemix lost (its list was cleared, or it restarted) says so after an hour, and
+**Retry** sends it again. In **Inbox → Clean versions**, an album deemix no longer has says **Not in deemix's
+queue any more** and can be sent again, and the bar at the top shows how busy deemix is.
+
+> **Developer notes.** `src/lib/deemixQueue.ts` (reading the queue, stuck detection, Cancel / Retry), `src/components/DeemixQueue.tsx`,
+> and on the Hub `hub/src/deemixQueue.ts`. Without a Hub, the app reads deemix itself with the same rules.
+
 ## Containers (Hub admins)
 
 If your Hub is set up for it, **Settings → Server → Containers** lists the household's other services, like

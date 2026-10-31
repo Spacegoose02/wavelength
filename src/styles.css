@@ -1738,3 +1738,9 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .source-row.as-button:hover { background: var(--panel-2); }
 .row-cover { width: 44px; height: 44px; border-radius: 6px; flex: none; }
 .clean-check { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line, rgb(255 255 255 / 0.08)); }
+
+/* Downloads → deemix queue (components/DeemixQueue.tsx) */
+.dl-item.dl-stuck { border-left: 3px solid #e5534b; padding-left: 8px; }
+.dl-errors { margin: 4px 0 0 16px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.dl-queue .errors.small { font-size: 12px; margin-bottom: 8px; }
+.req-progress { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; max-width: 320px; }

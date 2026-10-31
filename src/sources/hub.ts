@@ -1,4 +1,5 @@
 import { http, trimSlash } from '../lib/http';
+import type { DeemixItem } from '../lib/deemixQueue';
 import type { Track } from './types';
 
 /**
@@ -181,6 +182,18 @@ export interface HubRequest {
   /** In the library (Navidrome scanned it in): "your song is ready". */
   readyAt: number | null;
   seen: boolean;
+  /** Downloading with deemix: how it's going (hub/src/library.ts). */
+  progress?: HubDownloadProgress;
+}
+export interface HubDownloadProgress {
+  /** "Downloading · 5 of 12 songs", "Waiting · 2 in line", "Waiting for deemix to be free"… */
+  label: string;
+  percent: number;
+  done: number;
+  total: number;
+  failed: number;
+  stuck: boolean;
+  errors: { title: string; artist: string; message: string }[];
 }
 export type HubRequestInput = { link: string; kind: string; title: string; artist: string; cover?: string; note?: string };
 
@@ -290,6 +303,14 @@ export interface HubCleanJob {
   state: 'waiting' | 'queued' | 'failed';
   error?: string;
   at: number;
+  /** While waiting: what for. */
+  detail?: string;
+  /** deemix's queue has stopped moving. */
+  stuck?: boolean;
+  /** Place in the Hub's line of clean versions (1 = next). */
+  position?: number;
+  /** Being handed to deemix: too late to cancel. */
+  starting?: boolean;
 }
 export interface HubAlbumRating {
   artist: string;
@@ -592,6 +613,12 @@ export class HubClient {
   /** A clean version, into its own "… (Clean)" folder once deemix is free (hub/src/cleanDownloads.ts). */
   deemixClean = (link: string, bitrate?: number) => this.call<{ job: HubCleanJob }>('POST', '/api/downloads/deemix/clean', { link, bitrate });
   deemixCleanJobs = () => this.call<{ jobs: HubCleanJob[] }>('GET', '/api/downloads/deemix/clean');
+  deemixCleanCancel = (link: string) => this.call('DELETE', '/api/downloads/deemix/clean', { link });
+  /** deemix's queue made readable, with stalls noticed by the Hub (hub/src/deemixQueue.ts). */
+  deemixProgress = () => this.call<{ items: DeemixItem[]; clean: HubCleanJob[] }>('GET', '/api/downloads/deemix/progress');
+  deemixCancel = (uuid: string) => this.call('POST', `/api/downloads/deemix/queue/${encodeURIComponent(uuid)}/cancel`);
+  deemixRetry = (uuid: string) => this.call('POST', `/api/downloads/deemix/queue/${encodeURIComponent(uuid)}/retry`);
+  deemixClearFinished = () => this.call('POST', '/api/downloads/deemix/queue/clear');
   ytSearch = (query: string) => this.call<{ results: { id: string; title: string; channel: string; url: string; duration?: number; thumbnail?: string }[] }>('POST', '/api/downloads/ytdlp/search', { query });
   ytJobs = () => this.call<{ jobs: HubYtJob[] }>('GET', '/api/downloads/ytdlp/jobs');
   ytStart = (r: { url: string; title?: string; channel?: string }) => this.call<{ job: HubYtJob }>('POST', '/api/downloads/ytdlp/jobs', r);

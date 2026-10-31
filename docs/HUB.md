@@ -374,6 +374,41 @@ edits) puts them back; Navidrome rescans afterwards. **Keep** leaves an album as
 
 It needs what the tag editor needs: the music read-write at `/music` and a Navidrome admin login on the Hub.
 
+## Following deemix downloads
+
+deemix only keeps a list of downloads; it never says one is stuck. The Hub reads that list
+(`hub/src/deemixQueue.ts`) and turns it into something you can follow:
+
+- **Every download** with its place in line ("Waiting · 3 in line"), songs done and failed ("Downloading · 5 of
+  12 songs · 1 failed"), and deemix's reason for each song that failed, in words ("Not available in your Deezer
+  country or account" rather than `notAvailable`).
+- **Stuck downloads.** The Hub remembers when each download last moved. When deemix has had work to do and nothing
+  has moved for 15 minutes, the one at the front is marked **stuck**. That's usually a download deemix hung on, or
+  a deemix restart that left old items "in queue" without starting them.
+- **Cancel, Retry, Clear finished** (the routes above). deemix refuses a link it still lists, even a failed one, so
+  Retry and approving a failed request again take the old one off first.
+- **Requests** carry a `progress` object while deemix has them (`label`, `percent`, `done`, `total`, `failed`,
+  `stuck`, `errors`), so the Inbox shows a bar and reasons. A request deemix has no trace of an hour after it was
+  handed over (its list was cleared, or deemix restarted and forgot it) becomes **failed** with that reason instead
+  of saying "Downloading" for ever; approving it again retries.
+- **Clean versions** (§6.5 in USERS-AND-ADMIN.md) wait until deemix's queue is empty, one at a time, because the
+  Hub changes deemix's folder name for them. Their line is now kept in the database, so a Hub restart carries on
+  where it left off. While one waits, it says what for ("3 downloads ahead in deemix"). If deemix is stuck, it
+  says so and **keeps waiting**: going ahead would swap the folder name in under someone else's album. Cancel the
+  stuck download (or restart deemix) and the line moves again. Each one still gives up after 12 hours.
+
+The Hub reads deemix's queue every 30 seconds while a request is downloading (and for 6 hours after anyone starts
+a download), and whenever someone has Downloads open.
+
+**Unsticking things by hand.** Open deemix's own page and look at its queue panel: cancel anything that isn't
+moving or clear the queue, or restart the deemix container. Clean versions marked "Waiting for deemix" start
+within seconds of the queue being empty.
+
+> **Not tested against a real deemix.** The routes for cancelling (`/api/removeFromQueue`) and clearing
+> (`/api/removeFinishedDownloads`) are deemix-gui's, but versions differ on where they read the id, so the Hub
+> sends it in both the query string and the body. The tests use a stand-in deemix. If Cancel does nothing on
+> your deemix, use deemix's own page, and please report the version.
+
 ## Soulseek
 
 The Hub can search and download from Soulseek through [slskd](https://github.com/slskd/slskd)
@@ -502,7 +537,12 @@ with a 4xx status.
 | `PUT/DELETE /api/admin/services/:id/users/:userId` | `keys.manage` | let someone use a "chosen" server, with an optional own login `{ secrets: { token } }` / take it away |
 | `GET/POST/PUT/DELETE /api/admin/subwave/:id/<path>` | `subwave.control` | a SUB/WAVE admin call, made by the Hub with its saved admin login (`<path>` is relative to SUB/WAVE's `/api`) |
 | `GET /api/downloads/deemix` | `downloads.run` | `{ user }`: who deemix is logged in as (the Hub logs in with its ARL) |
-| `GET/POST /api/downloads/deemix/queue` | `downloads.run` | deemix's queue / add `{ link, bitrate? }` (a Deezer link) |
+| `GET/POST /api/downloads/deemix/queue` | `downloads.run` | deemix's queue / add `{ link, bitrate? }` (a Deezer link). A link deemix still lists as finished or failed is taken off and queued again; one still waiting or downloading is left alone |
+| `GET /api/downloads/deemix/progress` | `downloads.run` | `{ items, clean }`: deemix's queue made readable (see "Following deemix downloads") and the clean versions the Hub is holding |
+| `POST /api/downloads/deemix/queue/:uuid/cancel` | `downloads.run` | Cancel a download, or take a finished one off deemix's list |
+| `POST /api/downloads/deemix/queue/:uuid/retry` | `downloads.run` | Take it off deemix's list and queue it again (a clean version goes back through the clean folder) |
+| `POST /api/downloads/deemix/queue/clear` | `downloads.run` | Clear finished and failed downloads off deemix's list |
+| `DELETE /api/downloads/deemix/clean` | `downloads.run` | `{ link }`: take a clean version out of the Hub's line before deemix gets it (409 once it's being handed over) |
 | `POST /api/downloads/ytdlp/search` | `downloads.run` | `{ query }` → `{ results }` (YouTube search, or a link's contents) |
 | `GET/POST/DELETE /api/downloads/ytdlp/jobs` | `downloads.run` | downloads (your own; admins see everyone's) / start `{ url, title?, channel? }` / clear finished |
 | `POST /api/requests` | `requests.create` | ask for music `{ link, kind?, title, artist?, cover?, note? }` → `{ request }`. With `downloads.run` it is approved (downloaded) straight away |

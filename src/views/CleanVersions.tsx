@@ -4,6 +4,7 @@ import { useMustRequest } from '../lib/inbox';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
 import { Cover, Empty } from '../components/common';
+import { DeemixActivity } from '../components/DeemixQueue';
 import { IconDownload, IconPause, IconPlay } from '../components/Icons';
 import { checkCleanVersions, useCleanCheck, type Suspect } from '../lib/cleanCopies';
 import { deleteAlbums } from '../lib/deleteAlbums';
@@ -96,6 +97,7 @@ export function CleanVersions() {
           Select all
         </label>
         <span className="muted small">{open.length} of {offers.length} still to get</span>
+        {!request && <DeemixActivity />}
         <span className="grow" />
         <button className="btn" disabled={busy || !selected.length} onClick={() => downloadAll(selected)}>
           {verb} selected{selected.length ? ` (${selected.length})` : ''}
