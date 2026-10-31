@@ -1,6 +1,9 @@
 # Tests the Wavelength Hub on every change to hub/, and publishes its Docker image from main. The image also
 # carries the app's web build (served at /), so app changes rebuild it too.
 #
+# The image is scanned with Trivy for known vulnerabilities that have a fix (the weekly run fails on
+# high/critical ones, pull requests only report them).
+#
 # Image: ghcr.io/spacegoose02/wavelength-hub (:latest and :sha-<commit>). The first time it's published,
 # make the package public (GitHub → your profile → Packages → wavelength-hub → Package settings) so
 # Unraid can pull it without logging in. See docs/HUB.md.
@@ -12,6 +15,9 @@ on:
   push:
     branches: [main]
     paths: ['hub/**', 'src/**', 'index.html', 'package.json', 'package-lock.json', 'vite.config.ts', '.github/workflows/hub.yml']
+  # Weekly rebuild: picks up a fresh yt-dlp and Alpine security fixes, and scans the image for new advisories
+  schedule:
+    - cron: '23 5 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -52,6 +58,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # One platform, loaded locally, for the vulnerability scan
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: hub/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: wavelength-hub:scan
+          cache-from: type=gha
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0, pinned: a scanner sees the whole image
+        with:
+          image-ref: wavelength-hub:scan
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+          exit-code: ${{ github.event_name == 'schedule' && '1' || '0' }}
       # Pull requests only build the image (to catch Dockerfile breakage); main also pushes it.
       - uses: docker/build-push-action@v6
         with:

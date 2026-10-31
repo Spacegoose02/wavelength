@@ -13,6 +13,20 @@
   plays from every device. Last.fm needs `WAVELENGTH_LASTFM_KEY` / `_SECRET` on the Hub.
 - **Hub:** `PATCH /api/radar/follows/:id`, `GET /api/radar/mix`, `upcoming` in `GET /api/radar`,
   `GET`/`POST`/`DELETE /api/me/scrobble[/:service]`. Migration 17.
+- **Security:** the app now has a Content-Security-Policy (so does its browser version on the Hub): text from
+  the internet can't run scripts inside Wavelength.
+- **Hub:** the Docker image checks yt-dlp against its published checksum, rebuilds every week for a fresh
+  yt-dlp and Alpine fixes, and is scanned for known vulnerabilities.
+- **Builds:** Vite 8 (fixes the dev-server advisories in `npm audit`); release builds use Node 22.
+- **Security:** updates are checked before they install. The app compares each downloaded file with the
+  SHA-256 GitHub publishes for it, and, once a signing key is set up, also requires a valid signature
+  (docs/RELEASING.md "Update signing").
+- **Security:** yt-dlp downloads in the app only take web links and pass them after `--`, so a link can't
+  turn into a yt-dlp option; a custom yt-dlp path must be an actual yt-dlp program.
+- **Security:** updated the Rust TLS libraries (rustls, rustls-webpki, webpki-roots) and tokio for published
+  advisories.
+- **Builds:** a new `App` check runs TypeScript, Rust tests, clippy and dependency audits on every pull
+  request and weekly; Dependabot keeps npm, Cargo, Docker and Actions dependencies current.
 
 ## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your
