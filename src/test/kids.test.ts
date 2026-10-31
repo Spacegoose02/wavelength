@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { explicitOfAlbum, explicitOfTrack, useRatings } from '../lib/kids';
+import { isCleanEdition } from '../lib/explicitCheck';
+import { albumNotForKids, albumVersion, explicitOfAlbum, explicitOfTrack, flagOn, trackNotForKids, trackVersion, useFlags, useRatings } from '../lib/kids';
 import { versionOf } from '../lib/versions';
-import type { Album } from '../sources/types';
+import { mergeAlbums } from '../sources/registry';
+import type { Album, Track } from '../sources/types';
 
 const rating = (kind: 'album' | 'track', title = '') =>
   ({ kind, artist: 'Rihanna', album: 'Loud', title, rating: 'explicit', cleanLink: null, checkedAt: 0 }) as const;
@@ -34,5 +36,76 @@ describe('admin flags', () => {
     useFlags.setState({ flags: [{ id: 1, kind: 'album', artist: 'Rihanna', title: 'Loud', verdict: 'block' } as never] });
     expect(albumNotForKids({ artist: 'Rihanna', title: 'Loud' } as Album)).toBe(true);
     expect(albumNotForKids({ artist: 'Rihanna', title: 'Loud (Clean)' } as Album)).toBe(false);
+  });
+});
+
+describe('explicit and clean copies of the same album, flagged separately', () => {
+  const t = (album: string, title: string, explicit?: 'explicit' | 'clean') => ({ kind: 'track', id: `${album}/${title}`, sourceId: 'nd', artist: 'Rihanna', album, title, explicit }) as Track;
+  const flag = (id: number, kind: string, title: string, verdict: string, version?: string) => ({ id, kind, artist: 'Rihanna', title, verdict, version }) as never;
+  beforeEach(() => useRatings.setState({ ratings: [rating('album'), rating('track', 'S&M')] }));
+
+  test('"OK for kids" on the clean version’s song leaves the explicit song hidden', () => {
+    useFlags.setState({ flags: [flag(1, 'track', 'S&M', 'allow', trackVersion(t('Loud (Clean)', 'S&M')))] });
+    expect(trackNotForKids(t('Loud (Clean)', 'S&M'))).toBe(false);
+    expect(trackNotForKids(t('Loud', 'S&M'))).toBe(true);
+    expect(trackNotForKids(t('Loud', 'S&M', 'explicit'))).toBe(true);
+  });
+
+  test('same-named copies told apart by their tags: marking the clean one doesn’t mark the explicit one', () => {
+    useFlags.setState({ flags: [flag(1, 'track', 'S&M', 'allow', 'clean'), flag(2, 'album', 'Loud', 'allow', 'clean')] });
+    expect(trackNotForKids(t('Loud', 'S&M', 'clean'))).toBe(false);
+    expect(trackNotForKids(t('Loud', 'S&M', 'explicit'))).toBe(true);
+    expect(albumNotForKids({ artist: 'Rihanna', title: 'Loud', explicit: 'clean' } as Album)).toBe(false);
+    expect(albumNotForKids({ artist: 'Rihanna', title: 'Loud', explicit: 'explicit' } as Album)).toBe(true);
+  });
+
+  test('hiding the clean version hides only it; "every version" hides both', () => {
+    useFlags.setState({ flags: [flag(1, 'album', 'Loud (Clean)', 'block', 'clean')] });
+    expect(albumNotForKids({ artist: 'Rihanna', title: 'Loud (Clean)' } as Album)).toBe(true);
+    expect(trackNotForKids(t('Loud (Clean)', 'Only Girl'))).toBe(true);
+    useFlags.setState({ flags: [flag(1, 'track', 'Only Girl', 'block', 'any')] });
+    expect(trackNotForKids(t('Loud (Clean)', 'Only Girl'))).toBe(true);
+    expect(trackNotForKids(t('Loud', 'Only Girl'))).toBe(true);
+  });
+
+  test('a song tagged explicit is hidden even in a "(Clean)" album', () => {
+    useFlags.setState({ flags: [] });
+    expect(trackNotForKids(t('Loud (Clean)', 'S&M', 'explicit'))).toBe(true);
+  });
+
+  test('the admin button finds the flag for the version on screen only', () => {
+    useFlags.setState({ flags: [flag(1, 'album', 'Loud (Clean)', 'allow', 'clean')] });
+    expect(flagOn('album', 'Rihanna', 'Loud (Clean)', 'clean')?.id).toBe(1);
+    expect(flagOn('album', 'Rihanna', 'Loud', '')).toBeUndefined();
+    expect(albumVersion({ title: 'Loud (Clean)' })).toBe('clean');
+    expect(albumVersion({ title: 'Loud' })).toBe('');
+  });
+
+  test('a flag from an older Hub (no version): "(Clean)" in its title makes it the clean version’s', () => {
+    useFlags.setState({ flags: [flag(1, 'album', 'Loud (Clean)', 'block')] });
+    expect(albumNotForKids({ artist: 'Rihanna', title: 'Loud (Clean)' } as Album)).toBe(true);
+    expect(trackNotForKids(t('Loud', 'Only Girl'))).toBe(false);
+  });
+});
+
+describe('the library check’s clean version', () => {
+  const tracks = (...t: [string, boolean][]) => ({ data: t.map(([title, explicit_lyrics]) => ({ title, explicit_lyrics })) });
+  test('only an edited release with no explicit songs counts', () => {
+    expect(isCleanEdition({ explicit_lyrics: false, explicit_content_lyrics: 3, tracks: tracks(['S&M', false]) }, ['S&M'])).toBe(true);
+    // the explicit album's explicit songs are on it, none explicit
+    expect(isCleanEdition({ explicit_lyrics: false, explicit_content_lyrics: 0, tracks: tracks(['S&M', false], ['Only Girl', false]) }, ['S&M'])).toBe(true);
+    // a different release with the same title
+    expect(isCleanEdition({ explicit_lyrics: false, explicit_content_lyrics: 0, tracks: tracks(['Intro', false]) }, ['S&M'])).toBe(false);
+    // an explicit song on it
+    expect(isCleanEdition({ explicit_lyrics: false, explicit_content_lyrics: 3, tracks: tracks(['S&M', true]) }, ['S&M'])).toBe(false);
+    expect(isCleanEdition({ explicit_lyrics: false, explicit_content_lyrics: 4, tracks: tracks(['S&M', false]) }, ['S&M'])).toBe(false);
+    expect(isCleanEdition({ error: { message: 'no' } }, ['S&M'])).toBe(false);
+  });
+});
+
+describe('versions on different servers', () => {
+  test('same-named albums tagged explicit and clean aren’t merged into one', () => {
+    const a = (sourceId: string, explicit?: 'explicit' | 'clean') => ({ id: sourceId, sourceId, artist: 'Rihanna', title: 'Loud', explicit }) as Album;
+    expect(mergeAlbums([[a('nd', 'explicit')], [a('plex')], [a('nd2', 'clean')]]).map((x) => x.refs!.length)).toEqual([2, 1]);
   });
 });

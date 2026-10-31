@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## 0.17.2
+- **Fixed: marking the clean version for kids marked the explicit one.** On an album with the Explicit / Clean
+  switch, the **Kids** button saved the flag under the explicit album's name even with the clean version on
+  screen, and song flags ignored which album a song was on. So **OK for kids** on a clean song or album let the
+  explicit one through. Flags now say which version they're for (untagged, explicit, clean, or every version) and
+  only apply to it, in the app, the Hub's Navidrome relay and Release Radar's auto-get. The **Kids** menu adds
+  **Hide every version**.
+- **Repair on update:** the Hub moves every existing **OK for kids** on a song or album to the clean version, so
+  explicit music is hidden from kids again (re-mark anything explicit you meant to allow). Song **Hide** flags keep
+  covering every version. Library-check results saved for a "(Clean)" album, which were Deezer's explicit album's,
+  are dropped. Recorded in the audit log as `kids.flagsRepaired`.
+- **Fixed: some "clean versions" weren't clean.** The library check took any Deezer album with the same name that
+  Deezer didn't call explicit. It now takes only an album Deezer marks as edited, or one with no explicit songs
+  that has the explicit album's explicit songs on it. **Inbox → Clean versions → Check clean versions** (admins)
+  re-checks the ones found before, drops the wrong ones, and lists downloaded clean copies with songs tagged
+  explicit or that came from a wrong album, to **Delete selected** or **Hide selected from kids**.
+- A song tagged explicit in its file is hidden from kids even inside a "(Clean)" album, on the Hub's relay too; a
+  song on a "(Clean)" album or tagged clean is no longer held to the explicit album's library check there.
+- The library check skips clean copies, and same-named albums tagged explicit on one server and clean on another
+  stay two versions instead of being merged.
+- Release Radar's auto-get for kids skips releases from artists or albums an admin hid from kids, not just explicit ones.
+- **Delete several albums at once:** admins get **Select** on Albums, to tick albums and **Delete selected** (to the
+  Hub's trash for 30 days, after a confirmation).
+- **Hub:** `content_flags.version`; `GET /api/flags` returns `version`, `POST /api/admin/flags` takes it.
+
 ## 0.17.1
 - **Fixed:** clean versions downloaded next to an explicit album (*Loud (Clean)*) showed the **E** badge and
   were hidden from kid profiles. They took the explicit album's library-check result, because "(Clean)" is

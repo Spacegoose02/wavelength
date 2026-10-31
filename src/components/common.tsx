@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useSettings } from '../store/settings';
 import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
-import { explicitOfAlbum, explicitOfTrack, useHidden, useRatings } from '../lib/kids';
+import { explicitOfAlbum, explicitOfTrack, trackVersion, useHidden, useRatings } from '../lib/kids';
 import { albumArt, artistArt, trackArt, useArtworkList } from '../lib/artwork';
 import { cleanSide, useVersionHidden } from '../lib/versions';
 import { KidFlagButton } from './KidFlag';
@@ -52,14 +52,16 @@ export function Rating({ explicit }: { explicit?: 'explicit' | 'clean' | boolean
   return null;
 }
 
-export function AlbumCard({ album, onOpen }: { album: Album; onOpen(a: Album): void }) {
+/** `selected`: the card is in a list being picked from (Albums → Select); tapping it ticks it instead of opening it. */
+export function AlbumCard({ album, onOpen, selected }: { album: Album; onOpen(a: Album): void; selected?: boolean }) {
   const hidden = useHidden();
   const otherVersion = useVersionHidden();
   useRatings((s) => s.ratings);
   useArtworkList();
   if (hidden.album(cleanSide(album)) || otherVersion(album)) return null;
   return (
-    <button className="card" onClick={() => onOpen(album)}>
+    <button className={`card ${selected !== undefined ? 'selectable' : ''} ${selected ? 'selected' : ''}`} onClick={() => onOpen(album)} aria-pressed={selected}>
+      {selected !== undefined && <input type="checkbox" className="card-check" checked={selected} readOnly tabIndex={-1} aria-hidden />}
       <Cover src={albumArt(album)} alt={album.title} />
       <div className="card-title" title={album.title}><Rating explicit={explicitOfAlbum(album)} />{album.title}</div>
       <div className="card-sub">
@@ -134,7 +136,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <button className="chip" onClick={() => enqueue([t])}>+ Queue</button>
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} />}
             <QueueOnSubwave track={t} />
-            {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} explicit={explicitOfTrack(t) === 'explicit'} className="chip" />}
+            {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} version={trackVersion(t)} explicit={explicitOfTrack(t) === 'explicit'} className="chip" />}
             {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}
             {onRemove && <button className="chip" onClick={() => onRemove(i)} title="Remove from playlist">✕</button>}
           </div>

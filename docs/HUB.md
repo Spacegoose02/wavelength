@@ -229,8 +229,9 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
   access at once. The Hub checks it, puts the person's real Navidrome login in its place and passes the call
   on (`hub/src/routes/relay.ts`), streams included, with seeking. Account and server calls (`changePassword`,
   user admin, `startScan`, shares, podcast and radio admin) are refused. For kids the Hub also refuses to
-  stream or download a song that Navidrome tags as explicit, that the library check rated explicit, or that
-  an admin flagged as not for kids, so another Subsonic app with the relay login gets no further than
+  stream or download a song that Navidrome tags as explicit, that the library check rated explicit (not on a
+  "(Clean)" album), or that an admin flagged as not for kids (a flag on a song or album only covers the version
+  it was set on, `hub/src/kidSafe.ts`), so another Subsonic app with the relay login gets no further than
   Wavelength would. The Hub must be able to reach the Navidrome address.
 
 - **Logins that never leave the Hub:** the SUB/WAVE admin user and password and the deemix ARL aren't sent
@@ -525,8 +526,8 @@ with a 4xx status.
 | `POST /api/me/push/test` | signed in | send yourself a test push (`502` with ntfy's answer when it fails) |
 | `GET /api/admin/push`, `PUT …` | `keys.manage` | the ntfy server: `{ server, hasToken }` / `{ server, token? }` (`server: ''` turns push off; `token: null` removes it) |
 | `GET /api/notifications?after=<id>` | signed in | yours after `after`, oldest first (20 at most): `{ notifications: [{ id, kind, title, body, createdAt }], last }`; `kind` is request.new (admins), request.ready, request.rejected, request.have, request.failed, share or radar (a new release from an artist you follow). Without `after`: none, only `last` to start from. Kept 30 days |
-| `GET /api/flags` | signed in | `{ flags: [{ id, kind, artist, title, verdict, setBy, createdAt }] }`: kid-safe flags |
-| `POST /api/admin/flags`, `DELETE /api/admin/flags/:id` | `library.edit` | set `{ kind: track/album/artist, artist, title?, verdict: block/allow }` (the same item again replaces its verdict) / remove |
+| `GET /api/flags` | signed in | `{ flags: [{ id, kind, artist, title, version, verdict, setBy, createdAt }] }`: kid-safe flags. `version` is which version of the song or album it's for: `''` (untagged), `explicit`, `clean` or `any` (artists, "every version"); see `hub/src/kidSafe.ts` |
+| `POST /api/admin/flags`, `DELETE /api/admin/flags/:id` | `library.edit` | set `{ kind: track/album/artist, artist, title?, version?, verdict: block/allow }` (the same item and version again replaces its verdict; without `version`, a title with "(Clean)" is the clean version and anything else `''`) / remove |
 | `GET /api/ratings` | signed in | `{ ratings: [{ kind: album/track, artist, album, title, rating: explicit/clean/unknown, cleanLink, checkedAt }] }`: the library check's results |
 | `POST /api/admin/ratings`, `DELETE /api/admin/ratings` | `library.edit` | save `{ albums: [{ artist, album, rating, cleanLink?, explicitTracks? }] }` (up to 200; an album sent again replaces its songs) / forget them all |
 | `GET /api/artwork` | signed in | `{ artwork: [{ id, kind: album/artist, artist, album, url, source, setBy, updatedAt }] }`: the Hub's cover art (`album` is `''` for an artist, `url` is a path on the Hub) |

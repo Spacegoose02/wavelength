@@ -1,5 +1,7 @@
 import { existsSync, renameSync, rmSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import { audit } from './audit.ts';
+import { repairOldFlags } from './kidSafe.ts';
 
 export type Db = DatabaseSync;
 
@@ -7,7 +9,7 @@ export type Db = DatabaseSync;
  * Schema changes, applied in order and recorded in `PRAGMA user_version`.
  * Never edit a shipped migration: add a new one.
  */
-const MIGRATIONS: string[] = [
+const MIGRATIONS: (string | ((db: Db) => void))[] = [
   `
   CREATE TABLE users (
     id            INTEGER PRIMARY KEY,
@@ -428,6 +430,18 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX household_tracks_playlist ON household_tracks(playlist_id, pos);
   `,
+  (db) => {
+    // Kid-safe flags say which version of a song or album they're for, so a flag set on the clean version
+    // ("Loud (Clean)") no longer applies to the explicit one: '' (untagged), 'explicit', 'clean' or 'any'
+    // (kidSafe.ts). Flags saved before this are sorted out by repairOldFlags.
+    db.exec(`
+      ALTER TABLE content_flags ADD COLUMN version TEXT NOT NULL DEFAULT '' CHECK (version IN ('', 'explicit', 'clean', 'any'));
+      DROP INDEX content_flags_key;
+      CREATE UNIQUE INDEX content_flags_key ON content_flags(kind, artist COLLATE NOCASE, title COLLATE NOCASE, version);
+    `);
+    const { moved, dropped } = repairOldFlags(db);
+    if (moved || dropped) audit(db, { action: 'kids.flagsRepaired', detail: { okForKidsMovedToClean: moved, cleanRatingsDropped: dropped } });
+  },
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
@@ -464,7 +478,9 @@ function migrate(db: Db) {
   const { user_version: from } = db.prepare('PRAGMA user_version').get() as { user_version: number };
   for (let v = from; v < MIGRATIONS.length; v++) {
     tx(db, () => {
-      db.exec(MIGRATIONS[v]);
+      const m = MIGRATIONS[v];
+      if (typeof m === 'string') db.exec(m);
+      else m(db);
       db.exec(`PRAGMA user_version = ${v + 1}`);
     });
   }

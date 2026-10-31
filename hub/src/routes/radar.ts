@@ -32,7 +32,7 @@ export function radarRoutes(app: FastifyInstance, { radar }: Ctx) {
 
   /**
    * `{ autoGet: true }`: new releases from this artist are requested automatically (downloaded straight away
-   * with Autodownload), from now on. Kid profiles' auto-get skips explicit releases.
+   * with Autodownload), from now on. Kid profiles' auto-get skips explicit releases and ones an admin hid from kids.
    */
   app.patch<{ Params: { id: string } }>('/api/radar/follows/:id', async (req) => {
     const { user, permissions } = signedIn(req);

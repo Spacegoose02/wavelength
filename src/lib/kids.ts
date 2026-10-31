@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { DeezerResult } from '../sources/deemix';
-import type { HubFlag, HubRating } from '../sources/hub';
+import type { FlagVersion, HubFlag, HubRating } from '../sources/hub';
 import { norm } from '../sources/registry';
 import type { Album, Artist, Track } from '../sources/types';
 import { hubClient, useHub } from '../store/hub';
@@ -13,6 +13,14 @@ import { cleanTitle, primaryArtist } from './match';
  * the server's tags or Deezer) and anything an admin marked as not for kids, unless an admin marked it as
  * fine. Flags are kept on the Hub and matched by name here, because every device reaches the music through
  * its own logins and ids differ between servers.
+ *
+ * An album's clean version ("Loud (Clean)") and the explicit one have the same name once the mark is dropped,
+ * and their songs have the same titles. So a song or album flag also says which version it's for, and only
+ * applies to that version (`FlagVersion`, the same rules as the Hub's hub/src/kidSafe.ts):
+ *   'explicit'  the file's own tag says explicit (Deezer: explicit lyrics)
+ *   'clean'     "(Clean)", "(Edited)" or "(Censored)" in the album's or song's title, or the file's tag says clean
+ *   ''          neither: untagged files, Plex
+ *   'any'       every version: artists, and "Hide every version"
  */
 
 interface FlagsState {
@@ -50,8 +58,20 @@ export function startFlagChecks() {
 
 const artistKey = (a = '') => norm(primaryArtist(a));
 const key = (kind: string, artist = '', title = '') => `${kind}|${artistKey(artist)}|${kind === 'artist' ? '' : cleanTitle(title)}`;
-/** Album flags: "Loud" and "Loud (Clean)" are different albums for kids, though the same for the library check. */
-const flagKey = (kind: string, artist = '', title = '') => key(kind, artist, title) + (kind === 'album' && CLEAN_MARK.test(title) ? '|clean' : '');
+const flagKey = (kind: string, artist: string, title: string, version: FlagVersion) => `${key(kind, artist, title)}|${kind === 'artist' ? 'any' : version}`;
+/** A flag from a Hub older than versions: the title says whether it's the clean version. */
+const versionOfFlag = (f: HubFlag): FlagVersion => f.version ?? (f.kind === 'artist' ? 'any' : CLEAN_MARK.test(f.title) ? 'clean' : '');
+
+/** Which version a song is, for kid-safe flags. */
+export function trackVersion(t: Pick<Track, 'album' | 'title' | 'explicit'>): Exclude<FlagVersion, 'any'> {
+  if (t.explicit === 'explicit') return 'explicit';
+  return t.explicit === 'clean' || CLEAN_MARK.test(t.album ?? '') || CLEAN_MARK.test(t.title) ? 'clean' : '';
+}
+/** Which version an album is, for kid-safe flags. */
+export function albumVersion(a: Pick<Album, 'title' | 'explicit'>): Exclude<FlagVersion, 'any'> {
+  if (a.explicit === 'explicit') return 'explicit';
+  return a.explicit === 'clean' || CLEAN_MARK.test(a.title) ? 'clean' : '';
+}
 
 let indexed: HubFlag[] | undefined;
 let index = new Map<string, HubFlag['verdict']>();
@@ -59,7 +79,7 @@ function verdicts() {
   const { flags } = useFlags.getState();
   if (flags !== indexed) {
     indexed = flags;
-    index = new Map(flags.map((f) => [flagKey(f.kind, f.artist, f.title), f.verdict]));
+    index = new Map(flags.map((f) => [flagKey(f.kind, f.artist, f.title, versionOfFlag(f)), f.verdict]));
   }
   return index;
 }
@@ -101,12 +121,14 @@ export function explicitOfAlbum(a: Pick<Album, 'artist' | 'title' | 'explicit'>)
   return r === 'explicit' || r === 'clean' ? r : undefined;
 }
 
-/** Most specific flag wins: song, then album, then artist. */
-function verdictFor(artist?: string, album?: string, title?: string): HubFlag['verdict'] | undefined {
+/**
+ * Most specific flag wins: song, then album, then artist. A flag on this version counts, then one on every
+ * version; a flag on another version of the same song or album doesn't.
+ */
+function verdictFor(i: { artist?: string; album?: string; title?: string; version: Exclude<FlagVersion, 'any'> }): HubFlag['verdict'] | undefined {
   const v = verdicts();
-  return (title ? v.get(key('track', artist, title)) : undefined)
-    ?? (album ? v.get(flagKey('album', artist, album)) : undefined)
-    ?? v.get(key('artist', artist));
+  const get = (kind: string, title = '') => v.get(flagKey(kind, i.artist ?? '', title, i.version)) ?? v.get(flagKey(kind, i.artist ?? '', title, 'any'));
+  return (i.title ? get('track', i.title) : undefined) ?? (i.album ? get('album', i.album) : undefined) ?? v.get(flagKey('artist', i.artist ?? '', '', 'any'));
 }
 
 /** Kid profiles get a shorter, bigger menu, with these labels. */
@@ -118,18 +140,23 @@ export const KID_VIEWS: Partial<Record<Route['view'], string>> = {
 export const isKid = () => useHub.getState().user?.role === 'kid';
 export const useIsKid = () => useHub((s) => s.user?.role === 'kid');
 
-/** Whether this would be hidden from a kid. `explicit` is the item's own rating. */
-export function notForKids(i: { artist?: string; album?: string; title?: string; explicit?: boolean }): boolean {
-  const v = verdictFor(i.artist, i.album, i.title);
+/** Whether this would be hidden from a kid. `explicit` is the item's own rating, `version` which version it is. */
+export function notForKids(i: { artist?: string; album?: string; title?: string; explicit?: boolean; version?: Exclude<FlagVersion, 'any'> }): boolean {
+  const v = verdictFor({ ...i, version: i.version ?? '' });
   if (v) return v === 'block';
   return !!i.explicit;
 }
 
-export const trackNotForKids = (t: Track) => t.kind === 'track' && notForKids({ artist: t.artist, album: t.album, title: t.title, explicit: explicitOfTrack(t) === 'explicit' });
-export const albumNotForKids = (a: Album) => notForKids({ artist: a.artist, album: a.title, explicit: explicitOfAlbum(a) === 'explicit' });
+export const trackNotForKids = (t: Track) =>
+  t.kind === 'track' && notForKids({ artist: t.artist, album: t.album, title: t.title, explicit: explicitOfTrack(t) === 'explicit', version: trackVersion(t) });
+export const albumNotForKids = (a: Album) => notForKids({ artist: a.artist, album: a.title, explicit: explicitOfAlbum(a) === 'explicit', version: albumVersion(a) });
 export const artistNotForKids = (a: Artist) => notForKids({ artist: a.name });
-export const deezerNotForKids = (r: DeezerResult) =>
-  notForKids({ artist: r.type === 'artist' ? r.title : r.artist, album: r.type === 'album' ? r.title : r.album, title: r.type === 'track' ? r.title : undefined, explicit: r.explicit });
+/** Deezer: explicit lyrics, or "(Clean)" in the title. "Not explicit" isn't the clean version, it's untagged. */
+export const deezerNotForKids = (r: DeezerResult) => {
+  const album = r.type === 'album' ? r.title : r.album;
+  const version = r.explicit ? 'explicit' : CLEAN_MARK.test(album ?? '') || (r.type === 'track' && CLEAN_MARK.test(r.title)) ? 'clean' : '';
+  return notForKids({ artist: r.type === 'artist' ? r.title : r.artist, album, title: r.type === 'track' ? r.title : undefined, explicit: r.explicit, version });
+};
 
 /**
  * Hook: a function that says whether to hide something on this profile. Always false for grown-ups, so
@@ -165,21 +192,35 @@ function kidFilters(flags: HubFlag[], ratings: HubRating[]) {
 /** Drop what a kid profile may not play (the last line of defence, in the player). */
 export const kidSafe = (tracks: Track[]) => (isKid() ? tracks.filter((t) => !trackNotForKids(t)) : tracks);
 
-/** Admin: the flag set on exactly this item, if any. */
-export function flagOn(kind: HubFlag['kind'], artist: string, title = ''): HubFlag | undefined {
-  const k = flagKey(kind, artist, title);
-  return useFlags.getState().flags.find((f) => flagKey(f.kind, f.artist, f.title) === k);
+/** Admin: the flag set on exactly this item and version, if any. */
+export function flagOn(kind: HubFlag['kind'], artist: string, title: string, version: FlagVersion): HubFlag | undefined {
+  const k = flagKey(kind, artist, title, version);
+  return useFlags.getState().flags.find((f) => flagKey(f.kind, f.artist, f.title, versionOfFlag(f)) === k);
 }
 
-/** Admin: mark something not for kids, fine for kids, or clear its flag (`null`). */
-export async function setFlag(kind: HubFlag['kind'], artist: string, title: string, verdict: HubFlag['verdict'] | null) {
+/** Admin: mark this version of something not for kids, fine for kids, or clear its flag (`null`). */
+export async function setFlag(kind: HubFlag['kind'], artist: string, title: string, version: FlagVersion, verdict: HubFlag['verdict'] | null) {
   const c = hubClient();
   if (!c) throw new Error('Sign in to your Hub first');
-  const existing = flagOn(kind, artist, title);
+  const existing = flagOn(kind, artist, title, version);
   if (verdict === null) {
     if (existing) await c.deleteFlag(existing.id);
   } else {
-    await c.setFlag({ kind, artist, title: kind === 'artist' ? undefined : title, verdict });
+    await c.setFlag({ kind, artist, title: kind === 'artist' ? undefined : title, version: kind === 'artist' ? 'any' : version, verdict });
   }
   await loadFlags();
 }
+
+/** Admin: remove one flag from the list. */
+export async function removeFlag(id: number) {
+  const c = hubClient();
+  if (!c) throw new Error('Sign in to your Hub first');
+  await c.deleteFlag(id);
+  await loadFlags();
+}
+
+/** How to name a flag's version in lists. */
+export const flagVersionLabel = (f: HubFlag) => {
+  const v = versionOfFlag(f);
+  return f.kind === 'artist' ? '' : v === 'clean' ? 'clean version' : v === 'explicit' ? 'explicit version' : v === 'any' ? 'every version' : '';
+};

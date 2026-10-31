@@ -8,6 +8,7 @@ import { approvers, notify, notifyRequester } from '../notify.ts';
 import { permissionsFor } from '../roles.ts';
 import { getUser } from '../users.ts';
 import { guardiansOf, isGuardian, kidsOf } from '../family.ts';
+import { releaseNotForKids } from '../kidSafe.ts';
 import { hubSlskd } from '../slskd.ts';
 import { hubDeemix, hubYtSettings, isDeezerLink } from './proxy.ts';
 import { readFiles } from './slskd.ts';
@@ -78,7 +79,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     const user = getUser(db, userId);
     if (!user || user.disabled) return;
     const permissions = permissionsFor(user);
-    if (!permissions.includes('requests.create') || (user.role === 'kid' && rel.explicit)) return;
+    if (!permissions.includes('requests.create') || (user.role === 'kid' && releaseNotForKids(db, rel))) return;
     const open = db.prepare("SELECT 1 FROM requests WHERE user_id = ? AND link = ? AND status IN ('pending', 'approved')").get(userId, rel.link);
     if (open) return;
     const kind = 'album'; // singles and EPs are albums on Deezer too
