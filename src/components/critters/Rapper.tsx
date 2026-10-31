@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, Head, RaccoonFrame, Tail, TORSO } from './parts';
-import { useRaccoonRig } from './rig';
+import { Arm, BodyOutfits, Head, CritterFrame, Tail, TORSO } from './parts';
+import { useCritterRig } from './rig';
 
 /**
  * Rapper raccoon between two speaker stacks: snapback, shades and gold chain, a mic in one hand and the
@@ -11,7 +11,7 @@ export function Rapper({ still }: { still?: boolean }) {
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ down: 1, pulse: 0 });
 
-  useRaccoonRig(
+  useCritterRig(
     root,
     ({ t, a, idle, bob, $ }) => {
       const s = state.current;
@@ -34,7 +34,7 @@ export function Rapper({ still }: { still?: boolean }) {
   );
 
   return (
-    <RaccoonFrame ref={root} kind="rapper" label="A rapper raccoon with a microphone">
+    <CritterFrame ref={root} kind="rapper" label="A rapper raccoon with a microphone">
       {/* speaker stacks and stage */}
       {[14, 316].map((x) => (
         <g key={x}>
@@ -99,6 +99,6 @@ export function Rapper({ still }: { still?: boolean }) {
         <circle className="fur-dark thumb" cx="170" cy="224" r="3.5" />
       </g>
       <Arm part="arm-r" d="M262 268 Q 300 256 302 222" hand={[302, 218]} thumb={[296, 222]} />
-    </RaccoonFrame>
+    </CritterFrame>
   );
 }

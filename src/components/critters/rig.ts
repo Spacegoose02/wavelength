@@ -1,7 +1,7 @@
 import { useEffect, type RefObject } from 'react';
 import { createAudioReader, type AudioSample } from '../../player/analysis';
 
-/** What each raccoon's own animation gets every frame. */
+/** What each critter's own animation gets every frame. */
 export interface RigFrame {
   /** seconds since the scene mounted */
   t: number;
@@ -27,18 +27,18 @@ export interface RigOptions {
 }
 
 /**
- * The animation every raccoon shares, written straight to SVG attributes from requestAnimationFrame
+ * The animation every critter shares, written straight to SVG attributes from requestAnimationFrame
  * (no React re-render per frame):
  *
  * - `head` bobs on beats and sways; `body` follows a little.
  * - `eyes` blink; when paused he yawns (`yawn`, hiding `smile`) and now and then lifts `adjust`
- *   (headphones, hat, cap or hair) as if setting it straight.
+ *   (headphones, hat, cap, hair or antennae) as if setting it straight.
  * - `tail` wags, `spot` (the backlight) breathes with the bass, `[data-glow]` parts (neon and laser
  *   outfits) pulse with the bass.
  *
- * Each raccoon passes `frame` for its own hands and instrument. Parts a raccoon doesn't have are skipped.
+ * Each critter passes `frame` for its own hands and instrument. Parts a critter doesn't have are skipped.
  */
-export function useRaccoonRig(root: RefObject<SVGSVGElement | null>, frame: (f: RigFrame) => void, opts: RigOptions = {}) {
+export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: RigFrame) => void, opts: RigOptions = {}) {
   const { nod: nodScale = 10, talk = false, still = false } = opts;
   useEffect(() => {
     const svg = root.current!;

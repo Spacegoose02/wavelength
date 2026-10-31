@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons), the **equalizer**,
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark and alien), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **Appears On** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
@@ -255,7 +255,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
-| Raccoon | A DJ, country, rapper or rocker raccoon playing along (see below) |
+| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark or a theremin alien playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -271,28 +271,32 @@ spectrum under the title does the same.
 > The audio reading (analyser → `freq`, `wave`, `bass`/`mid`/`treble`, `beat`, `transient`, or the calm
 > made-up signal) is `createAudioReader()` in `src/player/analysis.ts`, shared by every scene.
 
-### Raccoons
+### Critters
 
-The last visualizer is a raccoon who plays along with the music. There are four to choose from:
+<a id="raccoons"></a>
+The last visualizer is a critter who plays along with the music. There are six to choose from: four
+raccoons, a shark and an alien.
 
-<img src="screenshots/raccoons.png" alt="The four raccoons in the Neon synth skin: DJ, country, rapper and rocker" width="100%">
+<img src="screenshots/critters.png" alt="The six critters in the Neon synth skin: DJ, country, rapper and rocker raccoons, the drummer shark and the theremin alien" width="100%">
 
-| Raccoon | Look | While the music plays |
+| Critter | Look | While the music plays |
 |---|---|---|
-| **DJ** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
-| **Country** | Cowboy hat, plaid shirt, bandana, acoustic guitar, on a porch | Strums on the beat, changes chords, taps his boot |
-| **Rapper** | Snapback, shades, gold chain, mic, between two speaker stacks | Raps (his mouth follows the vocals and mids), throws his hand up on the beat, the speaker cones pump with the bass |
-| **Rocker** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
+| **DJ raccoon** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
+| **Country raccoon** | Cowboy hat, plaid shirt, bandana, acoustic guitar, on a porch | Strums on the beat, changes chords, taps his boot |
+| **Rapper raccoon** | Snapback, shades, gold chain, mic, between two speaker stacks | Raps (his mouth follows the vocals and mids), throws his hand up on the beat, the speaker cones pump with the bass |
+| **Rocker raccoon** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
+| **Drummer shark** | Striped sailor tee and a toothy grin, behind a drum kit on the sea floor | Hits the snare on the beat, crashes the cymbal on sharp hits, the kick drum thumps, the tail wags, bubbles rise faster with the bass and the seaweed sways |
+| **Theremin alien** | Antennae and a space suit, on the moon under a hovering UFO | One hand rises over the volume loop with the bass, the other moves toward the pitch antenna with the highs, glowing sound waves pour off the antenna, the UFO lights chase on the beat and the stars twinkle |
 
-**Switching raccoons.** On the raccoon visualizer, tap **Switch raccoon** in its top-right corner to go to
-the next one. Or go to **Settings → Playback → Now Playing visualizer** and pick one; that also switches
-Now Playing to the raccoon. Tapping the raccoon itself still moves on to the next visualizer, as on the others.
-If you're signed in to a [Wavelength Hub](HUB.md), your pick follows you to your other devices.
+**Switching critters.** On the critter visualizer, tap **Switch critter** in its top-right corner to go to
+the next one. Or go to **Settings → Playback → Now Playing visualizer** and pick one under **Critters**; that
+also switches Now Playing to the critter. Tapping the critter itself still moves on to the next visualizer, as
+on the others. If you're signed in to a [Wavelength Hub](HUB.md), your pick follows you to your other devices
+(an older app that doesn't know the shark or alien yet shows the DJ raccoon instead).
 
-<img src="screenshots/raccoon-picker.png" alt="Settings, Playback tab: the Now Playing visualizer chips and the four raccoon cards, with the rocker picked" width="80%">
-
-**They dress for your theme.** Fur is always raccoon grey, but their clothes, instruments and lights take
-your skin's colours, so every skin dresses them differently. Some groups of skins give them a whole outfit:
+**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green),
+but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
+Some groups of skins give them a whole outfit:
 
 | Skin group | Outfit |
 |---|---|
@@ -303,43 +307,55 @@ your skin's colours, so every skin dresses them differently. Some groups of skin
 | **Editor palettes** | Thick-rimmed coder glasses |
 | **Holidays** | A hat in place of their own: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an Uncle Sam hat for July 4th and heart boppers for Valentine's Day |
 
-Outfits swap out what they'd clash with: the hazmat hood replaces hats, caps and the mohawk (the DJ keeps
-his headphones on over it), and visors and glasses replace the rapper's shades. The outfit follows the skin
-on screen, so it changes with Seasonal and Random daily too.
+Outfits swap out what they'd clash with: the hazmat hood replaces hats, caps, the mohawk and the alien's
+antennae (the DJ keeps his headphones on over it), holiday hats replace the alien's antennae too, and visors
+and glasses replace the rapper's shades. The outfit follows the skin on screen, so it changes with Seasonal
+and Random daily too.
 
 <img src="screenshots/raccoon-outfits.png" alt="All four raccoons in six skins: Cherenkov (hazmat suits), Laser show (visors), Outrun (glow sticks), Game Boy Color (8-bit shades), Dracula (coder glasses) and Christmas (Santa hats)" width="100%">
 
+<img src="screenshots/critters-outfits.png" alt="The shark and the alien in three skins: Reactor core (hazmat suits), Christmas (Santa hats) and Laser show (visors)" width="60%">
+
 ### DJ raccoon
 
-The original raccoon, behind two decks:
+The original critter, behind two decks:
 
 <img src="screenshots/raccoon-dj.png" alt="The DJ raccoon in five skins: Neon synth, Christmas (Santa hat), July 4th (Uncle Sam hat), Thanksgiving (pilgrim hat) and Valentine's Day (heart boppers)" width="100%">
 
-All four raccoons behave the same way around the music:
+All the critters behave the same way around the music:
 
 - **Playing:** the head bobs on each beat (the rocker headbangs harder), and the hands and instrument
   follow the music as in the table above.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ his
-  headphones, the country raccoon tips his hat, the rapper fixes his cap, the rocker pushes his mohawk up).
-  The rapper lowers his mic.
+  headphones, the country raccoon tips his hat, the rapper fixes his cap, the rocker pushes his mohawk up,
+  the alien perks up its antennae). The rapper lowers his mic, the shark rests its sticks and the alien
+  drops its hands from the theremin.
 - **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.
 
-> **Developer notes.** `src/components/raccoon/`. Unlike the other scenes the raccoons are inline SVG, not
-> canvas drawings, so the drawings stay editable.
+> **Developer notes.** `src/components/critters/`. Unlike the other scenes the critters are inline SVG, not
+> canvas drawings, so the drawings stay editable. To add one, see
+> [CONTRIBUTING.md](CONTRIBUTING.md#add-a-critter-or-an-outfit).
 >
-> - `rig.ts` (`useRaccoonRig`) is the shared animation: head bob, sway, blink, yawn, the `adjust` part
+> - `Critter.tsx` has the `CRITTERS` list (id, label, blurb, component), in picker order. **Switch critter**,
+>   the Settings cards and the scene all read it, so a new critter is one entry there plus its id in
+>   `CritterKind` (`store/settings.ts`). The pick is stored in the `raccoon` setting and the scene id is
+>   still `raccoon`, the names from before there were other critters, so saved and Hub-synced settings
+>   carry over.
+> - `rig.ts` (`useCritterRig`) is the shared animation: head bob, sway, blink, yawn, the `adjust` part
 >   (headwear), tail, backlight and `[data-glow]` pulses. Every frame writes `transform`/`opacity` straight
->   onto named parts (`data-part="head"`, `arm-r`, …), with no React re-render. Each raccoon passes a
+>   onto named parts (`data-part="head"`, `arm-r`, …), with no React re-render. Each critter passes a
 >   `frame` callback for its own hands and instrument; `guitar.ts` is the strum/fret/string-buzz shared by
 >   the country and rocker raccoons.
-> - `parts.tsx` has what they share: the frame and defs, the tail, the head (with the holiday hats and the
->   skin-group outfits) and the body outfits. `DJ.tsx`, `Country.tsx`, `Rapper.tsx` and `Rocker.tsx` draw
->   the rest; `Raccoon.tsx` has the `RACCOONS` list and picks one by `raccoon` in the settings store
->   (`RaccoonKind`, synced to the Hub).
-> - Colours are CSS at the end of `styles.css` (`.raccoon .top { fill: var(--accent) }`, …). Hats and
->   outfits are all in the SVG and hidden. Hats show per skin (`:root[data-skin='halloween'] .raccoon .hat-witch`);
+> - `parts.tsx` has what they share: the frame and defs, the raccoon tail, the head (with the holiday hats
+>   and the skin-group outfits), the body outfits and `Arm` (which can hold a drumstick). `Head` draws the
+>   raccoon's face unless given a `face`: `Shark.tsx` and `Alien.tsx` pass their own, drawn on the same
+>   skeleton (head centred on 200,178, eyes on y 166, mouth on y 212, shoulders at 138,268 and 262,268) so
+>   the rig and every outfit fit them. `DJ.tsx`, `Country.tsx`, `Rapper.tsx`, `Rocker.tsx`, `Shark.tsx`
+>   and `Alien.tsx` draw the rest.
+> - Colours are CSS at the end of `styles.css` (`.critter .top { fill: var(--accent) }`, …). Hats and
+>   outfits are all in the SVG and hidden. Hats show per skin (`:root[data-skin='halloween'] .critter .hat-witch`);
 >   outfits per skin group, from `data-skin-group` on `<html>`, which `App.tsx` sets from `skinGroup()`
->   (`:root[data-skin-group='nuclear'] .raccoon .outfit-nuclear`). A raccoon's own headwear has
+>   (`:root[data-skin-group='nuclear'] .critter .outfit-nuclear`). A critter's own headwear has
 >   `className="own-hat"` and own glasses `own-eyewear`, so outfits can hide them.
 > - `still` draws a single (paused) frame, for the Settings cards.
 
@@ -798,7 +814,7 @@ restarts, and keeps the database it replaced on the server just in case.
 
 ### What follows you between devices
 
-Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **volume levelling and crossfade**, **Now Playing scene** and **raccoon**,
+Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **volume levelling and crossfade**, **Now Playing scene** and **critter**,
 **radio stations** (favorites, hidden and order) and **Discover chart picks** sync to your profile. Change the
 skin on the TV and your phone has it next time it checks in (at start, when the window gets focus, and every
 few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and

@@ -64,9 +64,9 @@ genre names cover it).
 2. `src/lib/seasons.ts`: add the id to `HolidaySkin` and an entry to `SEASONS` with a `label`, a readable
    `window` and `includes(date)`. Use the `between()` helper for fixed dates; see `thanksgiving()` for a
    holiday that moves. Keep windows from overlapping: the first match wins.
-3. Give the raccoons a hat (optional): a `<g className="hat hat-myhat">` with the other hats in `Head`
-   in `components/raccoon/parts.tsx` (all four raccoons share it), and
-   `:root[data-skin='myholiday'] .raccoon .hat-myhat { display: inline; }` in the raccoon rules at the end
+3. Give the critters a hat (optional): a `<g className="hat hat-myhat">` with the other hats in `Head`
+   in `components/critters/parts.tsx` (every critter shares it), and
+   `:root[data-skin='myholiday'] .critter .hat-myhat { display: inline; }` in the critter rules at the end
    of `styles.css`.
 4. Update the window table in the [user guide](USER-GUIDE.md#skins-and-themes).
 
@@ -74,25 +74,44 @@ genre names cover it).
 
 - **Canvas scene** (most of them): write a `Draw` in `components/Scenes.tsx`, add its id to `NpScene`
   (`store/settings.ts`) and to `SCENES` and `DRAW`. It gets bass/mid/treble, beats and the skin colours.
-- **SVG or DOM scene** (like the raccoon): its own component, rendered by `NowPlayingStage` for its id.
+- **SVG or DOM scene** (like the critters): its own component, rendered by `NowPlayingStage` for its id.
   Call `createAudioReader()` from `player/analysis.ts` inside a `requestAnimationFrame` loop and write
   attributes directly instead of setting React state every frame.
 - Both must keep moving with no readable audio (paused, or a stream without CORS): the reader gives a calm
   made-up signal with `live: false`.
 
-## Add a raccoon or a raccoon outfit
+## Add a critter or an outfit
 
-- **A raccoon:** a component in `components/raccoon/` like `Country.tsx`: wrap it in `RaccoonFrame`, use
-  `Tail`, `Head` (pass its headwear as `own`, with `className="own-hat"`, or `own-eyewear` for glasses)
-  and `BodyOutfits` inside its `data-part="body"` group, and call `useRaccoonRig` with a `frame` callback
-  for its hands and props. Use `TORSO` for the top so outfits fit over it, classes `sleeve` and `hand` on
-  the arms (`Arm` does this), and CSS classes for colours. Add its id to `RaccoonKind`
-  (`store/settings.ts`), an entry to `RACCOONS` and a case in `Raccoon` (`Raccoon.tsx`), and its colours
-  to the raccoon rules at the end of `styles.css`.
+The critters (raccoons, shark, alien) live in `components/critters/`. See the
+[user guide's developer notes](USER-GUIDE.md#critters) for how the pieces fit.
+
+- **A critter:** copy the nearest one (`Shark.tsx` for an animal with its own face, `Country.tsx` for
+  another raccoon) to `components/critters/MyCritter.tsx`, then:
+  1. Wrap it in `CritterFrame` with a `kind` (it becomes the `critter-<kind>` class for its colours).
+  2. Draw it on the shared skeleton so the rig and every outfit fit: head centred on 200,178 (about 160
+     wide, 130 tall, top near y 112 where the hats sit), shoulders at 138,268 and 262,268, a tail (if any)
+     rooted at 268,292 with `data-part="tail"`, and `TORSO` for the top inside its `data-part="body"`
+     group, followed by `BodyOutfits`.
+  3. Use `Head`. A raccoon gets the raccoon face; anything else passes `face={<MyFace />}` with
+     `data-part="eyes"` centred on y 166, `data-part="smile"` and `data-part="yawn"` (an open mouth around
+     y 212 to 232, starting `transform="scale(1 0)"`). Pass its headwear as `own`, with
+     `className="own-hat"` (and `data-part="adjust"` to have it set straight when paused), or
+     `own-eyewear` for glasses.
+  4. Arms with `Arm` (classes `sleeve` and `hand`), which can hold a prop as children.
+  5. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Write
+     attributes straight onto `data-part` elements; don't set React state per frame. Keep it moving
+     with `a.live` false (made-up signal) and calm when `idle`.
+  6. Colours: CSS classes, in a block for it at the end of `styles.css` beside the shark and alien.
+     Body colours stay fixed; clothes, instruments and lights use `--accent` / `--viz-*`. Override
+     `.critter-<kind> .sleeve`, `.hand` and `.thumb` if its arms aren't in a sleeve.
+  7. Add its id to `CritterKind` (`store/settings.ts`) and an entry to `CRITTERS` (`Critter.tsx`). That's
+     all the wiring: **Switch critter** and the Settings cards read the list.
+  8. Add a row to the critter table in the [user guide](USER-GUIDE.md#critters).
 - **An outfit for a skin group:** a `<g className="outfit outfit-mygroup">` in `Head` and/or `BodyOutfits`
-  (`parts.tsx`) and a `:root[data-skin-group='mygroup'] .raccoon .outfit-mygroup` line in the "skin-group
+  (`parts.tsx`) and a `:root[data-skin-group='mygroup'] .critter .outfit-mygroup` line in the "skin-group
   outfits" rule. The group slug is the first word of the group name, lower-case (`skinGroup()` in
   `store/settings.ts`). If it replaces headwear or glasses, hide `.own-hat` / `.own-eyewear` for that group.
+  Check it on every critter: they share the skeleton, but faces differ.
 
 ## Add a native (Rust) command
 

@@ -1116,8 +1116,8 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 
 /* Now Playing stage: tap the artwork to cycle visualizer scenes (components/Scenes.tsx) */
 .np-stage-wrap { position: relative; }
-.np-raccoon-switch { position: absolute; top: 10px; right: 10px; padding: 5px 12px; border: 0; border-radius: 999px; background: rgb(0 0 0 / 0.55); color: #fff; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; opacity: 0.75; transition: opacity 0.15s; }
-.np-raccoon-switch:hover, .np-raccoon-switch:focus-visible { opacity: 1; }
+.np-critter-switch { position: absolute; top: 10px; right: 10px; padding: 5px 12px; border: 0; border-radius: 999px; background: rgb(0 0 0 / 0.55); color: #fff; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; opacity: 0.75; transition: opacity 0.15s; }
+.np-critter-switch:hover, .np-critter-switch:focus-visible { opacity: 1; }
 .np-stage { position: relative; display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; border-radius: var(--radius-lg); }
 .np-stage .np-art { width: 100%; }
 .np-stage.scene { aspect-ratio: 1; }
@@ -1469,112 +1469,156 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .skin-card.july4 .skin-preview { background:radial-gradient(circle at 25% 30%,#ffd166 0 2px,transparent 3px),radial-gradient(circle at 70% 25%,#5aa9ff 0 2px,transparent 3px),#0a1230; } .skin-card.july4 .skin-preview span { flex:1; background:repeating-linear-gradient(to top,#e63946 0 6px,#ffffff 6px 12px); }
 .skin-card.valentine .skin-preview { background:linear-gradient(180deg,#ffe4ec,#ffc2d4); } .skin-card.valentine .skin-preview span { flex:1; background:linear-gradient(to top,#9d1543,#e0245e 60%,#ff8fab); border-radius:10px 10px 0 0; }
 
-/* Settings → Playback: raccoon picker */
-.raccoon-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-.raccoon-pick { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: var(--radius-lg); background: var(--panel); border: 2px solid transparent; text-align: left; color: inherit; font: inherit; cursor: pointer; }
-.raccoon-pick.on { border-color: var(--accent); }
-.raccoon-pick svg { width: 100%; aspect-ratio: 1; border-radius: var(--radius); background: rgb(0 0 0 / 0.35); margin-bottom: 4px; }
-.raccoon-pick small { font-size: 12px; }
+/* Settings → Playback: critter picker */
+.critter-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.critter-pick { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: var(--radius-lg); background: var(--panel); border: 2px solid transparent; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.critter-pick.on { border-color: var(--accent); }
+.critter-pick svg { width: 100%; aspect-ratio: 1; border-radius: var(--radius); background: rgb(0 0 0 / 0.35); margin-bottom: 4px; }
+.critter-pick small { font-size: 12px; }
 
-/* ============ Now Playing: raccoons (components/raccoon/) ============ */
-/* fur stays raccoon-coloured on every skin; clothes and lights follow the skin */
-.raccoon .fur-dark { fill: #26262c; stroke: #26262c; }
-.raccoon .fur-dark-soft { fill: #4a4a53; }
-.raccoon .fur-mid { fill: #8a8a95; stroke: #8a8a95; }
-.raccoon .fur-light { fill: #ececf1; }
-.raccoon .hand { fill: #8a8a95; }
-.raccoon .top { fill: var(--accent); }
-.raccoon .top-shade { fill: rgb(0 0 0 / 0.28); }
-.raccoon .sleeve { stroke: var(--accent); }
-.raccoon .strings { stroke: var(--accent-ink, #fff); }
-.raccoon .phones { stroke: var(--viz-high); }
-.raccoon .phones-cup { fill: var(--viz-high); }
-.raccoon .phones-pad { fill: var(--viz-mid); }
-.raccoon .record-label { fill: var(--viz-mid); }
-.raccoon .spot-stop { stop-color: var(--viz-low); }
-.raccoon .desk-top { fill: #2a2a31; }
-.raccoon .desk-front { fill: #1b1b20; }
-.raccoon .led-0 { fill: var(--viz-low); }
-.raccoon .led-1 { fill: var(--viz-mid); }
-.raccoon .led-2 { fill: var(--viz-high); }
+/* ============ Now Playing: critters (components/critters/) ============ */
+/* raccoons (DJ, Country, Rapper, Rocker): fur stays raccoon-coloured on every skin; clothes and lights follow the skin */
+.critter .fur-dark { fill: #26262c; stroke: #26262c; }
+.critter .fur-dark-soft { fill: #4a4a53; }
+.critter .fur-mid { fill: #8a8a95; stroke: #8a8a95; }
+.critter .fur-light { fill: #ececf1; }
+.critter .hand { fill: #8a8a95; }
+.critter .top { fill: var(--accent); }
+.critter .top-shade { fill: rgb(0 0 0 / 0.28); }
+.critter .sleeve { stroke: var(--accent); }
+.critter .strings { stroke: var(--accent-ink, #fff); }
+.critter .phones { stroke: var(--viz-high); }
+.critter .phones-cup { fill: var(--viz-high); }
+.critter .phones-pad { fill: var(--viz-mid); }
+.critter .record-label { fill: var(--viz-mid); }
+.critter .spot-stop { stop-color: var(--viz-low); }
+.critter .desk-top { fill: #2a2a31; }
+.critter .desk-front { fill: #1b1b20; }
+.critter .led-0 { fill: var(--viz-low); }
+.critter .led-1 { fill: var(--viz-mid); }
+.critter .led-2 { fill: var(--viz-high); }
 /* country */
-.raccoon .fence { fill: #7a5634; }
-.raccoon .fence-dark { fill: #5a3d22; }
-.raccoon .porch { fill: #6b4626; }
-.raccoon .porch-line { stroke: #4e321a; }
-.raccoon .legs { fill: #3d5f93; }
-.raccoon .boot { fill: #5b3a1e; }
-.raccoon .bandana { fill: var(--viz-high); }
-.raccoon .cowboy { fill: #9a6a3a; }
-.raccoon .cowboy-dark { stroke: #6e4a26; }
-.raccoon .hat-band { fill: var(--accent); }
-.raccoon .neck { fill: #4a2e17; }
-.raccoon .wood { fill: #c98a4b; }
-.raccoon .wood-edge { stroke: #6e4220; }
+.critter .fence { fill: #7a5634; }
+.critter .fence-dark { fill: #5a3d22; }
+.critter .porch { fill: #6b4626; }
+.critter .porch-line { stroke: #4e321a; }
+.critter .legs { fill: #3d5f93; }
+.critter .boot { fill: #5b3a1e; }
+.critter .bandana { fill: var(--viz-high); }
+.critter .cowboy { fill: #9a6a3a; }
+.critter .cowboy-dark { stroke: #6e4a26; }
+.critter .hat-band { fill: var(--accent); }
+.critter .neck { fill: #4a2e17; }
+.critter .wood { fill: #c98a4b; }
+.critter .wood-edge { stroke: #6e4220; }
 /* rapper */
-.raccoon .speaker-box { fill: #17171b; stroke: #2a2a30; stroke-width: 2; }
-.raccoon .cone-rim { fill: #0d0d10; }
-.raccoon .cone { fill: #2a2a30; }
-.raccoon .cone-cap { fill: var(--viz-mid); }
-.raccoon .stage { fill: #1c1c22; }
-.raccoon-rapper .legs { fill: #2f4a7a; }
-.raccoon .sneaker { fill: #f2f2f5; }
-.raccoon .sneaker-stripe { stroke: var(--accent); }
-.raccoon .chain { stroke: #e8c15a; }
-.raccoon .medallion { fill: #f5cf5a; stroke: #b8901e; stroke-width: 2; }
-.raccoon .medallion-mark { fill: #a57c14; }
-.raccoon .cap { fill: var(--viz-high); }
-.raccoon .cap-brim { fill: var(--viz-mid); }
-.raccoon .cap-logo { fill: var(--accent); }
-.raccoon .shade-glint { stroke: var(--viz-high); }
+.critter .speaker-box { fill: #17171b; stroke: #2a2a30; stroke-width: 2; }
+.critter .cone-rim { fill: #0d0d10; }
+.critter .cone { fill: #2a2a30; }
+.critter .cone-cap { fill: var(--viz-mid); }
+.critter .stage { fill: #1c1c22; }
+.critter-rapper .legs { fill: #2f4a7a; }
+.critter .sneaker { fill: #f2f2f5; }
+.critter .sneaker-stripe { stroke: var(--accent); }
+.critter .chain { stroke: #e8c15a; }
+.critter .medallion { fill: #f5cf5a; stroke: #b8901e; stroke-width: 2; }
+.critter .medallion-mark { fill: #a57c14; }
+.critter .cap { fill: var(--viz-high); }
+.critter .cap-brim { fill: var(--viz-mid); }
+.critter .cap-logo { fill: var(--accent); }
+.critter .shade-glint { stroke: var(--viz-high); }
 /* rocker */
-.raccoon .amp { fill: #141417; stroke: #2e2e34; stroke-width: 2; }
-.raccoon .amp-logo { fill: var(--viz-high); }
-.raccoon .grille { fill: #24242a; stroke: #33333a; stroke-width: 1; }
-.raccoon-rocker .legs { fill: #1b1b20; }
-.raccoon .boot-black { fill: #0f0f12; }
-.raccoon .leather { fill: #1d1d22; }
-.raccoon-rocker .sleeve { stroke: #1d1d22; }
-.raccoon .mohawk { fill: var(--viz-high); }
-.raccoon .mohawk-tip { stroke: var(--viz-peak, #fff); }
-.raccoon .fretboard { fill: #222226; }
-.raccoon .axe { fill: var(--viz-mid); stroke: #111; stroke-width: 2; }
+.critter .amp { fill: #141417; stroke: #2e2e34; stroke-width: 2; }
+.critter .amp-logo { fill: var(--viz-high); }
+.critter .grille { fill: #24242a; stroke: #33333a; stroke-width: 1; }
+.critter-rocker .legs { fill: #1b1b20; }
+.critter .boot-black { fill: #0f0f12; }
+.critter .leather { fill: #1d1d22; }
+.critter-rocker .sleeve { stroke: #1d1d22; }
+.critter .mohawk { fill: var(--viz-high); }
+.critter .mohawk-tip { stroke: var(--viz-peak, #fff); }
+.critter .fretboard { fill: #222226; }
+.critter .axe { fill: var(--viz-mid); stroke: #111; stroke-width: 2; }
 
-/* holiday hats replace the raccoon's own headwear */
-.raccoon .hat, .raccoon .outfit { display: none; }
-:root[data-skin='halloween'] .raccoon .hat-witch,
-:root[data-skin='thanksgiving'] .raccoon .hat-pilgrim,
-:root[data-skin='christmas'] .raccoon .hat-santa,
-:root[data-skin='july4'] .raccoon .hat-sam,
-:root[data-skin='valentine'] .raccoon .hat-hearts { display: inline; }
-:root[data-skin-group='holidays'] .raccoon .own-hat { display: none; }
+/* shark (Shark.tsx): blue-grey skin and white jaw on every skin; sailor tee, drum shells and logo follow the skin */
+.critter .shark-skin { fill: #6f8fa8; }
+.critter .shark-dark { fill: #557590; }
+.critter .shark-belly { fill: #eef3f6; }
+.critter .shark-gill { stroke: #4a6780; }
+.critter-shark .sleeve { stroke: #6f8fa8; }
+.critter-shark .hand { fill: #6f8fa8; }
+.critter-shark .thumb { fill: #4a6780; }
+.critter .tee-stripe { stroke: rgb(255 255 255 / 0.8); }
+.critter .sand { fill: #a88a55; }
+.critter .sand-dark { stroke: #8c7142; }
+.critter .weed { stroke: #2f7d5b; }
+.critter .weed-2 { stroke: #45a072; }
+.critter .drum-shell { fill: var(--accent); }
+.critter .drum-head { fill: #ececf1; }
+.critter .drum-hoop { stroke: #b9b9c2; }
+.critter .drum-logo { fill: var(--accent); }
+.critter .cymbal { fill: #e3b94a; stroke: #a8862a; stroke-width: 1.5; }
+.critter .cymbal-bell { fill: #c99e2e; }
+.critter .stand { stroke: #9a9aa4; }
+.critter .stick { stroke: #e8d2a6; }
 
-/* skin-group outfits (App.tsx sets data-skin-group): each one's parts are in components/raccoon/parts.tsx */
-:root[data-skin-group='nuclear'] .raccoon .outfit-nuclear,
-:root[data-skin-group='lasers'] .raccoon .outfit-lasers,
-:root[data-skin-group='neon'] .raccoon .outfit-neon,
-:root[data-skin-group='retro'] .raccoon .outfit-retro,
-:root[data-skin-group='editor'] .raccoon .outfit-editor { display: inline; }
-:root[data-skin-group='nuclear'] .raccoon .own-hat,
-:root:is([data-skin-group='nuclear'], [data-skin-group='lasers'], [data-skin-group='retro'], [data-skin-group='editor']) .raccoon .own-eyewear { display: none; }
+/* alien (Alien.tsx): green skin on every skin; space suit, UFO lights, antennae and sound waves follow the skin */
+.critter .alien-skin { fill: #8fd16a; }
+.critter .alien-dark { fill: #5f9e45; stroke: #5f9e45; }
+.critter-alien .hand { fill: #8fd16a; }
+.critter-alien .thumb { fill: #5f9e45; }
+.critter-alien .legs { fill: #c9ced8; }
+.critter .moon-boot { fill: #ececf1; }
+.critter .suit-trim { fill: #c9ced8; }
+.critter .antenna { fill: var(--viz-high); }
+.critter .planet { fill: var(--viz-low); }
+.critter .planet-ring { stroke: var(--viz-mid); }
+.critter .ufo { fill: #b8bec8; }
+.critter .ufo-rim { fill: #7d838d; }
+.critter .moon { fill: #6e6e7a; }
+.critter .crater { fill: #5c5c67; }
+.critter .theremin { fill: #5a3a22; }
+.critter .theremin-panel { fill: #2a1c12; }
+.critter .rod { stroke: #d8d8de; }
+.critter .rod-tip { fill: #d8d8de; }
+.critter .wave-a { stroke: var(--viz-high); }
+.critter .wave-b { stroke: var(--viz-mid); }
+
+/* holiday hats replace the critter's own headwear */
+.critter .hat, .critter .outfit { display: none; }
+:root[data-skin='halloween'] .critter .hat-witch,
+:root[data-skin='thanksgiving'] .critter .hat-pilgrim,
+:root[data-skin='christmas'] .critter .hat-santa,
+:root[data-skin='july4'] .critter .hat-sam,
+:root[data-skin='valentine'] .critter .hat-hearts { display: inline; }
+:root[data-skin-group='holidays'] .critter .own-hat { display: none; }
+
+/* skin-group outfits (App.tsx sets data-skin-group): each one's parts are in components/critters/parts.tsx */
+:root[data-skin-group='nuclear'] .critter .outfit-nuclear,
+:root[data-skin-group='lasers'] .critter .outfit-lasers,
+:root[data-skin-group='neon'] .critter .outfit-neon,
+:root[data-skin-group='retro'] .critter .outfit-retro,
+:root[data-skin-group='editor'] .critter .outfit-editor { display: inline; }
+:root[data-skin-group='nuclear'] .critter .own-hat,
+:root:is([data-skin-group='nuclear'], [data-skin-group='lasers'], [data-skin-group='retro'], [data-skin-group='editor']) .critter .own-eyewear { display: none; }
 /* Nuclear: yellow hazmat suit, hood and respirator, black rubber gloves and boots */
-.raccoon .hazmat { fill: #f4c20d; }
-:root[data-skin='meltdown'] .raccoon .hazmat { fill: #ff8a1f; }
-:root[data-skin='uranium'] .raccoon .hazmat, :root[data-skin='isotope'] .raccoon .hazmat { fill: #b6e83a; }
-:root[data-skin-group='nuclear'] .raccoon .sleeve { stroke: #f4c20d; }
-:root[data-skin='meltdown'] .raccoon .sleeve { stroke: #ff8a1f; }
-:root:is([data-skin='uranium'], [data-skin='isotope']) .raccoon .sleeve { stroke: #b6e83a; }
-:root[data-skin-group='nuclear'] .raccoon .legs { fill: #e0b10a; }
-:root[data-skin-group='nuclear'] .raccoon :is(.hand, .boot, .boot-black, .sneaker) { fill: #1b1b1f; }
-:root[data-skin-group='nuclear'] .raccoon .thumb { fill: #3a3a40; }
+.critter .hazmat { fill: #f4c20d; }
+:root[data-skin='meltdown'] .critter .hazmat { fill: #ff8a1f; }
+:root[data-skin='uranium'] .critter .hazmat, :root[data-skin='isotope'] .critter .hazmat { fill: #b6e83a; }
+:root[data-skin-group='nuclear'] .critter .sleeve { stroke: #f4c20d; }
+:root[data-skin='meltdown'] .critter .sleeve { stroke: #ff8a1f; }
+:root:is([data-skin='uranium'], [data-skin='isotope']) .critter .sleeve { stroke: #b6e83a; }
+:root[data-skin-group='nuclear'] .critter .legs { fill: #e0b10a; }
+:root[data-skin-group='nuclear'] .critter :is(.hand, .boot, .boot-black, .sneaker, .moon-boot) { fill: #1b1b1f; }
+:root[data-skin-group='nuclear'] .critter .thumb { fill: #3a3a40; }
 /* Lasers: a visor with a glowing beam; Neon: glow sticks */
-.raccoon .visor-strap { stroke: #1b1b22; }
-.raccoon .visor-beam { fill: var(--viz-high); }
-.raccoon .visor-rim { stroke: var(--viz-mid); }
-.raccoon .glow-a { stroke: var(--viz-high); }
-.raccoon .glow-b { stroke: var(--viz-mid); }
+.critter .visor-strap { stroke: #1b1b22; }
+.critter .visor-beam { fill: var(--viz-high); }
+.critter .visor-rim { stroke: var(--viz-mid); }
+.critter .glow-a { stroke: var(--viz-high); }
+.critter .glow-b { stroke: var(--viz-mid); }
 /* Editor palettes: thick-rimmed coder glasses */
-.raccoon .coder-frame { stroke: var(--viz-low); }
+.critter .coder-frame { stroke: var(--viz-low); }
 
 /* ============ Radio: editing "Your stations" and ordering favorites ============ */
 .station-hero.editing { cursor: grab; grid-template-columns: 1fr; }

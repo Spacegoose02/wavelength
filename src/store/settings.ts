@@ -19,8 +19,11 @@ export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber'
 /** What the Now Playing artwork slot shows: the cover, or one of the visualizer scenes (components/Scenes.tsx). */
 export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' | 'raccoon';
 
-/** Which raccoon the raccoon scene shows (components/raccoon/). */
-export type RaccoonKind = 'dj' | 'country' | 'rapper' | 'rocker';
+/**
+ * Which critter the critter scene (`npScene: 'raccoon'`) shows: components/critters/Critter.tsx.
+ * The scene id and the `raccoon` setting keep their old names so saved and Hub-synced settings carry over.
+ */
+export type CritterKind = 'dj' | 'country' | 'rapper' | 'rocker' | 'shark' | 'alien';
 
 /** Headings in Settings → Themes, in display order. */
 export const SKIN_GROUPS = ['Classic', 'Retro', 'Neon', 'Lasers', 'Nuclear', 'Editor palettes', 'Holidays', 'Accessibility'] as const;
@@ -113,8 +116,9 @@ interface SettingsState {
   discoverCharts: Partial<Record<Genre, ChartSource[]>>;
   npScene: NpScene;
   setNpScene(s: NpScene): void;
-  raccoon: RaccoonKind;
-  setRaccoon(r: RaccoonKind): void;
+  /** the critter the critter scene shows (named before there were other critters) */
+  raccoon: CritterKind;
+  setRaccoon(r: CritterKind): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
   /** Settings → Playback: ReplayGain (player/replayGain.ts) and crossfade between songs (seconds, 0 = off). */

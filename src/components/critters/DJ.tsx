@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, Head, RaccoonFrame, Tail, TORSO } from './parts';
-import { useRaccoonRig, type RigFrame } from './rig';
+import { Arm, BodyOutfits, Head, CritterFrame, Tail, TORSO } from './parts';
+import { useCritterRig, type RigFrame } from './rig';
 
 /**
  * DJ raccoon behind a pair of decks. The hoodie, headphones, record labels and deck lights take the skin's
@@ -11,7 +11,7 @@ export function DJ({ still }: { still?: boolean }) {
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ spin: 0, pulse: 0 });
 
-  useRaccoonRig(
+  useCritterRig(
     root,
     ({ t, a, rock, hit, $ }: RigFrame) => {
       const s = state.current;
@@ -42,7 +42,7 @@ export function DJ({ still }: { still?: boolean }) {
   );
 
   return (
-    <RaccoonFrame ref={root} kind="dj" label="A raccoon DJ playing records">
+    <CritterFrame ref={root} kind="dj" label="A raccoon DJ playing records">
       <Tail />
 
       <g data-part="body">
@@ -88,6 +88,6 @@ export function DJ({ still }: { still?: boolean }) {
 
       <Arm part="arm-l" d="M138 268 Q 146 300 176 318" hand={[178, 320]} thumb={[186, 318]} />
       <Arm part="arm-r" d="M262 268 Q 284 290 290 316" hand={[290, 318]} thumb={[283, 316]} />
-    </RaccoonFrame>
+    </CritterFrame>
   );
 }

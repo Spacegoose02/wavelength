@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, BodyOutfits, Head, RaccoonFrame, Tail, TORSO } from './parts';
-import { useRaccoonRig } from './rig';
+import { Arm, BodyOutfits, Head, CritterFrame, Tail, TORSO } from './parts';
+import { useCritterRig } from './rig';
 
 /**
  * Country raccoon on a porch in front of a fence: cowboy hat, plaid shirt and bandana in the skin's colours,
@@ -11,7 +11,7 @@ export function Country({ still }: { still?: boolean }) {
   const root = useRef<SVGSVGElement>(null);
   const hands = useRef(newGuitarHands());
 
-  useRaccoonRig(
+  useCritterRig(
     root,
     (f) => {
       playGuitar(f, hands.current, 22);
@@ -21,7 +21,7 @@ export function Country({ still }: { still?: boolean }) {
   );
 
   return (
-    <RaccoonFrame ref={root} kind="country" label="A country raccoon playing guitar">
+    <CritterFrame ref={root} kind="country" label="A country raccoon playing guitar">
       <defs>
         <pattern id="raccoon-plaid" width="18" height="18" patternUnits="userSpaceOnUse">
           <rect x="0" y="0" width="18" height="6" fill="rgb(0 0 0 / 0.22)" />
@@ -90,6 +90,6 @@ export function Country({ still }: { still?: boolean }) {
 
       <Arm part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} thumb={[190, 302]} />
       <Arm part="arm-r" d="M262 268 Q 292 286 304 266" hand={[306, 264]} thumb={[300, 258]} />
-    </RaccoonFrame>
+    </CritterFrame>
   );
 }

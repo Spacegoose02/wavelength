@@ -3,7 +3,7 @@ import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid } from '../lib/platform';
 import { Equalizer } from '../components/Equalizer';
 import { SCENES } from '../components/Scenes';
-import { Raccoon, RACCOONS } from '../components/raccoon/Raccoon';
+import { Critter, CRITTERS } from '../components/critters/Critter';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -520,7 +520,7 @@ function ThemesTab() {
   );
 }
 
-/** Settings → Playback: which Now Playing visualizer, and which raccoon the raccoon scene shows (both sync to the Hub). */
+/** Settings → Playback: which Now Playing visualizer, and which critter the critter scene shows (both sync to the Hub). */
 function NowPlayingPicker() {
   const { npScene, setNpScene, raccoon, setRaccoon } = useSettings();
   return (
@@ -532,19 +532,19 @@ function NowPlayingPicker() {
           <button key={s.id} className={`chip ${npScene === s.id ? 'on' : ''}`} onClick={() => setNpScene(s.id)}>{s.label}</button>
         ))}
       </div>
-      <h3>Raccoon</h3>
-      <p className="muted small">They dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
-      <div className="raccoon-picks">
-        {RACCOONS.map((r) => (
+      <h3>Critters</h3>
+      <p className="muted small">Pick who plays along. They dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
+      <div className="critter-picks">
+        {CRITTERS.map((r) => (
           <button
             key={r.id}
-            className={`raccoon-pick ${npScene === 'raccoon' && raccoon === r.id ? 'on' : ''}`}
+            className={`critter-pick ${npScene === 'raccoon' && raccoon === r.id ? 'on' : ''}`}
             onClick={() => {
               setRaccoon(r.id);
               setNpScene('raccoon');
             }}
           >
-            <Raccoon kind={r.id} still />
+            <Critter kind={r.id} still />
             <b>{r.label}</b>
             <small className="muted">{r.blurb}</small>
           </button>

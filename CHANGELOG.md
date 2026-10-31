@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **A shark and an alien join the raccoons** in Now Playing. The **drummer shark** plays a drum kit on the sea
+  floor: snare on the beat, cymbal crashes on sharp hits, a thumping kick, bubbles that rise faster with the
+  bass. The **theremin alien** plays a theremin on the moon under a hovering UFO: its hands follow the bass
+  and the highs and glowing sound waves pour off the antenna. Both bob, blink, yawn and dress for your theme
+  like the raccoons (hazmat suits, visors, glow sticks, shades, holiday hats).
+- The **Switch raccoon** button is now **Switch critter**, the visualizer is called **Critters**, and
+  **Settings → Playback** lists all six under **Critters**. Your current pick carries over. See the
+  [user guide](docs/USER-GUIDE.md#critters).
 
 ## 0.17.6
 - **Appears On, like Spotify.** An artist's page now lists, under their albums, the albums by other artists in
