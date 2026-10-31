@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { sourceFor } from '../sources/registry';
 import type { Album, Favorites as Favs, Track } from '../sources/types';
 import { SOURCE_COLORS } from '../sources/types';
+import { useShallow } from 'zustand/react/shallow';
 import { useSettings } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
@@ -16,7 +17,7 @@ const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album }
 
 export function Favorites() {
   // Only Navidrome stars: SUB/WAVE likes are mirrored there, and SUB/WAVE has no getFavorites of its own.
-  const sources = useSettings((s) => s.sources.filter((x) => x.enabled && x.kind === 'navidrome'));
+  const sources = useSettings(useShallow((s) => s.sources.filter((x) => x.enabled && x.kind === 'navidrome')));
   const [tab, setTab] = useState(sources[0]?.id);
   const cfg = sources.find((s) => s.id === tab) ?? sources[0];
 
