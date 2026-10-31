@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, Head, CritterFrame, Tail, TORSO } from './parts';
+import { Arm, BodyOutfits, Head, CritterFrame, TORSO } from './parts';
+import type { ActProps } from './species';
 import { useCritterRig, type RigFrame } from './rig';
 
 /**
@@ -7,7 +8,8 @@ import { useCritterRig, type RigFrame } from './rig';
  * colours. The right hand scratches on strong high-frequency hits, the left rides the mixer with the mids,
  * and the records spin while something plays. Paused, he adjusts his headphones now and then.
  */
-export function DJ({ still }: { still?: boolean }) {
+export function DJ({ species, still }: ActProps) {
+  const { Face, Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ spin: 0, pulse: 0 });
 
@@ -42,8 +44,8 @@ export function DJ({ still }: { still?: boolean }) {
   );
 
   return (
-    <CritterFrame ref={root} kind="dj" label="A raccoon DJ playing records">
-      <Tail />
+    <CritterFrame ref={root} kind="dj" species={species.id} label={`A ${species.noun} DJ playing records`}>
+      {Tail && <Tail />}
 
       <g data-part="body">
         <path className="top" d={TORSO} />
@@ -53,6 +55,7 @@ export function DJ({ still }: { still?: boolean }) {
       </g>
 
       <Head
+        face={<Face />}
         over={
           <g data-part="adjust">
             <path d="M122 182 C 122 80, 278 80, 278 182" className="phones" fill="none" strokeWidth="9" strokeLinecap="round" />

@@ -20,7 +20,7 @@ export interface RigFrame {
 export interface RigOptions {
   /** how far the head nods on a beat (DJ 10, rocker headbangs harder) */
   nod?: number;
-  /** open the mouth with the mids while playing (the rapper raps) */
+  /** open the mouth with the vocals (`AudioSample.voice`) while playing; on for every act unless turned off */
   talk?: boolean;
   /** draw one frame and stop: Settings previews */
   still?: boolean;
@@ -31,15 +31,16 @@ export interface RigOptions {
  * (no React re-render per frame):
  *
  * - `head` bobs on beats and sways; `body` follows a little.
- * - `eyes` blink; when paused he yawns (`yawn`, hiding `smile`) and now and then lifts `adjust`
- *   (headphones, hat, cap, hair or antennae) as if setting it straight.
+ * - `eyes` blink; the mouth (`yawn`, hiding `smile`) sings along with the vocals. Paused, they yawn
+ *   and now and then lift `adjust`
+ *   (headphones, hat, cap, hair or beanie) as if setting it straight.
  * - `tail` wags, `spot` (the backlight) breathes with the bass, `[data-glow]` parts (neon and laser
  *   outfits) pulse with the bass.
  *
  * Each critter passes `frame` for its own hands and instrument. Parts a critter doesn't have are skipped.
  */
 export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: RigFrame) => void, opts: RigOptions = {}) {
-  const { nod: nodScale = 10, talk = false, still = false } = opts;
+  const { nod: nodScale = 10, talk = true, still = false } = opts;
   useEffect(() => {
     const svg = root.current!;
     const cache = new Map<string, SVGElement | null>();
@@ -59,6 +60,7 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
     let nextBlink = 2;
     let nextYawn = 6;
     let nextAdjust = 11;
+    let singing = 0;
 
     const loop = () => {
       if (!still) raf = requestAnimationFrame(loop);
@@ -90,7 +92,10 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
         if (t > nextAdjust + 1.2) nextAdjust = t + 10 + Math.random() * 8;
       }
       const adj = idle && t > nextAdjust ? Math.sin(((t - nextAdjust) / 1.2) * Math.PI) : 0;
-      const mouth = talk && a.playing ? Math.max(yawn, Math.min(1, a.mid * 1.8) * 0.7) : yawn;
+      // sing along: open quickly on a syllable, close a little slower
+      const sing = talk && a.playing ? a.voice * 0.85 : 0;
+      singing += (sing - singing) * (sing > singing ? 0.55 : 0.3);
+      const mouth = Math.max(yawn, singing);
       set('eyes', `translate(0 166) scale(1 ${lids.toFixed(2)}) translate(0 -166)`);
       set('yawn', `translate(0 212) scale(1 ${mouth.toFixed(2)}) translate(0 -212)`);
       const smile = find('smile');

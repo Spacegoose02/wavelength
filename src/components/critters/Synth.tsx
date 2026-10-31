@@ -1,28 +1,7 @@
 import { useRef } from 'react';
-import { BodyOutfits, CritterFrame, Head } from './parts';
+import { Arm, BodyOutfits, CritterFrame, Head, TORSO } from './parts';
+import type { ActProps } from './species';
 import { useCritterRig } from './rig';
-
-/** The grey's face for `Head`: a big bulb head with a pointed chin and huge black eyes, on the shared skeleton. */
-function GreyFace() {
-  return (
-    <>
-      <path className="grey-skin" d="M200 92 C 272 92 298 140 290 180 C 282 216 236 248 200 254 C 164 248 118 216 110 180 C 102 140 128 92 200 92 Z" />
-      <path className="grey-shade" d="M150 104 C 112 124 102 160 110 186 C 118 218 160 246 196 254 C 160 238 126 208 122 176 C 118 146 128 120 150 104 Z" />
-      <ellipse cx="248" cy="116" rx="20" ry="7" transform="rotate(28 248 116)" fill="rgb(255 255 255 / 0.55)" />
-      <circle cx="226" cy="104" r="2" fill="rgb(255 255 255 / 0.7)" /><circle cx="234" cy="102" r="1.6" fill="rgb(255 255 255 / 0.7)" />
-      <path className="grey-line" d="M126 150 Q 150 128 186 148 M274 150 Q 250 128 214 148" fill="none" strokeWidth="2" strokeLinecap="round" />
-      <g data-part="eyes">
-        <ellipse cx="160" cy="168" rx="34" ry="22" fill="#0b0b0d" transform="rotate(22 160 168)" />
-        <ellipse cx="240" cy="168" rx="34" ry="22" fill="#0b0b0d" transform="rotate(-22 240 168)" />
-        <ellipse cx="152" cy="160" rx="7" ry="4.5" fill="#fff" transform="rotate(-10 152 160)" />
-        <ellipse cx="246" cy="160" rx="7" ry="4" fill="#fff" transform="rotate(-25 246 160)" />
-      </g>
-      <path className="grey-line" d="M194 204 h4 M202 204 h4" fill="none" strokeWidth="2.5" strokeLinecap="round" />
-      <path data-part="smile" d="M188 222 Q 200 230 212 222" fill="none" className="grey-line" strokeWidth="2.5" strokeLinecap="round" />
-      <ellipse data-part="yawn" cx="200" cy="226" rx="8" ry="9" fill="#2a2030" transform="scale(1 0)" />
-    </>
-  );
-}
 
 const STARS: [number, number, number][] = [
   [22, 40, 1.4], [70, 110, 1.2], [120, 24, 1.6], [300, 18, 1.3], [352, 96, 1.6], [384, 30, 1.2],
@@ -38,7 +17,8 @@ const KEYS = Array.from({ length: 14 }, (_, i) => 118 + i * 11.7);
  * The keys light up with the spectrum, the left hand hops on the beat, the right glides along the keys with
  * the highs, the beam brightens with the bass and the saucer's lights chase. Paused, the hands rest.
  */
-export function Grey({ still }: { still?: boolean }) {
+export function Synth({ species, still }: ActProps) {
+  const { Face, Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ pulse: 0, glide: 0 });
 
@@ -49,8 +29,8 @@ export function Grey({ still }: { still?: boolean }) {
       const svg = root.current!;
       s.glide += ((idle ? 0 : a.live ? Math.min(1, a.treble * 1.8) * 2 - 1 : Math.sin(t * 0.8)) - s.glide) * 0.1;
       const hop = idle ? 0 : a.live ? bob * 8 : Math.max(0, Math.sin(t * 4)) * 6;
-      $('arm-l').setAttribute('transform', `rotate(${(hop + (idle ? -4 : 0)).toFixed(2)} 180 262)`);
-      $('arm-r').setAttribute('transform', `rotate(${(-s.glide * 22 + rock * 3).toFixed(2)} 220 262)`);
+      $('arm-l').setAttribute('transform', `rotate(${(-hop + (idle ? 4 : 0)).toFixed(2)} 138 268)`);
+      $('arm-r').setAttribute('transform', `rotate(${(-s.glide * 18 + rock * 3).toFixed(2)} 262 268)`);
 
       const bins = a.freq.length;
       svg.querySelectorAll<SVGElement>('[data-key]').forEach((k, i) => {
@@ -70,7 +50,7 @@ export function Grey({ still }: { still?: boolean }) {
   );
 
   return (
-    <CritterFrame ref={root} kind="grey" label="A grey alien playing a synth in a wheat field">
+    <CritterFrame ref={root} kind="synth" species={species.id} label={`A ${species.noun} playing a synth in a wheat field`}>
       {/* night sky, the saucer and its beam, a wheat field with a crop circle */}
       {STARS.map(([cx, cy, r]) => <circle key={`${cx},${cy}`} data-star="" cx={cx} cy={cy} r={r} fill="#fff" />)}
       <path data-part="beam" className="beam" d="M172 52 L 228 52 L 330 350 L 70 350 Z" />
@@ -88,19 +68,20 @@ export function Grey({ still }: { still?: boolean }) {
         return <path key={x} className="wheat" d={`M${x} 336 q -2 -14 2 -24 M${x + 8} 338 q 2 -12 -1 -22`} fill="none" strokeWidth="2.5" strokeLinecap="round" />;
       })}
 
-      {/* slim legs and long feet */}
-      <path className="grey-skin" d="M184 296 H196 V350 H184 Z M204 296 H216 V350 H204 Z" />
-      <ellipse className="grey-skin" cx="186" cy="352" rx="12" ry="5" />
-      <ellipse className="grey-skin" cx="214" cy="352" rx="12" ry="5" />
+      {Tail && <Tail />}
+
+      {/* black trousers and boots */}
+      <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
+      <path className="boot-black" d="M154 346 H190 V366 H146 Q 146 352 154 346 Z" />
+      <path className="boot-black" d="M210 346 H246 Q 254 352 254 366 H210 Z" />
 
       <g data-part="body">
-        <rect className="grey-skin" x="191" y="236" width="18" height="20" />
-        <path className="grey-skin" d="M170 304 C 170 270 178 252 200 250 C 222 252 230 270 230 304 Z" />
-        <path className="grey-shade" d="M176 300 C 176 274 182 258 194 252 C 184 262 182 280 184 300 Z" />
+        <path className="top" d={TORSO} />
+        <rect className="top-shade" x="176" y="240" width="48" height="16" rx="7" />
         <BodyOutfits />
       </g>
 
-      <Head face={<GreyFace />} />
+      <Head face={<Face />} />
 
       {/* the synth on an X stand */}
       <path className="stand" d="M160 322 L 240 372 M240 322 L 160 372" fill="none" strokeWidth="4" strokeLinecap="round" />
@@ -115,17 +96,9 @@ export function Grey({ still }: { still?: boolean }) {
       {KEYS.slice(0, -1).map((x, i) => ([2, 6].includes(i % 7) ? null : <rect key={x} x={x + 7} y="298" width="6.5" height="11" rx="1" fill="#16161a" />))}
       <rect className="synth-trim" x="110" y="290" width="180" height="5" rx="2" />
 
-      {/* long thin arms with three-fingered hands on the keys */}
-      <g data-part="arm-l">
-        <path className="grey-arm" d="M180 262 Q 160 278 162 296" fill="none" strokeWidth="10" strokeLinecap="round" />
-        <circle className="grey-skin hand" cx="162" cy="298" r="7" />
-        <path className="grey-finger" d="M157 302 l -3 8 M162 304 v 8 M167 302 l 3 8" fill="none" strokeWidth="3" strokeLinecap="round" />
-      </g>
-      <g data-part="arm-r">
-        <path className="grey-arm" d="M220 262 Q 240 278 238 296" fill="none" strokeWidth="10" strokeLinecap="round" />
-        <circle className="grey-skin hand" cx="238" cy="298" r="7" />
-        <path className="grey-finger" d="M233 302 l -3 8 M238 304 v 8 M243 302 l 3 8" fill="none" strokeWidth="3" strokeLinecap="round" />
-      </g>
+      {/* hands on the keys */}
+      <Arm part="arm-l" d="M138 268 Q 136 292 158 298" hand={[160, 298]} thumb={[166, 292]} />
+      <Arm part="arm-r" d="M262 268 Q 264 292 242 298" hand={[240, 298]} thumb={[234, 292]} />
     </CritterFrame>
   );
 }

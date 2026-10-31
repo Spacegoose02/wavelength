@@ -3,7 +3,7 @@ import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid } from '../lib/platform';
 import { Equalizer } from '../components/Equalizer';
 import { SCENES } from '../components/Scenes';
-import { Critter, CRITTERS } from '../components/critters/Critter';
+import { ACTS, Critter, SPECIES } from '../components/critters/Critter';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -520,9 +520,14 @@ function ThemesTab() {
   );
 }
 
-/** Settings → Playback: which Now Playing visualizer, and which critter the critter scene shows (both sync to the Hub). */
+/**
+ * Settings → Playback: which Now Playing visualizer, and who plays which act in the critter scene (all sync
+ * to the Hub). Each critter card shows that critter in the current act; each act card shows the current
+ * critter in that act. Picking either switches Now Playing to the critter scene.
+ */
 function NowPlayingPicker() {
-  const { npScene, setNpScene, raccoon, setRaccoon } = useSettings();
+  const { npScene, setNpScene, critter, setCritter, act, setAct } = useSettings();
+  const on = npScene === 'raccoon';
   return (
     <section id="visualizer">
       <h2>Now Playing visualizer</h2>
@@ -533,20 +538,36 @@ function NowPlayingPicker() {
         ))}
       </div>
       <h3>Critters</h3>
-      <p className="muted small">Pick who plays along. They dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
+      <p className="muted small">Pick who plays along, then what they play: any critter can do any act. They sing along with the vocals and dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
       <div className="critter-picks">
-        {CRITTERS.map((r) => (
+        {SPECIES.map((sp) => (
           <button
-            key={r.id}
-            className={`critter-pick ${npScene === 'raccoon' && raccoon === r.id ? 'on' : ''}`}
+            key={sp.id}
+            className={`critter-pick ${on && critter === sp.id ? 'on' : ''}`}
             onClick={() => {
-              setRaccoon(r.id);
+              setCritter(sp.id);
               setNpScene('raccoon');
             }}
           >
-            <Critter kind={r.id} still />
-            <b>{r.label}</b>
-            <small className="muted">{r.blurb}</small>
+            <Critter species={sp.id} act={act} still />
+            <b>{sp.label}</b>
+          </button>
+        ))}
+      </div>
+      <h3>Act</h3>
+      <div className="critter-picks">
+        {ACTS.map((a) => (
+          <button
+            key={a.id}
+            className={`critter-pick ${on && act === a.id ? 'on' : ''}`}
+            onClick={() => {
+              setAct(a.id);
+              setNpScene('raccoon');
+            }}
+          >
+            <Critter species={critter} act={a.id} still />
+            <b>{a.label}</b>
+            <small className="muted">{a.blurb}</small>
           </button>
         ))}
       </div>

@@ -1,42 +1,7 @@
 import { useRef } from 'react';
 import { Arm, BodyOutfits, CritterFrame, Head, TORSO } from './parts';
+import type { ActProps } from './species';
 import { useCritterRig } from './rig';
-
-/** Teeth along the grin, a quadratic from 164,206 through 200,232 to 236,206. */
-const TEETH = [174, 184, 194, 206, 216, 226]
-  .map((x) => {
-    const k = (x - 164) / 72;
-    const y = 206 + 52 * k * (1 - k) - 1;
-    return `M${x - 4} ${y.toFixed(1)} L${x + 4} ${y.toFixed(1)} L${x} ${(y + 6).toFixed(1)} Z`;
-  })
-  .join(' ');
-
-/** The shark's face for `Head`: dorsal fin, gills, white jaw and a toothy grin, on the shared skeleton. */
-function SharkFace() {
-  return (
-    <>
-      <path className="shark-skin" d="M174 124 Q 194 70 238 60 Q 222 92 228 126 Z" />
-      <path className="shark-dark" d="M196 90 Q 214 70 238 60 Q 226 80 224 100 Z" />
-      <ellipse className="shark-skin" cx="200" cy="178" rx="82" ry="66" />
-      <path className="shark-belly" d="M122 194 Q 130 240 200 245 Q 270 240 278 194 Q 240 214 200 214 Q 160 214 122 194 Z" />
-      <path className="shark-gill" d="M130 170 q -6 12 0 24 M140 166 q -6 14 0 28 M272 170 q 6 12 0 24 M262 166 q 6 14 0 28" fill="none" strokeWidth="3" strokeLinecap="round" />
-      <g data-part="eyes">
-        <circle cx="170" cy="166" r="10" fill="#fff" />
-        <circle cx="230" cy="166" r="10" fill="#fff" />
-        <circle cx="172" cy="167" r="6.5" fill="#111" />
-        <circle cx="228" cy="167" r="6.5" fill="#111" />
-        <circle cx="174" cy="164" r="2" fill="#fff" />
-        <circle cx="230" cy="164" r="2" fill="#fff" />
-      </g>
-      <path className="shark-gill" d="M188 190 q 5 -4 10 0 M202 190 q 5 -4 10 0" fill="none" strokeWidth="2.5" strokeLinecap="round" />
-      <g data-part="smile">
-        <path d="M164 206 Q 200 232 236 206" fill="none" stroke="#1e2a36" strokeWidth="3.5" strokeLinecap="round" />
-        <path d={TEETH} fill="#fff" />
-      </g>
-      <ellipse data-part="yawn" cx="200" cy="222" rx="16" ry="12" fill="#5a1a24" transform="scale(1 0)" />
-    </>
-  );
-}
 
 /** Bubbles: x, size, where in the climb each starts (0..1), speed. */
 const BUBBLES: [number, number, number, number][] = [
@@ -49,7 +14,8 @@ const BUBBLES: [number, number, number, number][] = [
  * logo take the skin's colours. The snare hand hits on the beat, the cymbal hand crashes on strong highs,
  * the kick drum thumps, the bubbles rise faster with the bass and the seaweed sways. Paused, the sticks rest.
  */
-export function Shark({ still }: { still?: boolean }) {
+export function Drums({ species, still }: ActProps) {
+  const { Face, Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ rise: 0 });
 
@@ -85,7 +51,7 @@ export function Shark({ still }: { still?: boolean }) {
   );
 
   return (
-    <CritterFrame ref={root} kind="shark" label="A shark playing the drums under the sea">
+    <CritterFrame ref={root} kind="drums" species={species.id} label={`A ${species.noun} playing the drums under the sea`}>
       {/* sunlight through the water, sea floor, seaweed and bubbles */}
       <path d="M40 0 L 90 0 L 150 340 L 120 340 Z M200 0 L 240 0 L 270 340 L 230 340 Z M320 0 L 350 0 L 380 340 L 350 340 Z" fill="rgb(255 255 255 / 0.05)" />
       <path className="sand" d="M0 350 Q 100 338 200 348 T 400 346 V400 H0 Z" />
@@ -97,8 +63,7 @@ export function Shark({ still }: { still?: boolean }) {
       ))}
       {BUBBLES.map(([x, r], i) => <circle key={i} data-bubble="" cx={x} cy="340" r={r} fill="rgb(255 255 255 / 0.12)" stroke="rgb(255 255 255 / 0.6)" strokeWidth="1.5" />)}
 
-      {/* tail fin, wagged by the rig about 268,292 */}
-      <path data-part="tail" className="shark-skin" d="M262 286 Q 296 292 318 276 L 340 230 Q 346 262 336 282 Q 352 296 360 318 Q 330 304 314 306 Q 290 310 262 302 Z" />
+      {Tail && <Tail />}
 
       <g data-part="body">
         <path className="top" d={TORSO} />
@@ -107,7 +72,7 @@ export function Shark({ still }: { still?: boolean }) {
         <BodyOutfits />
       </g>
 
-      <Head face={<SharkFace />} />
+      <Head face={<Face />} />
 
       {/* the kit: hi-hat, snare, kick with a tom on it, floor tom, crash */}
       <path className="stand" d="M44 276 V366 M44 366 L 30 378 M44 366 L 58 378 M104 334 V352 L 88 368 M104 352 L 120 368 M344 236 V366 L 330 378 M344 366 L 358 378 M276 350 V372 M324 350 V372" fill="none" strokeWidth="3" strokeLinecap="round" />
