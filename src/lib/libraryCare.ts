@@ -2,7 +2,7 @@ import { getJson, qs } from './http';
 import { cleanTitle, pool, primaryArtist } from './match';
 import { versionOf } from './versions';
 import { norm } from '../sources/registry';
-import type { Release } from '../sources/releaseRadar';
+import { deezerArtistsNamed, type Release } from '../sources/releaseRadar';
 import type { Album } from '../sources/types';
 
 /**
@@ -80,8 +80,8 @@ export async function missingAlbums(albums: Album[], limit = 40, onProgress?: (d
   const artists = topArtists(albums, limit);
   let done = 0;
   const lists = await pool(artists, 4, async (name) => {
-    const s = await getJson(`https://api.deezer.com/search/artist?${qs({ q: name, limit: 3 })}`).catch(() => null);
-    const hit = ((s?.data ?? []) as { id: number; name: string }[]).find((a) => norm(a.name) === norm(name));
+    // the same-name artist with the most fans, not the first one Deezer lists
+    const [hit] = await deezerArtistsNamed(name).catch(() => []);
     const out: Release[] = [];
     if (hit) {
       const r = await getJson(`https://api.deezer.com/artist/${hit.id}/albums?${qs({ limit: 100 })}`).catch(() => null);

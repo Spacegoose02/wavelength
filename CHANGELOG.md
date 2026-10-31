@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **The newest release banner no longer shows another artist's release.** Deezer often has several artists with
+  the same name (a dozen "Drake"s), and the artist page took the first one Deezer listed, so Drake's banner could
+  show a 2013 compilation by a small same-name upload. Wavelength now checks which same-name artist has the
+  albums in your library (else the one with the most fans), hides the banner when it isn't sure, and **Browse
+  releases** says when it isn't sure and lists the other artists with that name. Following by name, Release
+  Radar's "artists you play", Library Care's missing albums, song radio and the AI DJ pick the same-name artist
+  with the most fans too.
 
 ## 0.18.0
 - **Critters sing along better.** Checked against real songs with the vocals separated out: with synced

@@ -44,6 +44,17 @@ export function ArtistReleases({ artist, open: first }: { artist: Artist; open?:
           <span key={`${b.type}:${b.id}:${i}`}> / {i === stack.length - 2 ? <b>{b.title}</b> : <span className="muted">{b.title}</span>}</span>
         ))}
       </div>
+      {lookup.state === 'found' && !lookup.sure && stack.length > 0 && stack[0].id === lookup.artist.id && (
+        <p className="muted small artist-releases-unsure">
+          Not sure this is the right {artist.name}:{' '}
+          {lookup.libraryAlbums ? `none of your albums by ${artist.name} are in this discography.` : `Deezer has more than one artist by that name, and this is the one with the most fans.`}
+          {lookup.others.length > 0 && <>{' '}Others called {artist.name}:{' '}
+            {lookup.others.slice(0, 6).map((o, i) => (
+              <span key={o.id}>{i > 0 && ' · '}<button className="dz-link" onClick={() => openFromSearch({ type: 'artist', id: o.id, title: o.name })}>{o.name} ({fansLabel(o.fans)})</button></span>
+            ))}
+          </>}
+        </p>
+      )}
       {!canGet && <p className="muted small">To get music from here, set up deemix in Settings → Downloads, or ask your Hub admin to turn on Autodownload for you.</p>}
       <div className={canGet && !ask ? 'dl-layout' : undefined}>
         <div>
@@ -66,6 +77,8 @@ export function ArtistReleases({ artist, open: first }: { artist: Artist; open?:
     </div>
   );
 }
+
+const fansLabel = (n: number) => `${n.toLocaleString()} fan${n === 1 ? '' : 's'}`;
 
 /** No artist on Deezer with exactly this name: the closest ones, to pick the right one. */
 function NotOnDeezer({ artist, error, open, browse }: { artist: Artist; error?: string; open(b: Browse): void; browse: ReturnType<typeof useDeezerBrowse>['browse'] }) {

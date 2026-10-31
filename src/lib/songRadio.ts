@@ -1,3 +1,4 @@
+import { sameNameArtists } from './artistMatch';
 import { getJson, qs } from './http';
 import { findInLibrary, pool, primaryArtist } from './match';
 import { norm } from '../sources/registry';
@@ -17,9 +18,10 @@ const MAX = 40;
 interface Candidate { title: string; artist: string }
 
 async function deezerArtistId(name: string): Promise<number | undefined> {
-  const r = await getJson(`${DZ}/search/artist?${qs({ q: name, limit: 5 })}`).catch(() => null);
+  const r = await getJson(`${DZ}/search/artist?${qs({ q: name, limit: 25 })}`).catch(() => null);
   const list = (r?.data ?? []) as { id: number; name: string }[];
-  return (list.find((a) => norm(a.name) === norm(name)) ?? list[0])?.id;
+  // the same-name artist with the most fans (lib/artistMatch.ts), else Deezer's best guess
+  return (sameNameArtists(name, list)[0] ?? list[0])?.id;
 }
 
 async function topSongs(artistId: number, limit: number): Promise<Candidate[]> {

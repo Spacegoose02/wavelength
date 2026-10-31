@@ -129,7 +129,7 @@ All signed in; everything is the caller's own.
 | `GET /api/radar` | `{ follows: [{ id, name, picture, followedAt, autoGetAt }], releases: [{ id, artistId, artist, title, type, released, cover, link, explicit, foundAt }], upcoming: [same], windowDays, upcomingDays, checkedAt, pending, failed }` |
 | `PATCH /api/radar/follows/:id` | `{ autoGet: boolean }` → `{ follow }` |
 | `GET /api/radar/mix[?fresh=1]` | `{ week: "YYYY-MM-DD" (the Friday), tracks: [{ id, title, artist, album, cover, link, preview, explicit, duration, because }] }` |
-| `POST /api/radar/follows` | `{ id, name, picture? }` (Deezer artist id) or `{ name }` (the Hub finds an exact match on Deezer; 404 if none) → 201 `{ follow }`. Up to 1000 per person |
+| `POST /api/radar/follows` | `{ id, name, picture? }` (Deezer artist id) or `{ name }` (the Hub finds an exact name match on Deezer, the one with the most fans when several share the name; 404 if none) → 201 `{ follow }`. Up to 1000 per person |
 | `DELETE /api/radar/follows/:id` | stop following (404 if you weren't) |
 | `POST /api/radar/check` | look your artists up now (skips ones looked at in the last 10 minutes) → `{ releases, checkedAt, pending, failed }` |
 | `GET /api/radar/suggestions[?fresh=1]` | `{ suggestions: [{ id, name, picture, fans, because: [names], plays? }] }` |
