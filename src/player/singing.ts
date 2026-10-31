@@ -4,15 +4,17 @@ import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import type { AudioSample } from './analysis';
 import { engine } from './engine';
-import { dbToLinear, newVoiceState, voiceFrame } from './voice';
+import { dbToLinear, heardInMono, newVoiceState, voiceFrame } from './voice';
 
 /**
  * How open a singing mouth should be, 0..1, each frame (components/critters/rig.ts). Combines the vocal
  * detector (player/voice.ts) with the song's synced lyrics (lib/singAlong.ts):
  *
- * - readable audio + synced lyrics: the detector, but only inside sung lines (shut in intros, solos, gaps);
+ * - readable audio + synced lyrics: the detector, but only inside sung lines (shut in intros, solos, gaps), and
+ *   a little more willing to open inside one;
  * - readable audio, no synced lyrics: the detector alone;
- * - audio the app can't read (no CORS) + synced lyrics: mouthing in time with each line's syllables;
+ * - audio the app can't read (no CORS), or a mono song (the detector needs stereo to find the voice) +
+ *   synced lyrics: mouthing in time with each line's syllables;
  * - neither: a gentle made-up chatter while playing.
  */
 export function createSingingReader() {
@@ -38,8 +40,10 @@ export function createSingingReader() {
       }
       taps.mid.getFloatFrequencyData(mid);
       taps.side.getFloatFrequencyData(side);
-      const v = voiceFrame(state, dbToLinear(mid), dbToLinear(side), taps.sampleRate / taps.mid.fftSize, t);
-      return line === null ? 0 : v;
+      const v = voiceFrame(state, dbToLinear(mid), dbToLinear(side), taps.sampleRate / taps.mid.fftSize, t, !!line);
+      if (line === null) return 0;
+      // in mono the detector can't tell the voice from the band: follow the lyrics' syllables when we have them
+      if (!line || !heardInMono(state)) return v;
     }
     if (line) {
       const rate = line.syllables / Math.max(0.5, line.end - line.start);

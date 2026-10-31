@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Critters sing along better.** Checked against real songs with the vocals separated out: with synced
+  lyrics, mouths now catch most of the singing in a busy mix (72% and 62% of sung moments in two test songs,
+  up from 53% and 19%) without opening in the instrumental parts. Mono songs used to make the mouth open for
+  any instrument; with synced lyrics they now mouth along with each line's words instead.
 - **AI DJ.** A chat in the app that knows your library: ask for a playlist, a mood or "more like this" and it
   searches, plays, queues and saves playlists for you; ask which albums you're missing and it compares the
   artist's discography with your library and requests the ones you pick. It runs on the Hub with your AI
