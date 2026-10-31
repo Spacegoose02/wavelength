@@ -97,6 +97,12 @@ export class NavidromeSource implements MusicSource {
     return this.track({ id, coverArt: id, title: meta.title ?? 'Unknown', artist: meta.artist, album: meta.album, duration: meta.duration });
   }
 
+  /** The library's genres, most songs first (Subsonic getGenres). */
+  async getGenres(): Promise<{ name: string; songs: number }[]> {
+    const list = ((await this.call('getGenres')).genres?.genre ?? []) as { value: string; songCount?: number }[];
+    return list.map((g) => ({ name: g.value, songs: g.songCount ?? 0 })).filter((g) => g.name).sort((a, b) => b.songs - a.songs);
+  }
+
   async getFavorites() {
     const r = await this.call('getStarred2');
     const s = r.starred2 ?? {};

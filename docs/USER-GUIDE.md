@@ -522,6 +522,18 @@ what's playing, so the only way to name the song is to recognise the audio, like
 > checks they agree. HLS (`.m3u8`) streams carry no ICY titles and are skipped. A title equal to the
 > station's own name is ignored.
 
+### Get the song you hear
+
+When a station's title reads like "Artist - Song", **Now Playing** shows a button for it. If the song is in
+your library, it says **Queue from library** and plays it after the station. If not, it says **Get this song**,
+which sends it to deemix (or yt-dlp when Deezer doesn't have it) or, without Autodownload, requests it, like
+**Get** in Discover.
+
+### Stations for you
+
+Above the directory, **Radio → Stations for you** lists popular stations in the three genres you have the most
+music in (from your Navidrome library's genre counts, so tidy genres help). It shows when you're not searching.
+
 ## Profiles with a Wavelength Hub
 
 If your household runs a [Wavelength Hub](HUB.md), everyone gets their own profile. Without one, nothing

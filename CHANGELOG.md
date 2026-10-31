@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Get the song you hear on the radio:** Now Playing shows **Queue from library** when you have it, or **Get this
+  song** (Get or Request) when you don't, whenever the station's title names a song.
+- **Stations for you** (Radio): popular stations in the genres you have the most music in.
 - **Security:** the app now has a Content-Security-Policy (so does its browser version on the Hub): text from
   the internet can't run scripts inside Wavelength.
 - **Hub:** the Docker image checks yt-dlp against its published checksum, rebuilds every week for a fresh

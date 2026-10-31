@@ -8,6 +8,7 @@ import { AddToPlaylist } from './AddToPlaylist';
 import { EqButton } from './Equalizer';
 import { DevicesButton } from './Devices';
 import { TogetherButton } from './Together';
+import { RadioGetButton } from './RadioGetButton';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
 export function NowPlaying() {
@@ -35,6 +36,7 @@ export function NowPlaying() {
             <EqButton className="chip" />
             <DevicesButton className="chip" />
             <TogetherButton className="chip" />
+            {live && <RadioGetButton text={p.liveTitle} />}
           </div>
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && (
