@@ -9,6 +9,10 @@
 - The **Switch raccoon** button is now **Switch critter**, the visualizer is called **Critters**, and
   **Settings → Playback** lists all six under **Critters**. Your current pick carries over. See the
   [user guide](docs/USER-GUIDE.md#critters).
+- **Fixed: blank window after Back from a song's album (0.17.4).** Opening an album from Now Playing's song title,
+  or from a song list's album link, and then pressing Back left the Windows app blank until it was restarted. The
+  album page now leaves cleanly. (Newer WebView2 hands back a value from the scroll to the song that React took
+  for a cleanup function.)
 
 ## 0.17.6
 - **Appears On, like Spotify.** An artist's page now lists, under their albums, the albums by other artists in

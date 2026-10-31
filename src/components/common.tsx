@@ -136,7 +136,11 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
   const phone = useIsPhone();
   const focusIdx = focusIndex(tracks, focus);
   const focusRef = useRef<HTMLDivElement>(null);
-  useEffect(() => focusRef.current?.scrollIntoView({ block: 'center' }), [focusIdx]);
+  useEffect(() => {
+    // braces, not an expression body: newer Chromium (WebView2, so the Windows app) has scrollIntoView return a
+    // Promise, and React calls whatever an effect returns as its cleanup, which threw and blanked the app on Back
+    focusRef.current?.scrollIntoView({ block: 'center' });
+  }, [focusIdx]);
   const [openRow, setOpenRow] = useState<number | null>(null);
   const playTracks = usePlayer((s) => s.playTracks);
   const playNext = usePlayer((s) => s.playNext);
