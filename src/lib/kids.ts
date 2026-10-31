@@ -50,6 +50,8 @@ export function startFlagChecks() {
 
 const artistKey = (a = '') => norm(primaryArtist(a));
 const key = (kind: string, artist = '', title = '') => `${kind}|${artistKey(artist)}|${kind === 'artist' ? '' : cleanTitle(title)}`;
+/** Album flags: "Loud" and "Loud (Clean)" are different albums for kids, though the same for the library check. */
+const flagKey = (kind: string, artist = '', title = '') => key(kind, artist, title) + (kind === 'album' && CLEAN_MARK.test(title) ? '|clean' : '');
 
 let indexed: HubFlag[] | undefined;
 let index = new Map<string, HubFlag['verdict']>();
@@ -57,7 +59,7 @@ function verdicts() {
   const { flags } = useFlags.getState();
   if (flags !== indexed) {
     indexed = flags;
-    index = new Map(flags.map((f) => [key(f.kind, f.artist, f.title), f.verdict]));
+    index = new Map(flags.map((f) => [flagKey(f.kind, f.artist, f.title), f.verdict]));
   }
   return index;
 }
@@ -76,12 +78,17 @@ function ratingIndex() {
 /** The library check's rating for an album, if it was checked. */
 export const albumRating = (artist = '', album = '') => ratingIndex().get(key('album', artist, album));
 
+/** "(Clean)", "(Edited)" and the like in an album title: the clean version (Inbox → Clean versions saves them so). */
+export const CLEAN_MARK = /[([]\s*(clean|edited|censored)\b[^)\]]*[)\]]/i;
+
 /**
- * Explicit or clean: the file's own tag first, then the library check. A song on a checked explicit album
- * that isn't in its explicit list is clean.
+ * Explicit or clean: the file's own tag first, then the album's title, then the library check. A song on a
+ * checked explicit album that isn't in its explicit list is clean. The library check's rating is for the
+ * explicit album: "Loud (Clean)" shares its name once "(Clean)" is dropped, so the title is looked at first.
  */
 export function explicitOfTrack(t: Pick<Track, 'artist' | 'album' | 'title' | 'explicit'>): 'explicit' | 'clean' | undefined {
   if (t.explicit) return t.explicit;
+  if (CLEAN_MARK.test(t.album ?? '')) return 'clean';
   const idx = ratingIndex();
   if (idx.get(`${key('album', t.artist, t.album)}|${cleanTitle(t.title)}`)) return 'explicit';
   const a = idx.get(key('album', t.artist, t.album));
@@ -89,6 +96,7 @@ export function explicitOfTrack(t: Pick<Track, 'artist' | 'album' | 'title' | 'e
 }
 export function explicitOfAlbum(a: Pick<Album, 'artist' | 'title' | 'explicit'>): 'explicit' | 'clean' | undefined {
   if (a.explicit) return a.explicit;
+  if (CLEAN_MARK.test(a.title)) return 'clean';
   const r = albumRating(a.artist, a.title)?.rating;
   return r === 'explicit' || r === 'clean' ? r : undefined;
 }
@@ -97,7 +105,7 @@ export function explicitOfAlbum(a: Pick<Album, 'artist' | 'title' | 'explicit'>)
 function verdictFor(artist?: string, album?: string, title?: string): HubFlag['verdict'] | undefined {
   const v = verdicts();
   return (title ? v.get(key('track', artist, title)) : undefined)
-    ?? (album ? v.get(key('album', artist, album)) : undefined)
+    ?? (album ? v.get(flagKey('album', artist, album)) : undefined)
     ?? v.get(key('artist', artist));
 }
 
@@ -159,8 +167,8 @@ export const kidSafe = (tracks: Track[]) => (isKid() ? tracks.filter((t) => !tra
 
 /** Admin: the flag set on exactly this item, if any. */
 export function flagOn(kind: HubFlag['kind'], artist: string, title = ''): HubFlag | undefined {
-  const k = key(kind, artist, title);
-  return useFlags.getState().flags.find((f) => key(f.kind, f.artist, f.title) === k);
+  const k = flagKey(kind, artist, title);
+  return useFlags.getState().flags.find((f) => flagKey(f.kind, f.artist, f.title) === k);
 }
 
 /** Admin: mark something not for kids, fine for kids, or clear its flag (`null`). */
