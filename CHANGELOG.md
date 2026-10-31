@@ -4,6 +4,16 @@
 - **Get the song you hear on the radio:** Now Playing shows **Queue from library** when you have it, or **Get this
   song** (Get or Request) when you don't, whenever the station's title names a song.
 - **Stations for you** (Radio): popular stations in the genres you have the most music in.
+- **Synced lyrics** in Now Playing (**Lyrics** chip): the line being sung lights up, tap a line to jump there,
+  big text on TVs. From your Navidrome server's own lyrics when it has them, else LRCLIB. Kid profiles see
+  strong words hidden.
+- **Sleep timer** (**Now Playing → Sleep**): 15 minutes to 1½ hours with a gentle fade-out, or the end of this song.
+- **Gapless playback:** the next song is loaded ahead and starts the moment this one ends.
+- **Crossfade** (Settings → Playback, 1–12 s) and **ReplayGain** volume levelling (Track or Album, from your
+  files' loudness tags via Navidrome). Both sync between devices with a Hub.
+- **Faster start:** Settings, Discover, SUB/WAVE, Downloads, Inbox, Rewind, the tag editors and playlist import
+  now load the first time you open them, which halves the code parsed at startup (noticeable on TV boxes).
+- **Builds:** React 19 and zustand 5; the app has unit tests (`npm test`, Vitest).
 - **Security:** the app now has a Content-Security-Policy (so does its browser version on the Hub): text from
   the internet can't run scripts inside Wavelength.
 - **Hub:** the Docker image checks yt-dlp against its published checksum, rebuilds every week for a fresh

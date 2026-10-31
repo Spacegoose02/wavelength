@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -11,4 +12,6 @@ export default defineConfig({
     watch: { ignored: ['**/src-tauri/**'] },
   },
   envPrefix: ['VITE_', 'TAURI_'],
+  // Unit tests for the app's own logic (`npm test`); the Hub has its own (hub/test, node:test).
+  test: { include: ['src/**/*.test.ts'] },
 });

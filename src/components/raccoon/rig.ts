@@ -38,7 +38,7 @@ export interface RigOptions {
  *
  * Each raccoon passes `frame` for its own hands and instrument. Parts a raccoon doesn't have are skipped.
  */
-export function useRaccoonRig(root: RefObject<SVGSVGElement>, frame: (f: RigFrame) => void, opts: RigOptions = {}) {
+export function useRaccoonRig(root: RefObject<SVGSVGElement | null>, frame: (f: RigFrame) => void, opts: RigOptions = {}) {
   const { nod: nodScale = 10, talk = false, still = false } = opts;
   useEffect(() => {
     const svg = root.current!;
