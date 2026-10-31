@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.9
 - **Any critter, any act.** Pick who plays and what they play separately: the raccoon, shark, alien, grey
   alien and black or brown bear can each be a **DJ**, **Country** picker, **Rapper**, **Rocker**,
   **Drummer**, **Theremin** player, **Synth** player or **Accordion** player (48 combinations). Now Playing has
