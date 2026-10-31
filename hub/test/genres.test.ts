@@ -113,6 +113,16 @@ test('admins review the library’s genres, apply the tidy ones, undo, and map u
 
   // back to the defaults
   assert.equal((await json(app, 'PUT', '/api/admin/genres', { token: tokens.admin, body: { rules: null } })).body.defaults, true);
+
+  // the weekly look tells admins once about what needs tidying, not again for the same albums
+  assert.equal((await json(app, 'POST', '/api/admin/genres/check', { token: tokens.member })).status, 403);
+  const first = await json(app, 'POST', '/api/admin/genres/check', { token: tokens.admin });
+  assert.deepEqual(first.body, { albums: 1, unknown: 1, notified: true });
+  const notes = (await json(app, 'GET', '/api/notifications?after=0', { token: tokens.admin })).body.notifications;
+  assert.equal(notes[0].kind, 'library');
+  assert.match(notes[0].body, /1 album with an untidy genre and 1 genre without a rule/);
+  assert.equal((await json(app, 'GET', '/api/notifications?after=0', { token: tokens.member })).body.notifications.length, 0, 'members can’t fix genres');
+  assert.equal((await json(app, 'POST', '/api/admin/genres/check', { token: tokens.admin })).body.notified, false);
 });
 
 test('new downloads get the tidy genre before the library scan; older music and hand edits are left alone', async () => {

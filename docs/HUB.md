@@ -547,6 +547,7 @@ with a 4xx status.
 | `GET /api/admin/genres/review` | `library.edit` | `{ albums: [{ id, name, artist, songs, current, proposed }], unknown: [{ genre, albums, examples }], total, kept, genres }` |
 | `POST /api/admin/genres/apply` | `library.edit` | `{ albums: [{ id, genre }] }` (up to 500) sets the genre in every song, as one undoable save → `{ batch, label, changed, failed, missing }` |
 | `POST /api/admin/genres/keep` | `library.edit` | `{ ids, keep? }`: leave albums out of the review (`keep: false` puts them back) |
+| `POST /api/admin/genres/check` | `library.edit` | run the weekly look now → `{ albums, unknown, notified }`; notifies `library.edit` people (kind `library`) only about albums and genres not told about before |
 | `DELETE /api/admin/library/album/:id` | `library.edit` | move a Navidrome album's files to the trash → `{ batch, label, files, failed }` |
 | `GET /api/admin/trash` | `library.edit` | deleted albums of the last 60 days: `{ albums: [{ batch, label, at, files, by, restoredAt, purgedAt, purgeAt }] }` |
 | `POST /api/admin/trash/:batch/restore`, `DELETE /api/admin/trash/:batch` | `library.edit` | put a deleted album back / remove it for good now |

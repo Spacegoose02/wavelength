@@ -4,6 +4,14 @@
 - **Get the song you hear on the radio:** Now Playing shows **Queue from library** when you have it, or **Get this
   song** (Get or Request) when you don't, whenever the station's title names a song.
 - **Stations for you** (Radio): popular stations in the genres you have the most music in.
+- **Smart playlists** (Playlists): rules like "Rap; Hip-Hop, rated 4+, not played in 90 days" that pick songs from
+  your Navidrome library each time you play them. **Save copy** puts today's songs on your server. Synced with a Hub.
+- **Library care** (Albums → Library care): **Duplicates** lists albums your server has more than once (editions
+  folded in), and admins can send the extra copies to the trash; **Missing albums** lists studio albums by your
+  top artists that you don't have, with Get / Request.
+- **Weekly genre check:** the Hub reviews the library's genres once a week and notifies admins when there's
+  something new to tidy.
+- **Hub:** `POST /api/admin/genres/check`; notification kind `library`.
 - **Release Radar: Coming soon.** Releases the artists you follow have announced but not put out yet show under
   **Coming soon**, and you get a notification when one is announced.
 - **Get new releases automatically.** Turn on **Auto** for an artist in **Manage** and the Hub fetches each new

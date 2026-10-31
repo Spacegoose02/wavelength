@@ -44,6 +44,7 @@ function page<M extends Record<K, ComponentType<any>>, K extends keyof M & strin
 }
 const Rewind = page(() => import('./views/Rewind'), 'Rewind');
 const SubWave = page(() => import('./views/SubWave'), 'SubWave');
+const LibraryCare = page(() => import('./views/LibraryCare'), 'LibraryCare');
 const Discover = page(() => import('./views/Discover'), 'Discover');
 const ImportPlaylist = page(() => import('./views/ImportPlaylist'), 'ImportPlaylist');
 const TagEditor = page(() => import('./views/TagEditor'), 'TagEditor');
@@ -96,6 +97,7 @@ function View({ route }: { route: Route }) {
     case 'favorites': return <Favorites />;
     case 'recent': return <RecentlyAdded />;
     case 'library': return <LibraryHub />;
+    case 'libraryCare': return <LibraryCare />;
     case 'offline': return <Offline />;
     case 'offlineCollection': return <OfflineCollectionView key={route.id} id={route.id} />;
     case 'downloads': return <Downloads key={route.soulseek ? `sl:${route.soulseek.requestId}:${route.soulseek.q}` : ''} soulseek={route.soulseek} />;
