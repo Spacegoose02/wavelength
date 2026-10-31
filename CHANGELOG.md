@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.6
 - **Appears On, like Spotify.** An artist's page now lists, under their albums, the albums by other artists in
   your Navidrome library that they're featured on: songs crediting them as a track artist ("Drake feat. Future")
   or in the title ("Life Is Good (feat. Future)"). Click one to open the album. Kid profiles and the Explicit /
