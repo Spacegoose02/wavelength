@@ -17,7 +17,9 @@ import { refreshDeemix } from '../lib/deemixQueue';
 import { IconDownload, IconRefresh } from '../components/Icons';
 import { isAndroid } from '../lib/platform';
 import { SoulseekTab } from './SoulseekTab';
-import { BrowseBar, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, type Browse, type SendStatus } from './DeezerBrowse';
+import { BrowseBar, CleanChips, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, type Browse, type SendStatus } from './DeezerBrowse';
+import { cleanOnly, withVersions } from '../lib/deezerVersions';
+import { useVersionPref } from '../lib/versions';
 
 type Tab = 'deezer' | 'ytdlp' | 'slskd';
 
@@ -72,6 +74,9 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
   const [status, setStatus] = useState<Record<string, SendStatus>>({});
+  // Clean only starts on for people who prefer clean versions (Settings → Playback; kid profiles always do)
+  const pref = useVersionPref();
+  const [clean, setClean] = useState(pref === 'clean');
   // artist/album pages opened from the results; a new search starts back at the results
   const [stack, setStack] = useState<Browse[]>([]);
   const open = (b: Browse) => setStack((st) => [...st, b]);
@@ -88,7 +93,7 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
       setBusy(true);
       try {
         const r = await searchDeezer(q.trim());
-        if (alive) setResults(r);
+        if (alive) setResults(withVersions(r));
       } catch {
         if (alive) setResults([]);
       } finally {
@@ -123,7 +128,8 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
   };
 
   const current = stack[stack.length - 1];
-  const browse = { open, send, status };
+  const browse = { open, send, status, clean, setClean };
+  const shown = clean ? cleanOnly(results) : results;
 
   if (!deemix.url && !request) return <p className="muted">Set your deemix server URL in Settings — or use the yt-dlp tab.</p>;
 
@@ -148,7 +154,8 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
             <button className="link" onClick={onFallback}>Search with yt-dlp instead →</button>
           </div>
         )}
-        {results.map((r) => <DzRow key={statusKey(r)} r={r} open={open} send={send} status={status} />)}
+        {results.length > 0 && <CleanChips clean={clean} setClean={setClean} hidden={results.length - shown.length} />}
+        {shown.map((r) => <DzRow key={statusKey(r)} r={r} {...browse} />)}
       </div>}
       {request ? <MyRequestsAside /> : <DeemixQueuePanel />}
     </div>

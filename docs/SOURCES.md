@@ -57,6 +57,7 @@ Project: <https://github.com/perminder-klair/subwave>. Ports: web `:7700` (API m
   playlists, so the rest is paged from `/playlist/<id>/tracks?index=&limit=` (capped at 2,000). Private playlists return `{ error }`. Unknown ids come back as HTTP 200 with `{ error }` — check it. The album endpoint's embedded
   tracklist has no `album` object or `track_position`, so both are filled in from the album.
 - Any deezer.com link works in `addToQueue`: song, album, playlist, or **artist** (deemix queues the whole discography).
+- Explicit / clean: `lib/deezerVersions.ts` sets `version` on results from `explicit_lyrics`, `explicit_content_lyrics` (3 = edited) and the name, and pairs same-name releases in one list; **Clean only** filters on it.
 - UI: `views/DeezerBrowse.tsx` (pages) inside the Deezer tab of `views/Downloads.tsx`. User-facing walkthrough: [USER-GUIDE.md](USER-GUIDE.md).
 
 ### yt-dlp (desktop only) — `src-tauri/src/ytdlp.rs`, `src/sources/ytdlp.ts`

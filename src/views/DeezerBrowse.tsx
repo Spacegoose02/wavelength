@@ -3,6 +3,8 @@
  * related artists, playlists), album pages and playlist pages (full tracklists), each with Get
  * buttons that go to deemix.
  * Navigation is a small stack owned by the Deezer tab, so Back walks back through what you opened.
+ * Songs and albums carry an E (explicit) or C (clean) badge, and Clean only hides explicit ones
+ * (lib/deezerVersions.ts says which is which).
  */
 import { useEffect, useState } from 'react';
 import { mustRequest, useMustRequest } from '../lib/inbox';
@@ -13,6 +15,7 @@ import { Cover, Rating, Spinner, fmtTime } from '../components/common';
 import { useHidden } from '../lib/kids';
 import { IconBack, IconDownload, IconPause, IconPlay } from '../components/Icons';
 import { FollowButton } from '../components/FollowButton';
+import { cleanOnly, ownVersion, withVersions } from '../lib/deezerVersions';
 
 export type Browse = { type: 'artist' | 'album' | 'playlist'; id: number; title: string };
 export type SendStatus = { s: 'queued' | 'error' | 'sending'; msg?: string };
@@ -23,7 +26,27 @@ export interface BrowseProps {
   /** Send a Deezer link (song, album, playlist or artist) to deemix. */
   send(r: DeezerResult): void;
   status: Record<string, SendStatus>;
+  /** Clean only: leave explicit songs and albums out of results and pages. */
+  clean?: boolean;
+  setClean?(on: boolean): void;
 }
+
+/** All / Clean only switch, with how many explicit results it's hiding. */
+export function CleanChips({ clean, setClean, hidden }: Pick<BrowseProps, 'clean' | 'setClean'> & { hidden?: number }) {
+  if (!setClean) return null;
+  return (
+    <div className="chips dz-clean" role="group" aria-label="Explicit or clean">
+      <button className={`chip ${!clean ? 'on' : ''}`} onClick={() => setClean(false)}>All</button>
+      <button className={`chip ${clean ? 'on' : ''}`} title="Hide explicit songs and albums, so the clean versions are easy to find" onClick={() => setClean(true)}>
+        Clean only
+      </button>
+      {clean && hidden ? <span className="muted small">{hidden} explicit hidden</span> : null}
+    </div>
+  );
+}
+
+/** "Explicit" / "Clean" under an album card, so two releases with the same name and cover can be told apart. */
+const versionLabel = (r: DeezerResult) => (r.version === 'explicit' ? 'Explicit' : r.version === 'clean' ? 'Clean' : undefined);
 
 export const statusKey = (r: DeezerResult) => `${r.type}:${r.id}`;
 
@@ -76,7 +99,7 @@ export function DzRow({ r, open, send, status, numbered }: BrowseProps & { r: De
       <div className="track-main">
         <div className="track-title">
           {target ? <button className="dz-open" onClick={(e) => { e.stopPropagation(); open(target); }}>{r.title}</button> : r.title}
-          <Rating explicit={r.explicit} />
+          <Rating explicit={r.version ?? r.explicit} />
           {!numbered && <span className="tag">{r.type === 'album' && r.recordType && r.recordType !== 'album' ? r.recordType : r.type === 'track' ? 'song' : r.type}</span>}
         </div>
         <div className="track-sub">
@@ -133,7 +156,12 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
   const { data, error } = useLoad<DeezerArtistPage>(() => getDeezerArtist(id), [id]);
   if (error) return <div className="errors">{error}</div>;
   if (!data) return <Spinner />;
-  const { artist, top, albums, related, playlists } = data;
+  const { artist, related, playlists } = data;
+  const allTop = withVersions(data.top);
+  const allAlbums = withVersions(data.albums);
+  const top = p.clean ? cleanOnly(allTop) : allTop;
+  const albums = p.clean ? cleanOnly(allAlbums) : allAlbums;
+  const hidden = allTop.length - top.length + allAlbums.length - albums.length;
   return (
     <div className="dz-page">
       <div className="dz-head">
@@ -141,14 +169,15 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
         <div>
           <div className="kicker">Artist on Deezer</div>
           <h2>{artist.title}</h2>
-          <div className="muted small">{artist.fans ? `${artist.fans.toLocaleString()} fans · ` : ''}{albums.length} releases</div>
+          <div className="muted small">{artist.fans ? `${artist.fans.toLocaleString()} fans · ` : ''}{allAlbums.length} releases</div>
           <div className="hero-actions">
             <FollowButton id={artist.id} name={artist.title} picture={artist.cover} className="btn small" />
-            <GetButton r={artist} send={(r) => confirm(`Send ${artist.title}'s whole discography (${albums.length} releases) to ${mustRequest() ? 'your Hub admin' : 'deemix'}?`) && p.send(r)} status={p.status} label="Get discography" />
+            <GetButton r={artist} send={(r) => confirm(`Send ${artist.title}'s whole discography (${allAlbums.length} releases) to ${mustRequest() ? 'your Hub admin' : 'deemix'}?`) && p.send(r)} status={p.status} label="Get discography" />
           </div>
           {p.status[statusKey(artist)]?.s === 'error' && <div className="card-err">{p.status[statusKey(artist)].msg}</div>}
         </div>
       </div>
+      <CleanChips clean={p.clean} setClean={p.setClean} hidden={hidden} />
 
       {top.length > 0 && <>
         <h3 className="dz-section">Top songs</h3>
@@ -166,8 +195,8 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
                 <div key={a.id} className="dz-card">
                   <button className="card" onClick={() => p.open({ type: 'album', id: a.id, title: a.title })}>
                     <Cover src={a.cover} alt={a.title} />
-                    <div className="card-title" title={a.title}>{a.title}</div>
-                    <div className="card-sub"><span>{a.releaseDate?.slice(0, 4)}</span></div>
+                    <div className="card-title dz-title" title={a.title}><Rating explicit={a.version ?? a.explicit} />{a.title}</div>
+                    <div className="card-sub"><span>{[a.releaseDate?.slice(0, 4), versionLabel(a)].filter(Boolean).join(' · ')}</span></div>
                   </button>
                   <GetButton r={a} send={p.send} status={p.status} />
                 </div>
@@ -211,7 +240,10 @@ export function DeezerAlbum({ id, ...p }: BrowseProps & { id: number }) {
   const { data, error } = useLoad<DeezerAlbumPage>(() => getDeezerAlbum(id), [id]);
   if (error) return <div className="errors">{error}</div>;
   if (!data) return <Spinner />;
-  const { album, tracks, label } = data;
+  const { label } = data;
+  const album = { ...data.album, version: ownVersion(data.album) };
+  // on a clean album, songs Deezer marks not explicit are the clean versions of their songs
+  const tracks = withVersions(data.tracks).map((t) => (album.version === 'clean' && !t.version && t.explicit === false ? { ...t, version: 'clean' as const } : t));
   const length = tracks.reduce((n, t) => n + (t.duration ?? 0), 0);
   return (
     <div className="dz-page">
@@ -219,7 +251,7 @@ export function DeezerAlbum({ id, ...p }: BrowseProps & { id: number }) {
         <Cover src={album.cover} alt={album.title} className="dz-art" />
         <div>
           <div className="kicker">{album.recordType && album.recordType !== 'album' ? album.recordType : 'Album'} on Deezer</div>
-          <h2>{album.title}</h2>
+          <h2><Rating explicit={album.version ?? album.explicit} />{album.title}</h2>
           <div className="muted small">
             {album.artistId
               ? <button className="dz-link" onClick={() => p.open({ type: 'artist', id: album.artistId!, title: album.artist })}>{album.artist}</button>

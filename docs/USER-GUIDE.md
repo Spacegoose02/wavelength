@@ -80,6 +80,23 @@ playlists show up, tagged **playlist**, with who made them and how many songs th
 - Only public playlists can be found; private ones (including your own private Deezer playlists)
   aren't visible to the public API.
 
+### Explicit or clean
+
+Deezer often has an explicit and a clean release with the same name and cover (*I Am Not A Human Being*
+twice, say). To tell them apart:
+
+- Songs and albums show **E** (explicit) or **C** (clean) before the name, in search results, on artist
+  pages, in the discography grid and on album pages. Grid cards also say **Explicit** or **Clean** next to
+  the year, and long names show on two lines, so "Tha Carter IV (Edited Version)" isn't cut off.
+- **Clean only**, above search results and on artist pages, hides explicit songs and albums, so what's left
+  under a name is the clean version; it says how many it hid. **All** shows everything again. It starts on
+  for people who prefer clean versions (Settings → Playback) and on kid profiles.
+- A release is clean when its name says "(Clean)", "(Edited)" or "(Censored)", when Deezer marks its lyrics
+  as edited, or when Deezer marks it not explicit and the same list has an explicit release with the same
+  name by the same artist. A release that was never explicit gets no badge, and Clean only keeps it.
+- Nothing clean left under a name? Deezer may not have a clean version of it. The library check (Inbox →
+  Clean versions) looks for one too.
+
 ### Getting around
 
 - The bar above every page shows where you are, e.g. **Results / Tame Impala / Currents**.
@@ -95,6 +112,10 @@ playlists show up, tagged **playlist**, with who made them and how many songs th
 > Deezer tab in `src/views/Downloads.tsx` keeps a small stack of opened pages. **Get** on any row
 > sends that item's deezer.com link to deemix's `addToQueue`. deemix accepts playlist and artist links
 > too (an artist link queues the whole discography).
+>
+> The E / C badges and **Clean only** come from `src/lib/deezerVersions.ts`: Deezer's `explicit_lyrics`,
+> `explicit_content_lyrics` (3 = edited, on search results and album pages; artist discographies leave it out),
+> the name ("(Clean)" via `CLEAN_MARK`), and pairing releases by artist + `cleanTitle()` within one list.
 
 ---
 
