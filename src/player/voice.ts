@@ -17,11 +17,17 @@
  *   open the mouth fully on a sung syllable and close it between them.
  *
  * Centred, tonal instruments (a synth lead, a centred keyboard) can still open it; that's what the lyrics
- * gate below is for. On a test mix (drums, bass, double-tracked guitars, centred synth stabs and a centred
- * singer) this opened the mouth on 76% of sung frames and 9% of unsung ones, against 65% and 28% for the
- * plain vocal-band level it replaced. The lyrics gate roughly halves the unsung openings again.
+ * gate is for. Synced lyrics (lib/singAlong.ts) gate it in `singing.ts`: mouths stay shut outside sung lines,
+ * and inside one (`inLine`) the centre test is looser, since the line already says someone is singing.
  *
- * Synced lyrics (lib/singAlong.ts) then gate it: mouths stay shut outside sung lines.
+ * **Mono songs** (old recordings, mono streams, or a mono file the browser upmixes to L = R) have no side
+ * channel, so everything looks centred and the mouth would open for any instrument. `heardInMono` notices
+ * and `singing.ts` falls back to mouthing the lyrics' syllables instead.
+ *
+ * Measured on real songs (Oct 2026; vocals separated with Spleeter for the answer key, the analysers
+ * simulated frame by frame): the mouth opens about 33 ms after the voice. With synced lyrics it opens on 72%
+ * and 62% of the sung moments in two stereo pop songs (53% and 19% before the looser in-line test) and on 2%
+ * or less of the rest. Without lyrics, the strict test opens on 1–3% of three stereo instrumentals.
  */
 
 export interface VoiceState {
@@ -34,17 +40,26 @@ export interface VoiceState {
   holdUntil: number;
   /** last output */
   out: number;
+  /** side against mid power in the voice range, averaged over a few seconds: near 0 for a mono song */
+  width: number;
 }
 
-export const newVoiceState = (): VoiceState => ({ loud: -60, low: 0, high: 0, holdUntil: -1, out: 0 });
+export const newVoiceState = (): VoiceState => ({ loud: -60, low: 0, high: 0, holdUntil: -1, out: 0, width: 0.2 });
+
+/**
+ * True once the song has had (almost) no side channel for a few seconds: stereo songs measured 0.17 to 0.5,
+ * a mono one 0.003. The centre test can't find a voice in mono.
+ */
+export const heardInMono = (s: VoiceState) => s.width < 0.02;
 
 const db = (p: number) => 10 * Math.log10(p + 1e-12);
 
 /**
  * One frame. `mid` and `side` are linear magnitude spectra of the same size; `binHz` is the width of a bin;
- * `t` is seconds. Returns 0..1, how strongly a centred, tonal voice is sounding.
+ * `t` is seconds; `inLine` when synced lyrics say a line is being sung now. Returns 0..1, how strongly a
+ * centred, tonal voice is sounding.
  */
-export function voiceFrame(s: VoiceState, mid: ArrayLike<number>, side: ArrayLike<number>, binHz: number, t: number): number {
+export function voiceFrame(s: VoiceState, mid: ArrayLike<number>, side: ArrayLike<number>, binHz: number, t: number, inLine = false): number {
   const bin = (hz: number) => Math.min(mid.length - 1, Math.max(0, Math.round(hz / binHz)));
   const lo = bin(150);
   const hi = bin(4000);
@@ -53,6 +68,7 @@ export function voiceFrame(s: VoiceState, mid: ArrayLike<number>, side: ArrayLik
   // voice has almost no side, a part panned even halfway has side about half of mid and drops out.
   let power = 0;
   let midPower = 0;
+  let sidePower = 0;
   let sum = 0;
   let logSum = 0;
   for (let i = lo; i <= hi; i++) {
@@ -60,6 +76,7 @@ export function voiceFrame(s: VoiceState, mid: ArrayLike<number>, side: ArrayLik
     const c = m * Math.min(1, Math.max(0, 1 - (2 * side[i]) / (m + 1e-9)));
     power += c * c;
     midPower += m * m;
+    sidePower += side[i] * side[i];
     sum += c;
     logSum += Math.log(c + 1e-9);
   }
@@ -68,8 +85,13 @@ export function voiceFrame(s: VoiceState, mid: ArrayLike<number>, side: ArrayLik
   const flatness = mean > 1e-9 ? Math.exp(logSum / n) / mean : 1;
   // voice ≈ 0.05–0.3, noise ≈ 0.5+
   const tonal = Math.min(1, Math.max(0, (0.5 - flatness) / 0.3));
-  // how much of the voice range sits in the centre: high while a lead vocal sings over the band
-  const centred = Math.min(1, Math.max(0, (power / (midPower + 1e-12) - 0.4) / 0.4));
+  // how much of the voice range sits in the centre: high while a lead vocal sings over the band. A busy stereo
+  // mix keeps it low even under a clear voice (one test song sang at a median of 0.3), so inside a sung line
+  // it counts from 0.2 instead of 0.4.
+  const share = power / (midPower + 1e-12);
+  const from = inLine ? 0.2 : 0.4;
+  const centred = Math.min(1, Math.max(0, (share - from) / 0.4));
+  if (midPower > 1e-10) s.width += (sidePower / midPower - s.width) * 0.02;
 
   // drum hits: a jump in the kick band (40–120 Hz) or the cymbal/snare band (6–12 kHz) on the mid channel
   const band = (a: number, b: number) => {

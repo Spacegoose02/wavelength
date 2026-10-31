@@ -352,11 +352,13 @@ alien are all possible.
 It listens for the lead voice the way you would: sound in the voice range that sits in the centre of the
 stereo mix and is tonal rather than noisy, so drum hits and guitars panned to the sides don't move it.
 When the song has **synced lyrics** (the same ones the [Lyrics](#lyrics) chip shows, from your Navidrome
-server or LRCLIB), the mouth also stays shut through intros, solos and gaps between lines. On radio
-stations and servers the app can't read (no CORS, see above), it mouths along in time with the words of
-each line, or chatters gently if there are no synced lyrics. It can't shape individual words, and a
-centred instrument with the same range as a voice (a synth lead, say) can still open it in songs without
-synced lyrics.
+server or LRCLIB), the mouth also stays shut through intros, solos and gaps between lines, and opens more
+readily during a line, so it keeps up with a singer in a busy mix. On radio stations and servers the app
+can't read (no CORS, see above), and on **mono** songs (old recordings, mono streams), where there's no
+"centre" to listen to, it mouths along in time with the words of each line, or chatters gently if there
+are no synced lyrics. It can't shape individual words, and a centred instrument with the same range as a
+voice (a synth lead, say) can still open it in songs without synced lyrics. Mono songs without synced
+lyrics move the mouth with the music rather than the voice.
 
 **Switching.** On the critter visualizer, tap **Switch critter** in its top-right corner for the next critter
 (keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
