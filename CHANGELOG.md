@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Android Auto:** browse your playlists, recently added albums, favorites and radio stations in the car, search,
+  and ask the Assistant to play something on Wavelength.
+- **Home-screen widget (Android):** what's playing, with previous, play/pause and next.
+- **Push notifications while the app is closed,** through the free ntfy app: an admin picks the ntfy server
+  (Settings → Server), then each person turns it on under Settings → Account → Notifications.
+- **Hub:** `/api/me/push…` and `/api/admin/push`.
+- **CI:** an Android build with the Kotlin unit tests on pull requests that touch `src-tauri`.
 - **Two-step sign-in:** turn on an authenticator app code for your Hub password (Settings → Account), with 10
   recovery codes. Admins can reset it, and the Users tab shows which admins don't have it.
 - **Parents for kid profiles:** give a kid parents (Settings → Users) and their requests go to them too, to

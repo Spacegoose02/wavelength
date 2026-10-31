@@ -36,14 +36,35 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- exported so Android Auto can browse it; who may see the library is checked in onGetRoot (CarAccess.kt) -->
         <service
             android:name=".MediaPlaybackService"
-            android:exported="false"
+            android:exported="true"
             android:foregroundServiceType="mediaPlayback">
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
+                <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+        <!-- cover art for Android Auto's lists (ArtProvider.kt) -->
+        <provider
+            android:name=".ArtProvider"
+            android:authorities="com.tonearm.app.art"
+            android:exported="true" />
+        <receiver
+            android:name=".NowPlayingWidget"
+            android:exported="false"
+            android:label="Now playing">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/now_playing_widget" />
+        </receiver>
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"
             android:exported="true">

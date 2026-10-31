@@ -1,0 +1,59 @@
+# Builds the Android app (one ABI, debug, unsigned) and runs its Kotlin unit tests on pull requests that touch
+# the Android or Rust code, so a Kotlin mistake shows up before a release. Releases are built by release.yml.
+name: Android
+
+on:
+  pull_request:
+    paths: ['src-tauri/**', '.github/workflows/android.yml']
+  push:
+    branches: [main]
+    paths: ['src-tauri/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NDK_VERSION: 28.2.13676358
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Install NDK
+        run: |
+          sdkmanager --install "ndk;${NDK_VERSION}"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Build (x86_64, debug)
+        run: npx tauri android build --debug --apk --target x86_64
+
+      - name: Kotlin unit tests
+        working-directory: src-tauri/gen/android
+        run: ./gradlew :app:testUniversalDebugUnitTest -PabiList=x86_64 -ParchList=x86_64 -PtargetList=x86_64
