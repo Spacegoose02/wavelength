@@ -1,11 +1,14 @@
 package com.tonearm.app
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -34,11 +37,20 @@ object MediaBridge {
   private var artUrl: String? = null
   private var art: Bitmap? = null
   private var last = JSONObject()
+  private val policy = PlaybackPolicy()
+  private var appCtx: Context? = null
+  private var noisyRegistered = false
+
+  /** MainActivity listens to keep the WebView awake while a track is loaded (see PlaybackPolicy). */
+  var onKeepAwakeChanged: ((Boolean) -> Unit)? = null
 
   fun session(): MediaSessionCompat? = session
 
+  fun keepWebViewAwake() = policy.keepWebViewAwake
+
   fun attach(context: Context, view: WebView) {
     webView = view
+    appCtx = context.applicationContext
     if (session == null) {
       session = MediaSessionCompat(context.applicationContext, "Wavelength").apply {
         setCallback(object : MediaSessionCompat.Callback() {
@@ -75,9 +87,15 @@ object MediaBridge {
     val playing = s.optBoolean("playing", false)
     val live = s.optBoolean("live", false)
 
+    val wasAwake = policy.keepWebViewAwake
+    policy.onPlayerState(hasTrack, playing, SystemClock.elapsedRealtime())
+    if (wasAwake != policy.keepWebViewAwake) onKeepAwakeChanged?.invoke(policy.keepWebViewAwake)
+    setNoisyReceiver(ctx, playing)
+
     if (!hasTrack) {
       sess.setPlaybackState(PlaybackStateCompat.Builder().setState(PlaybackStateCompat.STATE_NONE, 0, 0f).build())
       sess.isActive = false
+      main.removeCallbacks(graceOver)
       MediaPlaybackService.stop(ctx)
       return
     }
@@ -101,7 +119,34 @@ object MediaBridge {
     )
     sess.isActive = true
     last = s
-    MediaPlaybackService.update(ctx, playing)
+    MediaPlaybackService.update(ctx, playing, policy.active(SystemClock.elapsedRealtime()))
+    // paused: let the service leave the foreground once the grace period is over
+    main.removeCallbacks(graceOver)
+    if (!playing) main.postDelayed(graceOver, PlaybackPolicy.GRACE_MS + 500)
+  }
+
+  private val graceOver = Runnable {
+    val ctx = appCtx ?: return@Runnable
+    if (policy.hasTrack) MediaPlaybackService.update(ctx, policy.playing, policy.active(SystemClock.elapsedRealtime()))
+  }
+
+  /** Headphones unplugged / Bluetooth dropped while playing → pause (Android sends AUDIO_BECOMING_NOISY). */
+  private val noisy = object : BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+      if (i.action == android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY && policy.shouldPauseOnNoisy()) send("pause")
+    }
+  }
+
+  private fun setNoisyReceiver(ctx: Context, on: Boolean) {
+    if (on == noisyRegistered) return
+    noisyRegistered = on
+    if (on) {
+      ContextCompat.registerReceiver(
+        ctx, noisy, IntentFilter(android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED
+      )
+    } else {
+      try { ctx.unregisterReceiver(noisy) } catch (e: IllegalArgumentException) { }
+    }
   }
 
   private fun setMetadata(sess: MediaSessionCompat, s: JSONObject) {
