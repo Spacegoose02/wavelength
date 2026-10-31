@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ReplayGainMode } from '../player/replayGain';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secretStorage } from '../lib/secrets';
 import type { SourceConfig, Station } from '../sources/types';
@@ -116,6 +117,9 @@ interface SettingsState {
   setRaccoon(r: RaccoonKind): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
+  /** Settings → Playback: ReplayGain (player/replayGain.ts) and crossfade between songs (seconds, 0 = off). */
+  playback: { replayGain: ReplayGainMode; replayGainPreamp: number; crossfade: number };
+  setPlayback(p: Partial<SettingsState['playback']>): void;
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';
   setVersions(v: SettingsState['versions']): void;
@@ -167,6 +171,8 @@ export const useSettings = create<SettingsState>()(
       setRaccoon: (raccoon) => set({ raccoon }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
+      playback: { replayGain: 'off', replayGainPreamp: 0, crossfade: 0 },
+      setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',
       setVersions: (versions) => set({ versions }),
       smartPlaylists: [],

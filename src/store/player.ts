@@ -8,7 +8,9 @@ import { sourceFor } from '../sources/registry';
 import type { Track } from '../sources/types';
 import { useSettings } from './settings';
 import { useLibrary } from './library';
-import { offlinePlaybackUrl } from './offline';
+import { offlinePlaybackUrl, trackKey, useOffline } from './offline';
+import { isAndroid } from '../lib/platform';
+import { replayGainFactor } from '../player/replayGain';
 
 export type Repeat = 'off' | 'all' | 'one';
 
@@ -53,7 +55,20 @@ engine.setVolume(savedVolume);
 engine.setEq(useSettings.getState().eq);
 useSettings.subscribe((s, prev) => {
   if (s.eq !== prev.eq) engine.setEq(s.eq);
+  if (s.playback !== prev.playback) applyLevel(usePlayer.getState().current());
 });
+
+/** ReplayGain for a song (music only: radio, books and podcasts play as they are). */
+function applyLevel(t: Track | undefined) {
+  const { replayGain, replayGainPreamp } = useSettings.getState().playback;
+  engine.setLevel(t?.kind === 'track' ? replayGainFactor(t.replayGain, replayGain, replayGainPreamp) : 1);
+}
+
+/** Sleep timer "end of this song" (lib/sleep.ts): stop when the current song ends instead of going on. */
+let stopAfterTrack: (() => void) | undefined;
+export const setStopAfterTrack = (fn?: () => void) => {
+  stopAfterTrack = fn;
+};
 
 const sourceOf = (t: Track) => {
   const cfg = useSettings.getState().sources.find((s) => s.id === t.sourceId);
@@ -197,16 +212,33 @@ function releaseLocalBlob() {
   localBlob = undefined;
 }
 
-async function loadCurrent(startAt = 0) {
-  const t = usePlayer.getState().current();
-  if (!t) return;
+/** Fresh state for a song that's starting: position, now-playing info, ReplayGain. Returns its load token. */
+function begin(t: Track, startAt: number) {
   scrobbled = false;
   listened = 0;
-  const token = ++loadSeq;
   usePlayer.setState({ position: startAt, duration: t.duration ?? 0, error: undefined, liveTitle: undefined, liveCover: undefined, buffering: true });
   updateMediaSession(t);
   watchNowPlaying(t);
+  applyLevel(t);
+  aheadFor = undefined;
+  return ++loadSeq;
+}
+
+async function loadCurrent(startAt = 0) {
+  const t = usePlayer.getState().current();
+  if (!t) return;
+  const token = begin(t, startAt);
   try {
+    // Loaded ahead on the idle deck while the last song played: starts with no gap
+    if (ahead?.key === trackKey(t)) {
+      const { url } = ahead;
+      ahead = undefined;
+      releaseLocalBlob();
+      await engine.load(url, startAt);
+      if (t.kind === 'track') sourceOf(t)?.scrobble?.(t, false).catch(() => {});
+      return;
+    }
+    ahead = undefined;
     // Downloaded on this device? Play the local file — no server, works offline.
     const local = await offlinePlaybackUrl(t);
     if (token !== loadSeq) {
@@ -236,6 +268,70 @@ async function loadCurrent(startAt = 0) {
   }
 }
 
+// ---- gapless and crossfade ------------------------------------------------
+
+/** The next song, loaded ahead on the idle deck (engine.preload): which song and its stream URL. */
+let ahead: { key: string; url: string } | undefined;
+/** the song we last started preparing ahead, so it's only done once */
+let aheadFor: string | undefined;
+const AHEAD_SECONDS = 20;
+
+/** Index of the song after the current one, as next() would pick it. */
+function nextIndex(): number | undefined {
+  const { queue, index, repeat } = usePlayer.getState();
+  if (repeat === 'one') return undefined;
+  if (index + 1 < queue.length) return index + 1;
+  return repeat === 'all' && queue.length > 1 ? 0 : undefined;
+}
+
+/**
+ * Near the end of a song: get the next one's stream ready on the idle deck. Music only, not while a listening
+ * party or the sleep timer is in charge, and not for downloaded songs on Android (they load whole into memory).
+ */
+async function prepareAhead(cur: Track) {
+  const i = nextIndex();
+  const next = i === undefined ? undefined : usePlayer.getState().queue[i];
+  if (!next || cur.kind !== 'track' || next.kind !== 'track' || intercept || stopAfterTrack) return;
+  const key = trackKey(next);
+  if (aheadFor === key) return;
+  aheadFor = key;
+  try {
+    if (useOffline.getState().tracks[key]) {
+      if (isAndroid) return;
+      const local = await offlinePlaybackUrl(next);
+      if (local) {
+        engine.preload(local);
+        ahead = { key, url: local };
+      }
+      return;
+    }
+    const ready = ((await sourceOf(next)?.prepare?.(next)) ?? { track: next }).track;
+    if (!ready.streamUrl || usePlayer.getState().queue[i!] !== next) return;
+    if (ready !== next) usePlayer.setState((s) => ({ queue: s.queue.map((q, j) => (j === i ? ready : q)) }));
+    engine.preload(ready.streamUrl);
+    ahead = { key, url: ready.streamUrl };
+  } catch {
+    /* it just loads normally when its turn comes */
+  }
+}
+
+/** Crossfade into the preloaded next song when the current one is `remaining` seconds from its end. */
+function maybeCrossfade(remaining: number) {
+  const seconds = useSettings.getState().playback.crossfade;
+  if (!seconds || !ahead || remaining > seconds || stopAfterTrack || intercept) return;
+  const i = nextIndex();
+  const next = i === undefined ? undefined : usePlayer.getState().queue[i];
+  if (!next || trackKey(next) !== ahead.key) return;
+  const { replayGain, replayGainPreamp } = useSettings.getState().playback;
+  const url = ahead.url;
+  if (!engine.crossfade(url, Math.max(1, remaining), replayGainFactor(next.replayGain, replayGain, replayGainPreamp))) return;
+  ahead = undefined;
+  usePlayer.setState({ index: i! });
+  begin(next, 0);
+  usePlayer.setState({ buffering: false });
+  sourceOf(next)?.scrobble?.(next, false).catch(() => {});
+}
+
 engine.on('timeupdate', (_, el) => {
   const st = usePlayer.getState();
   const t = st.current();
@@ -246,6 +342,11 @@ engine.on('timeupdate', (_, el) => {
   usePlayer.setState({ position: now });
   if (!t) return;
   const dur = el.duration || t.duration || 0;
+  if (t.kind === 'track' && dur > 0) {
+    const remaining = dur - now;
+    if (remaining < AHEAD_SECONDS) void prepareAhead(t);
+    maybeCrossfade(remaining);
+  }
   if (!scrobbled && t.kind !== 'radio' && dur > 30 && (now > dur / 2 || now > 240)) {
     scrobbled = true;
     useLibrary.getState().recordPlay(t);
@@ -273,6 +374,11 @@ engine.on('waiting', () => usePlayer.setState({ buffering: true }));
 engine.on('pause', () => usePlayer.setState({ playing: false }));
 engine.on('error', (_, el) => usePlayer.setState({ error: `Playback failed (code ${el.error?.code ?? '?'})`, buffering: false, playing: false }));
 engine.on('ended', () => {
+  if (stopAfterTrack) {
+    const done = stopAfterTrack;
+    stopAfterTrack = undefined;
+    return done();
+  }
   if (intercept?.('ended')) return;
   const st = usePlayer.getState();
   if (st.repeat === 'one') {

@@ -1,5 +1,5 @@
 import { startArtworkChecks } from './lib/artwork';
-import { useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
 import { startHubSync } from './lib/hubSync';
 import { inboxBadge, startInboxChecks, useInbox } from './lib/inbox';
@@ -23,12 +23,7 @@ import { History } from './views/History';
 import { Rewind } from './views/Rewind';
 import { LibraryCare } from './views/LibraryCare';
 import { PlaylistView, Playlists, ServerPlaylistView } from './views/Playlists';
-import { SubWave } from './views/SubWave';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Discover } from './views/Discover';
-import { ImportPlaylist } from './views/ImportPlaylist';
-import { TagEditor } from './views/TagEditor';
-import { ArtistTagEditor } from './views/ArtistTagEditor';
 import { Favorites } from './views/Favorites';
 import { RecentlyAdded } from './views/RecentlyAdded';
 import { LibraryHub, MobileNav } from './components/MobileNav';
@@ -39,12 +34,25 @@ import { AlbumView, Albums, ArtistView, Artists, Home } from './views/Library';
 import { Search } from './views/Search';
 import { Radio } from './views/Radio';
 import { Books } from './views/Books';
-import { Downloads } from './views/Downloads';
-import { Inbox } from './views/Inbox';
-import { Settings } from './views/Settings';
 import { activeSkin } from './lib/seasons';
 import { startUpdateChecks } from './lib/updates';
 import { UpdateBanner } from './components/Updates';
+import { Spinner } from './components/common';
+
+/** A page loaded the first time it's opened, so startup only parses what Home needs (slow TV boxes notice). */
+// `any`: each page has its own props, which lazy() keeps from M[K]
+function page<M extends Record<K, ComponentType<any>>, K extends keyof M & string>(load: () => Promise<M>, name: K) {
+  return lazy(() => load().then((m) => ({ default: m[name] })));
+}
+const Rewind = page(() => import('./views/Rewind'), 'Rewind');
+const SubWave = page(() => import('./views/SubWave'), 'SubWave');
+const Discover = page(() => import('./views/Discover'), 'Discover');
+const ImportPlaylist = page(() => import('./views/ImportPlaylist'), 'ImportPlaylist');
+const TagEditor = page(() => import('./views/TagEditor'), 'TagEditor');
+const ArtistTagEditor = page(() => import('./views/ArtistTagEditor'), 'ArtistTagEditor');
+const Downloads = page(() => import('./views/Downloads'), 'Downloads');
+const Inbox = page(() => import('./views/Inbox'), 'Inbox');
+const Settings = page(() => import('./views/Settings'), 'Settings');
 
 const NAV: { view: Route['view']; label: string; icon: ReactNode }[] = [
   { view: 'home', label: 'Home', icon: <IconHome /> },
@@ -210,7 +218,9 @@ export default function App() {
         <UpdateBanner />
         {history.length > 0 && (!phone || !tabRoot) && <button className="back" onClick={() => window.history.back()} title="Back (Alt+←)"><IconBack /></button>}
         <ErrorBoundary key={JSON.stringify(route).slice(0, 200)} onReset={() => go({ view: 'home' })}>
-          <View route={route} />
+          <Suspense fallback={<Spinner />}>
+            <View route={route} />
+          </Suspense>
         </ErrorBoundary>
       </main>
       {queueOpen && <QueuePanel />}

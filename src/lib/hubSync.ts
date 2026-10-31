@@ -13,6 +13,7 @@ import { startLibrarySync, syncLibrary } from './librarySync';
  * (hubServices.ts), and playlists and play history from librarySync.ts.
  */
 const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'raccoon', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'versions', 'smartPlaylists'] as const;
+const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'raccoon', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'versions', 'playback'] as const;
 type SyncedKey = (typeof SYNCED)[number];
 const prefKey = (k: SyncedKey) => `settings.${k}`;
 

@@ -377,6 +377,19 @@ input[type='range']:hover::-webkit-slider-thumb { opacity: 1; }
 .np-next-row:hover { background: rgb(255 255 255 / 0.08); }
 .np-next-row span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .np-next-row small { opacity: 0.6; }
+.lyrics { position: relative; margin-top: 14px; max-height: 38vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 4px 2px 12px; scrollbar-width: thin; mask-image: linear-gradient(transparent, #000 10%, #000 85%, transparent); }
+.lyrics.empty { opacity: 0.6; font-style: italic; mask-image: none; }
+.lyric { display: block; text-align: left; font-size: 17px; line-height: 1.45; font-weight: 600; padding: 3px 6px; border-radius: 6px; margin: 0; color: inherit; }
+.lyrics.synced .lyric { opacity: 0.45; transition: opacity 0.25s, transform 0.25s; }
+.lyrics.synced .lyric.past { opacity: 0.3; }
+.lyrics.synced .lyric.now { opacity: 1; color: var(--accent); transform: scale(1.03); transform-origin: left center; }
+.lyrics.synced .lyric:hover { background: rgb(255 255 255 / 0.06); }
+.lyrics-credit { margin-top: 10px; padding: 0 6px; }
+/* TV: big-text lyrics to read from the sofa */
+.tv .lyrics { max-height: 46vh; }
+.tv .lyric { font-size: 28px; }
+.range-field { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 16px; max-width: 420px; font-size: 14px; }
+.sleep-pop { width: min(360px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 10px; }
 
 /* ============ v0.2: tabs, menus, playlists, history, podcasts, yt-dlp ============ */
 .tabs { display: flex; gap: 4px; margin: 0 0 18px; border-bottom: 1px solid var(--line); }

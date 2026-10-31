@@ -2,11 +2,21 @@ import SparkMD5 from 'spark-md5';
 import { getJson, http, qs, trimSlash } from '../lib/http';
 import type { SongFacts } from '../lib/smartPlaylists';
 import type { Album, Artist, HistoryEntry, MusicSource, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
+import type { Lyrics } from '../lib/lyrics';
+import type { Album, Artist, HistoryEntry, MusicSource, ReplayGain, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
 
 /** Navidrome (or any Subsonic-compatible server) via the Subsonic REST API. */
 
 /** OpenSubsonic `explicitStatus`: 'explicit', 'clean', or '' when the file doesn't say. */
 const rating = (v: unknown) => (v === 'explicit' || v === 'clean' ? v : undefined);
+
+/** OpenSubsonic `replayGain` → ours; undefined when the file has no loudness tags. */
+function replayGain(r: any): ReplayGain | undefined {
+  if (!r) return undefined;
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+  const out: ReplayGain = { trackGain: num(r.trackGain), albumGain: num(r.albumGain), trackPeak: num(r.trackPeak), albumPeak: num(r.albumPeak) };
+  return out.trackGain === undefined && out.albumGain === undefined ? undefined : out;
+}
 export class NavidromeSource implements MusicSource {
   private ndToken?: string;
   constructor(public config: SourceConfig) {}
@@ -91,7 +101,23 @@ export class NavidromeSource implements MusicSource {
     streamUrl: this.url('stream', { id: s.id }),
     starred: !!s.starred,
     explicit: rating(s.explicitStatus),
+    replayGain: replayGain(s.replayGain),
   });
+
+  /** OpenSubsonic `getLyricsBySongId` (Navidrome 0.53+): lyrics from tags or a .lrc file. Synced preferred. */
+  async getLyrics(t: Track): Promise<Lyrics | undefined> {
+    if (t.kind !== 'track') return undefined;
+    const res = await this.call('getLyricsBySongId', { id: t.id });
+    const list: any[] = res.lyricsList?.structuredLyrics ?? [];
+    const best = list.find((l) => l.synced && l.line?.length) ?? list.find((l) => l.line?.length);
+    if (!best) return undefined;
+    const offset = (Number(best.offset) || 0) / 1000;
+    return {
+      synced: !!best.synced,
+      source: 'Navidrome',
+      lines: best.line.map((l: any) => ({ text: String(l.value ?? '').trim(), time: best.synced ? Math.max(0, (Number(l.start) || 0) / 1000 - offset) : undefined })),
+    };
+  }
 
   /** Build a playable track from just an id (e.g. a SubWave like — same Navidrome library). */
   trackFromId(id: string, meta: { title?: string; artist?: string; album?: string; duration?: number } = {}): Track {

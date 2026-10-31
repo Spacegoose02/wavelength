@@ -34,6 +34,10 @@ updates:
   - package-ecosystem: docker
     directory: /hub
     schedule: { interval: weekly }
+    # stay on Node LTS: odd-numbered majors are short-lived, so major Node moves are done by hand
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
