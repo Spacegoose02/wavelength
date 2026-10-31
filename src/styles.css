@@ -1720,3 +1720,5 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .mix-text { min-width: 0; }
 .mix-text .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .error-text { color: #ff9b9b; }
+.selectable { user-select: text; }
+.recovery-codes { font-family: var(--lcd-font, monospace); background: var(--panel-2); padding: 10px 14px; border-radius: var(--radius); columns: 2; max-width: 360px; }

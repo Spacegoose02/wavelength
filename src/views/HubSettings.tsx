@@ -92,6 +92,9 @@ export function SignedOut() {
   const [mode, setMode] = useState<'code' | 'password' | 'invite' | null>(null);
   const [form, setForm] = useState({ username: '', password: '', displayName: '' });
   const [invite, setInvite] = useState('');
+  /** The Hub asked for a two-step code after the password. */
+  const [needOtp, setNeedOtp] = useState(false);
+  const [otp, setOtp] = useState('');
   const client = useMemo(() => new HubClient(url), [url]);
 
   const connect = async (e?: FormEvent) => {
@@ -127,9 +130,10 @@ export function SignedOut() {
       signedIn(
         health?.setupNeeded ? await client.setup({ ...form, ...thisDevice() })
         : mode === 'invite' ? await client.acceptInvite({ ...form, code: invite.trim(), ...thisDevice() })
-        : await client.login({ ...form, ...thisDevice() }),
+        : await client.login({ ...form, ...(otp.trim() && { otp: otp.trim() }), ...thisDevice() }),
       );
     } catch (e) {
+      if (e instanceof HubError && e.twoFactor) setNeedOtp(true);
       setErr(errText(e));
     }
   };
@@ -175,6 +179,7 @@ export function SignedOut() {
               <div className="editor-grid">
                 <label>Username<input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required autoComplete="username" /></label>
                 <label>Password<input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required autoComplete="current-password" /></label>
+                {needOtp && <label className="span2">Code from your authenticator app (or a recovery code)<input value={otp} onChange={(e) => setOtp(e.target.value)} inputMode="numeric" autoComplete="one-time-code" autoFocus required /></label>}
               </div>
               <div className="row gap" style={{ marginTop: 12 }}><button className="btn primary">Sign in</button></div>
             </form>
@@ -369,6 +374,100 @@ function ScrobbleSetting() {
   );
 }
 
+/**
+ * Two-step sign-in (hub/src/totp.ts): a 6-digit code from an authenticator app after the password, for
+ * password sign-ins. Recommended for admins, whose account can change everything.
+ */
+function TwoFactorSetting({ admin }: { admin: boolean }) {
+  const c = hubClient()!;
+  const [state, setState] = useState<{ enabled: boolean; recoveryLeft: number } | null>();
+  const [step, setStep] = useState<'idle' | 'password' | 'scan' | 'codes' | 'off'>('idle');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [setup, setSetup] = useState<{ secret: string; uri: string }>();
+  const [codes, setCodes] = useState<string[]>([]);
+  const [msg, setMsg] = useState('');
+  const load = () => c.twoFactor().then(setState, (e) => setState(e instanceof HubError && e.status === 404 ? null : undefined));
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!state) return null;
+
+  const run = async (f: () => Promise<void>) => {
+    setMsg('');
+    try {
+      await f();
+    } catch (e) {
+      setMsg(errText(e));
+    }
+  };
+  const reset = () => {
+    setStep('idle');
+    setPassword('');
+    setCode('');
+    setSetup(undefined);
+  };
+
+  return (
+    <div className="editor">
+      <h3>Two-step sign-in</h3>
+      {state.enabled ? (
+        <p className="muted small">On. Signing in with your password also needs a code from your authenticator app. {state.recoveryLeft} recovery code{state.recoveryLeft === 1 ? '' : 's'} left.</p>
+      ) : (
+        <p className="muted small">After your password, also ask for a 6-digit code from an app on your phone (Google Authenticator, 1Password, Aegis…), so a leaked password alone can't get in.{admin ? ' Recommended for admins.' : ''} Signing in with single sign-on isn't affected.</p>
+      )}
+      {msg && <div className="errors">{msg}</div>}
+
+      {step === 'idle' && (
+        <div className="row gap">
+          {state.enabled ? <button className="btn ghost" onClick={() => setStep('off')}>Turn off</button> : <button className="btn" onClick={() => setStep('password')}>Turn on</button>}
+        </div>
+      )}
+
+      {step === 'password' && (
+        <form className="row gap" onSubmit={(e) => { e.preventDefault(); void run(async () => { setSetup(await c.twoFactorSetup(password)); setPassword(''); setStep('scan'); }); }}>
+          <input type="password" placeholder="Your Hub password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+          <button className="btn">Continue</button>
+          <button type="button" className="btn ghost" onClick={reset}>Cancel</button>
+        </form>
+      )}
+
+      {step === 'scan' && setup && (
+        <form onSubmit={(e) => { e.preventDefault(); void run(async () => { setCodes((await c.twoFactorEnable(code)).recoveryCodes); setStep('codes'); await load(); }); }}>
+          <p className="small">Scan this with your authenticator app, or type the key into it. Then enter the code it shows.</p>
+          <Qr text={setup.uri} />
+          <p className="small"><code className="selectable">{setup.secret.replace(/(.{4})/g, '$1 ').trim()}</code></p>
+          <div className="row gap">
+            <input placeholder="123456" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" required />
+            <button className="btn primary">Turn on</button>
+            <button type="button" className="btn ghost" onClick={reset}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {step === 'codes' && (
+        <div>
+          <p className="small"><b>Two-step sign-in is on.</b> Keep these recovery codes somewhere safe (a password manager or on paper). Each one works once instead of a code, if you lose your phone. They won't be shown again.</p>
+          <pre className="recovery-codes selectable">{codes.join('\n')}</pre>
+          <div className="row gap">
+            <button className="btn" onClick={() => void navigator.clipboard?.writeText(codes.join('\n'))}>Copy</button>
+            <button className="btn primary" onClick={() => { setCodes([]); reset(); }}>I've saved them</button>
+          </div>
+        </div>
+      )}
+
+      {step === 'off' && (
+        <form className="row gap wrap" onSubmit={(e) => { e.preventDefault(); void run(async () => { await c.twoFactorOff(password, code); reset(); await load(); }); }}>
+          <input type="password" placeholder="Your Hub password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+          <input placeholder="Code or recovery code" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="one-time-code" required />
+          <button className="btn">Turn off</button>
+          <button type="button" className="btn ghost" onClick={reset}>Cancel</button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 function SignedIn() {
   const { url, user, permissions, offline, lastSeen, signOut, refresh } = useHub();
   const [devices, setDevices] = useState<(HubDevice & { current: boolean })[]>([]);
@@ -416,6 +515,7 @@ function SignedIn() {
       <ScrobbleSetting />
 
       <SsoLink />
+      {user.hasPassword && <TwoFactorSetting admin={user.role === 'admin'} />}
 
       {user.hasPassword && (
         <form className="editor" onSubmit={async (e) => {
@@ -511,7 +611,7 @@ export function UsersTab() {
             <div className="track-main">
               <div className="track-title">{u.displayName}{u.id === me?.id ? <span className="muted small"> · you</span> : null}</div>
               <div className="track-sub">
-                @{u.username}{u.ssoSubject ? ` · SSO ${u.ssoSubject}` : ''}{u.hasPassword ? '' : ' · no password'} · {u.devices} device{u.devices === 1 ? '' : 's'} · last seen {when(u.lastSeenAt)}
+                @{u.username}{u.ssoSubject ? ` · SSO ${u.ssoSubject}` : ''}{u.hasPassword ? '' : ' · no password'}{u.twoFactor ? ' · 2-step' : u.role === 'admin' && u.hasPassword && u.twoFactor === false ? ' · no 2-step sign-in' : ''} · {u.devices} device{u.devices === 1 ? '' : 's'} · last seen {when(u.lastSeenAt)}
               </div>
             </div>
             <select value={u.role} onChange={(e) => run(() => c.updateUser(u.id, { role: e.target.value as HubRole }))} aria-label="Role">
@@ -531,6 +631,9 @@ export function UsersTab() {
               const ssoSubject = prompt(`tinyauth username for ${u.displayName} (empty to unlink):`, u.ssoSubject ?? '');
               if (ssoSubject !== null) run(() => c.updateUser(u.id, { ssoSubject: ssoSubject.trim() || null }));
             }}>SSO</button>
+            {u.twoFactor && <button className="btn small" title={`${u.displayName} uses two-step sign-in. Turn it off if they lost their phone`} onClick={() => {
+              if (confirm(`Turn off two-step sign-in for ${u.displayName}? They'll sign in with just their password until they turn it on again.`)) run(() => c.resetTwoFactor(u.id));
+            }}>Reset 2-step</button>}
             <button className="btn small ghost" onClick={() => run(() => c.updateUser(u.id, { disabled: !u.disabled }))}>{u.disabled ? 'Turn on' : 'Turn off'}</button>
             {u.id !== me?.id && <button className="btn small ghost" onClick={() => confirm(`Delete ${u.displayName}? Their synced settings go too.`) && run(() => c.deleteUser(u.id))}>Delete</button>}
           </div>

@@ -59,6 +59,8 @@ export type HubPrefs = Record<string, { value: unknown; updatedAt: number }>;
 
 export interface HubAdminUser extends HubUser {
   permissions: HubPermission[];
+  /** Uses two-step sign-in (hub/src/totp.ts); older Hubs don't say. */
+  twoFactor?: boolean;
   devices: number;
   lastSeenAt: number | null;
 }
