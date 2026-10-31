@@ -3,7 +3,7 @@
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens and bears), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
-**searching your playlists**, **Appears On** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
+**searching your playlists**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -40,6 +40,9 @@ Type an artist, album, playlist or song. Results come in four groups: **artists*
   **Get** downloads that song.
 - **Get discography** sends every release by the artist to deemix. You'll be asked to confirm,
   since that can be a lot of music.
+- Releases you already have say **✓ In library** instead of **Get**, and **Not in library** hides them. The
+  same page opens from **Browse releases** on an artist in your library: see
+  [Browse an artist's releases](#browse-an-artists-releases).
 
 Scroll down for the whole discography, newest first, split into **Albums**, **EPs**, **Singles**
 and **Compilations**. Each cover opens the album page, and each has its own **Get** button.
@@ -238,6 +241,52 @@ nothing to show.
 > copy of the artist after their own albums load, swaps in the catalog's album so versions and other servers'
 > copies work, and filters with `useHidden` and `useVersionHidden`. Plex, Audiobookshelf and SUB/WAVE don't
 > implement it, so an artist only on Plex has no Appears On.
+
+## Browse an artist's releases
+
+Every artist page in your library has two things for getting more of their music:
+
+- **The newest release banner**, under the artist's name: their newest album, EP or single on Deezer, e.g.
+  **New release · Tha Carter VI · single · Oct 24, 2026**. It says **New release** for the first 6 weeks (the
+  same window as Release Radar) and **Latest release** after that. ▶ plays a 30-second preview, **Get** sends it
+  to deemix (**Request** asks your Hub admin, without Autodownload), and **✓ In library** opens it when you
+  already have it. When Deezer lists something announced but not out yet, the banner adds **Coming soon:
+  Title, out Mar 14**. Click the cover or title to open the release.
+- **Browse releases**, next to Follow: the artist's whole Deezer discography, the same page as
+  **Downloads → Deezer** (top songs, Albums, EPs, Singles, Compilations, E / C badges and **Clean only**).
+  Releases you already have say **✓ In library** instead of **Get**, the header counts them, and
+  **Not in library** hides them so only what you could still get is left. Covers open the album page with its
+  tracklist, where you can get single songs. **Back** walks back through what you opened, then to the artist.
+
+Deezer has to have an artist with exactly the artist's name (case and accents don't matter). If you follow the
+artist, the one you follow is used. When there's no exact match, **Browse releases** shows the closest Deezer
+artists to pick from, and the banner stays hidden. **Various Artists** has neither.
+
+**Browse releases** shows when you can get music: with deemix set up in **Settings → Downloads** (yours or the
+Hub's) and Autodownload, or with **Request**. The banner shows either way; without a way to get music it just
+has the preview.
+
+**Kid profiles** see only releases that are fine for kids in both: the banner shows the newest one they may
+have (skipping an explicit single, say), Browse releases starts on **Clean only**, and explicit releases, songs
+and related artists stay hidden even with **All** picked. With **Clean** (or **Explicit**) picked as your version
+in **Settings → Playback**, the banner shows that version when the release has both.
+
+The same **✓ In library** marks and **Not in library** switch are on artist pages under **Downloads → Deezer**.
+A release counts as in your library when an album there has the same artist and name, ignoring extras like
+"(Deluxe)" or "[2015 Remaster]". Versions count separately: having the explicit album doesn't mark the clean
+release as in your library.
+
+> **Developer notes.** `src/components/ArtistNews.tsx` has the banner (`ArtistNews`), `useDeezerArtist()` (the
+> followed artist's Deezer id, else `findDeezerArtist()` in `src/sources/releaseRadar.ts`, which Release Radar's
+> "artists you play" uses too; lookups are kept for the session) and `useCanGet()`. `src/views/ArtistReleases.tsx`
+> is the **Browse releases** page (route `artistReleases`, optionally with a release open on top). It reuses
+> `DeezerArtist`, `DeezerAlbum` and `useDeezerBrowse()` (the browse stack, Get / Request and Clean only, shared with
+> Downloads → Deezer) from `src/views/DeezerBrowse.tsx`. `src/lib/artistReleases.ts` has `ownedIndex()` (Deezer
+> release → library album, keyed by `versionKey` and version-aware) and `newestRelease()` (latest out, whether it's
+> within `WINDOW_DAYS`, the next announced one, kid filter and preferred version); tests in
+> `src/test/artistReleases.test.ts`. The discography call (`/artist/<id>/albums`) is shared by the banner and the
+> page and kept 10 minutes (`getDeezerReleases()` in `src/sources/deemix.ts`), so opening an artist costs two Deezer
+> calls the first time (the name search and the discography).
 
 ## Now Playing visualizers
 

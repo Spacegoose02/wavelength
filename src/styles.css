@@ -1874,3 +1874,18 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .dj-limit { display: flex; align-items: center; gap: 4px; }
 .dj-limit input { width: 72px; }
 @media (max-width: 700px) { .dj-msg { max-width: 92%; } .dj-prices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* ============ artist page: newest release banner (components/ArtistNews.tsx) ============ */
+.artist-news { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 8px 12px 8px 8px; max-width: 560px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line, transparent); }
+.artist-news.new { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.artist-news.new .kicker { color: var(--accent); }
+.artist-news-art { flex: none; padding: 0; border: 0; background: none; cursor: pointer; }
+.artist-news-art .cover { width: 56px; }
+.artist-news-text { flex: 1; min-width: 0; }
+.artist-news-title { display: block; max-width: 100%; font-weight: 600; font-size: 15px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0; background: none; border: 0; cursor: pointer; }
+.artist-news-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.dz-filters { flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+.dz-filters .chips { margin: 0; }
+.dz-card.owned .cover { opacity: 0.55; }
+@media (max-width: 640px) { .artist-news { flex-wrap: wrap; } .artist-news-actions { width: 100%; justify-content: flex-end; } }
+/* Browse releases: clear of the app's own back arrow, like the hero */
+.artist-releases-crumbs { margin-left: 44px; min-height: 36px; }

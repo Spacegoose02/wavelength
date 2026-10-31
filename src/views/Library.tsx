@@ -9,7 +9,7 @@ import { stationToTrack } from '../sources/radio';
 import type { Album, Artist, Track } from '../sources/types';
 import { SOURCE_COLORS } from '../sources/types';
 import { AlbumCard, ArtistCard, Cover, Rating, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
-import { IconPlay, IconShuffle } from '../components/Icons';
+import { IconDownload, IconPlay, IconShuffle } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfArtist, shareOfTracks } from '../lib/inbox';
@@ -26,6 +26,7 @@ import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
 import { loadParts } from '../lib/albumParts';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
+import { ArtistNews, notOneArtist, useCanGet } from '../components/ArtistNews';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -373,6 +374,7 @@ function useSourceCfg() {
 export function ArtistView({ artist }: { artist: Artist }) {
   const cfgOf = useSourceCfg();
   const canEditTags = useCan('library.edit');
+  const { canGet } = useCanGet();
   const [albums, setAlbums] = useState<Album[] | null>(null);
   // a server that couldn't list this artist's albums says so, instead of leaving the page empty
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -420,6 +422,11 @@ export function ArtistView({ artist }: { artist: Artist }) {
           <SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} />
           <div className="hero-actions">
             <FollowButton name={artist.name} />
+            {canGet && !notOneArtist(artist.name) && (
+              <button className="btn" title={`${artist.name}'s whole discography on Deezer, to get what you don't have yet`} onClick={() => useUi.getState().go({ view: 'artistReleases', artist })}>
+                <IconDownload /> Browse releases
+              </button>
+            )}
             <SongRadioButton artist={artist.name} />
             <ShareButton what={() => shareOfArtist(artist.name, artistArt(artist))} />
             <KidFlagButton kind="artist" artist={artist.name} />
@@ -428,6 +435,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
               <button className="btn" title="Rename this artist, or merge two spellings, in all their songs' tags" onClick={() => useUi.getState().go({ view: 'artistTags', artist })}>Edit artist</button>
             )}
           </div>
+          <ArtistNews artist={artist} />
         </div>
       </header>
       {albums && albums.length > 1 && (
