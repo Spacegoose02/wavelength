@@ -233,6 +233,8 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
   "(Clean)" album), or that an admin flagged as not for kids (a flag on a song or album only covers the version
   it was set on, `hub/src/kidSafe.ts`), so another Subsonic app with the relay login gets no further than
   Wavelength would. The Hub must be able to reach the Navidrome address.
+  Navidrome gzips bigger replies and the Hub's fetch unzips them, so the relay passes them on unzipped and
+  without Navidrome's `content-length` (that's the zipped size; passing it on cut replies short).
 
 - **Logins that never leave the Hub:** the SUB/WAVE admin user and password and the deemix ARL aren't sent
   to any device, admins' included. The app sends those calls to the Hub (`/api/admin/subwave/…`,

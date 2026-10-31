@@ -54,13 +54,17 @@ const hostOf = (url: string) => {
   }
 };
 
+/** Fetch a URL and parse its JSON. Errors name the URL without its query string, so tokens never show. */
 export async function getJson<T = any>(url: string, init?: RequestInit): Promise<T> {
   const res = await http(url, init);
-  if (!res.ok) {
-    // Strip the query string so tokens never end up in error messages.
-    throw new Error(`${res.status} ${res.statusText || 'error'} — ${url.split('?')[0]}`);
+  const where = url.split('?')[0];
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText || 'error'} — ${where}`);
+  try {
+    return JSON.parse(await res.text()) as T;
+  } catch (e) {
+    // a reply cut short reads as "Expected ':' after property name…", which says nothing about where it came from
+    throw new Error(`Couldn't read the reply from ${where} (${(e as Error).message})`);
   }
-  return res.json() as Promise<T>;
 }
 
 export function trimSlash(url: string) {

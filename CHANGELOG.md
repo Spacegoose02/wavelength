@@ -5,6 +5,16 @@
   the album, the album scrolled to the song (which flashes), and the artist's page. In **Up next**, a song's artist
   opens their page. Now Playing closes, and Back returns to the page you were on before it.
 
+## 0.17.4
+- **Fixed: album and artist pages coming up empty through the Hub** ("Expected ':' after property name in JSON",
+  *Straight Outta Cashville*, Travis Scott). With Navidrome going through the Hub, the Hub passed on Navidrome's
+  size for a zipped reply but sent it unzipped, so mid-sized replies (an album's songs, an artist's albums) were cut
+  off part way, and the leftover bytes could spoil the next reply on the same connection, so other lists came and
+  went. The Hub now leaves the size off replies it unzipped. **Update your Hub** for this fix.
+- An album whose parts Navidrome lists separately still shows the parts that load if one doesn't, with a note.
+- An artist page whose server couldn't list the albums now says why instead of staying empty, and a broken reply
+  names the server address it came from.
+
 ## 0.17.3
 - **Select several albums or artists, like Plex.** **Albums**, **Artists** and an artist's page have **Select**;
   you can also start from the round tick on a card, or Ctrl/⌘- or Shift-click. Shift-click ticks a range. The

@@ -31,6 +31,7 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | Android: `http://` server unreachable | Cleartext blocked | Already allowed (`usesCleartextTraffic` true in `build.gradle.kts`) — check that wasn't reverted |
 | Plex: works then 401s | Token changed / signed out | Copy a new X-Plex-Token |
 | Audiobookshelf podcasts won't play | Podcasts need an episode play session (`/play/<episodeId>`) | Handled in `prepare()`; check ABS logs for the session error |
+| Album page: **"Expected ':' after property name in JSON"** (or "Failed to execute 'close' on 'ReadableStreamDefaultController'"); an artist page with no albums; albums that come and go | Navidrome through the Hub's relay, Hub older than 0.17.4: the Hub passed on Navidrome's size for a gzipped reply but sent it unzipped, so the app read only that many bytes | Update the Hub. `hub/src/routes/relay.ts` leaves `content-length` off replies fetch() unzipped |
 | SUB/WAVE tab: blank or errors | API URL wrong (no `/api` behind Caddy, or controller on `:7701`) | Settings → SUB/WAVE → set "API URL" explicitly; admin tabs need ADMIN_USER/ADMIN_PASS |
 | SUB/WAVE: no song time | now-playing has `timestamp` (seconds), not `startedAt` | Handled by `swTrack()`; if SUB/WAVE renames fields, update it there |
 | SUB/WAVE: "Too late — already on its way to air" on cancel | The song was already handed to Liquidsoap and is playing | Expected; only songs still in the queue can be cancelled |

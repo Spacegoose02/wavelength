@@ -136,9 +136,12 @@ export function relayRoutes(app: FastifyInstance, { db, config }: Ctx) {
       return fail(reply, 0, `The Hub couldn’t reach Navidrome`);
     }
     reply.code(res.status >= 300 && res.status < 400 && res.status !== 304 ? 502 : res.status);
+    // fetch() unzips a gzipped reply (Navidrome zips big JSON ones) but keeps the zipped content-length. Passed on,
+    // that cut the reply off at the zipped size: big albums and artists came back as broken JSON.
+    const unzipped = !!res.headers.get('content-encoding');
     for (const h of PASS) {
       const v = res.headers.get(h);
-      if (v) reply.header(h, v);
+      if (v && !(unzipped && h === 'content-length')) reply.header(h, v);
     }
     return reply.send(res.body ? Readable.fromWeb(res.body as any) : null);
   });
