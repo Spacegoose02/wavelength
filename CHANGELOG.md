@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.8
 - **A grey alien and a bear join the critters** in Now Playing. The **grey alien** is the classic big-headed
   grey with huge black eyes, playing a synth in a crop circle under its saucer's tractor beam: the keys light
   up with the music and the beam brightens with the bass. The **bear** squeezes an accordion by a campfire in
