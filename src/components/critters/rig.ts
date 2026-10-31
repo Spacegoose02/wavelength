@@ -1,5 +1,6 @@
 import { useEffect, type RefObject } from 'react';
 import { createAudioReader, type AudioSample } from '../../player/analysis';
+import { createSingingReader } from '../../player/singing';
 
 /** What each critter's own animation gets every frame. */
 export interface RigFrame {
@@ -20,7 +21,7 @@ export interface RigFrame {
 export interface RigOptions {
   /** how far the head nods on a beat (DJ 10, rocker headbangs harder) */
   nod?: number;
-  /** open the mouth with the vocals (`AudioSample.voice`) while playing; on for every act unless turned off */
+  /** open the mouth with the vocals (player/singing.ts) while playing; on for every act unless turned off */
   talk?: boolean;
   /** draw one frame and stop: Settings previews */
   still?: boolean;
@@ -53,6 +54,7 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
     const glows = [...svg.querySelectorAll<SVGElement>('[data-glow]')];
 
     const read = createAudioReader();
+    const singAlong = createSingingReader();
     let t = 0;
     let raf = 0;
     let bob = 0;
@@ -93,7 +95,7 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       }
       const adj = idle && t > nextAdjust ? Math.sin(((t - nextAdjust) / 1.2) * Math.PI) : 0;
       // sing along: open quickly on a syllable, close a little slower
-      const sing = talk && a.playing ? a.voice * 0.85 : 0;
+      const sing = talk ? singAlong(t, a) * 0.9 : 0;
       singing += (sing - singing) * (sing > singing ? 0.55 : 0.3);
       const mouth = Math.max(yawn, singing);
       set('eyes', `translate(0 166) scale(1 ${lids.toFixed(2)}) translate(0 -166)`);

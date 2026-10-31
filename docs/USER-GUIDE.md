@@ -299,8 +299,15 @@ alien are all possible.
 | **Synth** | Turtleneck, a synth on an X stand in a crop circle, under a saucer's tractor beam | The keys light up with the music, one hand hops on the beat, the other glides along the keys with the highs, the beam brightens with the bass |
 | **Accordion** | A beanie with a pom-pom and a sweater, by a campfire in the pines | The bellows pump faster with the bass and puff out on the beat, the campfire flares with the bass, fireflies blink with the highs |
 
-**They sing along.** Every critter's mouth opens and closes with the vocals: it follows the singing (or
-rapping) part of the sound, so it moves on syllables and closes between lines.
+**They sing along.** Every critter's mouth opens when someone sings (or raps) and closes when they stop.
+It listens for the lead voice the way you would: sound in the voice range that sits in the centre of the
+stereo mix and is tonal rather than noisy, so drum hits and guitars panned to the sides don't move it.
+When the song has **synced lyrics** (the same ones the [Lyrics](#lyrics) chip shows, from your Navidrome
+server or LRCLIB), the mouth also stays shut through intros, solos and gaps between lines. On radio
+stations and servers the app can't read (no CORS, see above), it mouths along in time with the words of
+each line, or chatters gently if there are no synced lyrics. It can't shape individual words, and a
+centred instrument with the same range as a voice (a synth lead, say) can still open it in songs without
+synced lyrics.
 
 **Switching.** On the critter visualizer, tap **Switch critter** in its top-right corner for the next critter
 (keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
@@ -366,8 +373,10 @@ All the critters behave the same way around the music:
 > - `rig.ts` (`useCritterRig`) is the shared animation: head bob, sway, blink, singing, yawn, the `adjust`
 >   part (headwear), tail, backlight and `[data-glow]` pulses. Every frame writes `transform`/`opacity`
 >   straight onto named parts (`data-part="head"`, `arm-r`, …), with no React re-render. The mouth (`yawn`)
->   follows `AudioSample.voice` from `player/analysis.ts`: how far the vocal band (about 250 Hz to 3 kHz)
->   is above its recent average. Each act passes a `frame` callback for its own hands and instrument;
+>   follows `player/singing.ts`: the vocal detector in `player/voice.ts` (centre-channel, tonal and
+>   drum-hit rejection on mid/side spectra the engine taps with `engine.voiceTaps()`), gated by the
+>   song's synced lyrics (`lib/singAlong.ts`: sung spans per line, syllable pacing when the audio can't be
+>   read). Each act passes a `frame` callback for its own hands and instrument;
 >   `guitar.ts` is the strum/fret/string-buzz shared by the country and rocker acts.
 > - `parts.tsx` has what they share: the frame and defs, the raccoon face and tail, the head (with the
 >   holiday hats and the skin-group outfits), the body outfits and `Arm` (which can hold a drumstick).
@@ -429,7 +438,9 @@ words online.
 
 > **Developer notes.** `src/lib/lyrics.ts` (LRC parsing, LRCLIB lookup with a search fallback that prefers synced
 > lyrics with a matching length, the kid filter), `NavidromeSource.getLyrics` (OpenSubsonic
-> `getLyricsBySongId`), and `src/components/Lyrics.tsx`. Lyrics are cached per song for the session.
+> `getLyricsBySongId`), and `src/components/Lyrics.tsx`. Lyrics are cached per song for the session. The
+> [critters](#critters) look up the playing song's lyrics too (same cache) while their scene is on screen,
+> to know when someone is singing (`src/lib/singAlong.ts`).
 
 ## Sleep timer
 
