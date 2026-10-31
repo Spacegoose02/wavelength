@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.10
 Fixes from a bug sweep (the full list is in the PR):
 - **Kid profiles:** Discover no longer shows kids explicit chart songs that aren't in the library, or plays their
   previews; a song stays hidden until Deezer says it's clean. A kid device the Hub signs out stays locked until a
