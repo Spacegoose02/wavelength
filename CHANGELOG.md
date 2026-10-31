@@ -48,6 +48,9 @@
   advisories.
 - **Builds:** a new `App` check runs TypeScript, Rust tests, clippy and dependency audits on every pull
   request and weekly; Dependabot keeps npm, Cargo, Docker and Actions dependencies current.
+- **Android:** music no longer stops when the screen locks. Playback also carries on into the next song with
+  the screen off, holds the CPU and Wi-Fi awake while streaming, and pauses when headphones are unplugged.
+  docs/USER-GUIDE.md "Listening with the screen off" covers phones whose battery saver still closes the app.
 
 ## 0.16.0
 - **Follow artists and build your own Release Radar** (with a Hub). Press **Follow** on any artist page (your

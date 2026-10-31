@@ -908,6 +908,22 @@ away, and an artist opens a search. **✕** takes it off your list. **You shared
 > change times in `tonearm.hubStamps`, pushed 2 s after a change). Add a setting to sync by adding its
 > `useSettings` key to `SYNCED`. The Hub side is documented in [HUB.md](HUB.md).
 
+## Listening with the screen off (Android)
+
+Music keeps playing when you lock your phone or switch to another app, and moves on to the next song as
+usual. While something is playing, Wavelength shows a playback notification with previous, play/pause and
+next; the same controls appear on the lock screen, in your car and on Bluetooth headphones. Unplugging
+headphones (or a Bluetooth headset disconnecting) pauses the music instead of switching to the speaker.
+
+If the music still stops a few minutes after you lock the phone, the phone's battery saver is closing
+Wavelength. Open **Settings → Apps → Wavelength → Battery** and choose **Unrestricted** (on Samsung, also take
+Wavelength off the **Sleeping apps** and **Deep sleeping apps** lists). Keep Wavelength's notifications
+allowed: Android needs the playback notification to keep a music app running. Swiping the notification away
+pauses the music.
+
+> **For developers:** see `src-tauri/gen/android` in [ARCHITECTURE.md](ARCHITECTURE.md) §5 (`PlaybackHost`,
+> `MediaPlaybackService`, `PlaybackPolicy`).
+
 ## Updates
 
 The Windows and Android apps check GitHub for a newer Wavelength on launch and every 6 hours. When there is
