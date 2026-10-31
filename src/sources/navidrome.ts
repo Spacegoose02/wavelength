@@ -1,7 +1,6 @@
 import SparkMD5 from 'spark-md5';
 import { getJson, http, qs, trimSlash } from '../lib/http';
 import type { SongFacts } from '../lib/smartPlaylists';
-import type { Album, Artist, HistoryEntry, MusicSource, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
 import type { Lyrics } from '../lib/lyrics';
 import type { Album, Artist, HistoryEntry, MusicSource, ReplayGain, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
 

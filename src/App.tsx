@@ -20,8 +20,6 @@ import { NowPlaying, QueuePanel } from './components/NowPlaying';
 import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart, IconInbox } from './components/Icons';
 import { Podcasts, PodcastView } from './views/Podcasts';
 import { History } from './views/History';
-import { Rewind } from './views/Rewind';
-import { LibraryCare } from './views/LibraryCare';
 import { PlaylistView, Playlists, ServerPlaylistView } from './views/Playlists';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Favorites } from './views/Favorites';
@@ -46,6 +44,7 @@ function page<M extends Record<K, ComponentType<any>>, K extends keyof M & strin
 }
 const Rewind = page(() => import('./views/Rewind'), 'Rewind');
 const SubWave = page(() => import('./views/SubWave'), 'SubWave');
+const LibraryCare = page(() => import('./views/LibraryCare'), 'LibraryCare');
 const Discover = page(() => import('./views/Discover'), 'Discover');
 const ImportPlaylist = page(() => import('./views/ImportPlaylist'), 'ImportPlaylist');
 const TagEditor = page(() => import('./views/TagEditor'), 'TagEditor');
