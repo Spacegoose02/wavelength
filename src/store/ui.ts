@@ -17,6 +17,7 @@ export type Route =
   | { view: 'rewind' }
   | { view: 'playlists' }
   | { view: 'playlist'; id: string }
+  | { view: 'household'; id: number }
   | { view: 'serverPlaylist'; playlist: ServerPlaylist }
   | { view: 'subwave'; sourceId?: string }
   | { view: 'discover'; genre?: 'new' }

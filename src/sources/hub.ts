@@ -59,6 +59,10 @@ export type HubPrefs = Record<string, { value: unknown; updatedAt: number }>;
 
 export interface HubAdminUser extends HubUser {
   permissions: HubPermission[];
+  /** Uses two-step sign-in (hub/src/totp.ts); older Hubs don't say. */
+  twoFactor?: boolean;
+  /** For kids: the people whose approval their requests need, besides the admins (hub/src/family.ts). */
+  guardians?: number[];
   devices: number;
   lastSeenAt: number | null;
 }
@@ -212,10 +216,26 @@ export interface HubPush {
   subscribeUrl: string | null;
   webUrl: string | null;
 }
+/** A playlist the household adds to together (hub/src/routes/household.ts). */
+export interface HouseholdPlaylist {
+  id: number;
+  name: string;
+  songs: number;
+  cover: string | null;
+  createdAt: number;
+  updatedAt: number;
+  owner: { id: number; displayName: string } | null;
+}
+export interface HouseholdEntry {
+  id: number;
+  track: SharedTrack;
+  addedAt: number;
+  addedBy: { id: number; displayName: string } | null;
+}
 /** Something the Hub tells this person about (hub/src/notify.ts), shown as a system notification. */
 export interface HubNotice {
   id: number;
-  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar' | 'library';
+  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar' | 'library' | 'report' | 'rewind';
   title: string;
   body: string;
   createdAt: number;
@@ -503,9 +523,12 @@ export interface HubInvite {
 /** An error the Hub answered with (as opposed to "couldn't reach it"). */
 export class HubError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** A password sign-in that also needs a two-step code (hub/src/totp.ts). */
+  twoFactor: boolean;
+  constructor(status: number, message: string, twoFactor = false) {
     super(message);
     this.status = status;
+    this.twoFactor = twoFactor;
   }
 }
 
@@ -522,8 +545,8 @@ export class HubClient {
     if (body !== undefined) headers['content-type'] = 'application/json';
     if (this.token) headers.authorization = `Bearer ${this.token}`;
     const res = await http(this.url + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
-    const data = (await res.json().catch(() => ({}))) as T & { error?: string };
-    if (!res.ok && res.status !== 202) throw new HubError(res.status, data.error || `${res.status} ${res.statusText || 'error'}`);
+    const data = (await res.json().catch(() => ({}))) as T & { error?: string; twoFactor?: boolean };
+    if (!res.ok && res.status !== 202) throw new HubError(res.status, data.error || `${res.status} ${res.statusText || 'error'}`, !!data.twoFactor);
     return { status: res.status, data };
   }
   private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -532,7 +555,7 @@ export class HubClient {
 
   health = () => this.call<HubHealth>('GET', '/api/health');
   setup = (b: { username: string; password: string; displayName?: string; deviceName: string; platform: string }) => this.call<HubSession>('POST', '/auth/setup', b);
-  login = (b: { username: string; password: string; deviceName: string; platform: string }) => this.call<HubSession>('POST', '/auth/login', b);
+  login = (b: { username: string; password: string; otp?: string; deviceName: string; platform: string }) => this.call<HubSession>('POST', '/auth/login', b);
   logout = () => this.call<{ ok: true }>('POST', '/auth/logout', {});
   startPairing = (b: { deviceName: string; platform: string }) => this.call<HubPairing>('POST', '/auth/device', b);
 
@@ -542,7 +565,7 @@ export class HubClient {
     return r.status === 202 ? null : r.data;
   }
 
-  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[] }>('GET', '/api/me');
+  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[] }>('GET', '/api/me');
   setDisplayName = (displayName: string) => this.call<{ user: HubUser }>('PATCH', '/api/me', { displayName });
   changePassword = (currentPassword: string, newPassword: string) => this.call('PUT', '/api/me/password', { currentPassword, newPassword });
   myDevices = () => this.call<{ devices: (HubDevice & { current: boolean })[] }>('GET', '/api/me/devices');
@@ -595,6 +618,21 @@ export class HubClient {
   hideSuggestion = (id: number) => this.call('POST', `/api/radar/suggestions/${id}/hide`, {});
   setAutoGet = (id: number, autoGet: boolean) => this.call<{ follow: HubFollow }>('PATCH', `/api/radar/follows/${id}`, { autoGet });
   weeklyMix = (fresh = false) => this.call<{ week: string; tracks: HubMixTrack[] }>('GET', `/api/radar/mix${fresh ? '?fresh=1' : ''}`);
+  // Two-step sign-in (hub/src/totp.ts)
+  twoFactor = () => this.call<{ enabled: boolean; recoveryLeft: number }>('GET', '/api/me/2fa');
+  twoFactorSetup = (password: string) => this.call<{ secret: string; uri: string }>('POST', '/api/me/2fa/setup', { password });
+  twoFactorEnable = (code: string) => this.call<{ recoveryCodes: string[] }>('POST', '/api/me/2fa/enable', { code });
+  twoFactorOff = (password: string, otp: string) => this.call('DELETE', '/api/me/2fa', { password, otp });
+  householdPlaylists = () => this.call<{ playlists: HouseholdPlaylist[] }>('GET', '/api/household/playlists');
+  householdPlaylist = (id: number) => this.call<{ playlist: HouseholdPlaylist; tracks: HouseholdEntry[] }>('GET', `/api/household/playlists/${id}`);
+  createHouseholdPlaylist = (name: string, tracks?: SharedTrack[]) => this.call<{ playlist: HouseholdPlaylist }>('POST', '/api/household/playlists', { name, tracks });
+  renameHouseholdPlaylist = (id: number, name: string) => this.call<{ playlist: HouseholdPlaylist }>('PATCH', `/api/household/playlists/${id}`, { name });
+  deleteHouseholdPlaylist = (id: number) => this.call<{ ok: true }>('DELETE', `/api/household/playlists/${id}`);
+  addToHousehold = (id: number, tracks: SharedTrack[]) => this.call<{ added: number }>('POST', `/api/household/playlists/${id}/tracks`, { tracks });
+  removeFromHousehold = (id: number, entry: number) => this.call<{ ok: true }>('DELETE', `/api/household/playlists/${id}/tracks/${entry}`);
+  orderHousehold = (id: number, ids: number[]) => this.call<{ ok: true }>('PUT', `/api/household/playlists/${id}/order`, { ids });
+  setGuardians = (kidId: number, ids: number[]) => this.call<{ user: HubAdminUser }>('PUT', `/api/admin/users/${kidId}/guardians`, { ids });
+  resetTwoFactor = (userId: number) => this.call<{ user: HubAdminUser }>('DELETE', `/api/admin/users/${userId}/2fa`);
   // Scrobbling (hub/src/scrobble.ts)
   push = () => this.call<HubPush>('GET', '/api/me/push');
   pushOn = () => this.call<HubPush>('POST', '/api/me/push', {});

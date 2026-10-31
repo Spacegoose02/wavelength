@@ -93,7 +93,7 @@ async function show(list: HubNotice[]) {
       window.focus();
       // "New from …" opens Release Radar, "Genres to tidy" the server settings, the rest the Inbox
       const kind = 'kind' in n ? n.kind : undefined;
-      useUi.getState().go(kind === 'radar' ? { view: 'discover', genre: 'new' } : kind === 'library' ? { view: 'settings', tab: 'server' } : { view: 'inbox' });
+      useUi.getState().go(kind === 'radar' ? { view: 'discover', genre: 'new' } : kind === 'library' ? { view: 'settings', tab: 'server' } : kind === 'rewind' ? { view: 'rewind' } : { view: 'inbox' });
       w.close();
     };
   }

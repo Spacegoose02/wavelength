@@ -38,7 +38,9 @@ import { ReleaseRadar } from './radar.ts';
 import { radarRoutes } from './routes/radar.ts';
 import { scrobbleRoutes } from './routes/scrobble.ts';
 import { pushRoutes } from './routes/push.ts';
+import { householdRoutes } from './routes/household.ts';
 import { Scrobbler } from './scrobble.ts';
+import { Digests } from './digests.ts';
 import { getUser } from './users.ts';
 import { Library } from './library.ts';
 import { CleanDownloads } from './cleanDownloads.ts';
@@ -69,6 +71,8 @@ export interface Ctx {
   radar: ReleaseRadar;
   /** Plays sent on to ListenBrainz / Last.fm (scrobble.ts). */
   scrobbler: Scrobbler;
+  /** Kid reports and "your month in music" notifications (digests.ts). */
+  digests: Digests;
   /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
   restart: () => void;
 }
@@ -99,6 +103,9 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.scrobbler = new Scrobbler(db, config);
   if (opts.watchLibrary ?? true) ctx.scrobbler.start();
   app.addHook('onClose', async () => ctx.scrobbler.stop());
+  ctx.digests = new Digests(db);
+  if (opts.watchLibrary ?? true) ctx.digests.start();
+  app.addHook('onClose', async () => ctx.digests.stop());
   app.decorate('hubLibrary', ctx.library);
   app.decorate('hubClean', ctx.clean);
   app.decorate('hubScrobbler', ctx.scrobbler);
@@ -132,7 +139,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   });
 
   app.setErrorHandler((err, req, reply) => {
-    if (err instanceof HttpError) return reply.code(err.statusCode).send({ error: err.message });
+    if (err instanceof HttpError) return reply.code(err.statusCode).send({ ...err.extra, error: err.message });
     const { statusCode: status, message } = err as { statusCode?: number; message?: string };
     if (status && status < 500) return reply.code(status).send({ error: message });
     req.log.error(err);
@@ -178,6 +185,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   radarRoutes(app, ctx);
   scrobbleRoutes(app, ctx);
   pushRoutes(app, ctx);
+  householdRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

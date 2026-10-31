@@ -60,7 +60,7 @@ export function dropTopic(db: Db, userId: number) {
   write(db, TOPICS, t);
 }
 
-const TAGS: Record<string, string> = {
+const TAGS: Record<NoticeKind, string> = {
   'request.new': 'inbox_tray', 'request.ready': 'white_check_mark', 'request.rejected': 'no_entry', 'request.have': 'cd',
   'request.failed': 'warning', share: 'gift', radar: 'new', library: 'books', report: 'bar_chart', rewind: 'rewind',
 };
