@@ -411,6 +411,8 @@ export interface HubFollow {
   name: string;
   picture: string | null;
   followedAt: number;
+  /** "Get new releases automatically" is on (since then); missing on older Hubs. */
+  autoGetAt?: number | null;
 }
 
 /** A new release from a followed artist, found by the Hub on Deezer. */
@@ -432,12 +434,37 @@ export interface HubRadarRelease {
 export interface HubRadar {
   follows: HubFollow[];
   releases: HubRadarRelease[];
+  /** Announced, not out yet (older Hubs don't send it). */
+  upcoming?: HubRadarRelease[];
   windowDays: number;
   /** When the Hub last looked any of them up; null before the first look. */
   checkedAt: number | null;
   /** Followed artists not looked up yet, and ones whose last look failed. */
   pending: number;
   failed: number;
+}
+
+/** A song in this week's Weekly Mix (hub/src/radar.ts weeklyMix): Deezer's, with a 30-second preview. */
+export interface HubMixTrack {
+  id: number;
+  title: string;
+  artist: string;
+  album: string;
+  cover: string | null;
+  link: string;
+  preview: string | null;
+  explicit: boolean;
+  duration: number;
+  because: string;
+}
+
+/** A ListenBrainz or Last.fm account plays are sent to (hub/src/scrobble.ts). */
+export interface HubScrobbleAccount {
+  service: 'listenbrainz' | 'lastfm';
+  username: string;
+  connectedAt: number;
+  /** why sending stopped (a revoked token); null while it works */
+  error: string | null;
 }
 
 /** An artist to follow: like ones you follow or play (`because`), or one you play a lot (`plays`). */
@@ -555,6 +582,13 @@ export class HubClient {
   unfollow = (id: number) => this.call('DELETE', `/api/radar/follows/${id}`);
   radarSuggestions = (fresh = false) => this.call<{ suggestions: HubSuggestion[] }>('GET', `/api/radar/suggestions${fresh ? '?fresh=1' : ''}`);
   hideSuggestion = (id: number) => this.call('POST', `/api/radar/suggestions/${id}/hide`, {});
+  setAutoGet = (id: number, autoGet: boolean) => this.call<{ follow: HubFollow }>('PATCH', `/api/radar/follows/${id}`, { autoGet });
+  weeklyMix = (fresh = false) => this.call<{ week: string; tracks: HubMixTrack[] }>('GET', `/api/radar/mix${fresh ? '?fresh=1' : ''}`);
+  // Scrobbling (hub/src/scrobble.ts)
+  scrobbleAccounts = () => this.call<{ accounts: HubScrobbleAccount[]; lastfmAvailable: boolean }>('GET', '/api/me/scrobble');
+  connectListenBrainz = (token: string) => this.call<{ account: HubScrobbleAccount }>('POST', '/api/me/scrobble/listenbrainz', { token });
+  connectLastfm = (username: string, password: string) => this.call<{ account: HubScrobbleAccount }>('POST', '/api/me/scrobble/lastfm', { username, password });
+  disconnectScrobble = (service: HubScrobbleAccount['service']) => this.call('DELETE', `/api/me/scrobble/${service}`);
 
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
   server = () => this.call<HubServerStatus>('GET', '/api/admin/server');

@@ -17,6 +17,8 @@ import { fetchAllowed } from './routes/webfetch.ts';
 const DZ = 'https://api.deezer.com';
 /** Releases from the last this many days are on the radar. */
 export const WINDOW_DAYS = 42;
+/** Announced releases (Deezer lists some before they're out) this far ahead show as "Coming soon". */
+export const UPCOMING_DAYS = 120;
 /** Kept this long, so a release doesn't count as "new" again if Deezer drops and re-adds it. */
 const KEEP_DAYS = 120;
 /** Each followed artist is looked up this often. */
@@ -38,7 +40,17 @@ const SUGGEST_MS = 6 * 60 * 60_000;
 export const MAX_FOLLOWS = 1000;
 const DAY = 86_400_000;
 
-export interface Followed { id: number; name: string; picture: string | null; followedAt: number }
+export interface Followed {
+  id: number;
+  name: string;
+  picture: string | null;
+  followedAt: number;
+  /** "Get new releases automatically" is on (since then). */
+  autoGetAt: number | null;
+}
+
+/** What auto-get does with a new release for one person (wired to requests in routes/requests.ts). */
+export type AutoGet = (userId: number, r: RadarRelease) => void | Promise<void>;
 
 export interface RadarRelease {
   id: number;
@@ -65,6 +77,28 @@ export interface Suggestion {
   because: string[];
   /** Set when it's suggested because you play them: how many times in the last 90 days. */
   plays?: number;
+}
+
+/** A song in someone's Weekly Mix: Deezer's, with a 30-second preview. */
+export interface MixTrack {
+  id: number;
+  title: string;
+  artist: string;
+  album: string;
+  cover: string | null;
+  link: string;
+  preview: string | null;
+  explicit: boolean;
+  duration: number;
+  /** why it's in the mix, e.g. "New from Tame Impala" or "Like Khruangbin" */
+  because: string;
+}
+
+/** The Friday a mix belongs to (YYYY-MM-DD): mixes are made fresh each Friday, like New Music Friday. */
+export function mixWeek(now: number): string {
+  const d = new Date(now);
+  const back = (d.getUTCDay() + 2) % 7; // days since Friday
+  return new Date(now - back * DAY).toISOString().slice(0, 10);
 }
 
 export interface DzArtist { id: number; name: string; picture: string | null; fans: number | null }
@@ -109,6 +143,9 @@ export class ReleaseRadar {
   private related = new Map<number, { at: number; list: DzArtist[] }>();
   private names = new Map<string, { at: number; artist: DzArtist | null }>();
   private suggested = new Map<number, { at: number; list: Suggestion[] }>();
+  private mixes = new Map<number, { week: string; list: MixTrack[] }>();
+  /** Set by routes/requests.ts: turns an auto-got release into a request. */
+  autoGet?: AutoGet;
 
   constructor(db: Db, opts: { now?: () => number; gapMs?: number } = {}) {
     this.db = db;
@@ -131,9 +168,9 @@ export class ReleaseRadar {
   // ---- following ----
 
   follows(userId: number): Followed[] {
-    const rows = this.db.prepare('SELECT artist_id, name, picture, followed_at FROM follows WHERE user_id = ? ORDER BY name COLLATE NOCASE').all(userId) as
-      { artist_id: number; name: string; picture: string | null; followed_at: number }[];
-    return rows.map((r) => ({ id: r.artist_id, name: r.name, picture: r.picture, followedAt: r.followed_at }));
+    const rows = this.db.prepare('SELECT artist_id, name, picture, followed_at, auto_get_at FROM follows WHERE user_id = ? ORDER BY name COLLATE NOCASE').all(userId) as
+      { artist_id: number; name: string; picture: string | null; followed_at: number; auto_get_at: number | null }[];
+    return rows.map((r) => ({ id: r.artist_id, name: r.name, picture: r.picture, followedAt: r.followed_at, autoGetAt: r.auto_get_at }));
   }
 
   /** Follow a Deezer artist. Looks them up right away (in the background), so their releases show up soon. */
@@ -148,8 +185,13 @@ export class ReleaseRadar {
     this.db.prepare('DELETE FROM radar_hidden WHERE user_id = ? AND artist_id = ?').run(userId, a.id);
     this.suggested.delete(userId);
     if (!this.checkedAt(a.id)) void this.checkArtist(a.id).catch(() => undefined);
-    const row = this.db.prepare('SELECT followed_at FROM follows WHERE user_id = ? AND artist_id = ?').get(userId, a.id) as { followed_at: number };
-    return { id: a.id, name: a.name, picture: a.picture ?? null, followedAt: row.followed_at };
+    const row = this.db.prepare('SELECT followed_at, auto_get_at FROM follows WHERE user_id = ? AND artist_id = ?').get(userId, a.id) as { followed_at: number; auto_get_at: number | null };
+    return { id: a.id, name: a.name, picture: a.picture ?? null, followedAt: row.followed_at, autoGetAt: row.auto_get_at };
+  }
+
+  /** Turn "Get new releases automatically" on or off for an artist you follow. Only releases from now on. */
+  setAutoGet(userId: number, artistId: number, on: boolean): boolean {
+    return this.db.prepare('UPDATE follows SET auto_get_at = ? WHERE user_id = ? AND artist_id = ?').run(on ? this.now() : null, userId, artistId).changes > 0;
   }
 
   unfollow(userId: number, artistId: number): boolean {
@@ -187,6 +229,14 @@ export class ReleaseRadar {
     return rows.map(outRelease);
   }
 
+  /** Announced releases from the artists `userId` follows that aren't out yet, soonest first. */
+  upcoming(userId: number): RadarRelease[] {
+    const from = new Date(this.now() + DAY).toISOString().slice(0, 10);
+    const rows = this.db.prepare(`SELECT r.* FROM radar_releases r JOIN follows f ON f.artist_id = r.artist_id AND f.user_id = ?
+      WHERE r.released > ? ORDER BY r.released, r.found_at`).all(userId, from) as unknown as ReleaseRow[];
+    return rows.map(outRelease);
+  }
+
   /** When the Hub last looked at any of the artists `userId` follows, and how many it couldn't look up. */
   status(userId: number): { checkedAt: number | null; pending: number; failed: number } {
     const r = this.db.prepare(`SELECT MAX(a.checked_at) AS at, SUM(a.artist_id IS NULL) AS pending, SUM(a.error IS NOT NULL) AS failed
@@ -214,7 +264,8 @@ export class ReleaseRadar {
       throw e;
     }
     const keepFrom = new Date(now - KEEP_DAYS * DAY).toISOString().slice(0, 10);
-    const until = new Date(now + DAY).toISOString().slice(0, 10);
+    const until = new Date(now + UPCOMING_DAYS * DAY).toISOString().slice(0, 10);
+    const today = new Date(now).toISOString().slice(0, 10);
     const name = (this.db.prepare('SELECT name FROM follows WHERE artist_id = ? LIMIT 1').get(artistId) as { name: string } | undefined)?.name ?? '';
     const fresh: RadarRelease[] = [];
     tx(this.db, () => {
@@ -240,10 +291,34 @@ export class ReleaseRadar {
       for (const r of fresh.filter((x) => x.released >= newsFrom)) {
         const who = (this.db.prepare('SELECT user_id FROM follows WHERE artist_id = ? AND followed_at <= ?').all(artistId, before) as { user_id: number }[]).map((x) => x.user_id);
         const what = { single: 'single', ep: 'EP', compile: 'compilation' }[r.type] ?? 'album';
-        notify(this.db, who, 'radar', `New from ${r.artist}`, `${r.title} (${what})`, now);
+        if (r.released > today) {
+          const day = new Date(r.released + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+          notify(this.db, who, 'radar', `Coming soon from ${r.artist}`, `${r.title} (${what}), out ${day}`, now);
+        } else notify(this.db, who, 'radar', `New from ${r.artist}`, `${r.title} (${what})`, now);
       }
     }
+    await this.runAutoGet(artistId);
     return fresh.length;
+  }
+
+  /**
+   * "Get new releases automatically": every release of this artist that is out (today or in the last NOTIFY_DAYS),
+   * that the Hub found after the person turned it on, and that wasn't got already, goes to `autoGet` once.
+   * An announced release is got on the day it comes out.
+   */
+  private async runAutoGet(artistId: number) {
+    if (!this.autoGet) return;
+    const now = this.now();
+    const today = new Date(now).toISOString().slice(0, 10);
+    const from = new Date(now - NOTIFY_DAYS * DAY).toISOString().slice(0, 10);
+    const due = this.db.prepare(`SELECT f.user_id, r.* FROM follows f JOIN radar_releases r ON r.artist_id = f.artist_id
+      LEFT JOIN radar_autoget g ON g.user_id = f.user_id AND g.release_id = r.id
+      WHERE f.artist_id = ? AND f.auto_get_at IS NOT NULL AND g.release_id IS NULL
+        AND r.released <= ? AND r.released >= ? AND r.found_at >= f.auto_get_at`).all(artistId, today, from) as unknown as (ReleaseRow & { user_id: number })[];
+    for (const row of due) {
+      this.db.prepare('INSERT OR IGNORE INTO radar_autoget (user_id, release_id, at) VALUES (?, ?, ?)').run(row.user_id, row.id, now);
+      await Promise.resolve(this.autoGet(row.user_id, outRelease(row))).catch(() => undefined);
+    }
   }
 
   /** Look up every followed artist that is due (or, with `userId`, that person's artists not looked at in the last few minutes). */
@@ -273,6 +348,54 @@ export class ReleaseRadar {
     const keepFrom = new Date(this.now() - KEEP_DAYS * DAY).toISOString().slice(0, 10);
     this.db.prepare('DELETE FROM radar_releases WHERE released < ? OR artist_id NOT IN (SELECT artist_id FROM follows)').run(keepFrom);
     this.db.prepare('DELETE FROM radar_artists WHERE artist_id NOT IN (SELECT artist_id FROM follows)').run();
+    this.db.prepare('DELETE FROM radar_autoget WHERE release_id NOT IN (SELECT id FROM radar_releases)').run();
+  }
+
+  // ---- weekly mix ----
+
+  /**
+   * Weekly Mix: up to 30 songs to try, made each Friday. Songs from the new releases of artists you follow (two
+   * from each), mixed with the top songs of the artists suggested to you (one or two from each). Kept for the
+   * week, unless `fresh`.
+   */
+  async weeklyMix(userId: number, fresh = false): Promise<{ week: string; tracks: MixTrack[] }> {
+    const week = mixWeek(this.now());
+    const hit = this.mixes.get(userId);
+    if (!fresh && hit?.week === week) return { week, tracks: hit.list };
+    const toTrack = (t: any, because: string, album?: { title?: string; cover?: string | null }): MixTrack | null =>
+      Number.isSafeInteger(t?.id) && t.title ? {
+        id: t.id, title: String(t.title), artist: String(t.artist?.name ?? ''), album: String(album?.title ?? t.album?.title ?? ''),
+        cover: album?.cover ?? t.album?.cover_medium ?? null, link: String(t.link ?? `https://www.deezer.com/track/${t.id}`),
+        preview: typeof t.preview === 'string' && t.preview ? t.preview : null, explicit: !!t.explicit_lyrics, duration: Number(t.duration) || 30, because,
+      } : null;
+
+    const fromReleases: MixTrack[] = [];
+    for (const r of this.releases(userId).slice(0, 12)) {
+      const got = await deezer(`/album/${r.id}/tracks?limit=2`).catch(() => null);
+      for (const t of got?.data ?? []) {
+        const m = toTrack({ ...t, artist: t.artist ?? { name: r.artist } }, `New from ${r.artist}`, { title: r.title, cover: r.cover });
+        if (m) fromReleases.push(m);
+      }
+      if (this.gapMs) await wait(this.gapMs);
+    }
+    const fromSuggested: MixTrack[] = [];
+    for (const a of (await this.suggestions(userId).catch(() => [])).slice(0, 10)) {
+      const got = await deezer(`/artist/${a.id}/top?limit=${a.plays ? 1 : 2}`).catch(() => null);
+      const because = a.plays ? `You play ${a.name} a lot` : a.because.length ? `Like ${a.because.slice(0, 2).join(' and ')}` : `New to you`;
+      for (const t of got?.data ?? []) {
+        const m = toTrack(t, because);
+        if (m) fromSuggested.push(m);
+      }
+      if (this.gapMs) await wait(this.gapMs);
+    }
+    // alternate the two, so the mix isn't all one kind; no song twice
+    const seen = new Set<number>();
+    const list: MixTrack[] = [];
+    for (let i = 0; list.length < 30 && (i < fromReleases.length || i < fromSuggested.length); i++) {
+      for (const t of [fromReleases[i], fromSuggested[i]]) if (t && !seen.has(t.id) && list.length < 30) seen.add(t.id), list.push(t);
+    }
+    this.mixes.set(userId, { week, list });
+    return { week, tracks: list };
   }
 
   // ---- suggestions ----

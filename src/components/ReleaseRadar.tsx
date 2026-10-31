@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { deemixClient } from '../lib/hubServices';
-import { follow, loadRadar, unfollow, useFollows } from '../lib/follows';
+import { follow, loadRadar, setAutoGet, unfollow, useFollows } from '../lib/follows';
 import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
 import { useHidden } from '../lib/kids';
-import type { HubRadarRelease, HubSuggestion } from '../sources/hub';
+import type { HubMixTrack, HubRadarRelease, HubSuggestion } from '../sources/hub';
 import { albumPreview, releaseRadar, type Release } from '../sources/releaseRadar';
 import { norm } from '../sources/registry';
+import { findInLibrary } from '../lib/match';
+import type { Track } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { hubClient, useHub } from '../store/hub';
 import { usePlayer } from '../store/player';
@@ -15,7 +17,7 @@ import { Cover, Spinner } from './common';
 import { FollowButton } from './FollowButton';
 import { IconDownload, IconPlay, IconRefresh, IconX } from './Icons';
 
-type Mode = 'following' | 'played';
+type Mode = 'following' | 'played' | 'mix';
 const MODE_KEY = 'tonearm.radarMode';
 
 /**
@@ -58,11 +60,12 @@ export function ReleaseRadar() {
           <span className="chips inline">
             <button className={`chip ${mode === 'following' ? 'on' : ''}`} onClick={() => pick('following')}>Following{follows ? ` (${follows})` : ''}</button>
             <button className={`chip ${mode === 'played' ? 'on' : ''}`} onClick={() => pick('played')}>Artists you play</button>
+            <button className={`chip ${mode === 'mix' ? 'on' : ''}`} onClick={() => pick('mix')}>Weekly Mix</button>
           </span>
         ) : <small className="muted">new from artists you play</small>}
         <button className="link small" onClick={() => setNonce(nonce + 1)}><IconRefresh /> Refresh</button>
       </h2>
-      {mode === 'following' ? <FollowingRadar nonce={nonce} /> : <PlayedRadar nonce={nonce} />}
+      {mode === 'following' ? <FollowingRadar nonce={nonce} /> : mode === 'mix' ? <WeeklyMix nonce={nonce} /> : <PlayedRadar nonce={nonce} />}
     </section>
   );
 }
@@ -95,6 +98,7 @@ function FollowingRadar({ nonce }: { nonce: number }) {
   }, [radar]);
 
   const releases = useMemo(() => (radar?.releases ?? []).map(fromHub), [radar]);
+  const upcoming = useMemo(() => (radar?.upcoming ?? []).map(fromHub), [radar]);
 
   return (
     <>
@@ -112,6 +116,12 @@ function FollowingRadar({ nonce }: { nonce: number }) {
       ) : !releases.length && !radar.pending ? (
         <p className="muted">Nothing new in the last {Math.round(radar.windowDays / 7)} weeks from the {follows.length} artists you follow.</p>
       ) : <ReleaseCards releases={releases} />}
+      {upcoming.length > 0 && (
+        <>
+          <h3 className="dz-section">Coming soon <small className="muted">announced, not out yet</small></h3>
+          <ReleaseCards releases={upcoming} upcoming />
+        </>
+      )}
       {!follows.length && !managing && <ManageFollows />}
       <Suggestions />
     </>
@@ -152,6 +162,11 @@ function ManageFollows() {
           {follows.map((f) => (
             <span key={f.id} className="chip">
               {f.name}
+              <button
+                className={`chip-auto ${f.autoGetAt ? 'on' : ''}`}
+                title={f.autoGetAt ? 'New releases are got automatically. Click to stop' : `Get new releases from ${f.name} automatically`}
+                onClick={() => void setAutoGet(f.id, !f.autoGetAt).catch(() => undefined)}
+              >Auto</button>
               <button className="chip-x" title={`Stop following ${f.name}`} onClick={() => void unfollow(f.id)}><IconX /></button>
             </span>
           ))}
@@ -230,7 +245,7 @@ function PlayedRadar({ nonce }: { nonce: number }) {
 }
 
 /** A row of releases, each with a preview and Get (or Request), or "In library" when you have it. */
-export function ReleaseCards({ releases }: { releases: Release[] }) {
+export function ReleaseCards({ releases, upcoming }: { releases: Release[]; upcoming?: boolean }) {
   const [status, setStatus] = useState<Record<number, string>>({});
   const albums = useCatalog((s) => s.albums);
   const deemix = useSettings((s) => s.deemix);
@@ -277,7 +292,9 @@ export function ReleaseCards({ releases }: { releases: Release[] }) {
             <div className="card-title" title={r.title}>{r.title}</div>
             <div className="card-sub"><span>{r.artist}</span></div>
             <div className="card-sub"><span className="tag">{r.type}</span><span>{new Date(r.released + 'T12:00:00').toLocaleDateString()}</span></div>
-            {mine ? (
+            {upcoming ? (
+              <span className="muted small">Out {new Date(r.released + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+            ) : mine ? (
               <button className="btn small" onClick={() => useUi.getState().go({ view: 'album', album: mine })}>In library</button>
             ) : (
               <button className="btn small" disabled={(!deemix.url && !ask) || status[r.id] === '…' || status[r.id] === 'Queued' || status[r.id] === 'Requested'} title={status[r.id]} onClick={() => get(r)}>
@@ -288,5 +305,103 @@ export function ReleaseCards({ releases }: { releases: Release[] }) {
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Weekly Mix: songs from this week's new releases by the artists you follow and from artists like them,
+ * picked by the Hub every Friday (hub/src/radar.ts weeklyMix). They're Deezer previews, so each has Get or
+ * Request, or plays the full song when it's already in your library.
+ */
+function WeeklyMix({ nonce }: { nonce: number }) {
+  const [mix, setMix] = useState<{ week: string; tracks: HubMixTrack[] }>();
+  const [err, setErr] = useState<string>();
+  const [status, setStatus] = useState<Record<number, string>>({});
+  const [found, setFound] = useState<Map<number, Track>>(new Map());
+  const deemix = useSettings((s) => s.deemix);
+  const ask = useMustRequest();
+  const hidden = useHidden();
+
+  useEffect(() => {
+    let alive = true;
+    setMix(undefined);
+    setErr(undefined);
+    setFound(new Map());
+    hubClient()?.weeklyMix(nonce > 0)
+      .then(async (m) => {
+        if (!alive) return;
+        setMix(m);
+        // which of them you already have, one search at a time so a big mix doesn't flood the server
+        const find = findInLibrary();
+        for (const t of m.tracks) {
+          const hit = await find(t);
+          if (!alive) return;
+          if (hit) setFound((f) => new Map(f).set(t.id, hit));
+        }
+      })
+      .catch((e) => alive && setErr(String((e as Error).message ?? e)));
+    return () => {
+      alive = false;
+    };
+  }, [nonce]);
+
+  const owned = (t: HubMixTrack) => found.get(t.id);
+
+  const shown = (mix?.tracks ?? []).filter((t) => !hidden.deezer({ type: 'track', id: t.id, title: t.title, artist: t.artist, link: t.link, explicit: t.explicit }));
+  // the full song when you have it, otherwise the preview
+  const asTrack = (t: HubMixTrack): Track | undefined => owned(t) ?? (t.preview
+    ? { id: `preview:${t.preview}`, sourceId: 'preview', kind: 'track' as const, title: t.title, artist: t.artist, album: `${t.album} (preview)`, coverUrl: t.cover ?? undefined, streamUrl: t.preview, duration: 30 }
+    : undefined);
+  const playFrom = (i: number) => {
+    const list = shown.slice(i).map(asTrack).filter((t): t is Track => !!t);
+    if (list.length) usePlayer.getState().playTracks(list);
+  };
+
+  const get = async (t: HubMixTrack) => {
+    setStatus((s) => ({ ...s, [t.id]: '…' }));
+    try {
+      if (mustRequest()) {
+        await requestMusic({ link: t.link, kind: 'track', title: t.title, artist: t.artist, cover: t.cover ?? undefined });
+        setStatus((s) => ({ ...s, [t.id]: 'Requested' }));
+      } else {
+        await deemixClient().addToQueue(t.link, deemix.bitrate);
+        setStatus((s) => ({ ...s, [t.id]: 'Queued' }));
+      }
+    } catch (e) {
+      setStatus((s) => ({ ...s, [t.id]: String((e as Error).message ?? e) }));
+    }
+  };
+
+  if (err) return <p className="muted">Couldn’t get your Weekly Mix: {err}</p>;
+  if (!mix) return <div className="row gap muted small"><Spinner /> Putting your Weekly Mix together…</div>;
+  if (!shown.length) return <p className="muted">Nothing for your Weekly Mix yet. Follow a few artists (or play more music) and it fills up every Friday.</p>;
+  return (
+    <>
+      <div className="row gap muted small radar-status">
+        Week of {new Date(mix.week + 'T12:00:00').toLocaleDateString([], { dateStyle: 'medium' })} · {shown.length} songs
+        <button className="btn small" onClick={() => playFrom(0)}><IconPlay /> Play all</button>
+      </div>
+      <ol className="mix-list">
+        {shown.map((t, i) => {
+          const mine = owned(t);
+          const st = status[t.id];
+          return (
+            <li key={t.id} className="mix-row">
+              <button className="icon-btn" title={mine ? 'Play' : 'Play preview'} disabled={!mine && !t.preview} onClick={() => playFrom(i)}><IconPlay /></button>
+              <Cover src={t.cover ?? undefined} alt={t.album} />
+              <div className="mix-text">
+                <div className="ellipsis" title={t.title}>{t.title}</div>
+                <div className="muted small ellipsis">{t.artist} · <span title={t.because}>{t.because}</span></div>
+              </div>
+              {mine ? <span className="tag">In library</span> : (
+                <button className="btn small" disabled={(!deemix.url && !ask) || st === '…' || st === 'Queued' || st === 'Requested'} title={st} onClick={() => get(t)}>
+                  <IconDownload /> {st && st.length < 12 ? st : ask ? 'Request' : 'Get'}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </>
   );
 }

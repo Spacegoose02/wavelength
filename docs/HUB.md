@@ -158,6 +158,8 @@ Hub sees it) is an extra lock you can add.
 | `WAVELENGTH_YTDLP` | `yt-dlp` | The yt-dlp command (the image includes it). |
 | `WAVELENGTH_WEB_DIR` | `/app/web` (image) | The app's web build, served at `/`. Without one, `/` goes to the sign-in page. |
 | `WAVELENGTH_FANART_KEY` | — | A [fanart.tv](https://fanart.tv/get-an-api-key/) API key (free). Adds fanart.tv artist pictures and album covers to the cover art picker. Without it the picker uses Deezer, Apple Music and the Cover Art Archive. |
+| `WAVELENGTH_LASTFM_KEY` | — | A [Last.fm API account](https://www.last.fm/api/account/create)'s API key. With the secret below, people can connect Last.fm for scrobbling. ListenBrainz needs nothing here. |
+| `WAVELENGTH_LASTFM_SECRET` | — | That API account's shared secret. |
 | `WAVELENGTH_DOCKER_URL` | — | A Docker socket proxy, e.g. `http://docker-socket-proxy:2375`. Turns on Docker control (below). Never the Docker socket itself. |
 | `WAVELENGTH_DOCKER_CONTAINERS` | — | Comma-separated container names admins may see, start, stop and restart, e.g. `navidrome,slskd`. Others stay invisible. |
 | `WAVELENGTH_SSO` | `false` | Accept tinyauth identity headers on `/auth/sso/`. |

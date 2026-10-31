@@ -19,7 +19,7 @@ interface Row { id: string; name: string; tracks: string; created_at: number; up
 const out = (r: Row) => ({ id: r.id, name: r.name, tracks: JSON.parse(r.tracks) as unknown[], createdAt: r.created_at, updatedAt: r.updated_at, deleted: !!r.deleted });
 const time = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 && v < 1e14 ? Math.floor(v) : null);
 
-export function mineRoutes(app: FastifyInstance, { db }: Ctx) {
+export function mineRoutes(app: FastifyInstance, { db, scrobbler }: Ctx) {
   const list = (userId: number) =>
     (db.prepare('SELECT id, name, tracks, created_at, updated_at, deleted FROM user_playlists WHERE user_id = ? ORDER BY created_at').all(userId) as unknown as Row[]).map(out);
 
@@ -73,7 +73,8 @@ export function mineRoutes(app: FastifyInstance, { db }: Ctx) {
         const json = p?.track && typeof p.track === 'object' ? JSON.stringify(p.track) : '';
         if (!at || !json || json.length > 16 * 1024) continue;
         add.run(user.id, at, json);
-        recordPlay(db, user.id, at, p.track as Record<string, unknown>, json);
+        const play = recordPlay(db, user.id, at, p.track as Record<string, unknown>, json);
+        if (play) scrobbler.enqueue(user.id, at, play);
       }
       db.prepare(`DELETE FROM play_history WHERE user_id = ? AND played_at < COALESCE(
         (SELECT played_at FROM play_history WHERE user_id = ? ORDER BY played_at DESC LIMIT 1 OFFSET ?), 0)`).run(user.id, user.id, KEEP_HISTORY - 1);

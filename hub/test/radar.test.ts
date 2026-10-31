@@ -23,6 +23,10 @@ function fakeDeezer(t: { after(fn: () => void): void }) {
     if (d.quota) return page({ error: { type: 'Exception', message: 'Quota limit exceeded', code: 4 } });
     let m = /^\/artist\/(\d+)\/albums$/.exec(url.pathname);
     if (m) return page({ data: d.albums[Number(m[1])] ?? [] });
+    m = /^\/album\/(\d+)\/tracks$/.exec(url.pathname);
+    if (m) return page({ data: [{ id: Number(m[1]) * 100 + 1, title: `Track of ${m[1]}`, preview: 'https://cdn.test/p.mp3', duration: 200 }, { id: Number(m[1]) * 100 + 2, title: `Second of ${m[1]}`, preview: '', duration: 180 }] });
+    m = /^\/artist\/(\d+)\/top$/.exec(url.pathname);
+    if (m) return page({ data: [{ id: Number(m[1]) * 1000, title: `Hit by ${m[1]}`, artist: { name: `Artist ${m[1]}` }, album: { title: 'Hits', cover_medium: null }, preview: 'https://cdn.test/h.mp3', duration: 210 }] });
     m = /^\/artist\/(\d+)\/related$/.exec(url.pathname);
     if (m) return page({ data: d.related[Number(m[1])] ?? [] });
     if (url.pathname === '/search/artist') {
@@ -179,4 +183,71 @@ test('suggestion routes', async (t) => {
   const c = await json(app, 'POST', '/api/radar/check', { token: tokens.member, body: {} });
   assert.equal(c.status, 200);
   assert.deepEqual(c.body.releases, []);
+});
+
+test('announced releases show as coming soon, and get a notice when first found', async (t) => {
+  const dz = fakeDeezer(t);
+  let now = Date.parse('2026-10-01T12:00:00Z');
+  const db = openDb(':memory:');
+  db.prepare("INSERT INTO users (id, username, display_name, role, created_at, updated_at) VALUES (1, 'u1', 'x', 'member', 0, 0)").run();
+  const radar = new ReleaseRadar(db, { now: () => now, gapMs: 0 });
+  dz.albums[7] = [];
+  radar.follow(1, { id: 7, name: 'Band' });
+  await settle();
+  now += 13 * 60 * 60_000;
+  dz.albums[7] = [album(20, 'Next Month', ymd(now + 30 * DAY)), album(21, 'Too Far', ymd(now + 200 * DAY))];
+  await radar.checkDue();
+  assert.deepEqual(radar.upcoming(1).map((r) => r.title), ['Next Month']);
+  assert.deepEqual(radar.releases(1), []);
+  const n = db.prepare('SELECT title, body FROM notifications').all().map((r) => ({ ...r }));
+  assert.equal(n.length, 1);
+  assert.equal(n[0].title, 'Coming soon from Band');
+  assert.match(String(n[0].body), /^Next Month \(album\), out /);
+});
+
+test('auto-get turns new releases into requests, once, and only ones found after it was turned on', async (t) => {
+  const dz = fakeDeezer(t);
+  const today = ymd(Date.now());
+  dz.albums[27] = [album(1, 'Already Out', today)];
+  dz.artists = [{ id: 27, name: 'Daft Punk' }];
+  const { app, db, tokens } = await seeded();
+  assert.equal((await json(app, 'POST', '/api/radar/follows', { token: tokens.member, body: { id: 27, name: 'Daft Punk' } })).status, 201);
+  await settle();
+  assert.equal((await json(app, 'PATCH', '/api/radar/follows/27', { token: tokens.member, body: { autoGet: 'yes' } })).status, 400);
+  assert.equal((await json(app, 'PATCH', '/api/radar/follows/99', { token: tokens.member, body: { autoGet: true } })).status, 404);
+  const on = await json(app, 'PATCH', '/api/radar/follows/27', { token: tokens.member, body: { autoGet: true } });
+  assert.equal(on.status, 200);
+  assert.ok(on.body.follow.autoGetAt);
+
+  // a new release turns up: it becomes the member's request, waiting for an admin (no Autodownload)
+  dz.albums[27] = [album(1, 'Already Out', today), album(2, 'Fresh', today, { record_type: 'single' })];
+  db.prepare('UPDATE radar_artists SET checked_at = 0').run();
+  await json(app, 'POST', '/api/radar/check', { token: tokens.member });
+  const reqs = () => db.prepare('SELECT title, status, note FROM requests').all().map((r) => ({ ...r }));
+  assert.deepEqual(reqs(), [{ title: 'Fresh', status: 'pending', note: 'Release Radar: got automatically' }], 'not the one from before auto-get was on');
+  // looking again doesn't ask twice
+  db.prepare('UPDATE radar_artists SET checked_at = 0').run();
+  await json(app, 'POST', '/api/radar/check', { token: tokens.member });
+  assert.equal(reqs().length, 1);
+});
+
+test('the weekly mix mixes new releases with suggested artists\' hits, and keeps for the week', async (t) => {
+  const dz = fakeDeezer(t);
+  const now = Date.parse('2026-10-31T12:00:00Z'); // a Saturday: the mix is Friday's
+  const db = openDb(':memory:');
+  db.prepare("INSERT INTO users (id, username, display_name, role, created_at, updated_at) VALUES (1, 'u1', 'x', 'member', 0, 0)").run();
+  const radar = new ReleaseRadar(db, { now: () => now, gapMs: 0 });
+  dz.albums[7] = [album(30, 'Fresh LP', ymd(now - 2 * DAY))];
+  dz.related[7] = [{ id: 8, name: 'Similar' }];
+  radar.follow(1, { id: 7, name: 'Band' });
+  await settle();
+  const mix = await radar.weeklyMix(1);
+  assert.equal(mix.week, '2026-10-30');
+  assert.deepEqual(mix.tracks.map((x) => x.title), ['Track of 30', 'Hit by 8', 'Second of 30']);
+  assert.equal(mix.tracks[0].because, 'New from Band');
+  assert.equal(mix.tracks[1].because, 'Like Band');
+  assert.equal(mix.tracks[2].preview, null);
+  const calls = dz.calls.length;
+  await radar.weeklyMix(1);
+  assert.equal(dz.calls.length, calls, 'kept for the week');
 });

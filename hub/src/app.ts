@@ -36,6 +36,8 @@ import { discoverRoutes } from './routes/discover.ts';
 import { ChartCache } from './discover.ts';
 import { ReleaseRadar } from './radar.ts';
 import { radarRoutes } from './routes/radar.ts';
+import { scrobbleRoutes } from './routes/scrobble.ts';
+import { Scrobbler } from './scrobble.ts';
 import { getUser } from './users.ts';
 import { Library } from './library.ts';
 import { CleanDownloads } from './cleanDownloads.ts';
@@ -47,6 +49,7 @@ declare module 'fastify' {
     hubRoutes: { method: string; url: string }[];
     hubLibrary: Library;
     hubClean: CleanDownloads;
+    hubScrobbler: Scrobbler;
   }
 }
 
@@ -63,6 +66,8 @@ export interface Ctx {
   charts: ChartCache;
   /** Release Radar: followed artists and their new releases, looked up in the background (radar.ts). */
   radar: ReleaseRadar;
+  /** Plays sent on to ListenBrainz / Last.fm (scrobble.ts). */
+  scrobbler: Scrobbler;
   /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
   restart: () => void;
 }
@@ -90,8 +95,12 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.radar = new ReleaseRadar(db);
   if (opts.watchLibrary ?? true) ctx.radar.start();
   app.addHook('onClose', async () => ctx.radar.stop());
+  ctx.scrobbler = new Scrobbler(db, config);
+  if (opts.watchLibrary ?? true) ctx.scrobbler.start();
+  app.addHook('onClose', async () => ctx.scrobbler.stop());
   app.decorate('hubLibrary', ctx.library);
   app.decorate('hubClean', ctx.clean);
+  app.decorate('hubScrobbler', ctx.scrobbler);
 
   // database backups, for restore (routes/server.ts); the route sets how big
   app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
@@ -166,6 +175,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   radioRoutes(app, ctx);
   discoverRoutes(app, ctx);
   radarRoutes(app, ctx);
+  scrobbleRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }
