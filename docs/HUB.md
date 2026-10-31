@@ -476,6 +476,23 @@ Hub and shows on every device and in the browser, in place of the one Navidrome 
   to signed-in people, and every new picture gets a new name.
 - Every change is in the audit log (`artwork.set`, `artwork.reset`).
 
+## Playlist covers
+
+Anyone can give a playlist a picture with **Change cover** on the playlist's page (see the
+[user guide](USER-GUIDE.md#playlist-covers)). The app crops it square, makes it 600×600 and uploads it; the
+Hub keeps it next to the album art (`/data/artwork`) and serves it from the same `/api/art/<file>` route.
+
+- **Which playlist** is a key: `wavelength:<id>` (someone's own Wavelength playlist), `household:<id>`,
+  `navidrome:<id>` or `plex:<id>` (the playlist's id on that server).
+- **Who sees it:** covers of Wavelength playlists only their owner; the rest everyone signed in.
+- **Who changes it:** your own Wavelength playlists, anyone (kids included). A household playlist, whoever
+  started it or an admin (`users.manage`). A Navidrome or Plex playlist, any grown-up; once someone has set a
+  cover, only they or an admin can replace or remove it.
+- Nothing is written to Navidrome or Plex, so other apps keep the server's cover.
+- Changes to shared playlists' covers are in the audit log (`playlistCover.set`, `playlistCover.reset`).
+- With no cover, the app shows a mosaic of the playlist's first four albums (Wavelength and household
+  playlists) or the server's own cover (Navidrome and Plex).
+
 ## Roles and permissions
 
 | Role | Permissions today |
@@ -583,6 +600,9 @@ with a 4xx status.
 | `GET /api/admin/artwork/search?kind=&artist=&album=` | `library.edit` | `{ candidates: [{ source, title, subtitle?, thumb, url }], failed: [service names] }` from Deezer, Apple Music, the Cover Art Archive and fanart.tv |
 | `PUT /api/admin/artwork` | `library.edit` | `{ kind, artist, album?, url, source? }` (the Hub downloads it) or `{ kind, artist, album?, image }` (base64 upload, 15 MB at most); JPEG, PNG or WebP. The same album or artist again replaces its picture |
 | `DELETE /api/admin/artwork/:id` | `library.edit` | back to the server's own picture |
+| `GET /api/playlist-covers` | signed in | `{ covers: [{ key, url, updatedAt }] }`: playlist covers (your own Wavelength playlists' and every shared one); `url` is a path on the Hub |
+| `PUT /api/playlist-covers` | signed in | `{ key, image }` (base64 JPEG, PNG or WebP, 15 MB at most). `key` is `wavelength:<id>`, `household:<id>`, `navidrome:<id>` or `plex:<id>`; who may set which is in "Playlist covers". The same key again replaces the picture |
+| `DELETE /api/playlist-covers/:key` | signed in | back to the mosaic or the server's cover (same rules) |
 | `GET /api/admin/server` | `server.view` | the server page: version, uptime, disks, yt-dlp version, counts |
 | `GET /api/admin/backup` | `server.view` | a copy of the database (`wavelength-hub-YYYY-MM-DD.db`), audited |
 | `GET /api/admin/docker` | `server.view` | `{ enabled, containers: [{ name, image, state, status, created }] }` for the containers in `WAVELENGTH_DOCKER_CONTAINERS`; `state` is `missing` for a name Docker doesn't have |

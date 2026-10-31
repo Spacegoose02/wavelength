@@ -339,6 +339,12 @@ export interface HubArtCandidate {
   thumb: string;
   url: string;
 }
+/** A picture someone picked for a playlist (docs/HUB.md "Playlist covers"). `url` is a path on the Hub. */
+export interface HubPlaylistCover {
+  key: string;
+  url: string;
+  updatedAt: number;
+}
 export type HubArtworkInput = { kind: HubArtwork['kind']; artist: string; album?: string; source?: string } & ({ url: string } | { image: string });
 
 /** The admin server page (GET /api/admin/server). */
@@ -709,6 +715,9 @@ export class HubClient {
   }
   ratings = () => this.call<{ ratings: HubRating[] }>('GET', '/api/ratings');
   artwork = () => this.call<{ artwork: HubArtwork[] }>('GET', '/api/artwork');
+  playlistCovers = () => this.call<{ covers: HubPlaylistCover[] }>('GET', '/api/playlist-covers');
+  setPlaylistCover = (key: string, image: string) => this.call<{ cover: HubPlaylistCover }>('PUT', '/api/playlist-covers', { key, image });
+  deletePlaylistCover = (key: string) => this.call('DELETE', `/api/playlist-covers/${encodeURIComponent(key)}`);
   kidStatus = (day: string) => this.call<{ kid: boolean; rules: KidRules; usedSeconds: number; pinSet: boolean }>('GET', `/api/me/kid?day=${day}`);
   listened = (day: string, seconds: number) => this.call<{ usedSeconds: number }>('POST', '/api/me/listened', { day, seconds });
   kidUnlock = (pin: string) => this.call<{ ok: true }>('POST', '/api/kid/unlock', { pin });

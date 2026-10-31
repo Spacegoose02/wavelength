@@ -1,4 +1,5 @@
 import { startArtworkChecks } from './lib/artwork';
+import { startPlaylistCoverChecks } from './lib/playlistCovers';
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { useCatalog } from './store/catalog';
 import { startHubSync } from './lib/hubSync';
@@ -180,6 +181,7 @@ export default function App() {
     startInboxChecks();
     startFlagChecks();
     startArtworkChecks();
+    startPlaylistCoverChecks();
     startKidTime();
     detectWebHub();
     startListeningReports();

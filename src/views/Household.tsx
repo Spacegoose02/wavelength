@@ -7,8 +7,10 @@ import { hubClient, useHub } from '../store/hub';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
-import { Cover, Empty, Spinner, TrackList } from '../components/common';
+import { Empty, Spinner, TrackList } from '../components/common';
 import { IconPlay, IconShuffle, IconX } from '../components/Icons';
+import { PlaylistArt, PlaylistCoverButton } from '../components/PlaylistCoverButton';
+import { forgetPlaylistCover, householdCoverKey } from '../lib/playlistCovers';
 
 /**
  * Household playlists (hub/src/routes/household.ts): one list the whole house adds to. The Hub keeps each
@@ -48,7 +50,7 @@ export function HouseholdPlaylists() {
         <div className="smart-list">
           {list?.map((p) => (
             <button key={p.id} className="source-row as-button" onClick={() => useUi.getState().go({ view: 'household', id: p.id })}>
-              <Cover src={p.cover ?? undefined} alt={p.name} className="row-cover" />
+              <PlaylistArt coverKey={householdCoverKey(p.id)} name={p.name} fallback={p.cover ?? undefined} className="row-cover" />
               <div className="track-main">
                 <div className="track-title">{p.name}</div>
                 <div className="track-sub">{p.songs} song{p.songs === 1 ? '' : 's'}{p.owner ? ` · started by ${p.owner.displayName}` : ''}</div>
@@ -153,7 +155,7 @@ export function HouseholdPlaylistView({ id }: { id: number }) {
   return (
     <div className="page">
       <header className="hero">
-        <div className="hero-art"><Cover src={p.cover ?? undefined} alt={p.name} /></div>
+        <div className="hero-art"><PlaylistArt coverKey={householdCoverKey(p.id)} name={p.name} tracks={tracks} fallback={p.cover ?? undefined} /></div>
         <div>
           <div className="kicker">Household playlist{p.owner ? ` · started by ${p.owner.displayName}` : ''}</div>
           <h1>{p.name}</h1>
@@ -174,12 +176,14 @@ export function HouseholdPlaylistView({ id }: { id: number }) {
                 {myPlaylists.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
               </select>
             )}
+            {mine && <PlaylistCoverButton coverKey={householdCoverKey(p.id)} name={p.name} tracks={tracks} auto="mosaic" />}
             {mine && <button className="btn ghost" onClick={() => {
               const name = prompt('Rename the playlist', p.name);
               if (name?.trim()) void act(() => hubClient()!.renameHouseholdPlaylist(p.id, name.trim()));
             }}>Rename</button>}
             {mine && <button className="btn ghost" onClick={async () => {
               if (!confirm(`Delete “${p.name}” for everyone?`)) return;
+              forgetPlaylistCover(householdCoverKey(p.id));
               await act(() => hubClient()!.deleteHouseholdPlaylist(p.id));
               useUi.getState().go({ view: 'playlists' });
             }}>Delete</button>}

@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- **Playlist covers.** Give any playlist your own picture: press **Change cover** on a Wavelength, Navidrome,
+  Plex or household playlist, then pick one of the album covers in it, upload a picture or paste an image link.
+  Wavelength crops it square. Signed in to a Hub, the cover is kept there and shows on all your devices
+  (Windows, Android, Android Auto and the browser); with no Hub it stays on that device. **Use the automatic
+  cover** goes back to the default. See the [user guide](docs/USER-GUIDE.md#playlist-covers).
+- **Better automatic covers.** A Wavelength playlist's mosaic now shows its first four different *albums*, so
+  four songs from one album no longer fill all four squares, and uses the Hub's cover art when an admin changed
+  it. Household playlists get the same mosaic.
+- **Hub:** new `playlist_covers` table and `GET/PUT/DELETE /api/playlist-covers` (see
+  [docs/HUB.md](docs/HUB.md#playlist-covers)).
 
 ## 0.17.10
 Fixes from a bug sweep (the full list is in the PR):
