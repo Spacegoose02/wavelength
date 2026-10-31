@@ -148,7 +148,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.skin = shown;
-    // the raccoons dress for the skin's group (hazmat suits on Nuclear, visors on Lasers, …): styles.css
+    // the critters dress for the skin's group (hazmat suits on Nuclear, visors on Lasers, …): styles.css
     document.documentElement.dataset.skinGroup = skinGroup(shown);
   }, [shown]);
 

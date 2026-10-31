@@ -73,7 +73,7 @@ browsing and streaming. The Hub is the **control plane**, not the data plane: au
 | Per-user preferences (skin, EQ, stations, local playlists, history) | Hub (synced) + device cache | Sign-in sync across devices. |
 | Device-only preferences (offline downloads, volume, TV focus) | Device | Meaningless on another device. |
 | Library, streaming, playlists, stars, scrobbles | **Navidrome** (unchanged) | Keep Navidrome, per the earlier decision. |
-| Themes, visualizers, the raccoons | **App only** | Pure UI. The visualizer and raccoon picks sync with the other settings. |
+| Themes, visualizers, the critters | **App only** | Pure UI. The visualizer and critter picks sync with the other settings. |
 
 ### Standalone and offline mode stay
 

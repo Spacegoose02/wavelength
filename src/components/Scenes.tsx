@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createAudioReader } from '../player/analysis';
 import { useSettings, type NpScene } from '../store/settings';
 import { Cover } from './common';
-import { Raccoon, RACCOONS, raccoonLabel } from './raccoon/Raccoon';
+import { Critter, critterLabel, nextCritter } from './critters/Critter';
 
 /**
  * Now Playing "scenes": tap the artwork to cycle through full-size visualizers that react to the
@@ -16,7 +16,7 @@ export const SCENES: { id: NpScene; label: string }[] = [
   { id: 'stars', label: 'Starfield' },
   { id: 'mirror', label: 'Mirror spectrum' },
   { id: 'rings', label: 'Pulse rings' },
-  { id: 'raccoon', label: 'Raccoon' },
+  { id: 'raccoon', label: 'Critters' },
 ];
 
 interface Frame {
@@ -249,15 +249,15 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
 
 /**
  * The artwork slot of Now Playing. Tap (or Enter) to move to the next scene; the choice is remembered.
- * On the raccoon scene a small button in the corner switches between the DJ, country, rapper and rocker raccoons.
+ * On the critter scene a small button in the corner switches to the next critter (the raccoons, the shark, the alien).
  */
 export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
   const scene = useSettings((s) => s.npScene);
   const setScene = useSettings((s) => s.setNpScene);
-  const raccoon = useSettings((s) => s.raccoon);
-  const setRaccoon = useSettings((s) => s.setRaccoon);
+  const critter = useSettings((s) => s.raccoon);
+  const setCritter = useSettings((s) => s.setRaccoon);
   const [hint, setHint] = useState<string>();
-  const sceneLabel = (id: NpScene) => (id === 'raccoon' ? raccoonLabel(raccoon) : SCENES.find((s) => s.id === id)?.label ?? 'Artwork');
+  const sceneLabel = (id: NpScene) => (id === 'raccoon' ? critterLabel(critter) : SCENES.find((s) => s.id === id)?.label ?? 'Artwork');
   const label = sceneLabel(scene);
 
   useEffect(() => {
@@ -273,22 +273,21 @@ export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
     setHint(sceneLabel(n.id));
   };
 
-  const nextRaccoon = () => {
-    const i = RACCOONS.findIndex((r) => r.id === raccoon);
-    const n = RACCOONS[(i + 1) % RACCOONS.length];
-    setRaccoon(n.id);
+  const switchCritter = () => {
+    const n = nextCritter(critter);
+    setCritter(n.id);
     setHint(n.label);
   };
 
   return (
     <div className="np-stage-wrap">
       <button className={`np-stage ${scene === 'art' ? '' : 'scene'}`} onClick={next} title={`${label}: tap for the next visualizer`} aria-label={`Visualizer: ${label}. Tap for the next one.`}>
-        {scene === 'art' ? <Cover key={art} src={art} alt={alt} className="np-art" /> : scene === 'raccoon' ? <Raccoon kind={raccoon} /> : <SceneCanvas scene={scene} art={art} />}
+        {scene === 'art' ? <Cover key={art} src={art} alt={alt} className="np-art" /> : scene === 'raccoon' ? <Critter kind={critter} /> : <SceneCanvas scene={scene} art={art} />}
         {hint && <span className="np-stage-hint">{hint}</span>}
       </button>
       {scene === 'raccoon' && (
-        <button className="np-raccoon-switch" onClick={nextRaccoon} title="Switch raccoon" aria-label={`${label}. Switch to the next raccoon.`}>
-          Switch raccoon
+        <button className="np-critter-switch" onClick={switchCritter} title="Switch critter" aria-label={`${label}. Switch to the next critter.`}>
+          Switch critter
         </button>
       )}
     </div>

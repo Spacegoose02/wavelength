@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, BodyOutfits, Head, RaccoonFrame, Tail, TORSO } from './parts';
-import { useRaccoonRig } from './rig';
+import { Arm, BodyOutfits, Head, CritterFrame, Tail, TORSO } from './parts';
+import { useCritterRig } from './rig';
 
 /**
  * Rocker raccoon in front of two amp stacks: a spiky mohawk and a flying-V in the skin's colours, a studded
@@ -12,7 +12,7 @@ export function Rocker({ still }: { still?: boolean }) {
   const root = useRef<SVGSVGElement>(null);
   const hands = useRef(newGuitarHands());
 
-  useRaccoonRig(
+  useCritterRig(
     root,
     (f) => {
       playGuitar(f, hands.current, 24, 1.3);
@@ -26,7 +26,7 @@ export function Rocker({ still }: { still?: boolean }) {
   );
 
   return (
-    <RaccoonFrame ref={root} kind="rocker" label="A rocker raccoon playing electric guitar">
+    <CritterFrame ref={root} kind="rocker" label="A rocker raccoon playing electric guitar">
       {/* amp stacks and stage */}
       {[12, 308].map((x) => (
         <g key={x}>
@@ -91,6 +91,6 @@ export function Rocker({ still }: { still?: boolean }) {
 
       <Arm part="arm-l" d="M138 268 Q 146 302 178 314" hand={[180, 314]} thumb={[186, 308]} />
       <Arm part="arm-r" d="M262 268 Q 288 288 294 270" hand={[296, 266]} thumb={[290, 260]} />
-    </RaccoonFrame>
+    </CritterFrame>
   );
 }

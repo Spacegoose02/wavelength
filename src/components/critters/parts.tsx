@@ -1,21 +1,25 @@
 import { forwardRef, type ReactNode } from 'react';
 
 /**
- * Pieces every raccoon shares (inline SVG, 400×400). Colours come from CSS (`.raccoon …` in styles.css):
- * fur is fixed, clothes and lights take the skin's `--accent` / `--viz-*`, and the outfit layers below
- * are all in the SVG but hidden until `data-skin-group` (set in App.tsx) or `data-skin` asks for one.
+ * Pieces every critter shares (inline SVG, 400×400). Colours come from CSS (`.critter …` in styles.css):
+ * fur and skin are fixed, clothes and lights take the skin's `--accent` / `--viz-*`, and the outfit layers
+ * below are all in the SVG but hidden until `data-skin-group` (set in App.tsx) or `data-skin` asks for one.
+ *
+ * Every critter is drawn on the same skeleton so the rig and the outfits fit all of them: head centred
+ * on 200,178 (about 160 wide, 130 tall, top near y 112 where the hats sit), eyes on y 166, mouth on
+ * y 212, shoulders at 138,268 and 262,268, tail root at 268,292, torso `TORSO`.
  */
 
 /** The <svg> with the shared defs and the backlight. */
-export const RaccoonFrame = forwardRef<SVGSVGElement, { kind: string; label: string; children: ReactNode }>(function RaccoonFrame({ kind, label, children }, ref) {
+export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; label: string; children: ReactNode }>(function CritterFrame({ kind, label, children }, ref) {
   return (
-    <svg ref={ref} className={`np-scene-canvas raccoon raccoon-${kind}`} viewBox="0 0 400 400" role="img" aria-label={label}>
+    <svg ref={ref} className={`np-scene-canvas critter critter-${kind}`} viewBox="0 0 400 400" role="img" aria-label={label}>
       <defs>
-        <radialGradient id="raccoon-spot">
+        <radialGradient id="critter-spot">
           <stop offset="0" className="spot-stop" />
           <stop offset="1" className="spot-stop" stopOpacity="0" />
         </radialGradient>
-        <filter id="raccoon-glow" x="-30%" y="-30%" width="160%" height="160%">
+        <filter id="critter-glow" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="3" result="b" />
           <feMerge>
             <feMergeNode in="b" />
@@ -23,7 +27,7 @@ export const RaccoonFrame = forwardRef<SVGSVGElement, { kind: string; label: str
           </feMerge>
         </filter>
       </defs>
-      <ellipse data-part="spot" cx="200" cy="200" rx="190" ry="170" fill="url(#raccoon-spot)" />
+      <ellipse data-part="spot" cx="200" cy="200" rx="190" ry="170" fill="url(#critter-spot)" />
       {children}
     </svg>
   );
@@ -53,7 +57,7 @@ function trefoil(cx: number, cy: number, r: number) {
   return blades.join(' ');
 }
 
-/** Outfit pieces worn on the body, drawn over the raccoon's own clothes. */
+/** Outfit pieces worn on the body, drawn over the critter's own clothes. */
 export function BodyOutfits() {
   return (
     <>
@@ -66,22 +70,21 @@ export function BodyOutfits() {
         <circle cx="236" cy="282" r="2.4" fill="#1b1b1f" />
       </g>
       <g className="outfit outfit-neon">
-        <path data-glow="" d="M150 250 Q 200 292 250 250" className="glow-a" fill="none" strokeWidth="5" strokeLinecap="round" filter="url(#raccoon-glow)" />
-        <path data-glow="" d="M160 252 Q 200 280 240 252" className="glow-b" fill="none" strokeWidth="4" strokeLinecap="round" filter="url(#raccoon-glow)" />
+        <path data-glow="" d="M150 250 Q 200 292 250 250" className="glow-a" fill="none" strokeWidth="5" strokeLinecap="round" filter="url(#critter-glow)" />
+        <path data-glow="" d="M160 252 Q 200 280 240 252" className="glow-b" fill="none" strokeWidth="4" strokeLinecap="round" filter="url(#critter-glow)" />
       </g>
     </>
   );
 }
 
 /**
- * The head: ears, face, eyes, nose and mouth, then the raccoon's own headwear (`own`), the skin-group
- * outfit, anything that goes over the outfit (`over`, e.g. the DJ's headphones) and the holiday hats.
- * Give own headwear `className="own-hat"` and own glasses `className="own-eyewear"` so outfits that
- * replace them can hide them.
+ * The raccoon's face: ears, mask, eyes, nose and mouth. Another critter passes its own `face` to `Head`
+ * with the same named parts: `eyes` (blinks, scaled about y 166), `smile` (hidden while the mouth is
+ * open) and `yawn` (the open mouth, scaled from y 212).
  */
-export function Head({ own, over }: { own?: ReactNode; over?: ReactNode }) {
+export function RaccoonFace() {
   return (
-    <g data-part="head">
+    <>
       <ellipse className="fur-mid" cx="138" cy="122" rx="22" ry="28" transform="rotate(-20 138 122)" />
       <ellipse className="fur-dark" cx="140" cy="125" rx="11" ry="16" transform="rotate(-20 140 125)" />
       <ellipse className="fur-mid" cx="262" cy="122" rx="22" ry="28" transform="rotate(20 262 122)" />
@@ -102,6 +105,20 @@ export function Head({ own, over }: { own?: ReactNode; over?: ReactNode }) {
       <ellipse cx="200" cy="194" rx="10" ry="7" fill="#111" />
       <path data-part="smile" d="M186 212 Q 200 224 214 212" fill="none" stroke="#2b2b31" strokeWidth="3" strokeLinecap="round" />
       <ellipse data-part="yawn" cx="200" cy="220" rx="10" ry="11" fill="#5a1a24" transform="scale(1 0)" />
+    </>
+  );
+}
+
+/**
+ * The head: the critter's face (the raccoon's unless `face` is given), then its own headwear (`own`),
+ * the skin-group outfit, anything that goes over the outfit (`over`, e.g. the DJ's headphones) and the
+ * holiday hats. Give own headwear `className="own-hat"` and own glasses `className="own-eyewear"` so
+ * outfits that replace them can hide them.
+ */
+export function Head({ face, own, over }: { face?: ReactNode; own?: ReactNode; over?: ReactNode }) {
+  return (
+    <g data-part="head">
+      {face ?? <RaccoonFace />}
 
       {own}
 
@@ -120,11 +137,11 @@ export function Head({ own, over }: { own?: ReactNode; over?: ReactNode }) {
       <g className="outfit outfit-lasers">
         <path d="M128 166 L 140 164 M272 166 L 260 164" className="visor-strap" strokeWidth="6" strokeLinecap="round" />
         <rect x="138" y="152" width="124" height="26" rx="13" fill="rgb(10 10 16 / 0.82)" />
-        <rect data-glow="" x="144" y="161" width="112" height="7" rx="3.5" className="visor-beam" filter="url(#raccoon-glow)" />
+        <rect data-glow="" x="144" y="161" width="112" height="7" rx="3.5" className="visor-beam" filter="url(#critter-glow)" />
         <rect x="138" y="152" width="124" height="26" rx="13" fill="none" className="visor-rim" strokeWidth="2.5" />
       </g>
       <g className="outfit outfit-neon">
-        <path data-glow="" d="M136 140 Q 200 112 264 140" className="glow-b" fill="none" strokeWidth="5" strokeLinecap="round" filter="url(#raccoon-glow)" />
+        <path data-glow="" d="M136 140 Q 200 112 264 140" className="glow-b" fill="none" strokeWidth="5" strokeLinecap="round" filter="url(#critter-glow)" />
       </g>
       <g className="outfit outfit-retro">
         {/* 8-bit shades */}
@@ -173,11 +190,15 @@ export function Head({ own, over }: { own?: ReactNode; over?: ReactNode }) {
   );
 }
 
-/** An arm from the shoulder to a hand, with the sleeve and hand coloured by CSS. */
-export function Arm({ part, d, hand, thumb }: { part: string; d: string; hand: [number, number]; thumb: [number, number] }) {
+/**
+ * An arm from the shoulder to a hand, with the sleeve and hand coloured by CSS. `children` (a drumstick,
+ * say) are drawn under the hand and move with the arm.
+ */
+export function Arm({ part, d, hand, thumb, children }: { part: string; d: string; hand: [number, number]; thumb: [number, number]; children?: ReactNode }) {
   return (
     <g data-part={part}>
       <path className="sleeve" d={d} fill="none" strokeWidth="20" strokeLinecap="round" />
+      {children}
       <circle className="hand" cx={hand[0]} cy={hand[1]} r="11" />
       <circle className="fur-dark thumb" cx={thumb[0]} cy={thumb[1]} r="3.5" />
     </g>
