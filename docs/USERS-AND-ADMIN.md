@@ -209,7 +209,7 @@ Effort: **S** ≈ a day or two, **M** ≈ up to a week, **L** ≈ 1–2 weeks, *
 
 | Card | Design | Needs Hub | Effort |
 |---|---|---|---|
-| **Users / profiles** | Profile = display name, avatar (upload or initials), role, linked services, devices. Profile switcher on shared devices (like a TV) with an optional PIN. | Yes | M |
+| **Users / profiles** | Profile = display name, avatar (upload or initials), role, linked services, devices. Profile switcher on shared devices (like a TV) with an optional PIN. **Done:** Settings → Account → People on this device; each saved profile's token in the keychain (`hub.profile.<id>`), PIN hashed on the device, grown-up PIN to leave a kid profile. Two-step sign-in (TOTP) for Hub passwords. | Yes | M |
 | **tinyauth SSO** | §3, device pairing + forward-auth headers. | Yes | M |
 | **Keys under users, own Navidrome profile** | §4. | Yes | L |
 | **Account sign-in sync across devices** | §3 "Sign-in sync". | Yes | M |
@@ -253,7 +253,7 @@ into the files, so it ships ahead of the tag editor and doesn't need the music f
 
 | Card | Design | Needs Hub | Effort |
 |---|---|---|---|
-| **Kids profiles** | Role = Kid (§3). Simple, big-button UI option, no Downloads/Settings/admin, optional listening-time limit and bedtime. PIN to leave a kid profile on a shared device. | Yes | M |
+| **Kids profiles** | Role = Kid (§3). Simple, big-button UI option, no Downloads/Settings/admin, optional listening-time limit and bedtime. PIN to leave a kid profile on a shared device. **Done**, plus **parents**: a kid's requests go to their parents too, who approve them from the Inbox and get a weekly listening report (`hub/src/family.ts`, `hub/src/digests.ts`). | Yes | M |
 | **Mark music not safe for kids** | Decided (§9): **flags inside the app**, no separate Kids library. Flags come from two places: **automatic** (anything marked explicit, see next row) and **manual** — the admin can mark any song, album or artist as not kid-safe, or mark an automatically flagged item as OK for kids. Flags live in the Hub and sync to every device; the app hides flagged items for kid profiles everywhere (library, search, playlists, radio requests, Discover). Kid devices never show the kid's Navidrome password, which keeps the soft filter from being trivially bypassed; a determined kid with that password could still reach the full library through another Subsonic app, an accepted trade-off. | Yes | M |
 | **Explicit and clean versions** | Read explicit status from Deezer (`explicit_lyrics`, `explicit_content_lyrics`) when browsing and downloading, and from files/Navidrome (OpenSubsonic `explicitStatus`, `ITUNESADVISORY` tag) in the library. Show an **E** / **C** badge. On Deezer pages and in requests, offer "Get clean version" by finding the matching clean album. Per-user setting: prefer clean / prefer explicit / show both. Kids always get clean. When both versions are in the library, collapse them into one album with a version switch (extends the merge in `sources/registry.ts`). | Partly | L |
 
@@ -305,7 +305,7 @@ High value and they fit naturally on top of the Hub:
    their phone or TV and is signed in. Pairs with device pairing. **S**
 7. **Sleep timer and alarm** — stop after N minutes / end of track or chapter; wake to a playlist or station.
    App only. **S**
-8. **Collaborative household playlists** — shared playlists any member can add to, with "added by" avatars. **M**
+8. **Collaborative household playlists** — shared playlists any member can add to, with "added by" avatars. **M** · **Done:** Playlists → Household (`hub/src/routes/household.ts`, `src/views/Household.tsx`).
 9. **Hub backup and restore** — one-click export of users, settings, requests and flags; restore on a new
    server. **S**
 

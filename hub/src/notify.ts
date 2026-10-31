@@ -7,7 +7,7 @@ import { isRole, permissionsFor, type Permission } from './roles.ts';
  * and show them as system notifications. The Inbox stays the place to act on them.
  */
 
-export type NoticeKind = 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar' | 'library';
+export type NoticeKind = 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar' | 'library' | 'report' | 'rewind';
 
 const KEEP_MS = 30 * 86_400_000;
 
@@ -17,7 +17,7 @@ export function notify(db: Db, userIds: number[], kind: NoticeKind, title: strin
 }
 
 /** Tell whoever asked for a request what happened to it. */
-export function notifyRequester(db: Db, requestId: number, kind: Exclude<NoticeKind, 'request.new' | 'share' | 'radar' | 'library'>) {
+export function notifyRequester(db: Db, requestId: number, kind: Extract<NoticeKind, 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed'>) {
   const r = db.prepare('SELECT user_id, title, artist, reason FROM requests WHERE id = ?').get(requestId) as
     { user_id: number; title: string; artist: string; reason: string | null } | undefined;
   if (!r) return;

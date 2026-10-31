@@ -16,6 +16,7 @@ import { DownloadButton } from '../components/DownloadButton';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfTracks } from '../lib/inbox';
 import { SmartPlaylists } from './SmartPlaylists';
+import { AddToHousehold, HouseholdPlaylists } from './Household';
 
 export function PlaylistCover({ p }: { p: Playlist }) {
   const covers = [...new Set(p.tracks.map((t) => t.coverUrl).filter(Boolean))].slice(0, 4) as string[];
@@ -107,6 +108,7 @@ export function Playlists() {
         )}
       </section>}
 
+      {!searching && <HouseholdPlaylists />}
       {!searching && <SmartPlaylists />}
 
       {serverSections.filter((cfg) => !searching || remote(cfg.id).length > 0).map((cfg) => (
@@ -201,6 +203,7 @@ export function PlaylistView({ id }: { id: string }) {
             <button className="btn" disabled={!p.tracks.length} onClick={() => shuffleAndPlay(p.tracks)}><IconShuffle /> Shuffle</button>
             {p.tracks.length > 0 && <QueueAllOnSubwave tracks={p.tracks} />}
             <ShareButton what={() => shareOfTracks('playlist', p.name, p.tracks)} />
+            <AddToHousehold tracks={p.tracks} />
             <DownloadButton id={`playlist:local:${p.id}`} kind="playlist" name={p.name} cover={p.tracks.find((t) => t.coverUrl)?.coverUrl} tracks={p.tracks} />
             <button className="btn ghost" onClick={() => {
               if (confirm(`Delete "${p.name}"?`)) {

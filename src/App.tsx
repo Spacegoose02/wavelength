@@ -20,6 +20,7 @@ import { NowPlaying, QueuePanel } from './components/NowPlaying';
 import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart, IconInbox } from './components/Icons';
 import { Podcasts, PodcastView } from './views/Podcasts';
 import { History } from './views/History';
+import { HouseholdPlaylistView } from './views/Household';
 import { PlaylistView, Playlists, ServerPlaylistView } from './views/Playlists';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Favorites } from './views/Favorites';
@@ -88,6 +89,7 @@ function View({ route }: { route: Route }) {
     case 'rewind': return <Rewind />;
     case 'playlists': return <Playlists />;
     case 'playlist': return <PlaylistView key={route.id} id={route.id} />;
+    case 'household': return <HouseholdPlaylistView key={route.id} id={route.id} />;
     case 'serverPlaylist': return <ServerPlaylistView key={`${route.playlist.sourceId}:${route.playlist.id}`} playlist={route.playlist} />;
     case 'subwave': return <SubWave key={route.sourceId ?? ''} sourceId={route.sourceId} />;
     case 'discover': return <Discover key={route.genre ?? ''} initialGenre={route.genre} />;

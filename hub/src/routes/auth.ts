@@ -4,6 +4,7 @@ import { audit } from '../audit.ts';
 import { DUMMY_HASH, hashPassword, hmac, newToken, normalizeUserCode, safeEqual, sha256, verifyPassword } from '../crypto.ts';
 import { tx } from '../db.ts';
 import { createDevice, revokeDevice } from '../devices.ts';
+import { passTotp } from '../totp.ts';
 import { clientIp, html, HttpError, signedIn, str } from '../http.ts';
 import { linkPage, message, setupPage, ssoConfirmPage, ssoConnectPage, ssoLinkConfirmPage } from '../pages.ts';
 import { decidePairing, pendingPairing, pollPairing, POLL_INTERVAL_S, startPairing } from '../pairing.ts';
@@ -36,6 +37,12 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
     if (!u || !ok || u.disabled) {
       audit(db, { action: 'auth.login_failed', target: username.toLowerCase(), ip: clientIp(req) });
       throw new HttpError(401, 'Wrong username or password');
+    }
+    // two-step sign-in (totp.ts): the password was right, now the code (`otp`; `code` is the pairing code)
+    const otp = str(req.body, 'otp', 20);
+    if (!passTotp(db, config.secretKey, u.id, otp || undefined)) {
+      if (otp) audit(db, { actorId: u.id, action: 'auth.login_failed', target: u.username, detail: { twoFactor: true }, ip: clientIp(req) });
+      throw new HttpError(401, otp ? 'That code didn’t work. Use the newest one from your authenticator app, or a recovery code' : 'Enter the 6-digit code from your authenticator app', { twoFactor: true });
     }
     limits.login.clear(key);
     return u;

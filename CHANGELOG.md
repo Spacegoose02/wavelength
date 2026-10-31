@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- **Two-step sign-in:** turn on an authenticator app code for your Hub password (Settings → Account), with 10
+  recovery codes. Admins can reset it, and the Users tab shows which admins don't have it.
+- **Parents for kid profiles:** give a kid parents (Settings → Users) and their requests go to them too, to
+  approve in **Inbox → To approve**, along with a **weekly listening report** every Monday.
+- **Your month in music:** on the 1st, a notification with last month's minutes, songs and top artist, opening Rewind.
+- **More than one person on a device:** add everyone on a shared TV or tablet and switch between them in a tap;
+  each can ask for a PIN, and leaving a kid profile needs the grown-up PIN.
+- **Household playlists** (Playlists → Household): playlists the whole house adds to, showing who added what.
+- **Hub:** `/api/me/2fa…`, `DELETE /api/admin/users/:id/2fa`, `PUT /api/admin/users/:id/guardians`,
+  `/api/household/playlists…`; `GET /api/me` adds `twoFactor` and `kids`; notification kinds `report` and `rewind`.
 - **Get the song you hear on the radio:** Now Playing shows **Queue from library** when you have it, or **Get this
   song** (Get or Request) when you don't, whenever the station's title names a song.
 - **Stations for you** (Radio): popular stations in the genres you have the most music in.
