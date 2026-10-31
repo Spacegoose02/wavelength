@@ -131,7 +131,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   });
 
   app.setErrorHandler((err, req, reply) => {
-    if (err instanceof HttpError) return reply.code(err.statusCode).send({ error: err.message });
+    if (err instanceof HttpError) return reply.code(err.statusCode).send({ ...err.extra, error: err.message });
     const { statusCode: status, message } = err as { statusCode?: number; message?: string };
     if (status && status < 500) return reply.code(status).send({ error: message });
     req.log.error(err);

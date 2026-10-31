@@ -7,6 +7,7 @@ import { getDevice, listDevices, revokeDevice, revokeUserDevices } from '../devi
 import { clientIp, HttpError, need, str } from '../http.ts';
 import { isRole, permissionsFor } from '../roles.ts';
 import { countActiveAdmins, createUser, deleteUser, getUser, getUserBySso, getUserForLogin, listUsers, updateUser, USERNAME_RE, type User, type UserPatch } from '../users.ts';
+import { disableTotp, totpEnabled } from '../totp.ts';
 import { MIN_PASSWORD } from './auth.ts';
 
 /**
@@ -16,7 +17,7 @@ import { MIN_PASSWORD } from './auth.ts';
 export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
   const withDevices = (u: User) => {
     const devices = listDevices(db, u.id);
-    return { ...u, permissions: permissionsFor(u), devices: devices.length, lastSeenAt: devices[0]?.lastSeenAt ?? null };
+    return { ...u, permissions: permissionsFor(u), devices: devices.length, lastSeenAt: devices[0]?.lastSeenAt ?? null, twoFactor: totpEnabled(db, u.id) };
   };
 
   /** Refuse a change that would leave the Hub with no active admin. */
@@ -97,6 +98,16 @@ export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
     });
     audit(db, { actorId: actor.id, action: 'user.deleted', target: target.username, ip: clientIp(req) });
     return { ok: true };
+  });
+
+  /** Someone lost their phone: turn their two-step sign-in off so they can sign in with the password alone. */
+  app.delete<{ Params: { id: string } }>('/api/admin/users/:id/2fa', async (req) => {
+    const { user: actor } = need(req, 'users.manage');
+    const target = getUser(db, Number(req.params.id));
+    if (!target) throw new HttpError(404, 'No such user');
+    if (!disableTotp(db, target.id)) throw new HttpError(404, `${target.displayName} doesn’t use two-step sign-in`);
+    audit(db, { actorId: actor.id, action: 'user.2fa_reset', target: target.username, ip: clientIp(req) });
+    return { user: withDevices(target) };
   });
 
   app.get('/api/admin/devices', async (req) => {

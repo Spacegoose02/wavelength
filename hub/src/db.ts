@@ -392,6 +392,17 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX scrobble_queue_user ON scrobble_queue(user_id, service, id);
   `,
+  `
+  -- Two-step sign-in (totp.ts). enabled_at NULL while being set up; last_step stops a code being used twice;
+  -- recovery holds sha256 hashes of the unused recovery codes.
+  CREATE TABLE user_totp (
+    user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    secret     TEXT NOT NULL,
+    enabled_at INTEGER,
+    last_step  INTEGER NOT NULL DEFAULT 0,
+    recovery   TEXT NOT NULL DEFAULT '[]'
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

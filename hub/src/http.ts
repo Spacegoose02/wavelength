@@ -18,9 +18,12 @@ declare module 'fastify' {
 /** Throw from a handler to answer `{ error }` with this status. */
 export class HttpError extends Error {
   statusCode: number;
-  constructor(statusCode: number, message: string) {
+  /** More fields for the JSON answer, next to `error`. */
+  extra?: Record<string, unknown>;
+  constructor(statusCode: number, message: string, extra?: Record<string, unknown>) {
     super(message);
     this.statusCode = statusCode;
+    this.extra = extra;
   }
 }
 
