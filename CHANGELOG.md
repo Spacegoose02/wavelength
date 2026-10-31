@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Smart playlists** (Playlists): rules like "Rap; Hip-Hop, rated 4+, not played in 90 days" that pick songs from
+  your Navidrome library each time you play them. **Save copy** puts today's songs on your server. Synced with a Hub.
+- **Library care** (Albums → Library care): **Duplicates** lists albums your server has more than once (editions
+  folded in), and admins can send the extra copies to the trash; **Missing albums** lists studio albums by your
+  top artists that you don't have, with Get / Request.
+- **Weekly genre check:** the Hub reviews the library's genres once a week and notifies admins when there's
+  something new to tidy.
+- **Hub:** `POST /api/admin/genres/check`; notification kind `library`.
 - **Release Radar: Coming soon.** Releases the artists you follow have announced but not put out yet show under
   **Coming soon**, and you get a notification when one is announced.
 - **Get new releases automatically.** Turn on **Auto** for an artist in **Manage** and the Hub fetches each new
@@ -13,14 +21,6 @@
   plays from every device. Last.fm needs `WAVELENGTH_LASTFM_KEY` / `_SECRET` on the Hub.
 - **Hub:** `PATCH /api/radar/follows/:id`, `GET /api/radar/mix`, `upcoming` in `GET /api/radar`,
   `GET`/`POST`/`DELETE /api/me/scrobble[/:service]`. Migration 17.
-- **Smart playlists** (Playlists): rules like "Rap; Hip-Hop, rated 4+, not played in 90 days" that pick songs from
-  your Navidrome library each time you play them. **Save copy** puts today's songs on your server. Synced with a Hub.
-- **Library care** (Albums → Library care): **Duplicates** lists albums your server has more than once (editions
-  folded in), and admins can send the extra copies to the trash; **Missing albums** lists studio albums by your
-  top artists that you don't have, with Get / Request.
-- **Weekly genre check:** the Hub reviews the library's genres once a week and notifies admins when there's
-  something new to tidy.
-- **Hub:** `POST /api/admin/genres/check`; notification kind `library`.
 - **Synced lyrics** in Now Playing (**Lyrics** chip): the line being sung lights up, tap a line to jump there,
   big text on TVs. From your Navidrome server's own lyrics when it has them, else LRCLIB. Kid profiles see
   strong words hidden.
