@@ -74,6 +74,7 @@ export function LibraryHub() {
     { view: 'offline', label: 'Downloaded', icon: <IconDownload /> },
     { view: 'favorites', label: 'Favorites', icon: <IconHeart /> },
     { view: 'playlists', label: 'Playlists', icon: <IconPlaylist /> },
+    { view: 'libraryCare', label: 'Library care', icon: <IconAlbum /> },
     { view: 'history', label: 'History', icon: <IconHistory /> },
     { view: 'radio', label: 'Radio', icon: <IconRadio /> },
     { view: 'books', label: 'Audiobooks', icon: <IconBook /> },

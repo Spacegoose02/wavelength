@@ -245,7 +245,7 @@ function PlayedRadar({ nonce }: { nonce: number }) {
 }
 
 /** A row of releases, each with a preview and Get (or Request), or "In library" when you have it. */
-function ReleaseCards({ releases, upcoming }: { releases: Release[]; upcoming?: boolean }) {
+export function ReleaseCards({ releases, upcoming }: { releases: Release[]; upcoming?: boolean }) {
   const [status, setStatus] = useState<Record<number, string>>({});
   const albums = useCatalog((s) => s.albums);
   const deemix = useSettings((s) => s.deemix);

@@ -26,6 +26,7 @@ export type Route =
   | { view: 'favorites' }
   | { view: 'recent' }
   | { view: 'library' }
+  | { view: 'libraryCare' }
   | { view: 'offline' }
   | { view: 'offlineCollection'; id: string }
   | { view: 'downloads'; soulseek?: { q: string; requestId?: number } }

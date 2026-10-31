@@ -15,6 +15,7 @@ import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfTracks } from '../lib/inbox';
+import { SmartPlaylists } from './SmartPlaylists';
 
 export function PlaylistCover({ p }: { p: Playlist }) {
   const covers = [...new Set(p.tracks.map((t) => t.coverUrl).filter(Boolean))].slice(0, 4) as string[];
@@ -105,6 +106,8 @@ export function Playlists() {
           </Grid>
         )}
       </section>}
+
+      {!searching && <SmartPlaylists />}
 
       {serverSections.filter((cfg) => !searching || remote(cfg.id).length > 0).map((cfg) => (
         <section key={cfg.id}>

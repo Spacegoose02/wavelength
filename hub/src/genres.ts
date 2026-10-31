@@ -92,6 +92,25 @@ export function saveGenreSettings(db: Db, s: { auto?: boolean; rules?: GenreRule
   return getGenreSettings(db);
 }
 
+const CHECK_KEY = 'genres.check';
+/** How often the Hub looks over the library's genres on its own (routes/genres.ts). */
+export const GENRE_CHECK_MS = 7 * 86_400_000;
+
+/** The last weekly look: when, and the albums (ids) and unknown genres (`genre:` + key) admins were told about. */
+export function getGenreCheck(db: Db): { at: number; told: string[] } {
+  const row = db.prepare('SELECT value FROM hub_settings WHERE key = ?').get(CHECK_KEY) as { value: string } | undefined;
+  try {
+    const v = row ? JSON.parse(row.value) : {};
+    return { at: Number(v.at) || 0, told: Array.isArray(v.told) ? v.told : [] };
+  } catch {
+    return { at: 0, told: [] };
+  }
+}
+
+export function setGenreCheck(db: Db, v: { at: number; told: string[] }) {
+  db.prepare('INSERT INTO hub_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value').run(CHECK_KEY, JSON.stringify(v));
+}
+
 /** The genres rules lead to, sorted. */
 export const genreTargets = (rules: GenreRule[]) => [...new Set(rules.map((r) => r.to))].sort((a, b) => a.localeCompare(b));
 

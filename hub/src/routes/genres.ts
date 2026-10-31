@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { filesSince, genreKey, genreLookup, genresSince, genreTargets, getGenreSettings, normalizeGenre, saveGenreSettings, setGenresSince, type GenreRule } from '../genres.ts';
+import { filesSince, GENRE_CHECK_MS, genreKey, getGenreCheck, setGenreCheck, genreLookup, genresSince, genreTargets, getGenreSettings, normalizeGenre, saveGenreSettings, setGenresSince, type GenreRule } from '../genres.ts';
 import { clientIp, HttpError, need } from '../http.ts';
 import { getScanSettings } from '../library.ts';
+import { notify, withPermission } from '../notify.ts';
 import { libraryFile, readTags, relPath, type Tags } from '../tags.ts';
 import { navidromeAdmin } from './navidrome.ts';
 import { saveTagChanges } from './tags.ts';
@@ -89,8 +90,7 @@ export function genreRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
    * The library's albums whose genre isn't the tidy one (with what it would become), and the genres no rule
    * knows, with how many albums have each. Albums an admin chose to keep are left out.
    */
-  app.get('/api/admin/genres/review', async (req) => {
-    need(req, 'library.edit');
+  const review = async () => {
     const s = getGenreSettings(db);
     const lookup = genreLookup(s.rules);
     const keep = new Set(s.keep);
@@ -117,7 +117,41 @@ export function genreRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
       kept: keep.size,
       genres: genreTargets(s.rules),
     };
+  };
+
+  app.get('/api/admin/genres/review', async (req) => {
+    need(req, 'library.edit');
+    return review();
   });
+
+  /**
+   * The weekly look at the library: when albums turn up whose genre isn't tidy (music added outside the Hub's
+   * downloads, or a genre no rule knew), the people who can fix them get one notification. Albums already
+   * told about don't notify again.
+   */
+  const check = async (): Promise<{ albums: number; unknown: number; notified: boolean }> => {
+    const r = await review();
+    const told = new Set(getGenreCheck(db).told);
+    const fresh = r.albums.filter((a) => !told.has(a.id)).length + r.unknown.filter((u) => !told.has(`genre:${genreKey(u.genre)}`)).length;
+    setGenreCheck(db, { at: Date.now(), told: [...r.albums.map((a) => a.id), ...r.unknown.map((u) => `genre:${genreKey(u.genre)}`)] });
+    if (!fresh) return { albums: r.albums.length, unknown: r.unknown.length, notified: false };
+    const parts = [r.albums.length && `${r.albums.length} album${r.albums.length === 1 ? '' : 's'} with an untidy genre`, r.unknown.length && `${r.unknown.length} genre${r.unknown.length === 1 ? '' : 's'} without a rule`].filter(Boolean);
+    notify(db, withPermission(db, 'library.edit'), 'library', 'Genres to tidy', `${parts.join(' and ')}. Settings → Server → Genres → Review`);
+    return { albums: r.albums.length, unknown: r.unknown.length, notified: true };
+  };
+
+  app.post('/api/admin/genres/check', async (req) => {
+    need(req, 'library.edit');
+    return check();
+  });
+
+  // every 6 hours, see whether a week has gone by since the last look (needs the Navidrome admin login)
+  const timer = setInterval(() => {
+    if (Date.now() - getGenreCheck(db).at < GENRE_CHECK_MS || !getScanSettings(db, config.secretKey)) return;
+    void check().catch(() => undefined);
+  }, 6 * 3_600_000);
+  timer.unref();
+  app.addHook('onClose', async () => clearInterval(timer));
 
   /** `{ albums: [{ id, genre }] }`: set these albums' genre in every song, as one undoable Save. */
   app.post('/api/admin/genres/apply', async (req) => {

@@ -204,7 +204,7 @@ export interface SharePayload {
 /** Something the Hub tells this person about (hub/src/notify.ts), shown as a system notification. */
 export interface HubNotice {
   id: number;
-  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar';
+  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar' | 'library';
   title: string;
   body: string;
   createdAt: number;
