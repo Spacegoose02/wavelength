@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { deemixClient, useHubRuns } from '../lib/hubServices';
-import { REQUEST_STATUS, requestMusic, useMustRequest } from '../lib/inbox';
+import { requestMusic, requestStatus, useMustRequest } from '../lib/inbox';
 import type { HubRequest } from '../sources/hub';
 import { hubClient } from '../store/hub';
 import { searchDeezer, type DeezerResult } from '../sources/deemix';
@@ -12,6 +12,8 @@ import { refreshHub, useDownloads, watchHub, ytSearch } from '../store/downloads
 import { useUi } from '../store/ui';
 import { useCan } from '../store/hub';
 import { Spinner, fmtTime } from '../components/common';
+import { DeemixQueuePanel } from '../components/DeemixQueue';
+import { refreshDeemix } from '../lib/deemixQueue';
 import { IconDownload, IconRefresh } from '../components/Icons';
 import { isAndroid } from '../lib/platform';
 import { SoulseekTab } from './SoulseekTab';
@@ -70,7 +72,6 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
   const [status, setStatus] = useState<Record<string, SendStatus>>({});
-  const [queue, setQueue] = useState<any[]>([]);
   // artist/album pages opened from the results; a new search starts back at the results
   const [stack, setStack] = useState<Browse[]>([]);
   const open = (b: Browse) => setStack((st) => [...st, b]);
@@ -103,21 +104,6 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
     };
   }, [q]);
 
-  const refreshQueue = async () => {
-    try {
-      const r = await deemixClient().getQueue();
-      const order: string[] = r.queueOrder ?? Object.keys(r.queue ?? {});
-      setQueue(order.map((id) => r.queue?.[id]).filter(Boolean).reverse());
-    } catch {
-      setQueue([]);
-    }
-  };
-  useEffect(() => {
-    if (!deemix.url || request) return;
-    refreshQueue();
-    const h = window.setInterval(refreshQueue, 5000);
-    return () => window.clearInterval(h);
-  }, [deemix.url]);
 
   const send = async (r: DeezerResult) => {
     const key = statusKey(r);
@@ -130,7 +116,7 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
       }
       await deemixClient().addToQueue(r.link, deemix.bitrate);
       setStatus((s) => ({ ...s, [key]: { s: 'queued' } }));
-      refreshQueue();
+      void refreshDeemix();
     } catch (e) {
       setStatus((s) => ({ ...s, [key]: { s: 'error', msg: String((e as Error).message ?? e) } }));
     }
@@ -164,18 +150,7 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
         )}
         {results.map((r) => <DzRow key={statusKey(r)} r={r} open={open} send={send} status={status} />)}
       </div>}
-      {request ? <MyRequestsAside /> : <aside className="dl-queue">
-        <h3>deemix queue</h3>
-        {!queue.length && <p className="muted">Empty</p>}
-        {queue.slice(0, 30).map((item: any) => (
-          <div key={item.uuid} className="dl-item">
-            <div className="track-title">{item.title}</div>
-            <div className="track-sub">{item.artist}</div>
-            <div className="progress"><i style={{ width: `${item.status === 'completed' ? 100 : Math.round(item.progress ?? 0)}%` }} /></div>
-            <small className="muted">{item.status}{item.failed ? ` · ${item.failed} failed` : ''}</small>
-          </div>
-        ))}
-      </aside>}
+      {request ? <MyRequestsAside /> : <DeemixQueuePanel />}
     </div>
   );
 }
@@ -315,7 +290,7 @@ function MyRequestsAside() {
         <div key={r.id} className="dl-item">
           <div className="track-title">{r.title}</div>
           <div className="track-sub">{r.artist}</div>
-          <small className={`req-status ${r.status}`}>{REQUEST_STATUS[r.status]}{r.reason ? ` · ${r.reason}` : ''}</small>
+          <small className={`req-status ${r.status}`}>{requestStatus(r)}{r.reason ? ` · ${r.reason}` : ''}</small>
         </div>
       ))}
     </aside>

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { Db } from './db.ts';
 import { seal, unseal } from './crypto.ts';
 import { HttpError } from './http.ts';
+import { DeemixWatch, describe, isDone, type DeemixItem, type DeemixSongError } from './deemixQueue.ts';
 import { notifyRequester } from './notify.ts';
 import { hubDeemix } from './routes/proxy.ts';
 import { serviceForHub, serviceIdOfKind } from './services.ts';
@@ -26,6 +27,21 @@ const SCAN_TIMEOUT_MS = 30 * 60_000;
 const FOLLOW_MS = 2 * 24 * 3600_000;
 /** Keep looking at the deemix queue this long after the last download someone started. */
 const ACTIVE_MS = 6 * 3600_000;
+/** A request deemix has no trace of this long after it was handed over: it was cleared, or deemix restarted. */
+const LOST_MS = 3600_000;
+
+/** How a request's download is going in deemix, for the Inbox. */
+export interface DownloadProgress {
+  /** "Downloading · 5 of 12 songs", "Waiting · 2 in line", "Waiting for deemix to be free"… */
+  label: string;
+  percent: number;
+  done: number;
+  total: number;
+  failed: number;
+  stuck: boolean;
+  /** Songs that failed, with deemix's reason (first few). */
+  errors: DeemixSongError[];
+}
 
 export interface ScanSettings {
   url: string;
@@ -116,6 +132,11 @@ export class Library {
   private lastAttempt = 0;
   /** deemix queue items already seen finished; undefined until the first look (so old ones don't count). */
   private deemixDone?: Set<string>;
+  private deemixWatch = new DeemixWatch();
+  /** deemix's queue as last read. */
+  private deemixQueue: DeemixItem[] = [];
+  /** A clean version the Hub holds until deemix is free (set by cleanDownloads.ts). */
+  cleanJob?: (link: string) => { state: string; error?: string; stuck?: boolean; position?: number } | undefined;
   /** The same for slskd transfers. */
   private slskdDone?: Set<string>;
   private lastSlskd = 0;
@@ -279,36 +300,82 @@ export class Library {
     if (isNew && !this.scanTimer && !this.scanning) this.downloaded();
   }
 
+  /** Read deemix's queue now (Downloads → deemix queue), keeping track of what has stopped moving. */
+  async readDeemix(): Promise<DeemixItem[]> {
+    this.deemixQueue = this.deemixWatch.read(await hubDeemix(this.db, this.key).client.getQueue());
+    return this.deemixQueue;
+  }
+
+  /** The deemix queue items for a request: by the ids deemix gave back, else by the Deezer link. */
+  private itemsFor(link: string, job: string | null): DeemixItem[] {
+    let ids: string[] = [];
+    try {
+      ids = job ? (JSON.parse(job) as string[]) : [];
+    } catch {
+      /* not JSON */
+    }
+    const prefix = deemixPrefix(link);
+    return this.deemixQueue.filter((i) => ids.includes(i.uuid) || (prefix && i.uuid.startsWith(prefix)));
+  }
+
+  /** How an approved deemix request's download is going, as of the last look at the queue. */
+  progressFor(r: { status: string; via: string | null; link: string; job?: string | null; downloadedAt?: number | null }): DownloadProgress | undefined {
+    if (r.status !== 'approved' || r.via !== 'deemix' || r.downloadedAt) return undefined;
+    const held = this.cleanJob?.(r.link);
+    const blank = { percent: 0, done: 0, total: 0, failed: 0, errors: [] };
+    if (held?.state === 'waiting') {
+      return { ...blank, label: held.stuck ? 'Waiting for deemix, which looks stuck' : `Waiting for deemix to be free${held.position && held.position > 1 ? ` · ${held.position} in line` : ''}`, stuck: !!held.stuck };
+    }
+    const mine = this.itemsFor(r.link, r.job ?? null);
+    if (!mine.length) return undefined;
+    const total = mine.reduce((n, i) => n + i.size, 0);
+    const done = mine.reduce((n, i) => n + i.downloaded, 0);
+    const failed = mine.reduce((n, i) => n + i.failed, 0);
+    const front = mine.find((i) => i.stalled) ?? mine.find((i) => i.status === 'downloading') ?? mine[0];
+    return {
+      label: describe(front),
+      percent: Math.round(mine.reduce((n, i) => n + i.progress, 0) / mine.length),
+      done, total, failed,
+      stuck: mine.some((i) => i.stalled),
+      errors: mine.flatMap((i) => i.errors).slice(0, 5),
+    };
+  }
+
   /** Look at the deemix queue: finished request downloads, and any new finished download (for a scan). */
   async deemixTick() {
     const watched = this.db
       .prepare("SELECT id, via, job, link, decided_at FROM requests WHERE status = 'approved' AND via = 'deemix' AND downloaded_at IS NULL AND decided_at > ?")
       .all(Date.now() - FOLLOW_MS) as unknown as Watched[];
     if (!watched.length && Date.now() - this.lastActivity > ACTIVE_MS) return;
-    let queue: { queue?: Record<string, { uuid?: string; status?: string }> };
     try {
-      queue = await hubDeemix(this.db, this.key).client.getQueue();
+      await this.readDeemix();
     } catch {
       return; // deemix not set up or not reachable: try again next time
     }
-    const items = Object.values(queue?.queue ?? {}).filter((i) => typeof i?.uuid === 'string');
-    const done = (st?: string) => st === 'completed' || st === 'withErrors';
+    const items = this.deemixQueue;
 
     for (const r of watched) {
-      let ids: string[] = [];
-      try {
-        ids = r.job ? (JSON.parse(r.job) as string[]) : [];
-      } catch {
-        /* not JSON */
+      const mine = this.itemsFor(r.link, r.job);
+      if (!mine.length) {
+        // handed to deemix a while ago, not waiting for a clean folder, and deemix has no trace of it
+        const held = this.cleanJob?.(r.link);
+        if (held?.state === 'waiting') continue;
+        if (held?.state === 'failed') {
+          this.finish(r.id, false, held.error);
+          continue;
+        }
+        const known = !!deemixPrefix(r.link) || !!r.job;
+        if (known && (r.decided_at ?? 0) < Date.now() - LOST_MS) this.finish(r.id, false, 'deemix no longer has it in its queue (it was cleared, or deemix restarted). Retry to download it again');
+        continue;
       }
-      const prefix = deemixPrefix(r.link);
-      const mine = items.filter((i) => ids.includes(i.uuid!) || (prefix && i.uuid!.startsWith(prefix)));
-      if (!mine.length) continue;
-      if (mine.every((i) => done(i.status))) this.finish(r.id, true);
-      else if (mine.every((i) => done(i.status) || i.status === 'failed') && mine.some((i) => i.status === 'failed')) this.finish(r.id, false, 'deemix couldn’t get it');
+      if (mine.every((i) => isDone(i.status))) this.finish(r.id, true);
+      else if (mine.every((i) => isDone(i.status) || i.status === 'failed') && mine.some((i) => i.status === 'failed')) {
+        const why = mine.flatMap((i) => i.errors)[0]?.message;
+        this.finish(r.id, false, why ? `deemix couldn’t get it (${why})` : 'deemix couldn’t get it');
+      }
     }
 
-    const finished = new Set(items.filter((i) => done(i.status)).map((i) => i.uuid!));
+    const finished = new Set(items.filter((i) => isDone(i.status)).map((i) => i.uuid));
     const isNew = this.deemixDone ? [...finished].some((u) => !this.deemixDone!.has(u)) : false;
     this.deemixDone = finished;
     // a new finished download, or requests still waiting for a scan (retried every 10 minutes if it failed)

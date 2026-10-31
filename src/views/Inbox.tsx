@@ -57,6 +57,16 @@ function useLoad<T>(load: () => Promise<T>, deps: unknown[] = []) {
   return { data, error, reload, setData };
 }
 
+/** Reload every 10 seconds while a request is still downloading, so its progress moves. */
+function useWhileDownloading(data: HubRequest[] | undefined, reload: () => void) {
+  const downloading = !!data?.some((r) => r.status === 'approved' && !r.downloadedAt);
+  useEffect(() => {
+    if (!downloading) return;
+    const h = window.setInterval(reload, 10_000);
+    return () => window.clearInterval(h);
+  }, [downloading]);
+}
+
 // ---- shared with you ----
 
 function SharedWithYou() {
@@ -178,11 +188,27 @@ function RequestRow({ r, who, children }: { r: HubRequest; who?: boolean; childr
         </div>
         {r.note && <div className="share-note">“{r.note}”</div>}
         {r.reason && <div className={r.status === 'failed' ? 'card-err small' : 'muted small'}>{r.reason}</div>}
+        {r.progress && <DownloadProgress p={r.progress} />}
       </div>
-      <span className={`req-status ${r.readyAt ? 'ready' : r.status}`}>
-        {requestStatus(r)}{r.status === 'approved' && r.via && !r.readyAt ? ` via ${r.via}` : ''}{r.decidedBy && r.status !== 'pending' && !who ? ` · ${r.decidedBy}` : ''}
+      <span className={`req-status ${r.readyAt ? 'ready' : r.progress?.stuck ? 'failed' : r.status}`}>
+        {requestStatus(r)}{r.status === 'approved' && r.via && !r.readyAt && !r.progress ? ` via ${r.via}` : ''}{r.decidedBy && r.status !== 'pending' && !who ? ` · ${r.decidedBy}` : ''}
       </span>
       {children}
+    </div>
+  );
+}
+
+/** How a request's deemix download is going: a bar, and the songs deemix couldn't get with its reasons. */
+function DownloadProgress({ p }: { p: NonNullable<HubRequest['progress']> }) {
+  return (
+    <div className="req-progress">
+      {p.total > 0 && <div className="progress thin"><i style={{ width: `${p.total > 1 ? Math.round(((p.done + p.failed) / p.total) * 100) : p.percent}%` }} /></div>}
+      {p.stuck && <small className="card-err">deemix has stopped moving. An admin can cancel the stuck download under Downloads, or restart deemix.</small>}
+      {p.errors.length > 0 && (
+        <small className="muted" title={p.errors.map((e) => `${e.title}: ${e.message}`).join('\n')}>
+          Couldn’t get {p.errors.length === 1 ? `“${p.errors[0].title || 'a song'}”: ${p.errors[0].message}` : `${p.failed} songs (${p.errors[0].message}${p.errors.length > 1 ? ', …' : ''})`}
+        </small>
+      )}
     </div>
   );
 }
@@ -228,6 +254,7 @@ function PlayRequest({ r }: { r: HubRequest }) {
 
 function MyRequests() {
   const { data, error, reload } = useLoad(async () => (await hubClient()!.myRequests()).requests);
+  useWhileDownloading(data, reload);
   useEffect(() => {
     if (data?.some((r) => !r.seen)) hubClient()?.requestsSeen().then(refreshInbox).catch(() => undefined);
   }, [data]);
@@ -255,6 +282,7 @@ function MyRequests() {
 function Approve() {
   const [filter, setFilter] = useState<'pending' | ''>('pending');
   const { data, error, reload } = useLoad(async () => (await hubClient()!.allRequests(filter || undefined)).requests, [filter]);
+  useWhileDownloading(data, reload);
   const [busy, setBusy] = useState<number>();
   // a parent (not an approver) decides only their kids' requests, without picking files or clearing the list
   const admin = useHub((s) => s.permissions.includes('requests.approve'));

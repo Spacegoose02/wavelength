@@ -64,7 +64,7 @@ export async function requestMusic(r: HubRequestInput): Promise<HubRequest> {
 
 /** What to show for a request: an approved one goes Downloading → Adding to your library → Ready. */
 export const requestStatus = (r: HubRequest) =>
-  r.status !== 'approved' ? REQUEST_STATUS[r.status] : r.readyAt ? 'Ready' : r.downloadedAt ? 'Adding to your library' : REQUEST_STATUS.approved;
+  r.status !== 'approved' ? REQUEST_STATUS[r.status] : r.readyAt ? 'Ready' : r.downloadedAt ? 'Adding to your library' : r.progress?.label ?? REQUEST_STATUS.approved;
 
 export const REQUEST_STATUS: Record<HubRequest['status'], string> = {
   pending: 'Waiting',

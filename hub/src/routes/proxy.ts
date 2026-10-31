@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
+import { itemLink } from '../deemixQueue.ts';
 import { clientIp, HttpError, need } from '../http.ts';
 import type { Db } from '../db.ts';
 import { serviceForHub, serviceIdOfKind } from '../services.ts';
@@ -51,6 +52,48 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
     return deemix().client.getQueue();
   });
 
+  /**
+   * deemix's queue made readable (deemixQueue.ts): each download with its songs done and failed, why each failed,
+   * its place in line, and whether it has stopped moving; plus the clean versions the Hub holds back.
+   */
+  app.get('/api/downloads/deemix/progress', async (req) => {
+    need(req, 'downloads.run');
+    return { items: await library.readDeemix(), clean: clean.list() };
+  });
+
+  /** Cancel a download (or take a finished one off deemix's list). */
+  app.post<{ Params: { uuid: string } }>('/api/downloads/deemix/queue/:uuid/cancel', async (req) => {
+    const { user } = need(req, 'downloads.run');
+    const uuid = req.params.uuid.slice(0, 100);
+    await deemix().client.removeFromQueue(uuid);
+    audit(db, { actorId: user.id, action: 'download.cancelled', target: uuid, detail: { via: 'deemix' }, ip: clientIp(req) });
+    return { ok: true };
+  });
+
+  /** Download it again: off deemix's list, then queued afresh (a clean version goes back through the clean folder). */
+  app.post<{ Params: { uuid: string } }>('/api/downloads/deemix/queue/:uuid/retry', async (req) => {
+    const { user } = need(req, 'downloads.run');
+    const { s, client } = deemix();
+    const item = (await library.readDeemix()).find((i) => i.uuid === req.params.uuid);
+    const link = item && itemLink(item);
+    if (!item || !link) throw new HttpError(404, 'deemix doesn’t have that download any more');
+    const bitrate = item.bitrate && [1, 3, 9].includes(item.bitrate) ? item.bitrate : Number(s.config.bitrate) || 9;
+    await client.removeFromQueue(item.uuid);
+    library.activity();
+    if (clean.list().some((j) => j.link === link)) clean.add(link, bitrate);
+    else await client.addToQueue(link, bitrate);
+    audit(db, { actorId: user.id, action: 'download.queued', target: link, detail: { via: 'deemix', bitrate, retry: true }, ip: clientIp(req) });
+    return { ok: true };
+  });
+
+  /** Clear finished and failed downloads off deemix's list (after noting which requests finished). */
+  app.post('/api/downloads/deemix/queue/clear', async (req) => {
+    need(req, 'downloads.run');
+    await library.deemixTick();
+    await deemix().client.removeFinished();
+    return { ok: true };
+  });
+
   app.post('/api/downloads/deemix/queue', async (req) => {
     const { user } = need(req, 'downloads.run');
     const b = (req.body ?? {}) as Record<string, unknown>;
@@ -81,6 +124,15 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
   app.get('/api/downloads/deemix/clean', async (req) => {
     need(req, 'downloads.run');
     return { jobs: clean.list() };
+  });
+
+  /** Take a clean version out of the line before deemix gets it: `{ link }`. */
+  app.delete('/api/downloads/deemix/clean', async (req) => {
+    const { user } = need(req, 'downloads.run');
+    const link = str(((req.body ?? {}) as Record<string, unknown>).link, 500);
+    clean.cancel(link);
+    audit(db, { actorId: user.id, action: 'download.cancelled', target: link, detail: { via: 'deemix', clean: true }, ip: clientIp(req) });
+    return { ok: true };
   });
 
   // ---- yt-dlp ----
