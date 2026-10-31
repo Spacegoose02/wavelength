@@ -243,6 +243,16 @@ export class Deemix {
     return getJson(`${this.base}/api/getQueue`);
   }
 
+  /** Cancel a download, or take a finished one off the list (the id goes in the query and the body: versions differ). */
+  async removeFromQueue(uuid: string) {
+    await this.post(`/api/removeFromQueue?uuid=${encodeURIComponent(uuid)}`, { uuid });
+  }
+
+  /** Clear finished and failed downloads off deemix's list. */
+  async removeFinished() {
+    await this.post('/api/removeFinishedDownloads', {});
+  }
+
   async test() {
     const r = await getJson(`${this.base}/api/connect`);
     let user = r?.currentUser?.name;

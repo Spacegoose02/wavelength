@@ -58,6 +58,10 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | "Skipped: Apple Music timed out / 504" | Apple's RSS service is down | Nothing to do; Mix uses the rest |
 | "Skipped: 403 … rss.applemarketingtools.com" | Apple moved the feed to `rss.marketingtools.apple.com`; an older app or Hub refuses the redirect | Update both the app and the Hub |
 | A chart shows 0 rows / "layout changed" | Site HTML changed (Billboard, RadioWave scrapers) | Update the parser in `charts.ts`; test against the live page |
+| Downloads stuck at "Waiting" or "Downloading", or Downloads says **deemix has stopped moving** | deemix hung on one download, or restarted and left old items "in queue" | Downloads → deemix queue → **Cancel** the stuck one (or **Retry** it); or clear the queue on deemix's own page, or restart the deemix container (`docs/HUB.md`, "Following deemix downloads") |
+| Clean versions stay at "Waiting for deemix" | They wait until deemix's queue is empty, and something in it is stuck or still downloading | As above. Each row says what it's waiting for; **Cancel** takes one out of the line |
+| Clean versions say "Sent to deemix" and never change | Sent before this update, then the Hub restarted or deemix's list was cleared, so nothing has it any more | Update; they then say **Not in deemix's queue any more** and can be sent again (**Retry**, or **Download all**) |
+| A request says "Download failed: deemix no longer has it in its queue" | deemix's list was cleared or deemix restarted before it finished | **Retry** in Inbox → To approve |
 | Everything goes to yt-dlp instead of deemix | deemix not logged in (per-session login) | Settings → Downloads → deemix → ARL; **Test deemix** reports whether it's logged in |
 | yt-dlp: "ffmpeg not found" | ffmpeg not on PATH for the running app | `ytdlp.rs::find_ffmpeg_dir` checks winget's Packages folder; install with `winget install yt-dlp.FFmpeg` |
 | yt-dlp to a NAS share fails | Not logged into the SMB share | Settings → Downloads → yt-dlp → network share username/password → **Test folder** |

@@ -102,14 +102,44 @@ export class DeemixClient {
     try {
       return await send();
     } catch (e) {
-      if (!/NotLoggedIn|login/i.test(String((e as Error).message))) throw e;
+      const msg = String((e as Error).message);
+      if (/AlreadyInQueue/i.test(msg)) return this.requeue(link, send, e);
+      if (!/NotLoggedIn|login/i.test(msg)) throw e;
       await this.login();
       return send();
     }
   }
 
+  /**
+   * deemix refuses a link it still has on its list, even a failed or finished one, so Retry would never work.
+   * Take the old finished one off and queue it again; one still waiting or downloading is left as it is.
+   */
+  private async requeue(link: string, send: () => Promise<any>, refused: unknown) {
+    const m = /deezer\.com\/(?:[a-z]{2}\/)?(track|album|playlist|artist)\/(\d+)/i.exec(link);
+    const prefix = m ? `${m[1].toLowerCase()}_${m[2]}_` : null;
+    const items = Object.values<{ uuid?: string; status?: string }>((await this.getQueue())?.queue ?? {});
+    const mine = prefix ? items.filter((i) => typeof i.uuid === 'string' && i.uuid.startsWith(prefix)) : [];
+    if (!mine.length) throw refused;
+    if (mine.some((i) => i.status === 'inQueue' || i.status === 'downloading')) return { result: true, alreadyQueued: true, uuid: mine[0].uuid };
+    for (const i of mine) await this.removeFromQueue(i.uuid!);
+    return send();
+  }
+
   getQueue() {
     return this.req('GET', '/api/getQueue');
+  }
+
+  /**
+   * Cancel one download (or take a finished one off the list). deemix-gui reads the id from the query string in
+   * some versions and the body in others, so it gets both.
+   */
+  removeFromQueue(uuid: string) {
+    return this.req('POST', `/api/removeFromQueue?uuid=${encodeURIComponent(uuid)}`, { uuid });
+  }
+
+  /** Clear finished and failed downloads off deemix's list. */
+  removeFinished() {
+    return this.req('POST', '/api/removeFinishedDownloads', {});
   }
 
   /** deemix's settings, and its Spotify ones (saving has to send those back too). */

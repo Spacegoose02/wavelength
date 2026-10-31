@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- **See what deemix is doing.** Downloads → deemix queue shows each download's place in line, songs done and
+  failed, and deemix's reason for each failed song, with **Cancel**, **Retry** and **Clear finished**. Inbox
+  requests (Release Radar's automatic ones too) show a progress bar and reasons.
+- **Fixed: downloads getting stuck.** When deemix hangs on a download, the Hub now notices after 15 minutes and
+  says so, instead of clean versions waiting silently for up to 12 hours each. Clean versions waiting for deemix
+  are kept across Hub restarts (they used to vanish and stay at "Sent to deemix" for ever); ones already lost now
+  say **Not in deemix's queue any more** and can be sent again. Retrying a failed download works even while deemix
+  still lists the failed one. A request deemix lost is marked failed with the reason after an hour.
+- **Hub:** `GET /api/downloads/deemix/progress`, `POST /api/downloads/deemix/queue/:uuid/cancel|retry`,
+  `POST /api/downloads/deemix/queue/clear`, `DELETE /api/downloads/deemix/clean`; requests carry `progress`.
 
 ## 0.17.1
 - **Fixed:** clean versions downloaded next to an explicit album (*Loud (Clean)*) showed the **E** badge and
