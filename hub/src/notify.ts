@@ -11,9 +11,16 @@ export type NoticeKind = 'request.new' | 'request.ready' | 'request.rejected' | 
 
 const KEEP_MS = 30 * 86_400_000;
 
+type Sink = (userIds: number[], kind: NoticeKind, title: string, body: string) => void;
+/** Where else each database's notifications go (push.ts, set up by app.ts). */
+const sinks = new WeakMap<Db, Sink>();
+export const onNotify = (db: Db, sink: Sink) => sinks.set(db, sink);
+
 export function notify(db: Db, userIds: number[], kind: NoticeKind, title: string, body: string, now = Date.now()) {
   const add = db.prepare('INSERT INTO notifications (user_id, kind, title, body, created_at) VALUES (?, ?, ?, ?, ?)');
-  for (const id of new Set(userIds)) add.run(id, kind, title.slice(0, 200), body.slice(0, 400), now);
+  const to = [...new Set(userIds)];
+  for (const id of to) add.run(id, kind, title.slice(0, 200), body.slice(0, 400), now);
+  if (to.length) sinks.get(db)?.(to, kind, title.slice(0, 200), body.slice(0, 400));
 }
 
 /** Tell whoever asked for a request what happened to it. */

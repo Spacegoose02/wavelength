@@ -22,6 +22,51 @@ function Disk({ d }: { d: { free: number; total: number } | null }) {
 
 const errText = (e: unknown) => String((e as Error).message ?? e);
 
+/** Admin: the ntfy server the Hub sends push notifications through (hub/src/push.ts). */
+function PushNotifications() {
+  const [s, setS] = useState<{ server: string; hasToken: boolean } | null>();
+  const [form, setForm] = useState({ server: '', token: '' });
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    hubClient()?.pushSettings().then((r) => {
+      setS(r);
+      setForm({ server: r.server, token: '' });
+    }, () => setS(null));
+  }, []);
+  if (!s) return null;
+  const save = async (b: { server: string; token?: string | null }) => {
+    setMsg('…');
+    try {
+      const r = await hubClient()!.savePushSettings(b);
+      setS(r);
+      setForm({ server: r.server, token: '' });
+      setMsg(r.server ? '✓ Saved. Everyone can turn push on under Settings → Account → Notifications.' : '✓ Push notifications are off');
+    } catch (e) {
+      setMsg(errText(e));
+    }
+  };
+  return (
+    <section>
+      <h2>Push notifications</h2>
+      <p className="muted small">
+        Lets people get their notifications through the ntfy app while Wavelength is closed. Use <code>https://ntfy.sh</code> (free; each
+        person gets a long random topic, but ntfy.sh can read what's sent: song and album names) or your own ntfy server, with an access
+        token if it needs one.
+      </p>
+      <form className="editor-grid" onSubmit={(e) => { e.preventDefault(); void save({ server: form.server.trim(), ...(form.token.trim() && { token: form.token.trim() }) }); }}>
+        <label>ntfy server<input value={form.server} placeholder="https://ntfy.sh" onChange={(e) => setForm({ ...form, server: e.target.value })} /></label>
+        <label>Access token {s.hasToken ? '(saved; type to replace)' : '(optional)'}<input type="password" value={form.token} placeholder="tk_…" autoComplete="off" onChange={(e) => setForm({ ...form, token: e.target.value })} /></label>
+        <div className="row gap span2">
+          <button className="btn small primary">Save</button>
+          {s.hasToken && <button type="button" className="btn small ghost" onClick={() => void save({ server: s.server, token: null })}>Remove token</button>}
+          {s.server && <button type="button" className="btn small ghost" onClick={() => void save({ server: '' })}>Turn off</button>}
+        </div>
+      </form>
+      {msg && <p className="small">{msg}</p>}
+    </section>
+  );
+}
+
 /** Who's playing what right now, on which device (reported by each device every minute). */
 function ListeningNow() {
   const [list, setList] = useState<HubListening[]>();
@@ -484,6 +529,7 @@ export function ServerTab() {
         </div>
         <div className="row gap" style={{ marginTop: 10 }}><button className="btn small ghost" onClick={load}>Refresh</button></div>
       </section>
+      <PushNotifications />
       <ListeningNow />
       <Containers />
       <NavidromeAccounts />

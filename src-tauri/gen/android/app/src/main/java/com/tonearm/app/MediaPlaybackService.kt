@@ -3,19 +3,21 @@ package com.tonearm.app
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.wifi.WifiManager
 import android.os.Build
-import android.os.IBinder
+import android.os.Bundle
 import android.os.PowerManager
+import android.os.Process
 import android.util.Log
+import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 
 /**
@@ -27,8 +29,11 @@ import androidx.media.session.MediaButtonReceiver
  * (and loading the next track) carries on with the screen off instead of stalling when the
  * CPU or Wi-Fi radio naps. MediaBridge keeps it in the foreground for a short grace period
  * after a pause (PlaybackPolicy), because the player pauses between every two tracks.
+ *
+ * It's also the media browser Android Auto (and Wear OS, the Assistant) connects to: [onLoadChildren] asks
+ * the page for a folder's items through MediaBridge.browse.
  */
-class MediaPlaybackService : Service() {
+class MediaPlaybackService : MediaBrowserServiceCompat() {
   companion object {
     private const val CHANNEL = "wavelength_playback"
     private const val NOTIF_ID = 4202
@@ -36,6 +41,7 @@ class MediaPlaybackService : Service() {
     private var playing = false
     private var foreground = false
     private var running = false
+    private const val EMPTY_ROOT = "empty"
 
     /** [inForeground]: keep the service (and the locks) in the foreground; false once paused for a while. */
     fun update(ctx: Context, isPlaying: Boolean, inForeground: Boolean) {
@@ -61,7 +67,33 @@ class MediaPlaybackService : Service() {
   private var wakeLock: PowerManager.WakeLock? = null
   private var wifiLock: WifiManager.WifiLock? = null
 
-  override fun onBind(intent: Intent?): IBinder? = null
+  override fun onCreate() {
+    super.onCreate()
+    sessionToken = MediaBridge.ensureSession(this).sessionToken
+  }
+
+  override fun onGetRoot(clientPackageName: String, clientUid: Int, rootHints: Bundle?): BrowserRoot {
+    if (!CarAccess.mayBrowse(clientPackageName, clientUid, Process.myUid(), Process.SYSTEM_UID)) return BrowserRoot(EMPTY_ROOT, null)
+    val extras = Bundle().apply {
+      putBoolean("android.media.browse.CONTENT_STYLE_SUPPORTED", true)
+      putInt("android.media.browse.CONTENT_STYLE_BROWSABLE_HINT", 1) // lists
+      putInt("android.media.browse.CONTENT_STYLE_PLAYABLE_HINT", 2) // album covers in a grid
+      putBoolean("android.media.browse.SEARCH_SUPPORTED", true)
+    }
+    return BrowserRoot("root", extras)
+  }
+
+  override fun onLoadChildren(parentId: String, result: Result<MutableList<MediaBrowserCompat.MediaItem>>) {
+    if (parentId == EMPTY_ROOT) return result.sendResult(mutableListOf())
+    result.detach()
+    MediaBridge.browse(parentId) { items -> result.sendResult(items.toMutableList()) }
+  }
+
+  /** The search box in Android Auto: the page answers like a folder named `search:<query>`. */
+  override fun onSearch(query: String, extras: Bundle?, result: Result<MutableList<MediaBrowserCompat.MediaItem>>) {
+    result.detach()
+    MediaBridge.browse("search:$query") { items -> result.sendResult(items.toMutableList()) }
+  }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     running = true

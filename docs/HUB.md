@@ -521,6 +521,9 @@ with a 4xx status.
 | `GET /api/shares?sent=1` | signed in | shared with you (or `sent=1`: what you shared), newest first |
 | `GET /api/shares/counts`, `POST /api/shares/seen` | signed in | `{ unseen }` / mark `{ ids? }` (or all) as seen |
 | `POST /api/shares/:id/hide`, `DELETE /api/shares/:id` | signed in | take one off your list / unshare (the sender, or an admin) |
+| `GET /api/me/push`, `POST …`, `DELETE …` | signed in | push through ntfy: `{ available, server, topic, subscribeUrl, webUrl }` / turn on (a new topic each time) / off |
+| `POST /api/me/push/test` | signed in | send yourself a test push (`502` with ntfy's answer when it fails) |
+| `GET /api/admin/push`, `PUT …` | `keys.manage` | the ntfy server: `{ server, hasToken }` / `{ server, token? }` (`server: ''` turns push off; `token: null` removes it) |
 | `GET /api/notifications?after=<id>` | signed in | yours after `after`, oldest first (20 at most): `{ notifications: [{ id, kind, title, body, createdAt }], last }`; `kind` is request.new (admins), request.ready, request.rejected, request.have, request.failed, share or radar (a new release from an artist you follow). Without `after`: none, only `last` to start from. Kept 30 days |
 | `GET /api/flags` | signed in | `{ flags: [{ id, kind, artist, title, verdict, setBy, createdAt }] }`: kid-safe flags |
 | `POST /api/admin/flags`, `DELETE /api/admin/flags/:id` | `library.edit` | set `{ kind: track/album/artist, artist, title?, verdict: block/allow }` (the same item again replaces its verdict) / remove |
@@ -591,6 +594,16 @@ report a week it wasn't watching.
 
 A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`,
 `/auth/sso/connect` (the last two sit behind tinyauth).
+
+## Push notifications
+
+The Hub can post every notification it writes (`notify.ts`) to **ntfy** too, so it reaches a phone while Wavelength
+is closed (`hub/src/push.ts`). Nothing is sent until an admin sets the ntfy server (Settings → Server → Push
+notifications): `https://ntfy.sh` or your own, with an optional access token (sealed with the Hub's key). Each
+person who turns it on gets a random topic (`wl-` and 20 letters); they subscribe to it in the ntfy app through
+the `ntfy://` link or QR code the app shows. What's posted is the notification's title and text, with a tag and a
+link to the Hub's web app. On ntfy.sh the topic is the only secret, and ntfy.sh can read the messages; use your
+own server to keep them in the house. The person's topic list is kept in `hub_settings` (`push.topics`).
 
 ## Security notes
 
