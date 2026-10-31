@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.18.0
 - **Critters sing along better.** Checked against real songs with the vocals separated out: with synced
   lyrics, mouths now catch most of the singing in a busy mix (72% and 62% of sung moments in two test songs,
   up from 53% and 19%) without opening in the instrumental parts. Mono songs used to make the mouth open for
