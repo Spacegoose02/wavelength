@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { createServer, type Server } from 'node:http';
+import { createServer, get, type Server } from 'node:http';
+import { gzipSync } from 'node:zlib';
 import { after, test } from 'node:test';
 import { json, seeded } from './helpers.ts';
 
@@ -12,6 +13,11 @@ const SONGS: Record<string, { id: string; title: string; album: string; artist: 
   s1: { id: 's1', title: 'Baby Shark', album: 'Pinkfong Hits', artist: 'Pinkfong' },
   s2: { id: 's2', title: 'Rough Song', album: 'Loud', artist: 'Band', explicitStatus: 'explicit' },
   s3: { id: 's3', title: 'Flagged', album: 'Fine Album', artist: 'Someone' },
+};
+
+const ALBUM = {
+  id: 'al1', name: 'Straight Outta Cashville', artist: 'Young Buck',
+  song: Array.from({ length: 20 }, (_, i) => ({ id: `t${i}`, title: `Song ${i + 1}`, album: 'Straight Outta Cashville', artist: 'Young Buck', track: i + 1, duration: 200 })),
 };
 
 /** A fake Navidrome speaking Subsonic, with real logins checked by token. */
@@ -41,6 +47,14 @@ async function fakeSubsonic(logins: Record<string, string>) {
     if (!pw || md5(pw + q.s) !== q.t) return send({ status: 'failed', error: { code: 40, message: 'Wrong username or password' } });
     if (method === 'ping') return send({ status: 'ok' });
     if (method === 'getSong') return send({ status: 'ok', song: SONGS[q.id] });
+    if (method === 'getAlbum') {
+      // a big reply, gzipped when asked, as Navidrome does
+      const body = JSON.stringify({ 'subsonic-response': { status: 'ok', album: ALBUM } });
+      const gz = /gzip/.test(String(req.headers['accept-encoding'] ?? ''));
+      const out = gz ? gzipSync(body) : Buffer.from(body);
+      res.writeHead(200, { 'content-type': 'application/json', 'content-length': String(out.length), ...(gz ? { 'content-encoding': 'gzip', vary: 'Accept-Encoding' } : {}) });
+      return res.end(out);
+    }
     if (method === 'stream') {
       res.writeHead(206, { 'content-type': 'audio/mpeg', 'content-range': 'bytes 0-3/10', 'content-length': '4' });
       return res.end('ABCD');
@@ -123,4 +137,31 @@ test('an admin can send everyone through the relay', async () => {
   // plain p= works too, and the member isn't held to the kid filter
   const r = await app.inject({ method: 'GET', url: `/nd/${s.body.service.id}/rest/stream?u=${encodeURIComponent(mia.secrets.username)}&p=enc:${Buffer.from(mia.secrets.password).toString('hex')}&id=s2` });
   assert.equal(r.statusCode, 206);
+});
+
+test('big gzipped replies come through the relay whole', async () => {
+  // Navidrome gzips big replies; the Hub's fetch unzips them, so passing Navidrome's content-length on cut the
+  // reply off at the zipped size ("Expected ':' after property name in JSON" on big albums and artists)
+  const nd = await fakeSubsonic({ mia: 'mia-real-pw' });
+  const { app, tokens, ids } = await seeded();
+  const s = await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body: { kind: 'navidrome', url: nd.url, config: { relay: 'everyone' } } });
+  await json(app, 'PUT', `/api/admin/services/${s.body.service.id}/users/${ids.member}`, { token: tokens.admin, body: { secrets: { username: 'mia', password: 'mia-real-pw' } } });
+  const mia = (await json(app, 'GET', '/api/me/services', { token: tokens.member })).body.services[0];
+  await app.listen({ port: 0, host: '127.0.0.1' });
+  after(() => app.close());
+  const port = (app.server.address() as { port: number }).port;
+  const path = `/nd/${s.body.service.id}/rest/getAlbum?u=${encodeURIComponent(mia.secrets.username)}&p=${encodeURIComponent(mia.secrets.password)}&id=al1&f=json`;
+  // a plain HTTP client that trusts content-length, like the app's
+  const { headers, body } = await new Promise<{ headers: Record<string, unknown>; body: string }>((ok, fail) => {
+    get({ host: '127.0.0.1', port, path }, (res) => {
+      let b = '';
+      res.setEncoding('utf8');
+      res.on('data', (d) => (b += d));
+      res.on('end', () => ok({ headers: res.headers, body: b }));
+      res.on('error', fail);
+    }).on('error', fail);
+  });
+  assert.ok(!headers['content-encoding'], 'the reply is passed on unzipped');
+  const album = JSON.parse(body)['subsonic-response'].album;
+  assert.equal(album.song.length, 20);
 });

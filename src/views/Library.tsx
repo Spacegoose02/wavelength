@@ -23,6 +23,7 @@ import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 import { ArtworkButton } from '../components/ArtworkButton';
 import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
+import { loadParts } from '../lib/albumParts';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
 
@@ -373,18 +374,27 @@ export function ArtistView({ artist }: { artist: Artist }) {
   const cfgOf = useSourceCfg();
   const canEditTags = useCan('library.edit');
   const [albums, setAlbums] = useState<Album[] | null>(null);
+  // a server that couldn't list this artist's albums says so, instead of leaving the page empty
+  const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     let alive = true;
+    setErrors({});
+    const failed: Record<string, string> = {};
     Promise.all(
       (artist.refs ?? [artist]).map(async (ref) => {
         const cfg = cfgOf(ref.sourceId);
         try {
           return cfg ? (await sourceFor(cfg).getArtistAlbums?.(ref.id)) ?? [] : [];
-        } catch {
+        } catch (e) {
+          if (cfg) failed[cfg.name] = String((e as Error)?.message ?? e);
           return [];
         }
       }),
-    ).then((lists) => alive && setAlbums(mergeAlbums(lists).sort((a, b) => (b.year ?? 0) - (a.year ?? 0))));
+    ).then((lists) => {
+      if (!alive) return;
+      setErrors(failed);
+      setAlbums(mergeAlbums(lists).sort((a, b) => (b.year ?? 0) - (a.year ?? 0)));
+    });
     return () => {
       alive = false;
     };
@@ -427,6 +437,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
           <AlbumSelectActions sel={sel} busy={busy} setBusy={setBusy} />
         </SelectBar>
       )}
+      <ErrorList errors={errors} />
       {!albums ? <Spinner /> : (
         <Grid>{albums.map((a) => (
           <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
@@ -470,8 +481,12 @@ export function AlbumView({ album }: { album: Album }) {
     const cfg = cfgOf(ref.sourceId);
     if (!cfg) return;
     const src = sourceFor(cfg);
-    Promise.all(parts.map((p) => src.getAlbumTracks!(p.id)))
-      .then((lists) => alive && setTracks(parts.length > 1 ? byPosition(lists.flat()) : lists[0]))
+    loadParts(parts.map((p) => p.id), (id) => src.getAlbumTracks!(id))
+      .then(({ tracks, failed }) => {
+        if (!alive) return;
+        setTracks(tracks);
+        if (failed) setError(`Some songs on this album couldn't be loaded (${failed}). Showing the rest.`);
+      })
       .catch((e) => alive && setError(String(e.message ?? e)));
     return () => {
       alive = false;
@@ -555,14 +570,6 @@ function splitParts(ref: Album, copies: Album[]): Album[] {
     seen.add(id);
     return true;
   });
-}
-
-/** Songs from several parts of one album, in disc and track order, each once. */
-export function byPosition(tracks: Track[]): Track[] {
-  const seen = new Set<string>();
-  return tracks
-    .filter((t) => !seen.has(t.id) && !!seen.add(t.id))
-    .sort((a, b) => (a.discNumber ?? 1) - (b.discNumber ?? 1) || (a.trackNumber ?? 999) - (b.trackNumber ?? 999));
 }
 
 /**
