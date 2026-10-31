@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.18.1
 - **The newest release banner no longer shows another artist's release.** Deezer often has several artists with
   the same name (a dozen "Drake"s), and the artist page took the first one Deezer listed, so Drake's banner could
   show a 2013 compilation by a small same-name upload. Wavelength now checks which same-name artist has the
