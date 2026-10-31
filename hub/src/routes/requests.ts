@@ -70,7 +70,7 @@ const getRequest = (db: Db, id: number) => {
 
 const KINDS = ['track', 'album', 'playlist', 'artist', 'video'];
 
-export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library, clean, radar }: Ctx) {
+export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library, clean, radar, dj }: Ctx) {
   const key = config.secretKey;
   /** A request as sent to devices, with its download's progress while deemix has it. */
   const withProgress = (r: Row): MusicRequest => {
@@ -145,26 +145,36 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     return getRequest(db, r.id)!;
   }
 
-  app.post('/api/requests', async (req) => {
-    const auth = need(req, 'requests.create');
-    const b = (req.body ?? {}) as Record<string, unknown>;
+  /** Make a request as `user` (the app's Request button, and the AI DJ's request_download tool). */
+  async function create(user: Auth['user'], permissions: Auth['permissions'], b: Record<string, unknown>, ip: string): Promise<MusicRequest> {
     const link = str(b, 'link', 1000);
     if (!/^https?:\/\/\S+$/i.test(link)) throw new HttpError(400, 'Send the link to the song, album or video');
     const title = str(b, 'title', 300);
     if (!title) throw new HttpError(400, 'Send a title');
     const kind = KINDS.includes(str(b, 'kind', 20)) ? str(b, 'kind', 20) : isDeezerLink(link) ? 'track' : 'video';
     // asking twice for the same thing just returns the open request
-    const open = db.prepare(`${SELECT} WHERE r.user_id = ? AND r.link = ? AND r.status = 'pending'`).get(auth.user.id, link) as Row | undefined;
-    if (open) return { request: toRequest(open) };
+    const open = db.prepare(`${SELECT} WHERE r.user_id = ? AND r.link = ? AND r.status = 'pending'`).get(user.id, link) as Row | undefined;
+    if (open) return toRequest(open);
     const { lastInsertRowid } = db
       .prepare('INSERT INTO requests (user_id, link, kind, title, artist, cover, note, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(auth.user.id, link, kind, title, str(b, 'artist', 300), str(b, 'cover', 1000) || null, str(b, 'note', 500) || null, 'pending', Date.now());
+      .run(user.id, link, kind, title, str(b, 'artist', 300), str(b, 'cover', 1000) || null, str(b, 'note', 500) || null, 'pending', Date.now());
     let r = getRequest(db, Number(lastInsertRowid))!;
-    audit(db, { actorId: auth.user.id, action: 'request.created', target: `${r.artist} – ${r.title}`, detail: { link, kind }, ip: clientIp(req) });
+    audit(db, { actorId: user.id, action: 'request.created', target: `${r.artist} – ${r.title}`, detail: { link, kind }, ip });
     // Autodownload (and admins): no queue
-    if (auth.permissions.includes('downloads.run')) r = await approve(r, auth.user, clientIp(req));
-    else notify(db, [...approvers(db, auth.user.id), ...guardiansOf(db, auth.user.id)], 'request.new', `New request from ${auth.user.displayName}`, r.artist ? `${r.title} by ${r.artist}` : r.title);
-    return { request: r };
+    if (permissions.includes('downloads.run')) r = await approve(r, user, ip);
+    else notify(db, [...approvers(db, user.id), ...guardiansOf(db, user.id)], 'request.new', `New request from ${user.displayName}`, r.artist ? `${r.title} by ${r.artist}` : r.title);
+    return r;
+  }
+
+  dj.request = async (user, b) => {
+    const permissions = permissionsFor(user);
+    if (!permissions.includes('requests.create')) throw new HttpError(403, 'This account can’t request music');
+    return create(user, permissions, b, '');
+  };
+
+  app.post('/api/requests', async (req) => {
+    const auth = need(req, 'requests.create');
+    return { request: await create(auth.user, auth.permissions, (req.body ?? {}) as Record<string, unknown>, clientIp(req)) };
   });
 
   /** Your requests, newest first. */

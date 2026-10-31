@@ -3,7 +3,7 @@
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens and bears), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
-**searching your playlists**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
+**searching your playlists**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -772,6 +772,21 @@ queue any more** and can be sent again, and the bar at the top shows how busy de
 > **Developer notes.** `src/lib/deemixQueue.ts` (reading the queue, stuck detection, Cancel / Retry), `src/components/DeemixQueue.tsx`,
 > and on the Hub `hub/src/deemixQueue.ts`. Without a Hub, the app reads deemix itself with the same rules.
 
+## AI DJ
+
+With a Hub where an admin turned it on for you, **AI DJ** is in the menu (under **Library** on phones). Chat with
+it: ask for a playlist ("25 songs for a road trip"), a mood ("chill music for dinner"), more like an artist or what
+you played this week, or "which Radiohead albums am I missing?". It searches your library, plays or queues what it
+finds, saves playlists (**Open the playlist** jumps to one) and, when you say yes, requests missing albums like the
+Request button does. **This month** under the box shows how much of your allowance you've used.
+
+Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only), the model, prices, monthly limits
+and who can use it. The full setup guide is [AI-DJ.md](AI-DJ.md).
+
+> **Developer notes.** `src/views/DJ.tsx` (chat), `src/lib/dj.ts` (the tools that run in the app),
+> `src/views/DjAdmin.tsx` (admin tab), `hub/src/dj/` and `hub/src/routes/dj.ts` on the Hub. See
+> [AI-DJ.md](AI-DJ.md#how-it-works).
+
 ## Containers (Hub admins)
 
 If your Hub is set up for it, **Settings → Server → Containers** lists the household's other services, like
@@ -781,7 +796,7 @@ Hub was told about show up. Setting it up is in `docs/HUB.md`, "Docker control".
 
 ## Settings tabs
 
-Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users** and **Server** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
+Settings is split into tabs: **Account** (Wavelength Hub sign-in), **Users**, **Server** and **AI DJ** (Hub admins only), **Sources** (servers), **Playback** (equalizer), **Downloads** (deemix and
 yt-dlp), **Themes**, **Discover** (charts) and **Updates**. Links elsewhere open the right tab: **Edit charts** on
 Discover opens Discover, and the Settings link in Downloads opens Downloads.
 

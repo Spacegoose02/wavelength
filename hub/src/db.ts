@@ -447,6 +447,42 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   -- clean), so flags 0.17.2 saved as 'explicit' are for the album or song as a whole again (kidSafe.ts).
   UPDATE OR REPLACE content_flags SET version = '' WHERE version = 'explicit';
   `,
+  `
+  -- AI DJ (dj/): who may use it and their own monthly spending limit (USD, null = none), every model call
+  -- with its tokens and estimated cost, and each person's chats. Messages are the provider's own JSON,
+  -- kept as sent so a chat can go on; \`pending\` holds tool calls waiting for the app to answer.
+  CREATE TABLE dj_access (
+    user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    enabled       INTEGER NOT NULL DEFAULT 0,
+    monthly_limit REAL,
+    updated_at    INTEGER NOT NULL
+  );
+  CREATE TABLE dj_usage (
+    id                 INTEGER PRIMARY KEY,
+    user_id            INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    at                 INTEGER NOT NULL,
+    model              TEXT NOT NULL,
+    input_tokens       INTEGER NOT NULL,
+    output_tokens      INTEGER NOT NULL,
+    cache_read_tokens  INTEGER NOT NULL DEFAULT 0,
+    cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+    cost               REAL NOT NULL,             -- USD, estimated from the prices in the DJ settings
+    conversation_id    INTEGER
+  );
+  CREATE INDEX dj_usage_user ON dj_usage(user_id, at);
+  CREATE INDEX dj_usage_at ON dj_usage(at);
+  CREATE TABLE dj_conversations (
+    id         INTEGER PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title      TEXT NOT NULL,
+    messages   TEXT NOT NULL,                     -- JSON array
+    pending    TEXT,                              -- JSON, or null
+    turns      INTEGER NOT NULL DEFAULT 0,        -- messages the person sent
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX dj_conversations_user ON dj_conversations(user_id, updated_at);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
