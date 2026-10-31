@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.17.3
+- **Fixed: albums split into an Explicit and a Clean album (0.17.2).** When Navidrome lists part of an album on its
+  own (*One Day* from *Underground Luxury*, downloaded separately), that part's "clean" tag made Wavelength show it
+  as a separate clean version, with an Explicit / Clean switch, and split the album in two. A tag only says whether
+  the songs in it are explicit, so now only "(Clean)", "(Edited)" or "(Censored)" in the name makes a clean version.
+  Same-named albums are one album again, and the album page shows and plays all the parts on a server together, in
+  track order. Your files and folders weren't changed, by 0.17.2 or by this.
+- Kid-safe flags no longer treat a song's explicit tag as another version: a flag on an album covers all its songs
+  again, whatever their tags. Flags 0.17.2 saved for "the explicit version" now cover the song or album as a whole.
+  Clean songs on an explicit album are still fine for kids on their own (search, playlists).
+
 ## 0.17.2
 - **See what deemix is doing.** Downloads → deemix queue shows each download's place in line, songs done and
   failed, and deemix's reason for each failed song, with **Cancel**, **Retry** and **Clear finished**. Inbox

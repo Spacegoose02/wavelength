@@ -19,12 +19,16 @@ const EXPLICIT_MARK = /[([]\s*explicit\b[^)\]]*[)\]]/i;
 /** Albums with this key are versions of each other: same artist, same title without "(Clean)" and the like. */
 export const versionKey = (a: Pick<Album, 'artist' | 'title'>) => `${norm(primaryArtist(a.artist))}|${cleanTitle(a.title)}`;
 
-/** Which version one server's copy is: from its title, its tags, or the library check. */
+/**
+ * Which version one server's copy is. Only the name makes a clean version ("(Clean)", "(Edited)"): a "clean" tag
+ * on an album just means none of the songs in it are explicit, which is also true of a part of an explicit album
+ * that Navidrome lists on its own (one song downloaded separately, say). Without a mark, an album is the
+ * explicit version when its tags or the library check say so.
+ */
 export function versionOf(a: Album): Version | undefined {
   if (CLEAN_MARK.test(a.title)) return 'clean';
   if (EXPLICIT_MARK.test(a.title)) return 'explicit';
-  // its own tag first: two versions with the same title share one library-check rating
-  return a.explicit ?? explicitOfAlbum(a);
+  return a.explicit === 'explicit' || explicitOfAlbum(a) === 'explicit' ? 'explicit' : undefined;
 }
 
 const copies = (a: Album) => a.refs ?? [a];

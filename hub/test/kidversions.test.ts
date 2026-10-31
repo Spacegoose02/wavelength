@@ -51,7 +51,8 @@ test('"OK for kids" on the clean version doesn’t let the explicit one through'
   // the explicit one can be let through on purpose, separately
   await set({ kind: 'track', artist: 'Rihanna', title: 'S&M', version: '', verdict: 'allow' });
   assert.equal(songNotForKids(db, explicitSM), false);
-  assert.equal(songNotForKids(db, { ...explicitSM, explicitStatus: 'explicit' }), true, 'a file tagged explicit needs its own');
+  assert.equal(songNotForKids(db, { ...explicitSM, explicitStatus: 'explicit' }), false, 'the tag doesn’t make another version');
+  assert.equal(songNotForKids(db, cleanSM), false);
 
   // "every version", and artists, cover both
   await set({ kind: 'track', artist: 'Rihanna', title: 'Only Girl', version: 'any', verdict: 'block' });
@@ -85,10 +86,10 @@ test('Release Radar: a kid’s auto-get skips explicit releases and ones hidden 
 test('upgrading repairs flags saved before versions', () => {
   const file = join(mkdtempSync(join(tmpdir(), 'wl-flags-')), 'hub.db');
   const db = openDb(file);
-  // back to how 0.17.1 left it
+  // back to how 0.17.1 left it (the two migrations since run again)
   const { user_version: now } = db.prepare('PRAGMA user_version').get() as { user_version: number };
   db.exec(`DROP INDEX content_flags_key; ALTER TABLE content_flags DROP COLUMN version;
-    CREATE UNIQUE INDEX content_flags_key ON content_flags(kind, artist COLLATE NOCASE, title COLLATE NOCASE); PRAGMA user_version = ${now - 1}`);
+    CREATE UNIQUE INDEX content_flags_key ON content_flags(kind, artist COLLATE NOCASE, title COLLATE NOCASE); PRAGMA user_version = ${now - 2}`);
   const flag = db.prepare("INSERT INTO content_flags (kind, artist, title, verdict, created_at) VALUES (?, ?, ?, ?, 0)");
   flag.run('album', 'Rihanna', 'Loud', 'allow'); // set on the clean version, saved under the explicit name
   flag.run('track', 'Rihanna', 'S&M', 'allow');
@@ -110,4 +111,14 @@ test('upgrading repairs flags saved before versions', () => {
   assert.equal((up.prepare("SELECT COUNT(*) AS n FROM ratings WHERE album = 'Loud (Clean)'").get() as { n: number }).n, 0);
   assert.ok((up.prepare("SELECT 1 FROM audit WHERE action = 'kids.flagsRepaired'").get()));
   up.close();
+});
+
+test('flags saved as "explicit" by 0.17.2 count for the whole song or album', async () => {
+  const { app, db, tokens } = await seeded();
+  const r = await json(app, 'POST', '/api/admin/flags', { token: tokens.admin, body: { kind: 'album', artist: 'B.o.B', title: 'Underground Luxury', version: 'explicit', verdict: 'block' } });
+  assert.equal(r.body.flag.version, '');
+  db.prepare("INSERT INTO content_flags (kind, artist, title, version, verdict, created_at) VALUES ('track', 'B.o.B', 'Ready', 'explicit', 'allow', 0)").run();
+  // the album's song tagged clean is covered by the album flag, and the old 'explicit' row still works
+  assert.equal(songNotForKids(db, { artist: 'B.o.B', album: 'Underground Luxury', title: 'One Day', explicitStatus: 'clean' }), true);
+  assert.equal(songNotForKids(db, { artist: 'B.o.B', album: 'Underground Luxury', title: 'Ready', explicitStatus: 'explicit' }), false);
 });

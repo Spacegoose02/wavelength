@@ -892,7 +892,7 @@ them are tagged explicit or because they came from one of those wrong albums. Ti
 **Delete selected** (to the Hub's trash for 30 days; the explicit albums stay) or **Hide selected from kids**.
 
 **Explicit and clean versions.** When your library has both versions of an album (for example *Loud* and
-*Loud (Clean)*, or two copies tagged differently), its page has an **Explicit** / **Clean** switch, and **Get
+*Loud (Clean)*; it's the name that says which is the clean version, not the files' tags), its page has an **Explicit** / **Clean** switch, and **Get
 clean version** goes away. Under **Settings → Playback → Explicit and clean versions**, **Prefer clean** or
 **Prefer explicit** shows only that version in album lists and opens albums on it (**Show both** is the
 default). It follows you to your other devices. Kid profiles always get the clean version.
