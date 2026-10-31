@@ -1,5 +1,5 @@
 import type { Db } from './db.ts';
-import { isRole, permissionsFor } from './roles.ts';
+import { isRole, permissionsFor, type Permission } from './roles.ts';
 
 /**
  * Notifications (docs/USERS-AND-ADMIN.md §6.8): the Hub writes one when something happens that a person
@@ -7,7 +7,7 @@ import { isRole, permissionsFor } from './roles.ts';
  * and show them as system notifications. The Inbox stays the place to act on them.
  */
 
-export type NoticeKind = 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar';
+export type NoticeKind = 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar' | 'library';
 
 const KEEP_MS = 30 * 86_400_000;
 
@@ -17,7 +17,7 @@ export function notify(db: Db, userIds: number[], kind: NoticeKind, title: strin
 }
 
 /** Tell whoever asked for a request what happened to it. */
-export function notifyRequester(db: Db, requestId: number, kind: Exclude<NoticeKind, 'request.new' | 'share' | 'radar'>) {
+export function notifyRequester(db: Db, requestId: number, kind: Exclude<NoticeKind, 'request.new' | 'share' | 'radar' | 'library'>) {
   const r = db.prepare('SELECT user_id, title, artist, reason FROM requests WHERE id = ?').get(requestId) as
     { user_id: number; title: string; artist: string; reason: string | null } | undefined;
   if (!r) return;
@@ -59,4 +59,10 @@ export function noticesAfter(db: Db, userId: number, after: number): { notificat
 
 export function pruneNotices(db: Db, now = Date.now()) {
   db.prepare('DELETE FROM notifications WHERE created_at < ?').run(now - KEEP_MS);
+}
+
+/** Everyone (not turned off) who has `permission`. */
+export function withPermission(db: Db, permission: Permission): number[] {
+  const users = db.prepare('SELECT id, role, autodownload FROM users WHERE disabled = 0').all() as { id: number; role: string; autodownload: number }[];
+  return users.filter((u) => isRole(u.role) && permissionsFor({ role: u.role, autodownload: !!u.autodownload }).includes(permission)).map((u) => u.id);
 }

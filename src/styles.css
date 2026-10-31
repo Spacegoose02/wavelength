@@ -1722,3 +1722,5 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .error-text { color: #ff9b9b; }
 .selectable { user-select: text; }
 .recovery-codes { font-family: var(--lcd-font, monospace); background: var(--panel-2); padding: 10px 14px; border-radius: var(--radius); columns: 2; max-width: 360px; }
+.smart-list { display: grid; gap: 6px; justify-items: start; } .smart-list .source-row { width: 100%; }
+.dup-group { margin-bottom: 14px; } .dup-group h3 { margin: 10px 0 6px; } .dup-group .cover, .dup-group img { width: 44px; height: 44px; border-radius: 6px; }

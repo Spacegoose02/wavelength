@@ -5,6 +5,7 @@ import { secretStorage } from '../lib/secrets';
 import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
+import type { SmartPlaylist } from '../lib/smartPlaylists';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
@@ -122,6 +123,10 @@ interface SettingsState {
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';
   setVersions(v: SettingsState['versions']): void;
+  /** Playlists → Smart playlists (lib/smartPlaylists.ts): the rules, synced. */
+  smartPlaylists: SmartPlaylist[];
+  saveSmartPlaylist(p: SmartPlaylist): void;
+  removeSmartPlaylist(id: string): void;
   /** This device shows up under Devices on your other devices, which can control it (lib/remote.ts). Not synced. */
   remoteControl: boolean;
   setRemoteControl(v: boolean): void;
@@ -170,6 +175,9 @@ export const useSettings = create<SettingsState>()(
       setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',
       setVersions: (versions) => set({ versions }),
+      smartPlaylists: [],
+      saveSmartPlaylist: (p) => set((st) => ({ smartPlaylists: st.smartPlaylists.some((x) => x.id === p.id) ? st.smartPlaylists.map((x) => (x.id === p.id ? p : x)) : [...st.smartPlaylists, p] })),
+      removeSmartPlaylist: (id) => set((st) => ({ smartPlaylists: st.smartPlaylists.filter((x) => x.id !== id) })),
       remoteControl: true,
       setRemoteControl: (remoteControl) => set({ remoteControl }),
       notifications: true,
