@@ -8,7 +8,7 @@ import { loadFlags, setFlag, useFlags, useRatings } from '../lib/kids';
 import { today } from '../lib/kidTime';
 import { notifyAllowed, notifySupported } from '../lib/notify';
 import { isAndroid } from '../lib/platform';
-import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
+import { HubClient, HubError, type HubPush, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
@@ -241,7 +241,67 @@ function NotifySetting() {
         Notify me on this device
       </label>
       {msg && <p className="small">{msg}</p>}
+      <PushSetting />
     </div>
+  );
+}
+
+/** Push through ntfy (hub/src/push.ts): news on the phone while Wavelength is closed. */
+function PushSetting() {
+  const [p, setP] = useState<HubPush | null>();
+  const [msg, setMsg] = useState('');
+  const c = hubClient()!;
+  useEffect(() => {
+    c.push().then(setP, () => setP(null)); // an older Hub has no push
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!p) return null;
+  const run = async (f: () => Promise<unknown>, done = '') => {
+    setMsg('…');
+    try {
+      await f();
+      setMsg(done);
+    } catch (e) {
+      setMsg(errText(e));
+    }
+  };
+  return (
+    <>
+      <h4>When Wavelength is closed</h4>
+      {!p.available ? (
+        <p className="muted small">Your Hub can send these through the free ntfy app, so they arrive while Wavelength is closed. An admin turns it on under Settings → Server → Push notifications.</p>
+      ) : !p.topic ? (
+        <>
+          <p className="muted small">Get them through the free <b>ntfy</b> app (Android, iPhone, desktop), even while Wavelength is closed. Your Hub sends them to {new URL(p.server!).host}.</p>
+          <button className="btn small" onClick={() => run(async () => setP(await c.pushOn()))}>Turn on</button>
+        </>
+      ) : (
+        <>
+          <p className="muted small">
+            Install <b>ntfy</b>, then scan this or tap <b>Subscribe in ntfy</b> on the phone. Keep the topic to yourself: whoever
+            knows it can read your notifications{p.server?.includes('ntfy.sh') ? ' on ntfy.sh' : ''}.
+          </p>
+          <div className="hub-pair">
+            <Qr text={p.subscribeUrl!} />
+            <div>
+              <p className="small">Server <b className="selectable">{p.server}</b><br />Topic <b className="selectable">{p.topic}</b></p>
+              <div className="row gap wrap">
+                <a className="btn small primary" href={p.subscribeUrl!} onClick={(e) => {
+                  // the Android app's WebView doesn't follow ntfy:// links itself
+                  const native = window.WavelengthNative;
+                  if (!native?.openNtfy) return;
+                  e.preventDefault();
+                  if (!native.openNtfy(p.subscribeUrl!)) setMsg('Install ntfy from Google Play or F-Droid first, then tap this again.');
+                }}>Subscribe in ntfy</a>
+                <button className="btn small" onClick={() => run(() => c.pushTest(), '✓ Sent. It should be on your phone now.')}>Send a test</button>
+                <button className="btn small ghost" title="A new topic: anyone subscribed to the old one stops getting them" onClick={() => run(async () => setP(await c.pushOn()), '✓ New topic. Subscribe to it again in ntfy.')}>New topic</button>
+                <button className="btn small ghost" onClick={() => run(async () => setP(await c.pushOff()))}>Turn off</button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+      {msg && <p className="small">{msg}</p>}
+    </>
   );
 }
 

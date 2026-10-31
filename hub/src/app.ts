@@ -37,6 +37,7 @@ import { ChartCache } from './discover.ts';
 import { ReleaseRadar } from './radar.ts';
 import { radarRoutes } from './routes/radar.ts';
 import { scrobbleRoutes } from './routes/scrobble.ts';
+import { pushRoutes } from './routes/push.ts';
 import { Scrobbler } from './scrobble.ts';
 import { getUser } from './users.ts';
 import { Library } from './library.ts';
@@ -176,6 +177,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   discoverRoutes(app, ctx);
   radarRoutes(app, ctx);
   scrobbleRoutes(app, ctx);
+  pushRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

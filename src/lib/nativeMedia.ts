@@ -9,12 +9,17 @@ import { usePlayer } from '../store/player';
 
 interface NativeMedia {
   update(json: string): void;
+  /** Answer to a car's browse request (__wlBrowse); missing on app builds from before Android Auto. */
+  browseResult?(request: string, json: string): void;
+  /** Open an `ntfy://` subscribe link in the ntfy app; false when it isn't installed. */
+  openNtfy?(url: string): boolean;
 }
 
 declare global {
   interface Window {
     WavelengthNative?: NativeMedia;
     __wlMedia?: (cmd: string) => void;
+    __wlBrowse?: (request: string, parent: string) => void;
   }
 }
 
@@ -32,6 +37,23 @@ export function enableNativeMedia() {
     } else if (cmd === 'next') p.next();
     else if (cmd === 'prev') p.prev();
     else if (cmd.startsWith('seek:')) p.seek(Number(cmd.slice(5)));
+    // Android Auto / voice: play an item it browsed, or what was asked for
+    else if (cmd.startsWith('playId:')) void import('./carBrowse').then((m) => m.carPlay(cmd.slice(7)));
+    else if (cmd.startsWith('search:')) void import('./carBrowse').then((m) => m.carSearch(cmd.slice(7)));
+  };
+
+  // Android Auto opened a folder: answer with its items (lib/carBrowse.ts)
+  window.__wlBrowse = (request: string, parent: string) => {
+    void import('./carBrowse')
+      .then((m) => m.carChildren(parent))
+      .catch(() => [])
+      .then((items) => {
+        try {
+          native.browseResult?.(request, JSON.stringify(items));
+        } catch {
+          /* bridge gone */
+        }
+      });
   };
 
   // player → native session. Push on any meaningful change; position every ~5 s so the

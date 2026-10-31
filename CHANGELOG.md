@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Android Auto:** browse your playlists, recently added albums, favorites and radio stations in the car, search,
+  and ask the Assistant to play something on Wavelength.
+- **Home-screen widget (Android):** what's playing, with previous, play/pause and next.
+- **Push notifications while the app is closed,** through the free ntfy app: an admin picks the ntfy server
+  (Settings → Server), then each person turns it on under Settings → Account → Notifications.
+- **Hub:** `/api/me/push…` and `/api/admin/push`.
+- **CI:** an Android build with the Kotlin unit tests on pull requests that touch `src-tauri`.
 - **Get the song you hear on the radio:** Now Playing shows **Queue from library** when you have it, or **Get this
   song** (Get or Request) when you don't, whenever the station's title names a song.
 - **Stations for you** (Radio): popular stations in the genres you have the most music in.

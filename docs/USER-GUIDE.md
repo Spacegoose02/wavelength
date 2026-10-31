@@ -736,6 +736,12 @@ shared with you, and (admins) a new request also pop up as a system notification
 device under **Settings → Account → Notifications**. On Android they come while the app is open or playing in
 the background; in a browser, allow notifications for the page when asked.
 
+**While Wavelength is closed:** once an admin has set up push notifications (**Settings → Server → Push
+notifications**: `https://ntfy.sh`, or your own ntfy server), **Settings → Account → Notifications → When
+Wavelength is closed → Turn on** gives you a private topic. Install the free **ntfy** app, then tap **Subscribe in
+ntfy** (or scan the code), and **Send a test**. Everything the Hub would notify you about then also arrives through
+ntfy, on Android, iPhone or a computer. **New topic** cuts off anyone else who subscribed to the old one.
+
 **Admins:** add a Navidrome admin login under **Settings → Server → Library updates** and the Hub asks
 Navidrome to scan as soon as a download finishes (requests and your own downloads), so new music shows up
 in a minute instead of at Navidrome's next scheduled scan. **Scan now** starts one by hand.
@@ -921,8 +927,25 @@ Wavelength off the **Sleeping apps** and **Deep sleeping apps** lists). Keep Wav
 allowed: Android needs the playback notification to keep a music app running. Swiping the notification away
 pauses the music.
 
+### Android Auto
+
+Plug the phone into the car (or use wireless Android Auto) and Wavelength shows up with the other music apps:
+**Playlists** (yours and your server's), **Recently added**, **Favorites** (with **Liked songs**) and **Radio**,
+with covers. Pick something to play it; the car's search box and "Hey Google, play *something* on Wavelength"
+work too. Kid profiles only see what's allowed for kids. Wavelength needs to be open on the phone (it can be
+in the background); if it isn't, the car says so and Wavelength tries to open itself.
+
+### Home-screen widget
+
+Long-press the home screen → **Widgets** → **Wavelength**: the song that's playing with its cover, and previous,
+play/pause and next. With nothing playing, tapping it opens Wavelength.
+
 > **For developers:** see `src-tauri/gen/android` in [ARCHITECTURE.md](ARCHITECTURE.md) §5 (`PlaybackHost`,
-> `MediaPlaybackService`, `PlaybackPolicy`).
+> `MediaPlaybackService`, `PlaybackPolicy`). Android Auto: `MediaPlaybackService` is a
+> `MediaBrowserServiceCompat`; `MediaBridge.browse` asks the page (`src/lib/carBrowse.ts`) for each folder, and
+> `ArtProvider` serves the covers as `content://` links. Who may browse: `CarAccess.kt`. The widget is
+> `NowPlayingWidget.kt`. The Android workflow (`.github/workflows/android.yml`) builds one ABI and runs the Kotlin
+> unit tests on every pull request that touches `src-tauri`.
 
 ## Updates
 

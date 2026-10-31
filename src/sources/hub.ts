@@ -201,6 +201,17 @@ export interface SharePayload {
   station?: { name: string; streamUrl: string; favicon?: string; homepage?: string; nowPlayingUrl?: string };
   artist?: string;
 }
+/** Push notifications through ntfy (hub/src/push.ts). */
+export interface HubPush {
+  /** An admin has set up an ntfy server. */
+  available: boolean;
+  server: string | null;
+  /** This person's topic, when they've turned it on. */
+  topic: string | null;
+  /** `ntfy://host/topic`: the ntfy app opens it and offers to subscribe. */
+  subscribeUrl: string | null;
+  webUrl: string | null;
+}
 /** Something the Hub tells this person about (hub/src/notify.ts), shown as a system notification. */
 export interface HubNotice {
   id: number;
@@ -585,6 +596,13 @@ export class HubClient {
   setAutoGet = (id: number, autoGet: boolean) => this.call<{ follow: HubFollow }>('PATCH', `/api/radar/follows/${id}`, { autoGet });
   weeklyMix = (fresh = false) => this.call<{ week: string; tracks: HubMixTrack[] }>('GET', `/api/radar/mix${fresh ? '?fresh=1' : ''}`);
   // Scrobbling (hub/src/scrobble.ts)
+  push = () => this.call<HubPush>('GET', '/api/me/push');
+  pushOn = () => this.call<HubPush>('POST', '/api/me/push', {});
+  pushOff = () => this.call<HubPush>('DELETE', '/api/me/push');
+  pushTest = () => this.call<{ ok: true }>('POST', '/api/me/push/test', {});
+  pushSettings = () => this.call<{ server: string; hasToken: boolean }>('GET', '/api/admin/push');
+  /** `server: ''` turns push off; `token: null` removes the saved one, leaving it out keeps it. */
+  savePushSettings = (b: { server: string; token?: string | null }) => this.call<{ server: string; hasToken: boolean }>('PUT', '/api/admin/push', b);
   scrobbleAccounts = () => this.call<{ accounts: HubScrobbleAccount[]; lastfmAvailable: boolean }>('GET', '/api/me/scrobble');
   connectListenBrainz = (token: string) => this.call<{ account: HubScrobbleAccount }>('POST', '/api/me/scrobble/listenbrainz', { token });
   connectLastfm = (username: string, password: string) => this.call<{ account: HubScrobbleAccount }>('POST', '/api/me/scrobble/lastfm', { username, password });
