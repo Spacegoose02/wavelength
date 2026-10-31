@@ -217,6 +217,9 @@ section h2 { font-size: 19px; margin-bottom: 14px; display: flex; align-items: c
 .track-main { flex: 1; min-width: 0; }
 .track-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .track-sub { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a song row's artist and album: links to their pages */
+.sub-link { color: inherit; font: inherit; padding: 0; background: none; border: 0; cursor: pointer; display: inline; }
+.sub-link:hover, .sub-link:focus-visible { color: var(--text); text-decoration: underline; text-underline-offset: 0.15em; }
 .track-time { color: var(--muted); font-variant-numeric: tabular-nums; width: 56px; text-align: right; }
 .track-actions { display: flex; gap: 6px; opacity: 0; }
 .track-row:hover .track-actions { opacity: 1; }
