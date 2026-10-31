@@ -14,7 +14,7 @@ import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfArtist, shareOfTracks } from '../lib/inbox';
 import { albumVersion, explicitOfAlbum, explicitOfTrack, useHidden, useIsKid, useRatings } from '../lib/kids';
-import { hasBoth, preferredRef, useVersionHidden, useVersionPref, versionOf, versionsOf } from '../lib/versions';
+import { cleanSide, hasBoth, preferredRef, useVersionHidden, useVersionPref, versionOf, versionsOf } from '../lib/versions';
 import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { deleteAlbum, deleteAlbums } from '../lib/deleteAlbums';
 import { applyMerge, navidromeRefs, planAlbums, planArtists, type MergePlan } from '../lib/merge';
@@ -399,11 +399,14 @@ export function ArtistView({ artist }: { artist: Artist }) {
       alive = false;
     };
   }, [artist]);
+  const appearsOn = useAppearsOn(artist, albums);
   const hidden = useHidden();
   useArtworkList();
   const [busy, setBusy] = useState<string>();
   const otherVersion = useVersionHidden();
   const selectable = useMemo(() => (albums ?? []).filter((a) => !otherVersion(a)), [albums, otherVersion]);
+  // kid-safe and Explicit / Clean filtering, as on the cards, so the heading doesn't sit over nothing
+  const featured = useMemo(() => appearsOn.filter((a) => !hidden.album(cleanSide(a)) && !otherVersion(a)), [appearsOn, hidden, otherVersion]);
   const sel = useSelection(selectable, (a: Album) => `${a.sourceId}:${a.id}`);
   if (hidden.artist(artist)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
 
@@ -444,8 +447,55 @@ export function ArtistView({ artist }: { artist: Artist }) {
             selected={sel.isPicked(a)} badge={sel.badge(a)} />
         ))}</Grid>
       )}
+      {featured.length > 0 && (
+        <section className="appears-on">
+          <h2>Appears On</h2>
+          <Grid>{featured.map((a) => <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={openAlbum} />)}</Grid>
+        </section>
+      )}
     </div>
   );
+}
+
+/**
+ * "Appears On": albums by other artists in the library where this artist is featured on a song (lib/appearsOn.ts).
+ * Asked of each server that can (Navidrome) once the artist's own albums are in, so those are left out. Albums the
+ * catalog knows come back as the catalog's copy, so versions and copies on other servers work as everywhere else.
+ */
+function useAppearsOn(artist: Artist, own: Album[] | null): Album[] {
+  const cfgOf = useSourceCfg();
+  const [found, setFound] = useState<Album[]>([]);
+  useEffect(() => {
+    setFound([]);
+    if (!own) return;
+    let alive = true;
+    const ownKeys = new Set(own.flatMap((a) => (a.refs ?? [a]).map((r) => `${r.sourceId}:${r.id}`)));
+    Promise.all(
+      (artist.refs ?? [artist]).map(async (ref) => {
+        const cfg = cfgOf(ref.sourceId);
+        const src = cfg && sourceFor(cfg);
+        if (!src?.getAppearsOn) return [];
+        const ownIds = [...ownKeys].filter((k) => k.startsWith(`${ref.sourceId}:`)).map((k) => k.slice(ref.sourceId.length + 1));
+        return src.getAppearsOn({ id: ref.id, name: artist.name }, ownIds).catch(() => [] as Album[]);
+      }),
+    ).then((lists) => {
+      if (!alive) return;
+      const catalog = useCatalog.getState().albums;
+      const byKey = new Map<string, Album>();
+      for (const a of catalog) for (const r of a.refs ?? [a]) byKey.set(`${r.sourceId}:${r.id}`, a);
+      const out = new Map<string, Album>();
+      for (const a of lists.flat()) {
+        const full = byKey.get(`${a.sourceId}:${a.id}`) ?? a;
+        if ((full.refs ?? [full]).some((r) => ownKeys.has(`${r.sourceId}:${r.id}`))) continue;
+        out.set(`${full.sourceId}:${full.id}`, full);
+      }
+      setFound([...out.values()].sort((a, b) => (b.year ?? 0) - (a.year ?? 0)));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [artist, own]);
+  return found;
 }
 
 export function AlbumView({ album, focus }: { album: Album; focus?: { id: string; sourceId: string; title?: string } }) {

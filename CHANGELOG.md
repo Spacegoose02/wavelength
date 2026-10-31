@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Appears On, like Spotify.** An artist's page now lists, under their albums, the albums by other artists in
+  your Navidrome library that they're featured on: songs crediting them as a track artist ("Drake feat. Future")
+  or in the title ("Life Is Good (feat. Future)"). Click one to open the album. Kid profiles and the Explicit /
+  Clean version setting filter it like everywhere else.
 
 ## 0.17.5
 - **Find the clean version on Deezer.** In Downloads → Deezer, songs and albums show **E** or **C**, and the

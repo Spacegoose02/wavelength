@@ -56,6 +56,7 @@ under it.
 |---|---|
 | `test()` | Settings → Test connection |
 | `getAlbums / getArtists / getRecentAlbums / getAlbumTracks / getArtistAlbums` | Library, Home, Recently added |
+| `getAppearsOn` (Navidrome) | Artist page → Appears On (`lib/appearsOn.ts`) |
 | `search(q)` | Search (fan-out to every source) |
 | `getBooks / startBook / syncBook / getPodcasts / getEpisodes` | Audiobooks, Podcasts |
 | `getStations` | Radio, SUB/WAVE |
