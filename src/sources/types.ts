@@ -175,6 +175,8 @@ export interface MusicSource {
   setFavorite?(track: Track, on: boolean): Promise<void>;
   getArtists?(): Promise<Artist[]>;
   getArtistAlbums?(artistId: string): Promise<Album[]>;
+  /** Albums by other artists where this artist is featured on a song ("Appears On"), leaving out `ownAlbumIds`. */
+  getAppearsOn?(artist: { id: string; name: string }, ownAlbumIds?: string[]): Promise<Album[]>;
   getAlbumTracks?(albumId: string): Promise<Track[]>;
   getStations?(): Promise<Station[]>;
   /** Delete one of the server's own radio stations. Navidrome only allows this for admin accounts. */

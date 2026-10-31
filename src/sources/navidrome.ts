@@ -2,6 +2,7 @@ import SparkMD5 from 'spark-md5';
 import { getJson, http, qs, trimSlash } from '../lib/http';
 import type { SongFacts } from '../lib/smartPlaylists';
 import type { Lyrics } from '../lib/lyrics';
+import { appearsOnSongs, type CreditedSong } from '../lib/appearsOn';
 import type { Album, Artist, HistoryEntry, MusicSource, ReplayGain, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
 
 /** Navidrome (or any Subsonic-compatible server) via the Subsonic REST API. */
@@ -209,6 +210,31 @@ export class NavidromeSource implements MusicSource {
   async getArtistAlbums(artistId: string) {
     const r = await this.call('getArtist', { id: artistId });
     return (r.artist?.album ?? []).map(this.album);
+  }
+
+  /**
+   * Albums by other artists where this one is featured on a song (lib/appearsOn.ts). Navidrome's search finds songs
+   * that name the artist in their artists or title; the album artist must be someone else. At most 1500 songs.
+   */
+  async getAppearsOn(artist: { id: string; name: string }, ownAlbumIds: string[] = []): Promise<Album[]> {
+    const raw: any[] = [];
+    for (let offset = 0; offset < 1500; offset += 500) {
+      const page = (await this.call('search3', { query: artist.name, artistCount: 0, albumCount: 0, songCount: 500, songOffset: offset })).searchResult3?.song ?? [];
+      raw.push(...page);
+      if (page.length < 500) break;
+    }
+    const songs = raw.map((s): CreditedSong & { raw: any } => ({
+      raw: s,
+      albumId: s.albumId,
+      title: s.title ?? '',
+      artist: s.artist,
+      artists: Array.isArray(s.artists) ? s.artists : undefined,
+      albumArtist: s.displayAlbumArtist ?? (Array.isArray(s.albumArtists) ? s.albumArtists.map((a: any) => a.name).join(', ') : undefined),
+      albumArtistIds: Array.isArray(s.albumArtists) ? s.albumArtists.map((a: any) => a.id).filter(Boolean) : undefined,
+    }));
+    return appearsOnSongs(songs, { ids: new Set([artist.id]), name: artist.name }, new Set(ownAlbumIds)).map(({ raw: s }) =>
+      this.album({ id: s.albumId, name: s.album, artist: s.displayAlbumArtist ?? s.artist, year: s.year, coverArt: s.coverArt ?? s.albumId }),
+    );
   }
 
   async getAlbumTracks(albumId: string) {

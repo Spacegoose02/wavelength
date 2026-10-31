@@ -3,7 +3,7 @@
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
-**searching your playlists**, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
+**searching your playlists**, **Appears On** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -210,6 +210,34 @@ audiobooks, podcasts and Deezer previews have no library page, so they show plai
 Song lists work the same way: in search results, playlists, favorites, history and the other lists that show
 "Artist — Album" under a song, the artist opens the artist's page and the album opens the album scrolled to the
 song. On an album page, the artist under each song is a link too.
+
+## Appears On (artist pages)
+
+Under an artist's albums, **Appears On** lists albums by other artists in your library that the artist is
+featured on, the way Spotify does. Open Future's page and you'll see Drake's album with *Life Is Good* on it, for
+example. Click an album to open it.
+
+An album counts when one of its songs credits the artist but someone else is the album artist:
+
+- as a track artist: "Drake feat. Future", "Drake & Future", "Metro Boomin, Future", or the separate artist
+  credits newer Navidrome versions (0.55 and up) keep for each song, or
+- in the song title: "Life Is Good (feat. Future)", "Wants and Needs [with Lil Baby]", "Song ft. Future".
+
+The whole name has to match, so "Futuristic" or a song called *Back to the Future* doesn't put an album there.
+Albums already shown as the artist's own aren't repeated. Compilations ("Various Artists") count too.
+
+Kid profiles only see albums that are fine for kids, and with **Clean** (or **Explicit**) picked as your version,
+the other version of an album is hidden, the same as everywhere else. The section is left off when there's
+nothing to show.
+
+> **Developer notes.** `src/lib/appearsOn.ts` decides which songs count (`creditsOf`, `isCredited`,
+> `appearsOnSongs`; tests in `src/test/appearsOn.test.ts`). `NavidromeSource.getAppearsOn` asks Navidrome's
+> Subsonic `search3` for up to 1500 songs matching the artist's name, keeps the ones that credit the artist on
+> another artist's album (OpenSubsonic `artists`, `albumArtists` and `displayAlbumArtist` when the server sends
+> them), and returns one album per album id. `useAppearsOn` in `src/views/Library.tsx` runs it for each Navidrome
+> copy of the artist after their own albums load, swaps in the catalog's album so versions and other servers'
+> copies work, and filters with `useHidden` and `useVersionHidden`. Plex, Audiobookshelf and SUB/WAVE don't
+> implement it, so an artist only on Plex has no Appears On.
 
 ## Now Playing visualizers
 
