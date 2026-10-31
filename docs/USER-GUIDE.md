@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark and alien), the **equalizer**,
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens and bears), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **Appears On** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people) and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
@@ -255,7 +255,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
-| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark or a theremin alien playing along (see below) |
+| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien or a black or brown bear playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -274,10 +274,10 @@ spectrum under the title does the same.
 ### Critters
 
 <a id="raccoons"></a>
-The last visualizer is a critter who plays along with the music. There are six to choose from: four
-raccoons, a shark and an alien.
+The last visualizer is a critter who plays along with the music. There are nine to choose from: four
+raccoons, a shark, two aliens and a bear in black or brown fur.
 
-<img src="screenshots/critters.png" alt="The six critters in the Neon synth skin: DJ, country, rapper and rocker raccoons, the drummer shark and the theremin alien" width="100%">
+<img src="screenshots/critters.png" alt="The nine critters in the Neon synth skin: DJ, country, rapper and rocker raccoons, the drummer shark, the theremin alien, the grey alien and the black and brown bears" width="100%">
 
 | Critter | Look | While the music plays |
 |---|---|---|
@@ -287,14 +287,16 @@ raccoons, a shark and an alien.
 | **Rocker raccoon** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
 | **Drummer shark** | Striped sailor tee and a toothy grin, behind a drum kit on the sea floor | Hits the snare on the beat, crashes the cymbal on sharp hits, the kick drum thumps, the tail wags, bubbles rise faster with the bass and the seaweed sways |
 | **Theremin alien** | Antennae and a space suit, on the moon under a hovering UFO | One hand rises over the volume loop with the bass, the other moves toward the pitch antenna with the highs, glowing sound waves pour off the antenna, the UFO lights chase on the beat and the stars twinkle |
+| **Grey alien** | The classic grey: a big bulb head, huge black eyes and a slim grey body, in a wheat field with a crop circle under its saucer's tractor beam | Plays a synth: the keys light up with the music, one hand hops on the beat, the other glides along the keys with the highs, the beam brightens with the bass |
+| **Black bear** / **Brown bear** | A beanie with a pom-pom and a chunky sweater, by a campfire in the pines (the same bear, in black or brown fur) | Squeezes an accordion: the bellows pump faster with the bass and puff out on the beat, the campfire flares with the bass, fireflies blink with the highs |
 
 **Switching critters.** On the critter visualizer, tap **Switch critter** in its top-right corner to go to
 the next one. Or go to **Settings → Playback → Now Playing visualizer** and pick one under **Critters**; that
 also switches Now Playing to the critter. Tapping the critter itself still moves on to the next visualizer, as
 on the others. If you're signed in to a [Wavelength Hub](HUB.md), your pick follows you to your other devices
-(an older app that doesn't know the shark or alien yet shows the DJ raccoon instead).
+(an older app that doesn't know a newer critter yet shows the DJ raccoon instead).
 
-**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green),
+**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
 Some groups of skins give them a whole outfit:
 
@@ -316,6 +318,8 @@ and Random daily too.
 
 <img src="screenshots/critters-outfits.png" alt="The shark and the alien in three skins: Reactor core (hazmat suits), Christmas (Santa hats) and Laser show (visors)" width="60%">
 
+<img src="screenshots/critters-outfits-2.png" alt="The grey alien and the black and brown bears in four skins: Neon synth, Reactor core (hazmat suits), Christmas (Santa hats) and Laser show (visors)" width="90%">
+
 ### DJ raccoon
 
 The original critter, behind two decks:
@@ -328,8 +332,8 @@ All the critters behave the same way around the music:
   follow the music as in the table above.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ his
   headphones, the country raccoon tips his hat, the rapper fixes his cap, the rocker pushes his mohawk up,
-  the alien perks up its antennae). The rapper lowers his mic, the shark rests its sticks and the alien
-  drops its hands from the theremin.
+  the alien perks up its antennae, the bear pulls his beanie straight). The rapper lowers his mic, the shark rests its sticks, the alien
+  drops its hands from the theremin, the grey rests its hands on the keys and the bear's bellows breathe slowly.
 - **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.
 
 > **Developer notes.** `src/components/critters/`. Unlike the other scenes the critters are inline SVG, not
@@ -348,10 +352,12 @@ All the critters behave the same way around the music:
 >   the country and rocker raccoons.
 > - `parts.tsx` has what they share: the frame and defs, the raccoon tail, the head (with the holiday hats
 >   and the skin-group outfits), the body outfits and `Arm` (which can hold a drumstick). `Head` draws the
->   raccoon's face unless given a `face`: `Shark.tsx` and `Alien.tsx` pass their own, drawn on the same
+>   raccoon's face unless given a `face`: `Shark.tsx`, `Alien.tsx`, `Grey.tsx` and `Bear.tsx` pass their own, drawn on the same
 >   skeleton (head centred on 200,178, eyes on y 166, mouth on y 212, shoulders at 138,268 and 262,268) so
->   the rig and every outfit fit them. `DJ.tsx`, `Country.tsx`, `Rapper.tsx`, `Rocker.tsx`, `Shark.tsx`
->   and `Alien.tsx` draw the rest.
+>   the rig and every outfit fit them. `DJ.tsx`, `Country.tsx`, `Rapper.tsx`, `Rocker.tsx`, `Shark.tsx`,
+>   `Alien.tsx`, `Grey.tsx` and `Bear.tsx` draw the rest. `Bear.tsx` is one drawing used for two picks:
+>   `BlackBear` and `BrownBear` only set the fur colour (CSS `--bear-fur` on `.critter-bear-black` /
+>   `.critter-bear-brown`), which is the cheap way to add a colour variant of any critter.
 > - Colours are CSS at the end of `styles.css` (`.critter .top { fill: var(--accent) }`, …). Hats and
 >   outfits are all in the SVG and hidden. Hats show per skin (`:root[data-skin='halloween'] .critter .hat-witch`);
 >   outfits per skin group, from `data-skin-group` on `<html>`, which `App.tsx` sets from `skinGroup()`

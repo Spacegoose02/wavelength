@@ -249,7 +249,7 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
 
 /**
  * The artwork slot of Now Playing. Tap (or Enter) to move to the next scene; the choice is remembered.
- * On the critter scene a small button in the corner switches to the next critter (the raccoons, the shark, the alien).
+ * On the critter scene a small button in the corner switches to the next critter (the raccoons, the shark, the aliens, the bears).
  */
 export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
   const scene = useSettings((s) => s.npScene);

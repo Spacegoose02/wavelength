@@ -23,7 +23,7 @@ export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' 
  * Which critter the critter scene (`npScene: 'raccoon'`) shows: components/critters/Critter.tsx.
  * The scene id and the `raccoon` setting keep their old names so saved and Hub-synced settings carry over.
  */
-export type CritterKind = 'dj' | 'country' | 'rapper' | 'rocker' | 'shark' | 'alien';
+export type CritterKind = 'dj' | 'country' | 'rapper' | 'rocker' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown';
 
 /** Headings in Settings → Themes, in display order. */
 export const SKIN_GROUPS = ['Classic', 'Retro', 'Neon', 'Lasers', 'Nuclear', 'Editor palettes', 'Holidays', 'Accessibility'] as const;

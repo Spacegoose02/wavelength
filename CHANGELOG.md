@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **A grey alien and a bear join the critters** in Now Playing. The **grey alien** is the classic big-headed
+  grey with huge black eyes, playing a synth in a crop circle under its saucer's tractor beam: the keys light
+  up with the music and the beam brightens with the bass. The **bear** squeezes an accordion by a campfire in
+  the pines, in a beanie and sweater: the bellows pump with the bass, the fire flares and fireflies blink.
+  Pick a **black bear** or a **brown bear**. Like the others they bob, blink, yawn and dress for your theme.
+  See the [user guide](docs/USER-GUIDE.md#critters).
 
 ## 0.17.7
 - **A shark and an alien join the raccoons** in Now Playing. The **drummer shark** plays a drum kit on the sea
