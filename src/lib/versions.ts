@@ -2,7 +2,7 @@ import { norm } from '../sources/registry';
 import type { Album } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { useSettings } from '../store/settings';
-import { explicitOfAlbum, useIsKid, useRatings } from './kids';
+import { CLEAN_MARK, explicitOfAlbum, useIsKid, useRatings } from './kids';
 import { cleanTitle, primaryArtist } from './match';
 
 /**
@@ -14,7 +14,6 @@ import { cleanTitle, primaryArtist } from './match';
 export type Version = 'explicit' | 'clean';
 export type VersionPref = 'both' | Version;
 
-const CLEAN_MARK = /[([]\s*(clean|edited|censored)\b[^)\]]*[)\]]/i;
 const EXPLICIT_MARK = /[([]\s*explicit\b[^)\]]*[)\]]/i;
 
 /** Albums with this key are versions of each other: same artist, same title without "(Clean)" and the like. */

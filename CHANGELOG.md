@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Fixed:** clean versions downloaded next to an explicit album (*Loud (Clean)*) showed the **E** badge and
+  were hidden from kid profiles. They took the explicit album's library-check result, because "(Clean)" is
+  dropped when matching names. An album with "(Clean)", "(Edited)" or "(Censored)" in its title now counts as
+  clean unless its own file tags say explicit, and **Hide from kids** on the explicit album no longer hides the
+  clean one. Nothing was written to your files or the Hub; the badges are right again after updating.
 
 ## 0.17.0
 - **Android Auto:** browse your playlists, recently added albums, favorites and radio stations in the car, search,
