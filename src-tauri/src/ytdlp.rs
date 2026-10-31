@@ -13,17 +13,40 @@ use std::os::windows::process::CommandExt;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 /// Custom path → winget's Links folder (works even if PATH is stale) → PATH.
-fn find_exe(name: &str, custom: Option<&str>) -> PathBuf {
+/// A custom path has to be an existing file named like yt-dlp (`yt-dlp.exe`, `yt-dlp_x86.exe`, …), so
+/// the page can't use these commands to start some other program.
+fn find_exe(name: &str, custom: Option<&str>) -> Result<PathBuf, String> {
     if let Some(c) = custom.map(str::trim).filter(|c| !c.is_empty()) {
-        return PathBuf::from(c);
+        let p = PathBuf::from(c);
+        let named = p.file_name().is_some_and(|f| f.to_string_lossy().to_ascii_lowercase().starts_with(name));
+        if !named || !p.is_file() {
+            return Err(format!("{c} isn't a {name} program"));
+        }
+        return Ok(p);
     }
     if let Ok(local) = std::env::var("LOCALAPPDATA") {
         let p = PathBuf::from(local).join("Microsoft").join("WinGet").join("Links").join(format!("{name}.exe"));
         if p.exists() {
-            return p;
+            return Ok(p);
         }
     }
-    PathBuf::from(name)
+    Ok(PathBuf::from(name))
+}
+
+/// Only web links go to yt-dlp, so nothing the page sends can be read as one of its options.
+fn web_link(url: &str) -> Result<&str, String> {
+    let u = url.trim();
+    if u.starts_with("https://") || u.starts_with("http://") {
+        Ok(u)
+    } else {
+        Err("yt-dlp only takes http(s) links".into())
+    }
+}
+
+/// yt-dlp's `--audio-format` values.
+fn audio_format(f: &str) -> Result<&str, String> {
+    const OK: [&str; 9] = ["best", "aac", "alac", "flac", "m4a", "mp3", "opus", "vorbis", "wav"];
+    OK.contains(&f).then_some(f).ok_or_else(|| format!("unknown audio format {f}"))
 }
 
 /// ffmpeg's folder: PATH first, then winget's package dir (`yt-dlp.FFmpeg` / `Gyan.FFmpeg`
@@ -65,7 +88,7 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T, String> + Sen
 
 #[tauri::command]
 pub async fn ytdlp_version(bin: Option<String>) -> Result<String, String> {
-    let exe = find_exe("yt-dlp", bin.as_deref());
+    let exe = find_exe("yt-dlp", bin.as_deref())?;
     blocking(move || {
         let out = command(&exe).arg("--version").output().map_err(|e| format!("yt-dlp not found ({e})"))?;
         Ok(format!("yt-dlp {}", String::from_utf8_lossy(&out.stdout).trim()))
@@ -76,15 +99,14 @@ pub async fn ytdlp_version(bin: Option<String>) -> Result<String, String> {
 /// Returns yt-dlp's JSON (flat playlist) for a search term or any supported URL.
 #[tauri::command]
 pub async fn ytdlp_search(query: String, bin: Option<String>) -> Result<String, String> {
-    let exe = find_exe("yt-dlp", bin.as_deref());
-    let target = if query.starts_with("http://") || query.starts_with("https://") {
-        query
-    } else {
-        format!("ytsearch25:{query}")
+    let exe = find_exe("yt-dlp", bin.as_deref())?;
+    let target = match web_link(&query) {
+        Ok(u) => u.to_string(),
+        Err(_) => format!("ytsearch25:{query}"),
     };
     blocking(move || {
         let out = command(&exe)
-            .args(["-J", "--flat-playlist", "--no-warnings", &target])
+            .args(["-J", "--flat-playlist", "--no-warnings", "--", &target])
             .output()
             .map_err(|e| format!("yt-dlp not found ({e})"))?;
         if !out.status.success() {
@@ -112,7 +134,9 @@ pub async fn ytdlp_download(
     format: String,
     bin: Option<String>,
 ) -> Result<(), String> {
-    let exe = find_exe("yt-dlp", bin.as_deref());
+    let exe = find_exe("yt-dlp", bin.as_deref())?;
+    let url = web_link(&url)?.to_string();
+    let format = audio_format(&format)?.to_string();
     let ffmpeg = find_ffmpeg_dir();
     blocking(move || {
         let emit = |status: &'static str, percent: Option<f32>, message: Option<String>| {
@@ -143,7 +167,7 @@ pub async fn ytdlp_download(
                 return Err("ffmpeg not found".into());
             }
         }
-        cmd.arg(&url).stdout(Stdio::piped()).stderr(Stdio::piped());
+        cmd.arg("--").arg(&url).stdout(Stdio::piped()).stderr(Stdio::piped());
 
         let mut child = cmd.spawn().map_err(|e| format!("could not start yt-dlp ({e})"))?;
         let mut stderr = child.stderr.take().unwrap();
@@ -177,4 +201,23 @@ pub async fn ytdlp_download(
 
 fn last_line(s: &str) -> String {
     s.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("yt-dlp failed").trim().to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{audio_format, find_exe, web_link};
+    #[test]
+    fn only_web_links() {
+        assert_eq!(web_link(" https://youtu.be/x ").unwrap(), "https://youtu.be/x");
+        assert!(web_link("--exec calc").is_err());
+        assert!(web_link("file:///etc/passwd").is_err());
+    }
+    #[test]
+    fn formats_and_programs() {
+        assert!(audio_format("opus").is_ok());
+        assert!(audio_format("--exec").is_err());
+        assert!(find_exe("yt-dlp", Some("/bin/sh")).is_err());
+        assert!(find_exe("yt-dlp", Some("/nowhere/yt-dlp")).is_err());
+        assert_eq!(find_exe("yt-dlp", None).unwrap().file_name().unwrap(), "yt-dlp");
+    }
 }
