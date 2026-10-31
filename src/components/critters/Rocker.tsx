@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, BodyOutfits, Head, CritterFrame, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -10,7 +10,7 @@ import { useCritterRig } from './rig';
  * Paused, he pushes his hair back up now and then.
  */
 export function Rocker({ species, still }: ActProps) {
-  const { Face, Tail } = species;
+  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const hands = useRef(newGuitarHands());
 
@@ -50,23 +50,25 @@ export function Rocker({ species, still }: ActProps) {
       {Tail && <Tail />}
 
       {/* ripped black jeans and boots */}
-      <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
-      <path d="M164 326 L 182 322 M218 330 L 236 326" stroke="#cfcfd6" strokeWidth="3" strokeLinecap="round" />
-      <path className="boot-black" d="M154 346 H190 V366 H146 Q 146 352 154 346 Z" />
-      <path className="boot-black" d="M210 346 H246 Q 254 352 254 366 H210 Z" />
+      <Legs species={species}>
+        <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
+        <path d="M164 326 L 182 322 M218 330 L 236 326" stroke="#cfcfd6" strokeWidth="3" strokeLinecap="round" />
+        <path className="boot-black" d="M154 346 H190 V366 H146 Q 146 352 154 346 Z" />
+        <path className="boot-black" d="M210 346 H246 Q 254 352 254 366 H210 Z" />
+      </Legs>
 
-      <g data-part="body">
+      <Body species={species}>
         <path className="top" d={TORSO} />
         <path className="leather" d="M116 304 C 116 262, 150 246, 186 246 L 178 304 Z" />
         <path className="leather" d="M284 304 C 284 262, 250 246, 214 246 L 222 304 Z" />
         <path d="M186 246 L 170 274 L 182 280 M214 246 L 230 274 L 218 280" fill="none" stroke="#3a3a42" strokeWidth="2.5" />
         {[[140, 262], [152, 256], [164, 252], [260, 262], [248, 256], [236, 252]].map(([cx, cy]) => <circle key={cx} cx={cx} cy={cy} r="2.6" fill="#d8d8de" />)}
         <BodyOutfits />
-      </g>
+      </Body>
 
       <Head
-        face={<Face />}
-        own={
+        species={species}
+        hat={
           <g data-part="adjust" className="own-hat">
             <path className="mohawk" d="M166 124 L 172 74 L 184 112 L 194 50 L 204 108 L 216 56 L 222 112 L 234 78 L 236 124 Z" />
             <path className="mohawk-tip" d="M172 74 L 176 92 M194 50 L 196 74 M216 56 L 214 78 M234 78 L 230 96" fill="none" strokeWidth="3" strokeLinecap="round" />

@@ -10,6 +10,18 @@
   announced release. Kid profiles see the newest release they may have, and the explicit releases, songs and
   related artists on Deezer artist pages are now hidden for them as everywhere else.
   See the [user guide](docs/USER-GUIDE.md#browse-an-artists-releases).
+- **Critter makeover.** A design pass over all 48 critter and act pairs:
+  - The shark no longer has legs: it has a tail end with two fins, and its tail fin rests on the ground. Its
+    dorsal fin tucks under hats instead of poking out beside them, and it shows its teeth when it sings.
+  - Both aliens are slimmer: narrower heads and bodies, and the grey's head tapers to a proper pointed chin.
+    Hats, headphones, hoods, shades and visors are refitted to their heads, so the rapper's shades cover the
+    grey's eyes and hats sit on top of its head.
+  - The dark blob or box under every critter's chin is now a soft shadow that follows the chin, and the bears
+    lose the dark band under the muzzle.
+  - The country act plays a five-string banjo instead of an acoustic guitar.
+  - The theremin player's pitch hand plays by the antenna instead of resting on its chin, the accordion act's
+    legs match the critter (they were black for everyone but the bears), the drummer's neckline shows the
+    critter's own chest, and the shark's tail goes behind the campfire.
 
 ## 0.17.10
 Fixes from a bug sweep (the full list is in the PR):

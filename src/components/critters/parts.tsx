@@ -1,4 +1,5 @@
 import { forwardRef, type ReactNode } from 'react';
+import type { SpeciesInfo } from './species';
 
 /**
  * Pieces every critter shares (inline SVG, 400×400). Colours come from CSS (`.critter …` in styles.css):
@@ -26,6 +27,9 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: s
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        <clipPath id="critter-torso">
+          <path d={TORSO} />
+        </clipPath>
       </defs>
       <ellipse data-part="spot" cx="200" cy="200" rx="190" ry="170" fill="url(#critter-spot)" />
       {children}
@@ -44,6 +48,32 @@ export function Tail() {
 
 /** The usual torso outline (hoodie, shirt, jacket, hazmat suit). */
 export const TORSO = 'M116 304 C 116 262, 150 244, 200 244 C 250 244, 284 262, 284 304 Z';
+
+/** `translate(200 0) scale(k 1) translate(-200 0)`: squeeze about the middle of the picture. */
+const narrow = (k: number) => (k === 1 ? undefined : `translate(200 0) scale(${k} 1) translate(-200 0)`);
+
+/**
+ * The body (`body` part, which the rig bobs): the act's top and anything printed on it, narrowed for slim
+ * species (`build`), with the shadow the head casts just under the chin. Draw the top on `TORSO`.
+ */
+export function Body({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
+  const k = species.build ?? 1;
+  const { rx, ry, cy } = species.shadow ?? { rx: 70, ry: 62, cy: 190 };
+  return (
+    <g data-part="body">
+      <g transform={narrow(k)}>
+        {children}
+        <ellipse className="chin-shadow" cx="200" cy={cy} rx={rx / k} ry={ry} clipPath="url(#critter-torso)" />
+      </g>
+    </g>
+  );
+}
+
+/** The act's trousers and shoes, or the species' own lower half where it has one (the shark's tail end). */
+export function Legs({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
+  const { Lower } = species;
+  return Lower ? <Lower /> : <>{children}</>;
+}
 
 /** A radiation trefoil: three 60° blades round a dot. */
 function trefoil(cx: number, cy: number, r: number) {
@@ -78,8 +108,8 @@ export function BodyOutfits() {
 }
 
 /**
- * The raccoon's face: ears, mask, eyes, nose and mouth. Another critter passes its own `face` to `Head`
- * with the same named parts: `eyes` (blinks, scaled about y 166), `smile` (hidden while the mouth is
+ * The raccoon's face: ears, mask, eyes, nose and mouth. Every species' face (species.tsx) has the same
+ * named parts: `eyes` (blinks, scaled about y 166), `smile` (hidden while the mouth is
  * open) and `yawn` (the open mouth, scaled from y 212).
  */
 export function RaccoonFace() {
@@ -110,20 +140,28 @@ export function RaccoonFace() {
 }
 
 /**
- * The head: the critter's face (the raccoon's unless `face` is given), then its own headwear (`own`),
- * the skin-group outfit, anything that goes over the outfit (`over`, e.g. the DJ's headphones) and the
- * holiday hats. Give own headwear `className="own-hat"` and own glasses `className="own-eyewear"` so
- * outfits that replace them can hide them.
+ * The head: the species' face, then the act's own headwear (`hat`, `eyewear`), the skin-group outfit,
+ * anything that goes over the outfit (`over`, e.g. the DJ's headphones) and the holiday hats. Hats,
+ * headphones and hoods are sized for the usual head and refitted with the species' `fit`; glasses are
+ * stretched to cover bigger eyes. Give own headwear `className="own-hat"` and own glasses
+ * `className="own-eyewear"` so outfits that replace them can hide them.
  */
-export function Head({ face, own, over }: { face?: ReactNode; own?: ReactNode; over?: ReactNode }) {
+export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; hat?: ReactNode; eyewear?: ReactNode; over?: ReactNode }) {
+  const { Face, fit = {} } = species;
+  const w = fit.w ?? 1;
+  const lift = fit.lift ?? 0;
+  const [ex, ey] = fit.eyes ?? [1, 1];
+  const onTop = w === 1 && !lift ? undefined : `translate(0 ${lift}) ${narrow(w) ?? ''}`.trim();
+  const onEyes = ex === 1 && ey === 1 ? undefined : `translate(200 166) scale(${ex} ${ey}) translate(-200 -166)`;
   return (
     <g data-part="head">
-      {face ?? <RaccoonFace />}
+      <Face />
 
-      {own}
+      <g transform={onEyes}>{eyewear}</g>
+      <g transform={onTop}>{hat}</g>
 
       {/* skin-group outfits: hidden unless <html data-skin-group> matches (styles.css) */}
-      <g className="outfit outfit-nuclear">
+      <g className="outfit outfit-nuclear" transform={narrow(w)}>
         <path className="hazmat" fillRule="evenodd" d="M100 168 A100 96 0 1 1 300 168 A100 96 0 1 1 100 168 Z M134 184 A66 58 0 1 0 266 184 A66 58 0 1 0 134 184 Z" />
         <ellipse cx="200" cy="184" rx="67" ry="59" fill="rgb(160 220 255 / 0.14)" stroke="#8a6d00" strokeWidth="4" />
         <path d="M164 196 Q 200 186 236 196 L 232 226 Q 200 244 168 226 Z" fill="#3b3b42" />
@@ -134,30 +172,31 @@ export function Head({ face, own, over }: { face?: ReactNode; own?: ReactNode; o
         <circle cx="160" cy="224" r="5" fill="#2a2a30" />
         <circle cx="240" cy="224" r="5" fill="#2a2a30" />
       </g>
-      <g className="outfit outfit-lasers">
+      <g className="outfit outfit-lasers" transform={onEyes}>
         <path d="M128 166 L 140 164 M272 166 L 260 164" className="visor-strap" strokeWidth="6" strokeLinecap="round" />
         <rect x="138" y="152" width="124" height="26" rx="13" fill="rgb(10 10 16 / 0.82)" />
         <rect data-glow="" x="144" y="161" width="112" height="7" rx="3.5" className="visor-beam" filter="url(#critter-glow)" />
         <rect x="138" y="152" width="124" height="26" rx="13" fill="none" className="visor-rim" strokeWidth="2.5" />
       </g>
-      <g className="outfit outfit-neon">
+      <g className="outfit outfit-neon" transform={onTop}>
         <path data-glow="" d="M136 140 Q 200 112 264 140" className="glow-b" fill="none" strokeWidth="5" strokeLinecap="round" filter="url(#critter-glow)" />
       </g>
-      <g className="outfit outfit-retro">
+      <g className="outfit outfit-retro" transform={onEyes}>
         {/* 8-bit shades */}
         <path d="M146 156 H254 V164 H246 V172 H238 V180 H214 V172 H206 V164 H194 V172 H186 V180 H162 V172 H154 V164 H146 Z" fill="#0b0b0d" />
         <path d="M158 164 H166 V168 H158 Z M218 164 H226 V168 H218 Z" fill="#fff" />
       </g>
-      <g className="outfit outfit-editor">
+      <g className="outfit outfit-editor" transform={onEyes}>
         {/* coder glasses */}
         <circle cx="170" cy="166" r="15" fill="rgb(255 255 255 / 0.18)" className="coder-frame" strokeWidth="4.5" />
         <circle cx="230" cy="166" r="15" fill="rgb(255 255 255 / 0.18)" className="coder-frame" strokeWidth="4.5" />
         <path d="M185 164 Q 200 156 215 164 M155 162 L 134 156 M245 162 L 266 156" fill="none" className="coder-frame" strokeWidth="4.5" strokeLinecap="round" />
       </g>
 
-      {over}
+      <g transform={onTop}>
+        {over}
 
-      {/* holiday hats: hidden unless the skin shows one (styles.css) */}
+        {/* holiday hats: hidden unless the skin shows one (styles.css) */}
       <g className="hat hat-witch">
         <path d="M150 112 L 214 18 Q 222 10 226 22 L 250 112 Z" fill="#2a1638" />
         <rect x="160" y="96" width="84" height="12" fill="#ff7a1a" />
@@ -185,6 +224,7 @@ export function Head({ face, own, over }: { face?: ReactNode; own?: ReactNode; o
         <path d="M176 112 Q 168 76 160 52 M224 112 Q 232 76 240 52" fill="none" stroke="#3d0f1f" strokeWidth="3" />
         <path d="M160 58 C 146 44, 146 28, 160 32 C 174 28, 174 44, 160 58 Z" fill="#e0245e" />
         <path d="M240 58 C 226 44, 226 28, 240 32 C 254 28, 254 44, 240 58 Z" fill="#ff5c8a" />
+      </g>
       </g>
     </g>
   );

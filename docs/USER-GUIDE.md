@@ -332,15 +332,15 @@ alien are all possible.
 | Critter | Look |
 |---|---|
 | **Raccoon** | Grey fur, a black mask and a striped tail |
-| **Shark** | Blue-grey with a dorsal fin, gills, a white jaw, a toothy grin and a tail fin |
-| **Alien** | Green, with big black eyes and glowing antennae that pulse with the bass |
-| **Grey alien** | The classic grey: a big bulb head with a pointed chin and huge black eyes |
+| **Shark** | Blue-grey with a dorsal fin, gills, a white jaw and a toothy grin; no legs, but a tail end with two fins and a tail fin on the ground (the fin tucks under hats) |
+| **Alien** | Slim and green, with big black eyes and glowing antennae that pulse with the bass |
+| **Grey alien** | The classic grey: a big bulb head tapering to a pointed chin, huge black eyes and a slim body |
 | **Black bear** / **Brown bear** | Round ears and a pale muzzle, in black or brown fur |
 
 | Act | Scene and outfit | While the music plays |
 |---|---|---|
 | **DJ** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
-| **Country** | Cowboy hat, plaid shirt, bandana, acoustic guitar, on a porch | Strums on the beat, changes chords, taps a boot |
+| **Country** | Cowboy hat, plaid shirt, bandana, five-string banjo, on a porch | Strums on the beat, changes chords, taps a boot |
 | **Rapper** | Snapback, shades, gold chain, mic, between two speaker stacks | Throws a hand up on the beat, the speaker cones pump with the bass |
 | **Rocker** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
 | **Drummer** | Striped sailor tee, behind a drum kit on the sea floor | Hits the snare on the beat, crashes the cymbal on sharp hits, the kick drum thumps, bubbles rise faster with the bass and the seaweed sways |

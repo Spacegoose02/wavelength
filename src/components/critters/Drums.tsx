@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, CritterFrame, Head, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -15,7 +15,7 @@ const BUBBLES: [number, number, number, number][] = [
  * the kick drum thumps, the bubbles rise faster with the bass and the seaweed sways. Paused, the sticks rest.
  */
 export function Drums({ species, still }: ActProps) {
-  const { Face, Tail } = species;
+  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ rise: 0 });
 
@@ -64,15 +64,16 @@ export function Drums({ species, still }: ActProps) {
       {BUBBLES.map(([x, r], i) => <circle key={i} data-bubble="" cx={x} cy="340" r={r} fill="rgb(255 255 255 / 0.12)" stroke="rgb(255 255 255 / 0.6)" strokeWidth="1.5" />)}
 
       {Tail && <Tail />}
+      <Legs species={species}>{null}</Legs>
 
-      <g data-part="body">
+      <Body species={species}>
         <path className="top" d={TORSO} />
         <path d="M144 262 H256 M126 278 H274 M118 294 H282" className="tee-stripe" strokeWidth="6" />
-        <path className="shark-belly" d="M184 246 L 200 266 L 216 246 Z" />
+        <path className="neckline" d="M184 246 L 200 266 L 216 246 Z" />
         <BodyOutfits />
-      </g>
+      </Body>
 
-      <Head face={<Face />} />
+      <Head species={species} />
 
       {/* the kit: hi-hat, snare, kick with a tom on it, floor tom, crash */}
       <path className="stand" d="M44 276 V366 M44 366 L 30 378 M44 366 L 58 378 M104 334 V352 L 88 368 M104 352 L 120 368 M344 236 V366 L 330 378 M344 366 L 358 378 M276 350 V372 M324 350 V372" fill="none" strokeWidth="3" strokeLinecap="round" />

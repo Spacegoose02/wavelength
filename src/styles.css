@@ -1490,14 +1490,17 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .hand { fill: var(--skin, #8a8a95); }
 .critter .thumb { fill: var(--skin-dark, #26262c); }
 /* each species' skin, for hands and bare arms (species.tsx) */
-.species-raccoon { --skin: #8a8a95; --skin-dark: #26262c; }
-.species-shark { --skin: #6f8fa8; --skin-dark: #4a6780; }
+.species-raccoon { --skin: #8a8a95; --skin-dark: #26262c; --belly: #ececf1; }
+.species-shark { --skin: #6f8fa8; --skin-dark: #4a6780; --belly: #eef3f6; }
 .species-alien { --skin: #8fd16a; --skin-dark: #5f9e45; }
 .species-grey { --skin: #a9b4bc; --skin-dark: #7f8c95; }
-.species-bear-black { --bear-fur: #2b2622; --bear-fur-dark: #1c1916; --bear-muzzle: #b48f66; --skin: var(--bear-fur); --skin-dark: var(--bear-fur-dark); }
-.species-bear-brown { --bear-fur: #7a4e2d; --bear-fur-dark: #5e3b20; --bear-muzzle: #d6ad7c; --skin: var(--bear-fur); --skin-dark: var(--bear-fur-dark); }
+.species-bear-black { --bear-fur: #2b2622; --bear-fur-dark: #1c1916; --bear-muzzle: #b48f66; --skin: var(--bear-fur); --skin-dark: var(--bear-fur-dark); --belly: var(--bear-muzzle); }
+.species-bear-brown { --bear-fur: #7a4e2d; --bear-fur-dark: #5e3b20; --bear-muzzle: #d6ad7c; --skin: var(--bear-fur); --skin-dark: var(--bear-fur-dark); --belly: var(--bear-muzzle); }
+/* bare skin or fur (accordion legs, the drummer's neckline) */
+.critter .bare { fill: var(--skin); }
+.critter .neckline { fill: var(--belly, var(--skin)); }
 .critter .top { fill: var(--accent); }
-.critter .top-shade { fill: rgb(0 0 0 / 0.28); }
+.critter .chin-shadow { fill: rgb(0 0 0 / 0.2); }
 .critter .sleeve { stroke: var(--accent); }
 .critter .strings { stroke: var(--accent-ink, #fff); }
 .critter .phones { stroke: var(--viz-high); }
@@ -1522,8 +1525,8 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .cowboy-dark { stroke: #6e4a26; }
 .critter .hat-band { fill: var(--accent); }
 .critter .neck { fill: #4a2e17; }
-.critter .wood { fill: #c98a4b; }
-.critter .wood-edge { stroke: #6e4220; }
+.critter .banjo-rim { fill: #c9c9d1; stroke: #6e6e78; stroke-width: 2; }
+.critter .banjo-head { fill: #f2ead8; }
 /* rapper */
 .critter .speaker-box { fill: #17171b; stroke: #2a2a30; stroke-width: 2; }
 .critter .cone-rim { fill: #0d0d10; }
@@ -1558,6 +1561,10 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-dark { fill: #557590; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
+/* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
+.critter:is(.critter-country, .critter-rapper, .critter-rocker, .critter-accordion) .shark-fin,
+:root[data-skin-group='nuclear'] .critter .shark-fin,
+:root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
 .critter .tee-stripe { stroke: rgb(255 255 255 / 0.8); }
 .critter .sand { fill: #a88a55; }
