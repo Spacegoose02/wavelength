@@ -66,6 +66,16 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | yt-dlp: "ffmpeg not found" | ffmpeg not on PATH for the running app | `ytdlp.rs::find_ffmpeg_dir` checks winget's Packages folder; install with `winget install yt-dlp.FFmpeg` |
 | yt-dlp to a NAS share fails | Not logged into the SMB share | Settings → Downloads → yt-dlp → network share username/password → **Test folder** |
 
+## Merging albums and artists
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| **Merge** isn't in the select bar | Merging is for Hub admins (`library.edit`), and needs two or more ticked | Sign in to the Hub as an admin; tick at least two |
+| "…isn't on a Navidrome server, so the Hub can't merge into it" | The first album ticked is only on Plex (or another server) | Tick a Navidrome album first; it's the target |
+| Merged, but the albums still show separately after the rescan | Navidrome also tells albums apart by their MusicBrainz album id (and release date), and the files have different ones. The merge sets the year, but can't write MusicBrainz ids | Open the album, **Edit tags**, and fix it there; or clear the MusicBrainz album id with a tagger like MusicBrainz Picard. Check Navidrome's `PID.Album` setting |
+| Merged the wrong way round | The first one ticked is the target | **Settings → Server → Tag edits → Undo**, then tick the right one first |
+| "The Hub can't find …'s files in its music folder" | The Hub's music folder isn't the one Navidrome reads, or is read-only | See the tag editor's setup in `docs/HUB.md` (`WAVELENGTH_MUSIC_DIR`, `WAVELENGTH_NAVIDROME_MUSIC_DIR`) |
+
 ## In-app updates
 
 | Symptom | Cause | Fix |

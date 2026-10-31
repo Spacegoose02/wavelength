@@ -459,12 +459,59 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
 - **Missing albums:** for the 40 artists you have the most albums by, the studio albums Deezer lists that you
   don't have, with preview and **Get** / **Request**. Live albums, compilations and remix albums are left out.
 
-## Deleting several albums at once
+## Selecting several albums or artists
 
-Hub admins get a **Select** button on **Albums**. Tap albums to tick them (or **Select all**, which ticks every
-album the filter shows), then **Delete selected**. Wavelength lists what it's about to delete and asks first.
-The files go to the Hub's trash, and **Settings → Server → Deleted albums** can put them back for 30 days. Only
-copies on a Navidrome server can be deleted this way. Press **Done** to go back to opening albums.
+**Albums**, **Artists** and an artist's page have a **Select** button, like Plex's multi-select. You can also
+start selecting without it: hover over a card and click the round tick in its corner, or **Ctrl**-click (**⌘**
+on a Mac) or **Shift**-click a card. While you're selecting:
+
+- **Click** a card to tick or untick it.
+- **Shift-click** ticks every card between the last one you ticked and this one.
+- **Select all** ticks every card on screen (just the ones the filter shows, if you've typed one).
+- **Done** goes back to opening things when you click them.
+
+The bar at the top says how many you've ticked and has the actions:
+
+| Action | Who | What it does |
+|---|---|---|
+| **Play** / **Shuffle** | Everyone | Plays the songs on everything ticked, in the order you ticked them. |
+| **Play next** / **Add to queue** | Everyone | Puts those songs after the current one, or at the end of the queue. |
+| **Merge** | Hub admins | Merges everything ticked into the **first** one you ticked (below). |
+| **Delete selected** | Hub admins, albums only | Deletes the albums from your server (below). |
+
+### Merging albums and artists (admins)
+
+Merge works the way it does in Plex: **the first one you tick is the one the others merge into.** Its card says
+**Merge target**, and the bar says *merges into …*. To change the target, untick it and tick it again later, or
+press **Done** and start over.
+
+- **Albums:** every song on the other albums gets the target album's **Album**, **Album artist** and **Year**
+  tags, so your server files them all under the target. Use it when one album has been split in two, for example
+  a single clean song that ended up as its own "Underground Luxury" next to the rest of the album, or a
+  "(Deluxe)" copy you want filed with the original.
+- **Artists:** every song by the other artists is renamed to the target's name, in its **Artist** and **Album
+  artist** tags. Songs where they're credited with someone else ("Bobby Ray feat. T.I.") change too. Use it for
+  two spellings of one artist ("Beatles" and "The Beatles").
+
+Before anything changes, Wavelength reads the files and asks you to confirm, saying how many songs it will
+retag. Your Hub writes the new tags into the files; the files don't move and the audio isn't touched. The
+merged albums or artists leave the list straight away, and the library refreshes after Navidrome's rescan, a
+minute or two later.
+
+A merge is one save in the tag editor, so **Settings → Server → Tag edits → Undo** puts every song back as it
+was. Only copies on a Navidrome server can be merged, and your Hub needs what the tag editor needs: your music
+at `/music`, read-write, and the Navidrome admin login (Settings → Server).
+
+> **Developer notes:** `useSelection` and `SelectBar` in `src/components/Selection.tsx` keep the ticks in the
+> order they were made (the first is the target). `src/lib/merge.ts` plans a merge from the files' tags
+> (`planAlbums`, `planArtists`; the pure parts are `albumTarget`, `planAlbumMerge` and `planArtistMerge`, tested in
+> `src/test/merge.test.ts`) and saves it through `PUT /api/admin/tags` as one batch. No Hub change was needed.
+
+### Deleting several albums at once (admins)
+
+Tick albums on **Albums** or an artist's page, then **Delete selected**. Wavelength lists what it's about to
+delete and asks first. The files go to the Hub's trash, and **Settings → Server → Deleted albums** can put them
+back for 30 days. Only copies on a Navidrome server can be deleted this way.
 
 ## Searching your playlists
 
@@ -917,6 +964,8 @@ how the files name them now, **Change to** is the new name. To merge two spellin
 Beatles"), open one and change it to the other. It can also set one genre for all their songs. With **Also
 where they're credited with others** on, "Artist feat. Someone" and "Someone & Artist" change too. Every song
 that will change is listed first, by album; untick an album to leave it alone. **Undo** works as for albums.
+To merge several artists at once, or to merge albums, use **Select → Merge** on Albums or Artists (see
+[Merging albums and artists](#merging-albums-and-artists-admins)).
 
 Your Hub needs your music at `/music`, read-write, and the Navidrome admin login (Settings → Server).
 

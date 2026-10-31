@@ -347,6 +347,12 @@ albums at once and renames the artist in their Artist and Album artist tags, als
 B" if asked, with an optional genre; it saves through the same `PUT /api/admin/tags`, so it's undone the same
 way. The editors suggest artist and genre names from Navidrome (`GET /api/admin/tags/values`).
 
+
+**Merging** (Albums or Artists → **Select → Merge**, `src/lib/merge.ts`) uses the same endpoints: it reads the
+ticked albums' files with `GET /api/admin/tags/albums`, works out the new tags in the app, and writes them with one
+`PUT /api/admin/tags`, labelled "Merge … into …". So a merge shows up under **Tag edits**, is undone in one go, and
+is audited as `tags.edited`.
+
 ## Genres
 
 The Hub keeps one genre per kind of music: "Hip Hop", "Trap", "Pop Rap" and Deezer's "Rap/Hip Hop" all become

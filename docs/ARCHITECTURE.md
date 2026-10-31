@@ -32,11 +32,11 @@ admin-only controls. It's a control plane only: audio never goes through it. See
 | `main.tsx` | Boot: enables TV remote navigation and the Android media bridge, renders `<App/>`. |
 | `App.tsx` | Layout (sidebar or phone tab bar), keyboard shortcuts, back-button handling, the `View` router switch. |
 | `views/` | One file per page. Pages read stores and call source adapters; they don't fetch directly. |
-| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Scenes` (Now Playing visualizers), `raccoon/` (the SVG raccoon scenes: DJ, country, rapper and rocker, sharing one animation rig and the theme outfits), `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `DownloadButton`, `ReleaseRadar` (+ `FollowButton`), `Visualizer`, `ErrorBoundary`. |
+| `components/` | Reusable UI: `PlayerBar` (desktop deck + LCD), `MobileNav` (phone), `NowPlaying`, `Scenes` (Now Playing visualizers), `raccoon/` (the SVG raccoon scenes: DJ, country, rapper and rocker, sharing one animation rig and the theme outfits), `Equalizer` (EQ panel + `EqButton` pop-over), `TrackList` (in `common.tsx`), `AddToPlaylist`, `Selection` (Plex-style multi-select on album and artist grids), `DownloadButton`, `ReleaseRadar` (+ `FollowButton`), `Visualizer`, `ErrorBoundary`. |
 | `store/` | Global state (zustand). See §4. |
 | `sources/` | Adapters for each backend + chart/radio/download helpers. See [SOURCES.md](SOURCES.md). |
 | `player/engine.ts` | The audio engine. See §3. |
-| `lib/` | `http.ts` (fetch through Rust), `match.ts` (find "the same song" across servers), `platform.ts` (Android/phone detection), `tvNav.ts` (D-pad), `nativeMedia.ts` (Android media session bridge), `seasons.ts` (Seasonal holiday windows, Random daily, `activeSkin`). |
+| `lib/` | `http.ts` (fetch through Rust), `merge.ts` (merge albums or artists by retagging through the Hub), `match.ts` (find "the same song" across servers), `platform.ts` (Android/phone detection), `tvNav.ts` (D-pad), `nativeMedia.ts` (Android media session bridge), `seasons.ts` (Seasonal holiday windows, Random daily, `activeSkin`). |
 | `styles.css` | All CSS. Skins are blocks of CSS variables on `:root[data-skin='…']`. |
 
 ### Routing

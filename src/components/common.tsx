@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type MouseEvent, type ReactNode } from 'react';
 import { useSettings } from '../store/settings';
 import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
 import { explicitOfAlbum, explicitOfTrack, trackVersion, useHidden, useRatings } from '../lib/kids';
@@ -52,16 +52,41 @@ export function Rating({ explicit }: { explicit?: 'explicit' | 'clean' | boolean
   return null;
 }
 
+/** A card's selection state (components/Selection.tsx). `selected` undefined = not selecting, so a tap opens it. */
+interface Pickable<T> {
+  onOpen(x: T, e?: MouseEvent): void;
+  selected?: boolean;
+  /** "Merge target" on the first card ticked. */
+  badge?: string;
+  /** Shows a round tick on hover that starts selecting with this card (Plex-style). */
+  onPick?(x: T, e?: MouseEvent): void;
+}
+
+function PickMarks<T>({ x, selected, badge, onPick }: Omit<Pickable<T>, 'onOpen'> & { x: T }) {
+  return (
+    <>
+      {selected !== undefined
+        ? <input type="checkbox" className="card-check" checked={selected} readOnly tabIndex={-1} aria-hidden />
+        : onPick && <span className="card-pick" role="checkbox" aria-checked={false} aria-label="Select" title="Select"
+          onClick={(e) => { e.stopPropagation(); onPick(x, e); }} />}
+      {badge && <span className="card-badge">{badge}</span>}
+    </>
+  );
+}
+
+const cardClass = (selected?: boolean, pickable?: boolean) =>
+  `card ${selected !== undefined || pickable ? 'selectable' : ''} ${selected ? 'selected' : ''}`;
+
 /** `selected`: the card is in a list being picked from (Albums → Select); tapping it ticks it instead of opening it. */
-export function AlbumCard({ album, onOpen, selected }: { album: Album; onOpen(a: Album): void; selected?: boolean }) {
+export function AlbumCard({ album, onOpen, selected, badge, onPick }: { album: Album } & Pickable<Album>) {
   const hidden = useHidden();
   const otherVersion = useVersionHidden();
   useRatings((s) => s.ratings);
   useArtworkList();
   if (hidden.album(cleanSide(album)) || otherVersion(album)) return null;
   return (
-    <button className={`card ${selected !== undefined ? 'selectable' : ''} ${selected ? 'selected' : ''}`} onClick={() => onOpen(album)} aria-pressed={selected}>
-      {selected !== undefined && <input type="checkbox" className="card-check" checked={selected} readOnly tabIndex={-1} aria-hidden />}
+    <button className={cardClass(selected, !!onPick)} onClick={(e) => onOpen(album, e)} aria-pressed={selected}>
+      <PickMarks x={album} selected={selected} badge={badge} onPick={onPick} />
       <Cover src={albumArt(album)} alt={album.title} />
       <div className="card-title" title={album.title}><Rating explicit={explicitOfAlbum(album)} />{album.title}</div>
       <div className="card-sub">
@@ -72,12 +97,13 @@ export function AlbumCard({ album, onOpen, selected }: { album: Album; onOpen(a:
   );
 }
 
-export function ArtistCard({ artist, onOpen }: { artist: Artist; onOpen(a: Artist): void }) {
+export function ArtistCard({ artist, onOpen, selected, badge, onPick }: { artist: Artist } & Pickable<Artist>) {
   const hidden = useHidden();
   useArtworkList();
   if (hidden.artist(artist)) return null;
   return (
-    <button className="card" onClick={() => onOpen(artist)}>
+    <button className={cardClass(selected, !!onPick)} onClick={(e) => onOpen(artist, e)} aria-pressed={selected}>
+      <PickMarks x={artist} selected={selected} badge={badge} onPick={onPick} />
       <Cover src={artistArt(artist)} alt={artist.name} round />
       <div className="card-title center">{artist.name}</div>
       <div className="card-sub center"><SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} /></div>

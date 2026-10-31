@@ -144,6 +144,14 @@ section h2 { font-size: 19px; margin-bottom: 14px; display: flex; align-items: c
 .card.selectable { position: relative; }
 .card.selected { background: var(--panel); outline: 2px solid var(--accent); }
 .card-check { position: absolute; top: 12px; left: 12px; z-index: 1; width: 20px; height: 20px; pointer-events: none; }
+/* the round tick on hover that starts selecting (components/Selection.tsx) */
+.card-pick { position: absolute; top: 12px; left: 12px; z-index: 1; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff;
+  background: rgba(0, 0, 0, .45); opacity: 0; transition: opacity .12s; cursor: pointer; }
+.card:hover .card-pick, .card-pick:focus-visible { opacity: 1; }
+.card-pick:hover { background: var(--accent); }
+@media (hover: none) { .card-pick { display: none; } }
+.card-badge { position: absolute; top: 12px; right: 12px; z-index: 1; padding: 2px 8px; border-radius: 999px; background: var(--accent);
+  color: var(--accent-ink, #fff); font-size: 11px; font-weight: 700; pointer-events: none; }
 .select-bar { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 8px 0; }
 
 .cover {

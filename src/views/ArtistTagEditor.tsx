@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from '../components/common';
 import { forgetTagValues, TagLists } from '../components/TagLists';
+import { renameArtist } from '../lib/merge';
 import { sourceFor } from '../sources/registry';
 import type { HubTags, HubTagSong } from '../sources/hub';
 import type { Artist } from '../sources/types';
@@ -16,21 +17,7 @@ import { useUi } from '../store/ui';
 
 type Song = HubTagSong & { albumId: string };
 
-const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const errText = (e: unknown) => String((e as Error).message ?? e);
-
-/**
- * `from` → `to` in a tag. The whole value always; with `credits`, also where the artist is named with others
- * ("A feat. B", "A & B", "A; B"). A spot that already says `to` (renaming "Beatles" to "The Beatles") stays.
- */
-export function renameArtist(value: string | undefined, from: string, to: string, credits: boolean): string | undefined {
-  if (!value || !from.trim()) return value;
-  if (value.trim().toLowerCase() === from.trim().toLowerCase()) return to;
-  if (!credits) return value;
-  const k = to.toLowerCase().indexOf(from.toLowerCase());
-  return value.replace(new RegExp(`(?<![\\p{L}\\p{N}])${esc(from.trim())}(?![\\p{L}\\p{N}])`, 'giu'), (m, at: number) =>
-    k >= 0 && value.slice(at - k, at - k + to.length) === to ? m : to);
-}
 
 export function ArtistTagEditor({ artist }: { artist: Artist }) {
   const c = hubClient();
