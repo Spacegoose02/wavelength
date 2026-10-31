@@ -8,7 +8,8 @@ import { loadFlags, setFlag, useFlags, useRatings } from '../lib/kids';
 import { today } from '../lib/kidTime';
 import { notifyAllowed, notifySupported } from '../lib/notify';
 import { isAndroid } from '../lib/platform';
-import { HubClient, HubError, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
+import { ProfileSwitcher } from '../components/ProfileSwitcher';
+import { HubClient, HubError, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
@@ -31,8 +32,10 @@ function Qr({ text }: { text: string }) {
 }
 
 /** Shows a pairing code and waits for it to be approved in a browser. */
-function Pairing({ client, onDone }: { client: HubClient; onDone(): void }) {
+function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; take?: (s: HubSession) => void }) {
   const signedIn = useHub((s) => s.signedIn);
+  const takeRef = useRef(take);
+  takeRef.current = take;
   const [p, setP] = useState<HubPairing>();
   const [err, setErr] = useState('');
   const alive = useRef(true);
@@ -50,7 +53,7 @@ function Pairing({ client, onDone }: { client: HubClient; onDone(): void }) {
             const s = await client.pollPairing(pairing.deviceCode);
             if (!alive.current) return;
             if (s) {
-              signedIn(s);
+              (takeRef.current ?? signedIn)(s);
               onDone();
             } else timer = setTimeout(poll, pairing.interval * 1000);
           } catch (e) {
@@ -84,8 +87,10 @@ function Pairing({ client, onDone }: { client: HubClient; onDone(): void }) {
   );
 }
 
-export function SignedOut() {
-  const { url, setUrl, signedIn } = useHub();
+/** Signing in; with `adding`, a second person on this device (ProfileSwitcher) and `onCancel` to go back. */
+export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: () => void } = {}) {
+  const { url, setUrl, signedIn: first, addProfile } = useHub();
+  const signedIn = adding ? (s: HubSession) => { addProfile(s); onCancel?.(); } : first;
   const [draft, setDraft] = useState(url);
   const [health, setHealth] = useState<HubHealth>();
   const [err, setErr] = useState('');
@@ -140,7 +145,8 @@ export function SignedOut() {
 
   return (
     <section>
-      <h2>Wavelength Hub</h2>
+      <h2>{adding ? 'Add someone to this device' : 'Wavelength Hub'}</h2>
+      {adding && <button className="btn small ghost" onClick={onCancel}>← Back</button>}
       <p className="muted small">
         A Hub gives everyone in the house their own profile: their own settings on every device, and admin-only controls that
         really are admin-only. It's optional; without one Wavelength works as before. Downloaded music always plays, signed in or not.
@@ -173,7 +179,7 @@ export function SignedOut() {
             <button className={`btn ${mode === 'password' ? 'primary' : ''}`} onClick={() => setMode('password')}>Sign in with a password</button>
             <button className={`btn ${mode === 'invite' ? 'primary' : ''}`} onClick={() => setMode('invite')}>I have an invite</button>
           </div>
-          {mode === 'code' && <Pairing client={client} onDone={() => setMode(null)} />}
+          {mode === 'code' && <Pairing client={client} onDone={() => setMode(null)} take={adding ? signedIn : undefined} />}
           {mode === 'password' && (
             <form onSubmit={submit}>
               <div className="editor-grid">
@@ -470,6 +476,7 @@ function TwoFactorSetting({ admin }: { admin: boolean }) {
 
 function SignedIn() {
   const { url, user, permissions, offline, lastSeen, signOut, refresh } = useHub();
+  const [adding, setAdding] = useState(false);
   const [devices, setDevices] = useState<(HubDevice & { current: boolean })[]>([]);
   const [msg, setMsg] = useState('');
   const [pw, setPw] = useState({ current: '', next: '' });
@@ -480,6 +487,7 @@ function SignedIn() {
     loadDevices();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   if (!user) return null;
+  if (adding) return <SignedOut adding onCancel={() => setAdding(false)} />;
 
   return (
     <section>
@@ -492,6 +500,8 @@ function SignedIn() {
         </div>
         <button className="btn small ghost" onClick={() => confirm('Sign out of the Hub on this device?') && signOut()}>Sign out</button>
       </div>
+
+      <ProfileSwitcher onAdd={() => setAdding(true)} />
 
       <div className="editor">
         <h3>Settings sync</h3>
@@ -603,7 +613,7 @@ export function UsersTab() {
     <>
       <section>
         <h2>People</h2>
-        <p className="muted small">Roles: <b>Admin</b> can do everything. <b>Member</b> listens and requests music; turn on <b>Autodownload</b> to let them download without your approval. <b>Kid</b> gets the kid-safe view and can never autodownload.</p>
+        <p className="muted small">Roles: <b>Admin</b> can do everything. <b>Member</b> listens and requests music; turn on <b>Autodownload</b> to let them download without your approval. <b>Kid</b> gets the kid-safe view and can never autodownload. Give a kid <b>Parents</b> and their requests and weekly listening report go to those grown-ups too, who can approve them from their Inbox.</p>
         {err && <div className="errors">{err}</div>}
         {users.map((u) => (
           <div key={u.id} className={`source-row ${u.disabled ? 'off' : ''}`}>
@@ -634,6 +644,20 @@ export function UsersTab() {
             {u.twoFactor && <button className="btn small" title={`${u.displayName} uses two-step sign-in. Turn it off if they lost their phone`} onClick={() => {
               if (confirm(`Turn off two-step sign-in for ${u.displayName}? They'll sign in with just their password until they turn it on again.`)) run(() => c.resetTwoFactor(u.id));
             }}>Reset 2-step</button>}
+            {u.role === 'kid' && u.guardians && (
+              <details className="hub-guardians">
+                <summary className="btn small" title="Their requests go to these grown-ups too, and their weekly report">Parents{u.guardians.length ? ` (${u.guardians.length})` : ''}</summary>
+                <div className="hub-guardians-list">
+                  {users.filter((g) => g.role !== 'kid').map((g) => (
+                    <label key={g.id} className="check">
+                      <input type="checkbox" checked={u.guardians!.includes(g.id)}
+                        onChange={(e) => run(() => c.setGuardians(u.id, e.target.checked ? [...u.guardians!, g.id] : u.guardians!.filter((x) => x !== g.id)))} />
+                      <small>{g.displayName}</small>
+                    </label>
+                  ))}
+                </div>
+              </details>
+            )}
             <button className="btn small ghost" onClick={() => run(() => c.updateUser(u.id, { disabled: !u.disabled }))}>{u.disabled ? 'Turn on' : 'Turn off'}</button>
             {u.id !== me?.id && <button className="btn small ghost" onClick={() => confirm(`Delete ${u.displayName}? Their synced settings go too.`) && run(() => c.deleteUser(u.id))}>Delete</button>}
           </div>

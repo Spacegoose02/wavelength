@@ -22,7 +22,8 @@ type Tab = InboxTab;
 /** Everything the household sends you: things shared with you, answers to your requests, and (admins) requests to approve. */
 export function Inbox({ tab: start }: { tab?: InboxTab } = {}) {
   const signedIn = useHub((s) => !!s.token);
-  const approver = useHub((s) => s.permissions.includes('requests.approve'));
+  // parents decide their own kids' requests (hub/src/family.ts)
+  const approver = useHub((s) => s.permissions.includes('requests.approve') || s.kids.length > 0);
   // Clean versions: for people who can download or request, once the library check found any
   const getter = useHub((s) => s.user?.role !== 'kid' && (s.permissions.includes('downloads.run') || s.permissions.includes('requests.create')));
   const cleanCount = useCleanOffers().length;
@@ -255,7 +256,9 @@ function Approve() {
   const [filter, setFilter] = useState<'pending' | ''>('pending');
   const { data, error, reload } = useLoad(async () => (await hubClient()!.allRequests(filter || undefined)).requests, [filter]);
   const [busy, setBusy] = useState<number>();
-  const slskd = useHubRuns('slskd');
+  // a parent (not an approver) decides only their kids' requests, without picking files or clearing the list
+  const admin = useHub((s) => s.permissions.includes('requests.approve'));
+  const slskd = useHubRuns('slskd') && admin;
 
   const act = async (r: HubRequest, fn: () => Promise<unknown>) => {
     setBusy(r.id);
@@ -277,7 +280,7 @@ function Approve() {
         <button className={`chip ${filter === '' ? 'on' : ''}`} onClick={() => setFilter('')}>All</button>
       </div>
       {error && <div className="errors">{error}</div>}
-      {!data ? <Spinner /> : !data.length ? <Empty title="Nothing to approve">Requests from the household show up here.</Empty> : (
+      {!data ? <Spinner /> : !data.length ? <Empty title="Nothing to approve">{admin ? 'Requests from the household show up here.' : 'Your kids’ requests show up here.'}</Empty> : (
         <div className="tracklist">
           {data.map((r) => (
             <RequestRow key={r.id} r={r} who>
@@ -297,7 +300,7 @@ function Approve() {
                     if (reason !== null) act(r, () => hubClient()!.rejectRequest(r.id, reason));
                   }}>Reject</button>
                 </>}
-                {r.status !== 'pending' && (
+                {r.status !== 'pending' && admin && (
                   <button className="icon-btn" title="Remove" onClick={() => act(r, () => hubClient()!.deleteRequest(r.id))}><IconX /></button>
                 )}
               </div>

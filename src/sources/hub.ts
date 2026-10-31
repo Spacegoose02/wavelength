@@ -61,6 +61,8 @@ export interface HubAdminUser extends HubUser {
   permissions: HubPermission[];
   /** Uses two-step sign-in (hub/src/totp.ts); older Hubs don't say. */
   twoFactor?: boolean;
+  /** For kids: the people whose approval their requests need, besides the admins (hub/src/family.ts). */
+  guardians?: number[];
   devices: number;
   lastSeenAt: number | null;
 }
@@ -206,7 +208,7 @@ export interface SharePayload {
 /** Something the Hub tells this person about (hub/src/notify.ts), shown as a system notification. */
 export interface HubNotice {
   id: number;
-  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar' | 'library';
+  kind: 'request.new' | 'request.ready' | 'request.rejected' | 'request.have' | 'request.failed' | 'share' | 'radar' | 'library' | 'report' | 'rewind';
   title: string;
   body: string;
   createdAt: number;
@@ -536,7 +538,7 @@ export class HubClient {
     return r.status === 202 ? null : r.data;
   }
 
-  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[] }>('GET', '/api/me');
+  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[] }>('GET', '/api/me');
   setDisplayName = (displayName: string) => this.call<{ user: HubUser }>('PATCH', '/api/me', { displayName });
   changePassword = (currentPassword: string, newPassword: string) => this.call('PUT', '/api/me/password', { currentPassword, newPassword });
   myDevices = () => this.call<{ devices: (HubDevice & { current: boolean })[] }>('GET', '/api/me/devices');
@@ -594,6 +596,7 @@ export class HubClient {
   twoFactorSetup = (password: string) => this.call<{ secret: string; uri: string }>('POST', '/api/me/2fa/setup', { password });
   twoFactorEnable = (code: string) => this.call<{ recoveryCodes: string[] }>('POST', '/api/me/2fa/enable', { code });
   twoFactorOff = (password: string, otp: string) => this.call('DELETE', '/api/me/2fa', { password, otp });
+  setGuardians = (kidId: number, ids: number[]) => this.call<{ user: HubAdminUser }>('PUT', `/api/admin/users/${kidId}/guardians`, { ids });
   resetTwoFactor = (userId: number) => this.call<{ user: HubAdminUser }>('DELETE', `/api/admin/users/${userId}/2fa`);
   // Scrobbling (hub/src/scrobble.ts)
   scrobbleAccounts = () => this.call<{ accounts: HubScrobbleAccount[]; lastfmAvailable: boolean }>('GET', '/api/me/scrobble');
