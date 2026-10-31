@@ -483,6 +483,17 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   );
   CREATE INDEX dj_conversations_user ON dj_conversations(user_id, updated_at);
   `,
+  `
+  -- A picture someone picked for a playlist (routes/playlistCovers.ts). The key says which playlist:
+  -- wavelength:<id> (one of their own), household:<id>, navidrome:<id> or plex:<id>. The image is a file in
+  -- <data>/artwork, next to album and artist art. With no row the app shows its own mosaic or the server's cover.
+  CREATE TABLE playlist_covers (
+    key        TEXT PRIMARY KEY,
+    file       TEXT NOT NULL,
+    set_by     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    updated_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

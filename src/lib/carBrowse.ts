@@ -16,6 +16,7 @@ import { usePlayer } from '../store/player';
 import { enabledSources, useSettings } from '../store/settings';
 import { trackArt } from './artwork';
 import { parseId } from './carIds';
+import { playlistCoverOf, serverCoverKey, wavelengthCoverKey } from './playlistCovers';
 import { albumNotForKids, isKid, kidSafe } from './kids';
 
 export interface CarItem {
@@ -51,10 +52,10 @@ export async function carChildren(parent: string): Promise<CarItem[]> {
   if (parent === 'root') return ROOT;
   if (parent === 'playlists') {
     const local: CarItem[] = useLibrary.getState().playlists.filter((p) => p.tracks.length).map((p) => ({
-      id: `pl:${p.id}`, title: p.name, subtitle: `${p.tracks.length} songs`, art: art(trackArt(p.tracks.find((t) => trackArt(t)))), browsable: false,
+      id: `pl:${p.id}`, title: p.name, subtitle: `${p.tracks.length} songs`, art: art(playlistCoverOf(wavelengthCoverKey(p.id))) ?? art(trackArt(p.tracks.find((t) => trackArt(t)))), browsable: false,
     }));
     const server = (await Promise.all(sources().map((s) => s.getPlaylists?.().catch(() => []) ?? []))).flat()
-      .map((p): CarItem => ({ id: `sp:${p.sourceId}:${p.id}`, title: p.name, subtitle: p.trackCount ? `${p.trackCount} songs` : undefined, art: art(p.coverUrl), browsable: false }));
+      .map((p): CarItem => ({ id: `sp:${p.sourceId}:${p.id}`, title: p.name, subtitle: p.trackCount ? `${p.trackCount} songs` : undefined, art: art(playlistCoverOf(serverCoverKey(p))) ?? art(p.coverUrl), browsable: false }));
     return [...local, ...server].slice(0, MAX);
   }
   if (parent === 'recent') {

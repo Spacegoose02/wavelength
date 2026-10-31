@@ -694,6 +694,41 @@ name matches, so you can click the one you want. Press **Enter** instead to make
 > fetching every playlist; that's left out on purpose. The **+ Playlist** filter is in
 > `src/components/AddToPlaylist.tsx`.
 
+## Playlist covers
+
+Every playlist can have its own picture. Open the playlist and press **Change cover**:
+
+- **From this playlist** shows the album covers of the songs in it. Click one to use it.
+- **Upload a picture** from your computer or phone (JPEG, PNG, WebP or GIF, 15 MB at most), or paste an image
+  link and press **Use link**. Wavelength crops it to a square from the middle and makes it 600×600.
+- **Use the automatic cover** (or **Use the server's cover** on a Navidrome or Plex playlist) removes your
+  picture again.
+
+Which playlists:
+
+- **Wavelength playlists:** your own, always. With no picture they show a **mosaic of their first four
+  albums** (four different albums, not four songs from the same one). With fewer than four albums they show
+  the first album's cover.
+- **Navidrome and Plex playlists** you can edit (not read-only ones). With no picture they show the server's
+  own cover. Your picture is only shown in Wavelength: Navidrome, Plex and other apps keep their cover.
+- **Household playlists:** whoever started it, or an admin. With no picture they show a mosaic of their
+  albums too.
+
+**Where it's kept.** Signed in to a Hub, the cover is saved on your Hub, so it shows on every device you sign
+in on: Windows, Android (and Android Auto's playlist list), the TV and the browser. Your own playlists' covers
+only you see. Covers on Navidrome, Plex and household playlists everyone on the Hub sees, and only whoever set
+one (or an admin) can change it. Kid profiles can change their own playlists' covers only. With no Hub the
+cover stays on that one device.
+
+Deleting a playlist deletes its cover too.
+
+> **Developer notes:** `src/lib/playlistCovers.ts` keeps the covers (`usePlaylistCovers`, persisted as
+> `tonearm.playlistCovers`), makes the square JPEG (`squareImage`, `imageFromLink`, which downloads through
+> `http()` so the app isn't stopped by CORS) and picks the mosaic (`mosaicOf`). Covers are found by key:
+> `wavelength:<id>`, `household:<id>`, `navidrome:<id>` or `plex:<id>` (the server's playlist id).
+> `src/components/PlaylistCoverButton.tsx` has `PlaylistArt` (picked cover → mosaic → server cover) and the
+> picker. The Hub side is `hub/src/routes/playlistCovers.ts`.
+
 ## Import a playlist
 
 **Playlists → Import** brings a playlist over from somewhere else. Paste a link, or choose a file:
@@ -912,7 +947,7 @@ restarts, and keeps the database it replaced on the server just in case.
 ### What follows you between devices
 
 Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer**, **volume levelling and crossfade**, **Now Playing scene** and **critter**,
-**radio stations** (favorites, hidden and order) and **Discover chart picks** sync to your profile. Change the
+**radio stations** (favorites, hidden and order), **Discover chart picks** and **playlist covers** sync to your profile. Change the
 skin on the TV and your phone has it next time it checks in (at start, when the window gets focus, and every
 few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and
 the skin on another never overwrite each other. Changes made with no connection are kept and sent later.

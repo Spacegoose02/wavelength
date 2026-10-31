@@ -8,7 +8,9 @@ import { useServerPlaylists } from '../store/serverPlaylists';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { useHub } from '../store/hub';
-import { Cover, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
+import { Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
+import { PlaylistArt, PlaylistCoverButton } from '../components/PlaylistCoverButton';
+import { forgetPlaylistCover, serverCoverKey, usePlaylistCover, wavelengthCoverKey } from '../lib/playlistCovers';
 import { IconPlay, IconRefresh, IconShuffle } from '../components/Icons';
 import { ErrorList } from './Library';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
@@ -18,14 +20,9 @@ import { shareOfTracks } from '../lib/inbox';
 import { SmartPlaylists } from './SmartPlaylists';
 import { AddToHousehold, HouseholdPlaylists } from './Household';
 
+/** A Wavelength playlist's picture: the one picked for it, else a mosaic of its first four albums. */
 export function PlaylistCover({ p }: { p: Playlist }) {
-  const covers = [...new Set(p.tracks.map((t) => t.coverUrl).filter(Boolean))].slice(0, 4) as string[];
-  if (covers.length < 4) return <Cover src={covers[0]} alt={p.name} />;
-  return (
-    <div className="cover mosaic">
-      {covers.map((c) => <img key={c} src={c} alt="" loading="lazy" />)}
-    </div>
-  );
+  return <PlaylistArt coverKey={wavelengthCoverKey(p.id)} name={p.name} tracks={p.tracks} />;
 }
 
 /**
@@ -38,6 +35,9 @@ export function playlistMatch(name: string, tracks: Track[] | undefined, q: stri
   const song = tracks?.find((t) => t.title.toLowerCase().includes(f) || t.artist.toLowerCase().includes(f) || t.album?.toLowerCase().includes(f));
   return song ? { song } : null;
 }
+
+/** A picked cover others can open too: one on the Hub, not one kept on this device. */
+const shareable = (cover?: string) => (cover?.startsWith('http') ? cover : undefined);
 
 function shuffleAndPlay(tracks: Track[]) {
   if (!usePlayer.getState().shuffle) usePlayer.getState().toggleShuffle();
@@ -118,7 +118,7 @@ export function Playlists() {
             <Grid>
               {remote(cfg.id).map((p) => (
                 <button key={p.id} className="card" onClick={() => go({ view: 'serverPlaylist', playlist: p })}>
-                  <Cover src={p.coverUrl} alt={p.name} />
+                  <PlaylistArt coverKey={serverCoverKey(p)} name={p.name} fallback={p.coverUrl} />
                   <div className="card-title">{p.name}</div>
                   <div className="card-sub"><SourceDots sourceIds={[p.sourceId]} /><span>{p.trackCount ?? 0} tracks{p.readOnly ? ' · read-only' : ''}</span></div>
                 </button>
@@ -178,6 +178,7 @@ export function PlaylistView({ id }: { id: string }) {
   const { removeFromPlaylist, moveInPlaylist, renamePlaylist, deletePlaylist } = useLibrary();
   const playTracks = usePlayer((s) => s.playTracks);
   const [editing, setEditing] = useState(false);
+  const picked = usePlaylistCover(wavelengthCoverKey(id));
   if (!p) return <Empty title="Playlist not found" />;
   const total = p.tracks.reduce((s, t) => s + (t.duration ?? 0), 0);
 
@@ -202,12 +203,14 @@ export function PlaylistView({ id }: { id: string }) {
             <button className="btn primary" disabled={!p.tracks.length} onClick={() => playTracks(p.tracks)}><IconPlay /> Play</button>
             <button className="btn" disabled={!p.tracks.length} onClick={() => shuffleAndPlay(p.tracks)}><IconShuffle /> Shuffle</button>
             {p.tracks.length > 0 && <QueueAllOnSubwave tracks={p.tracks} />}
-            <ShareButton what={() => shareOfTracks('playlist', p.name, p.tracks)} />
+            <ShareButton what={() => shareOfTracks('playlist', p.name, p.tracks, undefined, shareable(picked))} />
             <AddToHousehold tracks={p.tracks} />
-            <DownloadButton id={`playlist:local:${p.id}`} kind="playlist" name={p.name} cover={p.tracks.find((t) => t.coverUrl)?.coverUrl} tracks={p.tracks} />
+            <DownloadButton id={`playlist:local:${p.id}`} kind="playlist" name={p.name} cover={picked ?? p.tracks.find((t) => t.coverUrl)?.coverUrl} tracks={p.tracks} />
+            <PlaylistCoverButton coverKey={wavelengthCoverKey(p.id)} name={p.name} tracks={p.tracks} auto="mosaic" />
             <button className="btn ghost" onClick={() => {
               if (confirm(`Delete "${p.name}"?`)) {
                 deletePlaylist(p.id);
+                forgetPlaylistCover(wavelengthCoverKey(p.id));
                 useUi.getState().go({ view: 'playlists' });
               }
             }}>Delete</button>
@@ -236,6 +239,9 @@ export function ServerPlaylistView({ playlist }: { playlist: ServerPlaylist }) {
   const [error, setError] = useState<string>();
   const [note, setNote] = useState<string>();
   const src = cfg ? sourceFor(cfg) : undefined;
+  const coverKey = serverCoverKey(playlist);
+  const picked = usePlaylistCover(coverKey);
+  const cover = picked ?? playlist.coverUrl;
 
   const reload = () =>
     src?.getPlaylistTracks!(playlist.id).then(setTracks).catch((e) => setError(String(e.message ?? e)));
@@ -259,7 +265,7 @@ export function ServerPlaylistView({ playlist }: { playlist: ServerPlaylist }) {
   return (
     <div className="page">
       <header className="hero">
-        <Cover src={playlist.coverUrl} alt={playlist.name} className="hero-art" />
+        <PlaylistArt coverKey={coverKey} name={playlist.name} fallback={playlist.coverUrl} className="hero-art" />
         <div>
           <div className="kicker"><i className="dot" style={{ background: SOURCE_COLORS[cfg.kind] }} /> {cfg.name} playlist{playlist.readOnly ? ' · read-only' : ''}</div>
           {editing && editable ? (
@@ -281,19 +287,21 @@ export function ServerPlaylistView({ playlist }: { playlist: ServerPlaylist }) {
             {tracks?.length ? <QueueAllOnSubwave tracks={tracks} /> : null}
             {tracks?.length ? (
               <DownloadButton id={`playlist:${playlist.sourceId}:${playlist.id}`} kind="playlist" name={name} subtitle={cfg.name}
-                cover={playlist.coverUrl ?? tracks.find((t) => t.coverUrl)?.coverUrl} tracks={tracks} />
+                cover={cover ?? tracks.find((t) => t.coverUrl)?.coverUrl} tracks={tracks} />
             ) : null}
-            {tracks?.length ? <ShareButton what={() => shareOfTracks('playlist', name, tracks, undefined, playlist.coverUrl)} /> : null}
+            {tracks?.length ? <ShareButton what={() => shareOfTracks('playlist', name, tracks, undefined, shareable(picked) ?? playlist.coverUrl)} /> : null}
             <button className="btn" disabled={!tracks?.length} onClick={() => {
               if (!tracks) return;
               const id = createLocal(name, tracks);
               setNote('Copied — you can now mix in other sources.');
               window.setTimeout(() => useUi.getState().go({ view: 'playlist', id }), 700);
             }}>Copy to Wavelength</button>
+            {editable && <PlaylistCoverButton coverKey={coverKey} name={name} tracks={tracks ?? []} auto="server" />}
             {editable && (
               <button className="btn ghost" onClick={() => guard(async () => {
                 if (!confirm(`Delete "${name}" from ${cfg.name}? This removes it for every app using that server.`)) return;
                 await src.deletePlaylist!(playlist.id);
+                if (coverKey) forgetPlaylistCover(coverKey);
                 useServerPlaylists.getState().load();
                 useUi.getState().go({ view: 'playlists' });
               })}>Delete</button>
