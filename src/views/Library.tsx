@@ -17,6 +17,8 @@ import { albumVersion, explicitOfAlbum, explicitOfTrack, useHidden, useIsKid, us
 import { hasBoth, preferredRef, useVersionHidden, useVersionPref, versionOf, versionsOf } from '../lib/versions';
 import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { deleteAlbum, deleteAlbums } from '../lib/deleteAlbums';
+import { applyMerge, navidromeRefs, planAlbums, planArtists, type MergePlan } from '../lib/merge';
+import { SelectBar, useSelection, type Selection } from '../components/Selection';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 import { ArtworkButton } from '../components/ArtworkButton';
@@ -131,10 +133,7 @@ export function Albums() {
   const [only, setOnly] = useState<string | null>(null);
   const hidden = useHidden();
   const kid = useIsKid();
-  const canDelete = useCan('library.edit');
-  // Select: tick albums to delete several at once (admins, Navidrome copies)
-  const [picked, setPicked] = useState<Set<string> | null>(null);
-  const [deleting, setDeleting] = useState<string>();
+  const [busy, setBusy] = useState<string>();
   const shown = useMemo(() => {
     const f = filter.toLowerCase();
     return albums.filter(
@@ -144,53 +143,23 @@ export function Albums() {
   }, [albums, filter, only, hidden]);
   const musicSources = sources.filter((s) => s.enabled && (s.kind === 'navidrome' || s.kind === 'plex'));
   const cardKey = (a: Album) => `${a.sourceId}:${a.id}`;
-  const deletable = (a: Album) => (a.refs ?? [a]).filter((r) => sources.find((s) => s.id === r.sourceId)?.kind === 'navidrome');
-  // what Select all ticks: the cards on screen (a version hidden by Settings → Playback isn't)
+  // what can be ticked: the cards on screen (a version hidden by Settings → Playback isn't)
   const otherVersion = useVersionHidden();
-  const selectable = picked ? shown.slice(0, 600).filter((a) => !otherVersion(a)) : [];
-  const chosen = selectable.filter((a) => picked!.has(cardKey(a)));
-  const toggle = (a: Album) => setPicked((p) => {
-    const n = new Set(p);
-    if (n.has(cardKey(a))) n.delete(cardKey(a));
-    else n.add(cardKey(a));
-    return n;
-  });
-  const removeChosen = async () => {
-    const copies = chosen.flatMap(deletable);
-    if (!copies.length) return alert('None of these are on a Navidrome server the Hub can delete from.');
-    const names = chosen.slice(0, 8).map((a) => `• ${a.title} – ${a.artist}`).join('\n') + (chosen.length > 8 ? `\n…and ${chosen.length - 8} more` : '');
-    if (!confirm(`Delete ${chosen.length} album${chosen.length === 1 ? '' : 's'} (${copies.length} cop${copies.length === 1 ? 'y' : 'ies'}) from your server?\n\n${names}\n\nTheir files go to the Hub's trash. You can put them back under Settings → Server → Deleted albums for 30 days.`)) return;
-    const failed: string[] = [];
-    let n = 0;
-    await deleteAlbums(copies, (a, r) => {
-      setDeleting(`Deleting… ${++n} of ${copies.length}`);
-      if ('error' in r) failed.push(`${a.title}: ${r.error}`);
-    });
-    setDeleting(undefined);
-    setPicked(new Set());
-    alert(failed.length ? `Deleted ${copies.length - failed.length} of ${copies.length}. These couldn't be deleted:\n${failed.slice(0, 10).join('\n')}` : `Deleted ${copies.length} album${copies.length === 1 ? '' : 's'}. They're in the Hub's trash for 30 days.`);
-  };
-
+  const selectable = useMemo(() => shown.slice(0, 600).filter((a) => !otherVersion(a)), [shown, otherVersion]);
+  const sel = useSelection(selectable, cardKey);
   return (
     <div className="page">
       <header className="page-head">
         <h1>Albums <small>{shown.length}</small></h1>
         {loading && <Spinner />}
         {!kid && <button className="btn small" title="Duplicates and missing albums" onClick={() => useUi.getState().go({ view: 'libraryCare' })}>Library care</button>}
-        {!kid && canDelete && <button className={`btn small ${picked ? 'primary' : ''}`} onClick={() => setPicked(picked ? null : new Set())}>{picked ? 'Done' : 'Select'}</button>}
+        <button className={`btn small ${sel.selecting ? 'primary' : ''}`} onClick={sel.selecting ? sel.stop : sel.start}>{sel.selecting ? 'Done' : 'Select'}</button>
         <input className="filter" placeholder="Filter albums…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
-      {picked && (
-        <div className="row select-bar">
-          <label className="check">
-            <input type="checkbox" checked={selectable.length > 0 && chosen.length === selectable.length}
-              onChange={(e) => setPicked(e.target.checked ? new Set(selectable.map(cardKey)) : new Set())} />
-            Select all{filter ? ' matching' : ''}
-          </label>
-          <span className="muted small">{deleting ?? `${chosen.length} selected`}</span>
-          <span className="grow" />
-          <button className="btn danger" disabled={!chosen.length || !!deleting} onClick={() => void removeChosen()}>Delete selected{chosen.length ? ` (${chosen.length})` : ''}</button>
-        </div>
+      {sel.selecting && (
+        <SelectBar sel={sel} all={selectable} filtered={!!filter || !!only} name={(a) => a.title} status={busy}>
+          <AlbumSelectActions sel={sel} busy={busy} setBusy={setBusy} />
+        </SelectBar>
       )}
       {musicSources.length > 1 && (
         <div className="chips">
@@ -202,7 +171,10 @@ export function Albums() {
           ))}
         </div>
       )}
-      <Grid>{shown.slice(0, 600).map((a) => <AlbumCard key={cardKey(a)} album={a} onOpen={picked ? toggle : openAlbum} selected={picked ? picked.has(cardKey(a)) : undefined} />)}</Grid>
+      <Grid>{shown.slice(0, 600).map((a) => (
+        <AlbumCard key={cardKey(a)} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
+          selected={sel.isPicked(a)} badge={sel.badge(a)} />
+      ))}</Grid>
       {shown.length > 600 && <p className="muted center">Showing 600 of {shown.length} — filter to narrow down.</p>}
     </div>
   );
@@ -213,18 +185,183 @@ export function Artists() {
   const go = useUi((s) => s.go);
   const [filter, setFilter] = useState('');
   const hidden = useHidden();
-  const shown = artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()) && !hidden.artist(a));
+  const kid = useIsKid();
+  const canEdit = useCan('library.edit');
+  const [busy, setBusy] = useState<string>();
+  const shown = useMemo(() => artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()) && !hidden.artist(a)), [artists, filter, hidden]);
+  const selectable = useMemo(() => shown.slice(0, 600), [shown]);
+  const sel = useSelection(selectable, (a: Artist) => `${a.sourceId}:${a.id}`);
+  const chosen = sel.chosen;
+  const play = (how: PlayHow) => withBusy(setBusy, 'Loading songs…', async () => playAll(await tracksOfArtists(chosen), how));
+  const merge = () => withBusy(setBusy, 'Reading tags…', async () => {
+    const plan = await planArtists(chosen);
+    if (await confirmMerge(plan, chosen.slice(1).map((a) => a.name), setBusy)) {
+      forgetArtists(chosen.slice(1));
+      sel.clear();
+    }
+  });
   return (
     <div className="page">
       <header className="page-head">
         <h1>Artists <small>{shown.length}</small></h1>
+        <button className={`btn small ${sel.selecting ? 'primary' : ''}`} onClick={sel.selecting ? sel.stop : sel.start}>{sel.selecting ? 'Done' : 'Select'}</button>
         <input className="filter" placeholder="Filter artists…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
+      {sel.selecting && (
+        <SelectBar sel={sel} all={selectable} filtered={!!filter} name={(a) => a.name} status={busy}>
+          <SelectionPlayButtons disabled={!chosen.length || !!busy} play={play} />
+          {canEdit && !kid && <button className="btn" disabled={chosen.length < 2 || !!busy} title="Merge the others into the first one you ticked" onClick={merge}>Merge{chosen.length > 1 ? ` (${chosen.length})` : ''}</button>}
+        </SelectBar>
+      )}
       <Grid>
-        {shown.slice(0, 600).map((a) => <ArtistCard key={`${a.sourceId}:${a.id}`} artist={a} onOpen={(artist) => go({ view: 'artist', artist })} />)}
+        {selectable.map((a) => (
+          <ArtistCard key={`${a.sourceId}:${a.id}`} artist={a} onOpen={(x, e) => sel.click(x, e) || go({ view: 'artist', artist: x })} onPick={sel.pick}
+            selected={sel.isPicked(a)} badge={sel.badge(a)} />
+        ))}
       </Grid>
     </div>
   );
+}
+
+// ---- what the select bar does (components/Selection.tsx) ----
+
+/** Play, Merge and Delete for ticked albums (Albums, and an artist's page). */
+function AlbumSelectActions({ sel, busy, setBusy }: { sel: Selection<Album>; busy?: string; setBusy(s?: string): void }) {
+  const kid = useIsKid();
+  const canEdit = useCan('library.edit') && !kid;
+  const pref = useVersionPref();
+  const chosen = sel.chosen;
+  const removeChosen = async () => {
+    const copies = chosen.flatMap((a) => navidromeRefs(a));
+    if (!copies.length) return alert('None of these are on a Navidrome server the Hub can delete from.');
+    const names = chosen.slice(0, 8).map((a) => `• ${a.title} – ${a.artist}`).join('\n') + (chosen.length > 8 ? `\n…and ${chosen.length - 8} more` : '');
+    if (!confirm(`Delete ${chosen.length} album${chosen.length === 1 ? '' : 's'} (${copies.length} cop${copies.length === 1 ? 'y' : 'ies'}) from your server?\n\n${names}\n\nTheir files go to the Hub's trash. You can put them back under Settings → Server → Deleted albums for 30 days.`)) return;
+    const failed: string[] = [];
+    let n = 0;
+    await deleteAlbums(copies, (a, r) => {
+      setBusy(`Deleting… ${++n} of ${copies.length}`);
+      if ('error' in r) failed.push(`${a.title}: ${r.error}`);
+    });
+    setBusy(undefined);
+    sel.clear();
+    alert(failed.length ? `Deleted ${copies.length - failed.length} of ${copies.length}. These couldn't be deleted:\n${failed.slice(0, 10).join('\n')}` : `Deleted ${copies.length} album${copies.length === 1 ? '' : 's'}. They're in the Hub's trash for 30 days.`);
+  };
+  const play = (how: PlayHow) => withBusy(setBusy, 'Loading songs…', async () => playAll(await tracksOfAlbums(chosen, pref), how));
+  const merge = () => withBusy(setBusy, 'Reading tags…', async () => {
+    const plan = await planAlbums(chosen);
+    if (await confirmMerge(plan, chosen.slice(1).map((a) => `${a.title} – ${a.artist}`), setBusy)) {
+      forgetAlbums(chosen.slice(1));
+      sel.clear();
+    }
+  });
+  return (
+    <>
+      <SelectionPlayButtons disabled={!chosen.length || !!busy} play={play} />
+      {canEdit && <button className="btn" disabled={chosen.length < 2 || !!busy} title="Merge the others into the first one you ticked" onClick={merge}>Merge{chosen.length > 1 ? ` (${chosen.length})` : ''}</button>}
+      {canEdit && <button className="btn danger" disabled={!chosen.length || !!busy} onClick={() => void removeChosen()}>Delete selected{chosen.length ? ` (${chosen.length})` : ''}</button>}
+    </>
+  );
+}
+
+type PlayHow = 'play' | 'shuffle' | 'next' | 'queue';
+
+function SelectionPlayButtons({ disabled, play }: { disabled: boolean; play(how: PlayHow): void }) {
+  return (
+    <>
+      <button className="btn primary" disabled={disabled} onClick={() => play('play')}><IconPlay /> Play</button>
+      <button className="btn" disabled={disabled} onClick={() => play('shuffle')}><IconShuffle /> Shuffle</button>
+      <button className="btn" disabled={disabled} onClick={() => play('next')}>Play next</button>
+      <button className="btn" disabled={disabled} onClick={() => play('queue')}>Add to queue</button>
+    </>
+  );
+}
+
+async function withBusy(setBusy: (s?: string) => void, label: string, fn: () => Promise<void>) {
+  setBusy(label);
+  try {
+    await fn();
+  } catch (e) {
+    alert(String((e as Error).message ?? e));
+  } finally {
+    setBusy(undefined);
+  }
+}
+
+function playAll(tracks: Track[], how: PlayHow) {
+  if (!tracks.length) return alert('No songs found on those.');
+  const p = usePlayer.getState();
+  if (how === 'next') return p.playNext(tracks);
+  if (how === 'queue') return p.enqueue(tracks);
+  if (how === 'shuffle' && !p.shuffle) p.toggleShuffle();
+  if (how === 'play' && p.shuffle) p.toggleShuffle();
+  p.playTracks(tracks, how === 'shuffle' ? Math.floor(Math.random() * tracks.length) : 0);
+}
+
+/** The ticked albums' songs, in the order ticked, each from the copy its page would open on. */
+async function tracksOfAlbums(albums: Album[], pref: ReturnType<typeof useVersionPref>) {
+  const sources = useSettings.getState().sources;
+  const out: Track[] = [];
+  for (const a of albums.slice(0, 100)) {
+    const ref = preferredRef(a, pref) ?? (a.refs ?? [a])[0];
+    const cfg = sources.find((s) => s.id === ref.sourceId);
+    if (cfg) out.push(...await sourceFor(cfg).getAlbumTracks!(ref.id).catch(() => []));
+  }
+  return out;
+}
+
+/** The ticked artists' songs: all their albums, newest first, artist by artist. */
+async function tracksOfArtists(artists: Artist[]) {
+  const sources = useSettings.getState().sources;
+  const out: Track[] = [];
+  for (const artist of artists.slice(0, 30)) {
+    const lists = await Promise.all((artist.refs ?? [artist]).map(async (r) => {
+      const cfg = sources.find((s) => s.id === r.sourceId);
+      return cfg ? (await sourceFor(cfg).getArtistAlbums?.(r.id).catch(() => [])) ?? [] : [];
+    }));
+    const albums = mergeAlbums(lists).sort((a, b) => (b.year ?? 0) - (a.year ?? 0)).slice(0, 40);
+    for (const a of albums) {
+      const cfg = sources.find((s) => s.id === a.sourceId);
+      if (cfg) out.push(...await sourceFor(cfg).getAlbumTracks!(a.id).catch(() => []));
+    }
+  }
+  return out;
+}
+
+/** Show what a merge will change, ask, and save it. True when it was saved. */
+async function confirmMerge(plan: MergePlan, others: string[], setBusy: (s?: string) => void) {
+  if (!plan.changes.length) {
+    alert(`Nothing to change: ${others.join(', ')} already ${others.length === 1 ? 'has' : 'have'} the same tags as ${plan.into}.${plan.missing.length ? ` (${plan.missing.length} files weren't found in the Hub's music folder.)` : ''}`);
+    return false;
+  }
+  const list = others.slice(0, 8).map((x) => `• ${x}`).join('\n') + (others.length > 8 ? `\n…and ${others.length - 8} more` : '');
+  const missing = plan.missing.length ? `\n\n${plan.missing.length} file${plan.missing.length === 1 ? ' isn’t' : 's aren’t'} in the Hub's music folder and will be left out.` : '';
+  if (!confirm(`Merge into ${plan.into}?\n\n${list}\n\nThis rewrites the tags of ${plan.changes.length} song${plan.changes.length === 1 ? '' : 's'}. The audio isn't touched, and you can undo it under Settings → Server → Tag edits.${missing}`)) return false;
+  setBusy('Merging…');
+  const r = await applyMerge(plan);
+  alert(`Merged: ${r.changed.length} song${r.changed.length === 1 ? '' : 's'} retagged${r.failed.length ? `; ${r.failed.length} failed (${r.failed[0].error})` : ''}. Navidrome rescans in a minute or two to show it.`);
+  // the library refreshes once Navidrome has had time to rescan
+  window.setTimeout(() => void useCatalog.getState().load(), 120_000);
+  return r.changed.length > 0;
+}
+
+/** Take merged albums and artists off the lists now; the refresh after the rescan shows the result. */
+function forgetAlbums(gone: Album[]) {
+  const keys = new Set(gone.flatMap((a) => navidromeRefs(a)).map((r) => `${r.sourceId}:${r.id}`));
+  const keep = (a: Album) => {
+    const refs = (a.refs ?? [a]).filter((r) => !keys.has(`${r.sourceId}:${r.id}`));
+    return refs.length === (a.refs ?? [a]).length ? [a] : refs.length ? [{ ...a, ...refs[0], refs }] : [];
+  };
+  useCatalog.setState((s) => ({ albums: s.albums.flatMap(keep), recent: s.recent.flatMap(keep) }));
+}
+
+function forgetArtists(gone: Artist[]) {
+  const keys = new Set(gone.flatMap((a) => navidromeRefs(a)).map((r) => `${r.sourceId}:${r.id}`));
+  useCatalog.setState((s) => ({
+    artists: s.artists.flatMap((a) => {
+      const refs = (a.refs ?? [a]).filter((r) => !keys.has(`${r.sourceId}:${r.id}`));
+      return refs.length === (a.refs ?? [a]).length ? [a] : refs.length ? [{ ...a, ...refs[0], refs }] : [];
+    }),
+  }));
 }
 
 function useSourceCfg() {
@@ -254,6 +391,10 @@ export function ArtistView({ artist }: { artist: Artist }) {
   }, [artist]);
   const hidden = useHidden();
   useArtworkList();
+  const [busy, setBusy] = useState<string>();
+  const otherVersion = useVersionHidden();
+  const selectable = useMemo(() => (albums ?? []).filter((a) => !otherVersion(a)), [albums, otherVersion]);
+  const sel = useSelection(selectable, (a: Album) => `${a.sourceId}:${a.id}`);
   if (hidden.artist(artist)) return <div className="page"><Empty title="Not available">Ask a grown-up about this one.</Empty></div>;
 
   return (
@@ -276,7 +417,22 @@ export function ArtistView({ artist }: { artist: Artist }) {
           </div>
         </div>
       </header>
-      {!albums ? <Spinner /> : <Grid>{albums.map((a) => <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={openAlbum} />)}</Grid>}
+      {albums && albums.length > 1 && (
+        <div className="row">
+          <button className={`btn small ${sel.selecting ? 'primary' : ''}`} onClick={sel.selecting ? sel.stop : sel.start}>{sel.selecting ? 'Done' : 'Select'}</button>
+        </div>
+      )}
+      {sel.selecting && (
+        <SelectBar sel={sel} all={selectable} filtered={false} name={(a) => a.title} status={busy}>
+          <AlbumSelectActions sel={sel} busy={busy} setBusy={setBusy} />
+        </SelectBar>
+      )}
+      {!albums ? <Spinner /> : (
+        <Grid>{albums.map((a) => (
+          <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
+            selected={sel.isPicked(a)} badge={sel.badge(a)} />
+        ))}</Grid>
+      )}
     </div>
   );
 }
