@@ -1,14 +1,14 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.3
 - **Select several albums or artists, like Plex.** **Albums**, **Artists** and an artist's page have **Select**;
   you can also start from the round tick on a card, or Ctrl/⌘- or Shift-click. Shift-click ticks a range. The
   bar plays, shuffles or queues everything ticked.
 - **Merge albums and artists (Hub admins).** Tick two or more and press **Merge**: the first one ticked is the
   target (its card says so), and the others merge into it. Albums take the target's album, album artist and year
   tags; artists are renamed to the target in every song. One save, so **Settings → Server → Tag edits** can undo it.
-
-## 0.17.3
 - **Fixed: albums split into an Explicit and a Clean album (0.17.2).** When Navidrome lists part of an album on its
   own (*One Day* from *Underground Luxury*, downloaded separately), that part's "clean" tag made Wavelength show it
   as a separate clean version, with an Explicit / Clean switch, and split the album in two. A tag only says whether
