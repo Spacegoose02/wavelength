@@ -38,6 +38,7 @@ import { ReleaseRadar } from './radar.ts';
 import { radarRoutes } from './routes/radar.ts';
 import { scrobbleRoutes } from './routes/scrobble.ts';
 import { Scrobbler } from './scrobble.ts';
+import { Digests } from './digests.ts';
 import { getUser } from './users.ts';
 import { Library } from './library.ts';
 import { CleanDownloads } from './cleanDownloads.ts';
@@ -68,6 +69,8 @@ export interface Ctx {
   radar: ReleaseRadar;
   /** Plays sent on to ListenBrainz / Last.fm (scrobble.ts). */
   scrobbler: Scrobbler;
+  /** Kid reports and "your month in music" notifications (digests.ts). */
+  digests: Digests;
   /** Stop the Hub so Docker starts it again (main.ts); used after a restore is staged. */
   restart: () => void;
 }
@@ -98,6 +101,9 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.scrobbler = new Scrobbler(db, config);
   if (opts.watchLibrary ?? true) ctx.scrobbler.start();
   app.addHook('onClose', async () => ctx.scrobbler.stop());
+  ctx.digests = new Digests(db);
+  if (opts.watchLibrary ?? true) ctx.digests.start();
+  app.addHook('onClose', async () => ctx.digests.stop());
   app.decorate('hubLibrary', ctx.library);
   app.decorate('hubClean', ctx.clean);
   app.decorate('hubScrobbler', ctx.scrobbler);
