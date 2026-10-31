@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, CritterFrame, Head, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -18,7 +18,7 @@ const KEYS = Array.from({ length: 14 }, (_, i) => 118 + i * 11.7);
  * the highs, the beam brightens with the bass and the saucer's lights chase. Paused, the hands rest.
  */
 export function Synth({ species, still }: ActProps) {
-  const { Face, Tail } = species;
+  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ pulse: 0, glide: 0 });
 
@@ -71,17 +71,18 @@ export function Synth({ species, still }: ActProps) {
       {Tail && <Tail />}
 
       {/* black trousers and boots */}
-      <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
-      <path className="boot-black" d="M154 346 H190 V366 H146 Q 146 352 154 346 Z" />
-      <path className="boot-black" d="M210 346 H246 Q 254 352 254 366 H210 Z" />
+      <Legs species={species}>
+        <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
+        <path className="boot-black" d="M154 346 H190 V366 H146 Q 146 352 154 346 Z" />
+        <path className="boot-black" d="M210 346 H246 Q 254 352 254 366 H210 Z" />
+      </Legs>
 
-      <g data-part="body">
+      <Body species={species}>
         <path className="top" d={TORSO} />
-        <rect className="top-shade" x="176" y="240" width="48" height="16" rx="7" />
         <BodyOutfits />
-      </g>
+      </Body>
 
-      <Head face={<Face />} />
+      <Head species={species} />
 
       {/* the synth on an X stand */}
       <path className="stand" d="M160 322 L 240 372 M240 322 L 160 372" fill="none" strokeWidth="4" strokeLinecap="round" />

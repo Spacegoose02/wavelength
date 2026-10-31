@@ -24,6 +24,26 @@ export interface SpeciesInfo {
   Face: ComponentType;
   /** wagged by the rig about 268,292; omit for no tail */
   Tail?: ComponentType;
+  /**
+   * Drawn instead of the act's trousers and shoes (`Legs` in parts.tsx): the shark has a tail end and
+   * fins, not legs. It must have a `boot` part, which the country act taps on the beat.
+   */
+  Lower?: ComponentType;
+  /** body width against the usual torso (1); the aliens are slim */
+  build?: number;
+  /** fits the shared headwear and glasses to this head (`Head` in parts.tsx); omit for the usual head */
+  fit?: HeadFit;
+  /** the shadow the head casts on the top: an ellipse just under the chin, clipped to the torso */
+  shadow?: { rx: number; ry: number; cy: number };
+}
+
+export interface HeadFit {
+  /** width of hats, headphones and hoods against the usual 160-wide head */
+  w?: number;
+  /** raise (negative) or lower hats and headphones for a taller or shorter head */
+  lift?: number;
+  /** stretch glasses, shades and visors (x, y about the eyes at 200,166) to cover bigger eyes */
+  eyes?: [number, number];
 }
 
 /** Teeth along the grin, a quadratic from 164,206 through 200,232 to 236,206. */
@@ -39,8 +59,11 @@ const TEETH = [174, 184, 194, 206, 216, 226]
 function SharkFace() {
   return (
     <>
-      <path className="shark-skin" d="M174 124 Q 194 70 238 60 Q 222 92 228 126 Z" />
-      <path className="shark-dark" d="M196 90 Q 214 70 238 60 Q 226 80 224 100 Z" />
+      {/* the dorsal fin; hats and hoods hide it (styles.css) instead of having it poke out beside them */}
+      <g className="shark-fin">
+        <path className="shark-skin" d="M174 124 Q 194 70 238 60 Q 222 92 228 126 Z" />
+        <path className="shark-dark" d="M196 90 Q 214 70 238 60 Q 226 80 224 100 Z" />
+      </g>
       <ellipse className="shark-skin" cx="200" cy="178" rx="82" ry="66" />
       <path className="shark-belly" d="M122 194 Q 130 240 200 245 Q 270 240 278 194 Q 240 214 200 214 Q 160 214 122 194 Z" />
       <path className="shark-gill" d="M130 170 q -6 12 0 24 M140 166 q -6 14 0 28 M272 170 q 6 12 0 24 M262 166 q 6 14 0 28" fill="none" strokeWidth="3" strokeLinecap="round" />
@@ -57,19 +80,46 @@ function SharkFace() {
         <path d="M164 206 Q 200 232 236 206" fill="none" stroke="#1e2a36" strokeWidth="3.5" strokeLinecap="round" />
         <path d={TEETH} fill="#fff" />
       </g>
-      <ellipse data-part="yawn" cx="200" cy="222" rx="16" ry="12" fill="#5a1a24" transform="scale(1 0)" />
+      {/* singing, the grin opens into a toothy mouth instead of a plain hole */}
+      <g data-part="yawn" transform="scale(1 0)">
+        <path d="M178 210 Q 200 204 222 210 Q 226 236 200 238 Q 174 236 178 210 Z" fill="#5a1a24" />
+        <path d="M182 210 l4 7 l4 -8 l4 8 l4 -9 l4 9 l4 -8 l4 8 l4 -7 Z" fill="#fff" />
+        <path d="M186 235 l4 -6 l4 6 l4 -7 l4 7 l4 -6 l4 6 Z" fill="#fff" />
+      </g>
     </>
   );
 }
 
+/**
+ * The shark's tail end, in place of legs: the body tapers to a white-bellied point between two pelvic fins
+ * (the right one, `boot`, taps in the country act).
+ */
+function SharkLower() {
+  return (
+    <>
+      <path className="shark-skin" d="M156 290 H244 C 250 326 232 352 200 358 C 168 352 150 326 156 290 Z" />
+      <path className="shark-belly" d="M172 292 H228 C 232 324 220 344 200 350 C 180 344 168 324 172 292 Z" />
+      <path className="shark-dark" d="M170 330 C 150 336 138 352 134 366 C 152 362 168 356 182 346 Z" />
+      <path data-part="boot" className="shark-dark" d="M230 330 C 250 336 262 352 266 366 C 248 362 232 356 218 346 Z" />
+    </>
+  );
+}
+
+/** The tail fin, standing on the ground to the right and swishing about the hip (rig, 268,292). */
 function SharkTail() {
-  return <path data-part="tail" className="shark-skin" d="M262 286 Q 296 292 318 276 L 340 230 Q 346 262 336 282 Q 352 296 360 318 Q 330 304 314 306 Q 290 310 262 302 Z" />;
+  return (
+    <g data-part="tail">
+      <path className="shark-skin" d="M220 330 C 256 352 290 352 314 334 L 330 282 Q 344 316 334 340 Q 354 350 368 368 Q 340 364 318 360 C 288 372 248 366 214 350 Z" />
+      <path className="shark-dark" d="M318 336 L 330 282 Q 344 316 334 340 Z" />
+    </g>
+  );
 }
 
 /** The alien's face for `Head`: a bulb-shaped green head with big black eyes and glowing antennae, on the shared skeleton. */
 function AlienFace() {
   return (
-    <>
+    // a little narrower than the shared skeleton: aliens are slim
+    <g transform="translate(200 0) scale(0.86 1) translate(-200 0)">
       <path className="alien-dark" d="M178 110 Q 168 82 154 66 M222 110 Q 232 82 246 66" fill="none" strokeWidth="4" strokeLinecap="round" />
       <circle data-glow="" className="antenna" cx="154" cy="64" r="8" filter="url(#critter-glow)" />
       <circle data-glow="" className="antenna" cx="246" cy="64" r="8" filter="url(#critter-glow)" />
@@ -87,7 +137,7 @@ function AlienFace() {
       <circle cx="195" cy="198" r="2.2" fill="#2b4a1f" /><circle cx="205" cy="198" r="2.2" fill="#2b4a1f" />
       <path data-part="smile" d="M184 214 Q 200 226 216 214" fill="none" stroke="#2b4a1f" strokeWidth="3" strokeLinecap="round" />
       <ellipse data-part="yawn" cx="200" cy="220" rx="10" ry="10" fill="#3a1030" transform="scale(1 0)" />
-    </>
+    </g>
   );
 }
 
@@ -95,16 +145,16 @@ function AlienFace() {
 function GreyFace() {
   return (
     <>
-      <path className="grey-skin" d="M200 92 C 272 92 298 140 290 180 C 282 216 236 248 200 254 C 164 248 118 216 110 180 C 102 140 128 92 200 92 Z" />
-      <path className="grey-shade" d="M150 104 C 112 124 102 160 110 186 C 118 218 160 246 196 254 C 160 238 126 208 122 176 C 118 146 128 120 150 104 Z" />
-      <ellipse cx="248" cy="116" rx="20" ry="7" transform="rotate(28 248 116)" fill="rgb(255 255 255 / 0.55)" />
-      <circle cx="226" cy="104" r="2" fill="rgb(255 255 255 / 0.7)" /><circle cx="234" cy="102" r="1.6" fill="rgb(255 255 255 / 0.7)" />
-      <path className="grey-line" d="M126 150 Q 150 128 186 148 M274 150 Q 250 128 214 148" fill="none" strokeWidth="2" strokeLinecap="round" />
+      <path className="grey-skin" d="M200 88 C 262 88 286 132 279 170 C 272 208 234 240 200 258 C 166 240 128 208 121 170 C 114 132 138 88 200 88 Z" />
+      <path className="grey-shade" d="M152 98 C 120 118 114 148 121 172 C 128 206 164 238 196 256 C 164 232 138 204 133 172 C 129 144 136 116 152 98 Z" />
+      <ellipse cx="244" cy="112" rx="18" ry="6" transform="rotate(30 244 112)" fill="rgb(255 255 255 / 0.55)" />
+      <circle cx="224" cy="100" r="2" fill="rgb(255 255 255 / 0.7)" /><circle cx="232" cy="98" r="1.6" fill="rgb(255 255 255 / 0.7)" />
+      <path className="grey-line" d="M134 150 Q 154 132 186 148 M266 150 Q 246 132 214 148" fill="none" strokeWidth="2" strokeLinecap="round" />
       <g data-part="eyes">
-        <ellipse cx="160" cy="168" rx="34" ry="22" fill="#0b0b0d" transform="rotate(22 160 168)" />
-        <ellipse cx="240" cy="168" rx="34" ry="22" fill="#0b0b0d" transform="rotate(-22 240 168)" />
-        <ellipse cx="152" cy="160" rx="7" ry="4.5" fill="#fff" transform="rotate(-10 152 160)" />
-        <ellipse cx="246" cy="160" rx="7" ry="4" fill="#fff" transform="rotate(-25 246 160)" />
+        <ellipse cx="164" cy="168" rx="30" ry="19" fill="#0b0b0d" transform="rotate(24 164 168)" />
+        <ellipse cx="236" cy="168" rx="30" ry="19" fill="#0b0b0d" transform="rotate(-24 236 168)" />
+        <ellipse cx="157" cy="161" rx="6" ry="4" fill="#fff" transform="rotate(-10 157 161)" />
+        <ellipse cx="242" cy="161" rx="6" ry="3.6" fill="#fff" transform="rotate(-25 242 161)" />
       </g>
       <path className="grey-line" d="M194 204 h4 M202 204 h4" fill="none" strokeWidth="2.5" strokeLinecap="round" />
       <path data-part="smile" d="M188 222 Q 200 230 212 222" fill="none" className="grey-line" strokeWidth="2.5" strokeLinecap="round" />
@@ -122,7 +172,6 @@ function BearFace() {
       <circle className="bear-muzzle" cx="140" cy="122" r="12" />
       <circle className="bear-muzzle" cx="260" cy="122" r="12" />
       <ellipse className="bear-fur" cx="200" cy="178" rx="82" ry="68" />
-      <ellipse className="bear-fur-dark" cx="200" cy="226" rx="56" ry="18" />
       <ellipse className="bear-muzzle" cx="200" cy="208" rx="36" ry="27" />
       <g data-part="eyes">
         <circle cx="168" cy="166" r="7" fill="#111" />
@@ -142,9 +191,9 @@ function BearFace() {
 /** In picker order. To add a species: a face (and tail) here, an entry below, its id in `Species`, colours in styles.css. */
 export const SPECIES: SpeciesInfo[] = [
   { id: 'raccoon', noun: 'raccoon', label: 'Raccoon', Face: RaccoonFace, Tail: RaccoonTail },
-  { id: 'shark', noun: 'shark', label: 'Shark', Face: SharkFace, Tail: SharkTail },
-  { id: 'alien', noun: 'alien', label: 'Alien', Face: AlienFace },
-  { id: 'grey', noun: 'grey alien', label: 'Grey alien', Face: GreyFace },
+  { id: 'shark', noun: 'shark', label: 'Shark', Face: SharkFace, Tail: SharkTail, Lower: SharkLower },
+  { id: 'alien', noun: 'alien', label: 'Alien', Face: AlienFace, build: 0.82, fit: { w: 0.88, eyes: [0.94, 1.4] }, shadow: { rx: 58, ry: 60, cy: 190 } },
+  { id: 'grey', noun: 'grey alien', label: 'Grey alien', Face: GreyFace, build: 0.78, fit: { w: 0.94, lift: -12, eyes: [1.14, 1.5] }, shadow: { rx: 42, ry: 70, cy: 194 } },
   { id: 'bear-black', noun: 'black bear', label: 'Black bear', Face: BearFace },
   { id: 'bear-brown', noun: 'brown bear', label: 'Brown bear', Face: BearFace },
 ];

@@ -96,21 +96,29 @@ shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
      `data-part="smile"` and `data-part="yawn"` (an open mouth around y 212 to 232, starting
      `transform="scale(1 0)"`; the rig opens it to sing and yawn). Features that stick out (fins,
      antennae) go in the face too; hats are drawn over them.
-  2. Optionally a `MyTail` with `data-part="tail"`, rooted at 268,292 (the rig wags it).
-  3. Add an entry to `SPECIES` and its id to `Species` (`store/settings.ts`).
-  4. In `styles.css`, `.species-<id> { --skin: …; --skin-dark: …; }` (hands, thumbs and bare arms) and its
+  2. Optionally a `MyTail` with `data-part="tail"`, rooted at 268,292 (the rig wags it), and a `MyLower` drawn
+     instead of every act's trousers and shoes for a critter without legs (the shark's tail end). It needs a
+     `data-part="boot"`, which the country act taps.
+  3. Fit it, if it isn't the usual round head on the usual body: `build` narrows the body (the aliens are
+     0.78 to 0.82), `fit` resizes the shared hats, headphones and hoods (`w`, `lift`) and stretches glasses
+     over bigger eyes (`eyes`), and `shadow` is the ellipse the head casts under the chin. Check it in a hat,
+     shades and the nuclear hood.
+  4. Add an entry to `SPECIES` and its id to `Species` (`store/settings.ts`).
+  5. In `styles.css`, `.species-<id> { --skin: …; --skin-dark: …; --belly: …; }` (hands, thumbs, bare arms
+     and legs; `--belly` for necklines) and its
      face colours beside the others. Face colours stay fixed on every skin.
-  5. A colour variant (like the black and brown bears) is another `SPECIES` entry with the same face and
+  6. A colour variant (like the black and brown bears) is another `SPECIES` entry with the same face and
      different CSS variables on its `.species-<id>`.
-  6. Check it in every act (they all show it), and add a row to the critter table in the
+  7. Check it in every act, singing as well as still, (they all show it), and add a row to the critter table in the
      [user guide](USER-GUIDE.md#critters).
 - **An act:** copy the nearest one (`Drums.tsx`, say) to `components/critters/MyAct.tsx`, then:
   1. Take `ActProps` (`{ species, still }`) and wrap the scene in `CritterFrame` with `kind="myact"` (the
      `critter-myact` class for its colours) and `species={species.id}`.
-  2. Draw behind to front: background, `{Tail && <Tail />}`, legs, the `data-part="body"` group (`TORSO`
-     clothes, then `BodyOutfits`), `<Head face={<Face />} own={…} />` with the act's headwear as `own`
-     (`className="own-hat"`, and `data-part="adjust"` to have it set straight when paused, or `own-eyewear`
-     for glasses), then the instrument and arms (`Arm`, classes `sleeve` and `hand`, can hold a prop).
+  2. Draw behind to front: background, `{Tail && <Tail />}`, legs inside `<Legs species={species}>` (so a
+     legless critter swaps in its own), `<Body species={species}>` (`TORSO` clothes, then `BodyOutfits`; it
+     narrows for slim critters and adds the chin shadow, so don't draw your own), `<Head species={species}
+     hat={…} eyewear={…} />` with the act's headwear (`className="own-hat"`, and `data-part="adjust"` to
+     have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`Arm`, classes `sleeve` and `hand`, can hold a prop).
   3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Write
      attributes straight onto `data-part` elements; don't set React state per frame. Keep it moving with
      `a.live` false (made-up signal) and calm when `idle`. Mouths sing on their own; pass `talk: false`

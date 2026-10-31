@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, Head, CritterFrame, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig, type RigFrame } from './rig';
 
@@ -9,7 +9,7 @@ import { useCritterRig, type RigFrame } from './rig';
  * and the records spin while something plays. Paused, he adjusts his headphones now and then.
  */
 export function DJ({ species, still }: ActProps) {
-  const { Face, Tail } = species;
+  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ spin: 0, pulse: 0 });
 
@@ -46,16 +46,16 @@ export function DJ({ species, still }: ActProps) {
   return (
     <CritterFrame ref={root} kind="dj" species={species.id} label={`A ${species.noun} DJ playing records`}>
       {Tail && <Tail />}
+      <Legs species={species}>{null}</Legs>
 
-      <g data-part="body">
+      <Body species={species}>
         <path className="top" d={TORSO} />
-        <ellipse className="top-shade" cx="200" cy="248" rx="54" ry="13" />
         <path d="M190 254 L188 284 M210 254 L212 284" className="strings" strokeWidth="3" strokeLinecap="round" />
         <BodyOutfits />
-      </g>
+      </Body>
 
       <Head
-        face={<Face />}
+        species={species}
         over={
           <g data-part="adjust">
             <path d="M122 182 C 122 80, 278 80, 278 182" className="phones" fill="none" strokeWidth="9" strokeLinecap="round" />

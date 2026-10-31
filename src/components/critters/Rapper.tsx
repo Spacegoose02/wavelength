@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, Head, CritterFrame, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -9,7 +9,7 @@ import { useCritterRig } from './rig';
  * the bass. Paused, the mic and hand drop and he straightens his cap now and then.
  */
 export function Rapper({ species, still }: ActProps) {
-  const { Face, Tail } = species;
+  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ down: 1, pulse: 0 });
 
@@ -58,37 +58,38 @@ export function Rapper({ species, still }: ActProps) {
       {Tail && <Tail />}
 
       {/* baggy jeans and sneakers */}
-      <path className="legs" d="M154 296 H190 L188 352 H156 Z M210 296 H246 L244 352 H212 Z" />
-      <path className="sneaker" d="M150 348 H192 Q 196 360 190 366 H146 Q 142 354 150 348 Z" />
-      <path className="sneaker" d="M208 348 H250 Q 258 354 254 366 H210 Q 204 360 208 348 Z" />
-      <path className="sneaker-stripe" d="M156 356 L 182 352 M216 352 L 242 356" strokeWidth="3" strokeLinecap="round" />
+      <Legs species={species}>
+        <path className="legs" d="M154 296 H190 L188 352 H156 Z M210 296 H246 L244 352 H212 Z" />
+        <path className="sneaker" d="M150 348 H192 Q 196 360 190 366 H146 Q 142 354 150 348 Z" />
+        <path className="sneaker" d="M208 348 H250 Q 258 354 254 366 H210 Q 204 360 208 348 Z" />
+        <path className="sneaker-stripe" d="M156 356 L 182 352 M216 352 L 242 356" strokeWidth="3" strokeLinecap="round" />
+      </Legs>
 
-      <g data-part="body">
+      <Body species={species}>
         <path className="top" d={TORSO} />
-        <ellipse className="top-shade" cx="200" cy="248" rx="50" ry="11" />
         <path d="M156 250 Q 200 304 244 250" fill="none" className="chain" strokeWidth="5" strokeDasharray="6 3" />
         <circle cx="200" cy="284" r="13" className="medallion" />
         <text x="200" y="289.5" textAnchor="middle" fontSize="15" fontWeight="900" className="medallion-mark">W</text>
         <BodyOutfits />
-      </g>
+      </Body>
 
       <Head
-        face={<Face />}
-        own={
-          <>
-            <g data-part="adjust" className="own-hat">
-              <path className="cap" d="M140 128 Q 142 70 200 68 Q 258 70 260 128 Z" />
-              <path d="M200 70 V128 M168 76 Q 160 100 162 128 M232 76 Q 240 100 238 128" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2" />
-              <ellipse className="cap-brim" cx="262" cy="126" rx="46" ry="9" transform="rotate(14 262 126)" />
-              <circle className="cap" cx="200" cy="69" r="5" />
-              <circle className="cap-logo" cx="200" cy="104" r="9" />
-            </g>
-            <g className="own-eyewear">
-              <path d="M144 156 H192 V166 Q 192 180 176 180 H160 Q 144 180 144 166 Z M208 156 H256 V166 Q 256 180 240 180 H224 Q 208 180 208 166 Z" fill="#0b0b0d" />
-              <path d="M192 160 H208" stroke="#0b0b0d" strokeWidth="4" />
-              <path data-glow="" d="M150 162 L 160 160 M214 162 L 224 160" className="shade-glint" strokeWidth="2.5" strokeLinecap="round" />
-            </g>
-          </>
+        species={species}
+        hat={
+          <g data-part="adjust" className="own-hat">
+            <path className="cap" d="M140 128 Q 142 70 200 68 Q 258 70 260 128 Z" />
+            <path d="M200 70 V128 M168 76 Q 160 100 162 128 M232 76 Q 240 100 238 128" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2" />
+            <ellipse className="cap-brim" cx="262" cy="126" rx="46" ry="9" transform="rotate(14 262 126)" />
+            <circle className="cap" cx="200" cy="69" r="5" />
+            <circle className="cap-logo" cx="200" cy="104" r="9" />
+          </g>
+        }
+        eyewear={
+          <g className="own-eyewear">
+            <path d="M144 156 H192 V166 Q 192 180 176 180 H160 Q 144 180 144 166 Z M208 156 H256 V166 Q 256 180 240 180 H224 Q 208 180 208 166 Z" fill="#0b0b0d" />
+            <path d="M192 160 H208" stroke="#0b0b0d" strokeWidth="4" />
+            <path data-glow="" d="M150 162 L 160 160 M214 162 L 224 160" className="shade-glint" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
         }
       />
 

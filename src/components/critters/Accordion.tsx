@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, CritterFrame, Head, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -15,7 +15,7 @@ const FIREFLIES = [[40, 230], [96, 180], [300, 200], [360, 250], [70, 290], [340
  * Paused, the bellows breathe slowly and he pulls his beanie straight now and then.
  */
 export function Accordion({ species, still }: ActProps) {
-  const { Face, Tail } = species;
+  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ ph: 0 });
 
@@ -53,6 +53,8 @@ export function Accordion({ species, still }: ActProps) {
         <path key={x} className="pine" d={`M${x} ${340 - h} L ${x + w * 0.65} ${340 - h * 0.42} H ${x - w * 0.65} Z M${x} ${340 - h * 0.7} L ${x + w} 340 H ${x - w} Z`} />
       ))}
       <path className="forest-floor" d="M0 338 Q 200 326 400 338 V400 H0 Z" />
+      {/* the tail goes behind the campfire, not through it */}
+      {Tail && <Tail />}
       <path className="log" d="M300 360 L 364 346 L 368 356 L 304 370 Z M300 346 L 364 360 L 360 370 L 296 356 Z" />
       <circle data-glow="" className="fire-glow" cx="332" cy="340" r="34" />
       <g data-part="flame">
@@ -61,24 +63,24 @@ export function Accordion({ species, still }: ActProps) {
       </g>
       {FIREFLIES.map(([x, y]) => <circle key={`${x},${y}`} data-fly="" className="firefly" cx={x} cy={y} r="2.6" />)}
 
-      {Tail && <Tail />}
-
       {/* legs and big paws */}
-      <path className="bear-fur" d="M158 296 H190 V350 H158 Z M210 296 H242 V350 H210 Z" />
-      <ellipse className="bear-fur" cx="172" cy="352" rx="22" ry="10" />
-      <ellipse className="bear-fur" cx="228" cy="352" rx="22" ry="10" />
-      <path className="bear-fur-dark" d="M160 352 v 6 M170 354 v 6 M180 352 v 6 M220 352 v 6 M230 354 v 6 M240 352 v 6" stroke="rgb(0 0 0 / 0.3)" strokeWidth="2" />
+      <Legs species={species}>
+        <path className="bare" d="M158 296 H190 V350 H158 Z M210 296 H242 V350 H210 Z" />
+        <ellipse className="bare" cx="172" cy="352" rx="22" ry="10" />
+        <ellipse className="bare" cx="228" cy="352" rx="22" ry="10" />
+        <path d="M160 352 v 6 M170 354 v 6 M180 352 v 6 M220 352 v 6 M230 354 v 6 M240 352 v 6" stroke="rgb(0 0 0 / 0.3)" strokeWidth="2" />
+      </Legs>
 
-      <g data-part="body">
+      <Body species={species}>
         <path className="top" d={TORSO} />
         <path d="M122 294 H278" stroke="rgb(0 0 0 / 0.2)" strokeWidth="8" />
         <path d="M166 248 Q 200 262 234 248" fill="none" stroke="rgb(0 0 0 / 0.25)" strokeWidth="6" />
         <BodyOutfits />
-      </g>
+      </Body>
 
       <Head
-        face={<Face />}
-        own={
+        species={species}
+        hat={
           <g data-part="adjust" className="own-hat">
             <path className="beanie" d="M134 132 Q 134 72 200 70 Q 266 72 266 132 Z" />
             <path d="M160 82 V128 M180 74 V128 M200 72 V128 M220 74 V128 M240 82 V128" stroke="rgb(0 0 0 / 0.15)" strokeWidth="3" />

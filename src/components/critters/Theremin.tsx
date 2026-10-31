@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Arm, BodyOutfits, CritterFrame, Head, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -15,7 +15,7 @@ const STARS: [number, number, number][] = [
  * the bass and the stars twinkle. Paused, the hands drop and the antennae perk up now and then.
  */
 export function Theremin({ species, still }: ActProps) {
-  const { Face, Tail } = species;
+  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ pulse: 0, vol: 0, pitch: 0 });
 
@@ -75,21 +75,21 @@ export function Theremin({ species, still }: ActProps) {
       {Tail && <Tail />}
 
       {/* space-suit trousers and moon boots */}
-      <path className="legs" d="M160 296 H188 V348 H160 Z M212 296 H240 V348 H212 Z" />
-      <path className="moon-boot" d="M152 342 H192 V364 H146 Q 146 348 152 342 Z" />
-      <path className="moon-boot" d="M208 342 H248 Q 254 348 254 364 H208 Z" />
+      <Legs species={species}>
+        <path className="legs" d="M160 296 H188 V348 H160 Z M212 296 H240 V348 H212 Z" />
+        <path className="moon-boot" d="M152 342 H192 V364 H146 Q 146 348 152 342 Z" />
+        <path className="moon-boot" d="M208 342 H248 Q 254 348 254 364 H208 Z" />
+      </Legs>
 
-      <g data-part="body">
+      <Body species={species}>
         <path className="top" d={TORSO} />
         <ellipse className="suit-trim" cx="200" cy="248" rx="48" ry="9" />
         <rect x="178" y="262" width="44" height="22" rx="4" fill="#16161a" />
         {[0, 1, 2].map((i) => <circle key={i} data-glow="" className={`led led-${i}`} cx={188 + i * 12} cy="273" r="4" />)}
         <BodyOutfits />
-      </g>
+      </Body>
 
-      <Head
-        face={<Face />}
-      />
+      <Head species={species} />
 
       {/* the theremin: a cabinet on a stand, volume loop on the left, pitch antenna on the right */}
       <path className="stand" d="M200 326 V362 L 182 376 M200 362 L 218 376" fill="none" strokeWidth="4" strokeLinecap="round" />
@@ -104,7 +104,7 @@ export function Theremin({ species, still }: ActProps) {
 
       {/* volume hand over the loop (left of picture), pitch hand by the antenna (right) */}
       <Arm part="arm-l" d="M138 268 Q 114 276 112 262" hand={[112, 258]} thumb={[120, 254]} />
-      <Arm part="arm-r" d="M262 268 Q 244 262 234 248" hand={[232, 246]} thumb={[226, 252]} />
+      <Arm part="arm-r" d="M262 268 Q 256 284 242 276" hand={[240, 274]} thumb={[234, 280]} />
     </CritterFrame>
   );
 }
