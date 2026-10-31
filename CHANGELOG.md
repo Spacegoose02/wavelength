@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.5
 - **Find the clean version on Deezer.** In Downloads → Deezer, songs and albums show **E** or **C**, and the
   discography grid says **Explicit** or **Clean** under each album, so two *I Am Not A Human Being* cards with the
   same cover can be told apart. Album names show on two lines instead of being cut off. **Clean only** (search
