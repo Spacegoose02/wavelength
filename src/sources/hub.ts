@@ -205,6 +205,22 @@ export interface SharePayload {
   station?: { name: string; streamUrl: string; favicon?: string; homepage?: string; nowPlayingUrl?: string };
   artist?: string;
 }
+/** A playlist the household adds to together (hub/src/routes/household.ts). */
+export interface HouseholdPlaylist {
+  id: number;
+  name: string;
+  songs: number;
+  cover: string | null;
+  createdAt: number;
+  updatedAt: number;
+  owner: { id: number; displayName: string } | null;
+}
+export interface HouseholdEntry {
+  id: number;
+  track: SharedTrack;
+  addedAt: number;
+  addedBy: { id: number; displayName: string } | null;
+}
 /** Something the Hub tells this person about (hub/src/notify.ts), shown as a system notification. */
 export interface HubNotice {
   id: number;
@@ -596,6 +612,14 @@ export class HubClient {
   twoFactorSetup = (password: string) => this.call<{ secret: string; uri: string }>('POST', '/api/me/2fa/setup', { password });
   twoFactorEnable = (code: string) => this.call<{ recoveryCodes: string[] }>('POST', '/api/me/2fa/enable', { code });
   twoFactorOff = (password: string, otp: string) => this.call('DELETE', '/api/me/2fa', { password, otp });
+  householdPlaylists = () => this.call<{ playlists: HouseholdPlaylist[] }>('GET', '/api/household/playlists');
+  householdPlaylist = (id: number) => this.call<{ playlist: HouseholdPlaylist; tracks: HouseholdEntry[] }>('GET', `/api/household/playlists/${id}`);
+  createHouseholdPlaylist = (name: string, tracks?: SharedTrack[]) => this.call<{ playlist: HouseholdPlaylist }>('POST', '/api/household/playlists', { name, tracks });
+  renameHouseholdPlaylist = (id: number, name: string) => this.call<{ playlist: HouseholdPlaylist }>('PATCH', `/api/household/playlists/${id}`, { name });
+  deleteHouseholdPlaylist = (id: number) => this.call<{ ok: true }>('DELETE', `/api/household/playlists/${id}`);
+  addToHousehold = (id: number, tracks: SharedTrack[]) => this.call<{ added: number }>('POST', `/api/household/playlists/${id}/tracks`, { tracks });
+  removeFromHousehold = (id: number, entry: number) => this.call<{ ok: true }>('DELETE', `/api/household/playlists/${id}/tracks/${entry}`);
+  orderHousehold = (id: number, ids: number[]) => this.call<{ ok: true }>('PUT', `/api/household/playlists/${id}/order`, { ids });
   setGuardians = (kidId: number, ids: number[]) => this.call<{ user: HubAdminUser }>('PUT', `/api/admin/users/${kidId}/guardians`, { ids });
   resetTwoFactor = (userId: number) => this.call<{ user: HubAdminUser }>('DELETE', `/api/admin/users/${userId}/2fa`);
   // Scrobbling (hub/src/scrobble.ts)

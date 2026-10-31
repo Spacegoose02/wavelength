@@ -409,6 +409,24 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (kid_id, guardian_id)
   );
   CREATE INDEX guardians_guardian ON guardians(guardian_id);
+  -- Household playlists (routes/household.ts): everyone who isn't a kid adds songs to them. Songs are kept
+  -- like shares are (title, artist, ...), so each person's app finds them in their own library.
+  CREATE TABLE household_playlists (
+    id         INTEGER PRIMARY KEY,
+    name       TEXT NOT NULL,
+    owner_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE household_tracks (
+    id          INTEGER PRIMARY KEY,
+    playlist_id INTEGER NOT NULL REFERENCES household_playlists(id) ON DELETE CASCADE,
+    pos         REAL NOT NULL,
+    track       TEXT NOT NULL,
+    added_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    added_at    INTEGER NOT NULL
+  );
+  CREATE INDEX household_tracks_playlist ON household_tracks(playlist_id, pos);
   `,
 ];
 

@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- **Two-step sign-in:** turn on an authenticator app code for your Hub password (Settings → Account), with 10
+  recovery codes. Admins can reset it, and the Users tab shows which admins don't have it.
+- **Parents for kid profiles:** give a kid parents (Settings → Users) and their requests go to them too, to
+  approve in **Inbox → To approve**, along with a **weekly listening report** every Monday.
+- **Your month in music:** on the 1st, a notification with last month's minutes, songs and top artist, opening Rewind.
+- **More than one person on a device:** add everyone on a shared TV or tablet and switch between them in a tap;
+  each can ask for a PIN, and leaving a kid profile needs the grown-up PIN.
+- **Household playlists** (Playlists → Household): playlists the whole house adds to, showing who added what.
+- **Hub:** `/api/me/2fa…`, `DELETE /api/admin/users/:id/2fa`, `PUT /api/admin/users/:id/guardians`,
+  `/api/household/playlists…`; `GET /api/me` adds `twoFactor` and `kids`; notification kinds `report` and `rewind`.
 - **Smart playlists** (Playlists): rules like "Rap; Hip-Hop, rated 4+, not played in 90 days" that pick songs from
   your Navidrome library each time you play them. **Save copy** puts today's songs on your server. Synced with a Hub.
 - **Library care** (Albums → Library care): **Duplicates** lists albums your server has more than once (editions

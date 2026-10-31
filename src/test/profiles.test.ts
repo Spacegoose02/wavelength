@@ -1,4 +1,10 @@
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+// the store persists to localStorage, which the test environment doesn't have
+vi.hoisted(() => {
+  const m = new Map<string, string>();
+  globalThis.localStorage ??= { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear(), key: () => null, length: 0 } as Storage;
+});
 import { profilePinHash, STAMPS_KEY, useHub } from '../store/hub';
 import type { HubSession } from '../sources/hub';
 

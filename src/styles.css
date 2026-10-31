@@ -1728,3 +1728,8 @@ h1 .rating { width: 22px; height: 22px; font-size: 13px; vertical-align: 6px; }
 .hub-guardians > summary { list-style: none; }
 .hub-guardians > summary::-webkit-details-marker { display: none; }
 .hub-guardians-list { position: absolute; z-index: 20; right: 0; top: calc(100% + 4px); background: var(--panel); border: 1px solid var(--border, var(--panel-2)); border-radius: var(--radius); padding: 8px 12px; display: grid; gap: 6px; min-width: 160px; }
+
+/* household playlists (views/Household.tsx) */
+.source-row.as-button { width: 100%; text-align: left; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.source-row.as-button:hover { background: var(--panel-2); }
+.row-cover { width: 44px; height: 44px; border-radius: 6px; flex: none; }
