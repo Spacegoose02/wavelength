@@ -57,6 +57,7 @@ export function linkPage(o: { code: string; device?: { name: string; platform: s
        ${o.sso ? `<input type="hidden" name="code" value="${code}">` : `<input class="code" name="code" value="${code}" placeholder="XXXX-XXXX" required>`}
        <label>Username</label><input name="username" autocomplete="username" required>
        <label>Password</label><input name="password" type="password" autocomplete="current-password" required>
+       <label>Two-step code <small>(only if you turned it on)</small></label><input name="otp" inputmode="numeric" autocomplete="one-time-code">
        <div class="row"><button name="decision" value="approve">Sign in device</button></div>
      </form>`,
   );
@@ -73,6 +74,7 @@ export function ssoConnectPage(o: { who: string; code: string; error?: string })
        <input type="hidden" name="code" value="${esc(o.code)}">
        <label>Wavelength username</label><input name="username" autocomplete="username" required>
        <label>Hub password</label><input name="password" type="password" autocomplete="current-password" required>
+       <label>Two-step code <small>(only if you turned it on)</small></label><input name="otp" inputmode="numeric" autocomplete="one-time-code">
        <div class="row"><button>Link my account</button></div>
      </form>
      <p class="or">No account? Ask your admin to add you.</p>`,

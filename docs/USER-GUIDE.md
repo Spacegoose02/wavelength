@@ -704,6 +704,24 @@ After that, single sign-on is enough; your Hub password keeps working too. **Unl
 Settings → Account lists every device signed in to your profile. **Sign out** next to one (a lost phone, an old
 TV) and it's signed out at once.
 
+### Two-step sign-in
+
+Settings → Account → **Two-step sign-in** adds a code from an authenticator app (Google Authenticator, 1Password,
+Aegis…) to signing in with your Hub password. Scan the QR code, type the 6-digit code to turn it on, and keep the
+10 **recovery codes** it shows somewhere safe: each one works once in place of a code if you lose your phone.
+From then on, signing in with a password (in the app, or on `/link` in a browser) asks for the code too.
+Single sign-on through tinyauth is left to tinyauth. Turning it off takes your password and a code. An admin can
+**Reset 2-step** for someone who lost both their phone and their recovery codes, and the Users tab marks admins
+without it.
+
+### More than one person on a device
+
+A TV or a shared tablet can keep everyone signed in. Settings → Account → **People on this device → + Add
+someone** signs in another person, and their name then switches to them in a tap, with their own settings,
+playlists, requests and Inbox. **Ask for a PIN before switching to me** keeps the others out of your profile by
+accident (it's checked on this device only). Leaving a kid profile takes the grown-up PIN. **✕** signs someone
+out of this device.
+
 ### Managing people (admins)
 
 Admins get a **Users** tab:
@@ -715,6 +733,11 @@ Admins get a **Users** tab:
 - **Role**: Admin, Member or Kid. Changes apply straight away, no re-login.
 - **Autodownload** (members only): lets them download without your approval. Without it, their **Get** buttons say **Request** and you approve in the Inbox. Kids can never have it.
 - **Set password**, **SSO** (link or unlink their tinyauth username), **Turn off** (signs out all their devices), **Delete**.
+- **Parents** (on a kid's row): the grown-ups whose approval that kid's requests need, besides the admins. A
+  parent sees the kid's requests in **Inbox → To approve** and can approve or reject them (Soulseek picks and
+  clearing the list stay with admins), and gets the kid's **weekly report** each Monday: songs, minutes, days
+  and top artists. Kids without parents have their report sent to the admins.
+- **Reset 2-step**: turns off someone's two-step sign-in.
 - **Signed-in devices**: everyone's devices, with **Sign out**.
 - **Activity**: recent sign-ins and admin changes.
 
@@ -897,6 +920,20 @@ library (by title and artist, since everyone's servers and logins differ) and pl
 keeps them as a Wavelength playlist, and it tells you how many it couldn't find. A station plays straight
 away, and an artist opens a search. **✕** takes it off your list. **You shared** lists what you've sent, with
 **Unshare**.
+
+### Household playlists
+
+**Playlists → Household** holds playlists the whole house adds to ("Saturday cleaning", "Road trip"). **Start
+it** with a name and everyone (except kid profiles) is told. On one, **+ What's playing** and **+ From my
+playlist…** add songs, and **Add to household…** on any of your playlists adds all of it. Each song shows who
+added it. **Play** finds the songs in *your* library, like a share does, and lists the ones you don't have. Anyone
+can reorder; a song can be taken off by whoever added it, whoever started the playlist, or an admin, and only
+those last two can rename or delete it.
+
+### Your month in music
+
+On the 1st of each month the Hub sends everyone a short "Your October in music" notification (minutes, songs,
+most-played artist). Tap it to open **Rewind**.
 
 > **Developer notes.** Requests: `hub/src/routes/requests.ts`; sharing: `hub/src/routes/shares.ts`; the app
 > side is `src/lib/inbox.ts` (badge counts, `requestMusic`, share snapshots; cover links carrying a login are

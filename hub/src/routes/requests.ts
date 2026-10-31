@@ -7,6 +7,7 @@ import { deemixJobIds } from '../library.ts';
 import { approvers, notify, notifyRequester } from '../notify.ts';
 import { permissionsFor } from '../roles.ts';
 import { getUser } from '../users.ts';
+import { guardiansOf, isGuardian, kidsOf } from '../family.ts';
 import { hubSlskd } from '../slskd.ts';
 import { hubDeemix, hubYtSettings, isDeezerLink } from './proxy.ts';
 import { readFiles } from './slskd.ts';
@@ -152,7 +153,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     audit(db, { actorId: auth.user.id, action: 'request.created', target: `${r.artist} – ${r.title}`, detail: { link, kind }, ip: clientIp(req) });
     // Autodownload (and admins): no queue
     if (auth.permissions.includes('downloads.run')) r = await approve(r, auth.user, clientIp(req));
-    else notify(db, approvers(db, auth.user.id), 'request.new', `New request from ${auth.user.displayName}`, r.artist ? `${r.title} by ${r.artist}` : r.title);
+    else notify(db, [...approvers(db, auth.user.id), ...guardiansOf(db, auth.user.id)], 'request.new', `New request from ${auth.user.displayName}`, r.artist ? `${r.title} by ${r.artist}` : r.title);
     return { request: r };
   });
 
@@ -169,7 +170,8 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     const n = (sql: string, ...args: (string | number)[]) => (db.prepare(sql).get(...args) as { n: number }).n;
     return {
       unseen: n('SELECT COUNT(*) AS n FROM requests WHERE user_id = ? AND seen = 0', user.id),
-      pending: permissions.includes('requests.approve') ? n("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'") : 0,
+      pending: permissions.includes('requests.approve') ? n("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'")
+        : n("SELECT COUNT(*) AS n FROM requests r JOIN guardians g ON g.kid_id = r.user_id AND g.guardian_id = ? WHERE r.status = 'pending'", user.id),
     };
   });
 
@@ -189,21 +191,33 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     return { ok: true };
   });
 
-  // ---- the admin queue ----
+  // ---- the admin queue (and parents, for their own kids' requests) ----
+
+  /** Admins see every request; a parent (family.ts) only their kids'. Anyone else: 403. */
+  const queue = (req: Parameters<typeof signedIn>[0]): { auth: Auth; kids: number[] | null } => {
+    const auth = signedIn(req);
+    if (auth.permissions.includes('requests.approve')) return { auth, kids: null };
+    const kids = kidsOf(db, auth.user.id);
+    if (!kids.length) throw new HttpError(403, 'You do not have permission to do that');
+    return { auth, kids };
+  };
 
   app.get('/api/admin/requests', async (req) => {
-    need(req, 'requests.approve');
+    const { kids } = queue(req);
     const status = str(req.query, 'status', 20);
+    const mine = kids ? `r.user_id IN (${kids.map(Number).join(',')})` : '1';
     const rows = (status
-      ? db.prepare(`${SELECT} WHERE r.status = ? ORDER BY r.created_at DESC LIMIT 300`).all(status)
-      : db.prepare(`${SELECT} ORDER BY (r.status = 'pending') DESC, r.created_at DESC LIMIT 300`).all()) as unknown as Row[];
+      ? db.prepare(`${SELECT} WHERE ${mine} AND r.status = ? ORDER BY r.created_at DESC LIMIT 300`).all(status)
+      : db.prepare(`${SELECT} WHERE ${mine} ORDER BY (r.status = 'pending') DESC, r.created_at DESC LIMIT 300`).all()) as unknown as Row[];
     return { requests: rows.map(toRequest) };
   });
 
-  const decided = (id: number) => {
+  /** The request, if the caller may decide it: admins any, parents their kids'. */
+  const decide = (req: Parameters<typeof signedIn>[0], id: number): { user: Auth['user']; r: MusicRequest; parent: boolean } => {
+    const { auth, kids } = queue(req);
     const r = getRequest(db, id);
-    if (!r) throw new HttpError(404, 'No such request');
-    return r;
+    if (!r || (kids && !isGuardian(db, auth.user.id, r.userId))) throw new HttpError(404, 'No such request');
+    return { user: auth.user, r, parent: !!kids };
   };
 
   /**
@@ -211,17 +225,16 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
    * downloads a folder picked on Soulseek instead. Also retries a failed one.
    */
   app.post<{ Params: { id: string } }>('/api/admin/requests/:id/approve', async (req) => {
-    const { user } = need(req, 'requests.approve');
-    const r = decided(Number(req.params.id));
+    const { user, r, parent } = decide(req, Number(req.params.id));
     const b = (req.body ?? {}) as { bitrate?: unknown; slskd?: { username?: unknown; files?: unknown } };
-    const slskd = b.slskd ? { username: str(b.slskd, 'username', 100), files: readFiles(b.slskd.files) } : undefined;
+    // picking Soulseek files is for admins
+    const slskd = b.slskd && !parent ? { username: str(b.slskd, 'username', 100), files: readFiles(b.slskd.files) } : undefined;
     if (slskd && !slskd.username) throw new HttpError(400, 'Whose files?');
     return { request: await approve(r, user, clientIp(req), typeof b.bitrate === 'number' && [1, 3, 9].includes(b.bitrate) ? b.bitrate : undefined, slskd) };
   });
 
   app.post<{ Params: { id: string } }>('/api/admin/requests/:id/reject', async (req) => {
-    const { user } = need(req, 'requests.approve');
-    const r = decided(Number(req.params.id));
+    const { user, r } = decide(req, Number(req.params.id));
     const reason = str(req.body, 'reason', 300) || null;
     db.prepare("UPDATE requests SET status = 'rejected', reason = ?, decided_by = ?, decided_at = ?, seen = 0 WHERE id = ?").run(reason, user.id, Date.now(), r.id);
     if (r.userId !== user.id) notifyRequester(db, r.id, 'request.rejected');
@@ -231,8 +244,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
 
   /** "You already have it": nothing to download. */
   app.post<{ Params: { id: string } }>('/api/admin/requests/:id/have', async (req) => {
-    const { user } = need(req, 'requests.approve');
-    const r = decided(Number(req.params.id));
+    const { user, r } = decide(req, Number(req.params.id));
     db.prepare("UPDATE requests SET status = 'have', reason = NULL, decided_by = ?, decided_at = ?, seen = 0 WHERE id = ?").run(user.id, Date.now(), r.id);
     if (r.userId !== user.id) notifyRequester(db, r.id, 'request.have');
     audit(db, { actorId: user.id, action: 'request.have', target: `${r.artist} – ${r.title}`, detail: { for: r.username }, ip: clientIp(req) });
@@ -241,7 +253,8 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
 
   app.delete<{ Params: { id: string } }>('/api/admin/requests/:id', async (req) => {
     need(req, 'requests.approve');
-    const r = decided(Number(req.params.id));
+    const r = getRequest(db, Number(req.params.id));
+    if (!r) throw new HttpError(404, 'No such request');
     db.prepare('DELETE FROM requests WHERE id = ?').run(r.id);
     return { ok: true };
   });

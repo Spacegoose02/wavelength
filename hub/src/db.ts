@@ -392,6 +392,42 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX scrobble_queue_user ON scrobble_queue(user_id, service, id);
   `,
+  `
+  -- Two-step sign-in (totp.ts). enabled_at NULL while being set up; last_step stops a code being used twice;
+  -- recovery holds sha256 hashes of the unused recovery codes.
+  CREATE TABLE user_totp (
+    user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    secret     TEXT NOT NULL,
+    enabled_at INTEGER,
+    last_step  INTEGER NOT NULL DEFAULT 0,
+    recovery   TEXT NOT NULL DEFAULT '[]'
+  );
+  -- Parents of kid accounts (family.ts): they approve the kid's requests and get the kid's weekly report.
+  CREATE TABLE guardians (
+    kid_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    guardian_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (kid_id, guardian_id)
+  );
+  CREATE INDEX guardians_guardian ON guardians(guardian_id);
+  -- Household playlists (routes/household.ts): everyone who isn't a kid adds songs to them. Songs are kept
+  -- like shares are (title, artist, ...), so each person's app finds them in their own library.
+  CREATE TABLE household_playlists (
+    id         INTEGER PRIMARY KEY,
+    name       TEXT NOT NULL,
+    owner_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE household_tracks (
+    id          INTEGER PRIMARY KEY,
+    playlist_id INTEGER NOT NULL REFERENCES household_playlists(id) ON DELETE CASCADE,
+    pos         REAL NOT NULL,
+    track       TEXT NOT NULL,
+    added_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    added_at    INTEGER NOT NULL
+  );
+  CREATE INDEX household_tracks_playlist ON household_tracks(playlist_id, pos);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

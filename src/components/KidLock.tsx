@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { checkPin, unlockKidTime, useKidTime } from '../lib/kidTime';
 import { useIsKid } from '../lib/kids';
 import { useHub } from '../store/hub';
+import { ProfileSwitcher } from './ProfileSwitcher';
 
 /** Ask for the grown-up PIN. `check` throws with the Hub's message when the PIN is wrong. */
 export function PinDialog({ title, note, check, onDone, onCancel }: { title: string; note?: string; check(pin: string): Promise<void>; onDone(): void; onCancel(): void }) {
@@ -72,6 +73,7 @@ export function KidSettings() {
   const rules = useKidTime((s) => s.rules);
   const pinSet = useKidTime((s) => s.pinSet);
   const [asking, setAsking] = useState(false);
+  const hasProfiles = useHub((s) => s.profiles.length > 0);
   if (!isKid) return null;
   return (
     <div className="page">
@@ -80,6 +82,7 @@ export function KidSettings() {
         <p>You've listened for <b>{Math.round(used / 60)} minutes</b> today{rules?.dailyMinutes ? ` out of ${rules.dailyMinutes}` : ''}.</p>
         {rules?.bedtimeFrom && <p>Bedtime is <b>{rules.bedtimeFrom}</b> to <b>{rules.bedtimeTo}</b>.</p>}
       </section>
+      {hasProfiles && <section><ProfileSwitcher /></section>}
       <section>
         <h2>Switch profile</h2>
         <p className="muted small">{pinSet ? 'A grown-up types the PIN to sign out of this kid profile.' : 'Ask a grown-up to set a PIN under Settings → Users before this profile can be signed out.'}</p>

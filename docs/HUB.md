@@ -193,6 +193,13 @@ Admins can also set or clear anyone's tinyauth username in Settings → Users.
 **Direct password sign-in**: the app can also send a Hub username and password straight to
 `POST /auth/login`, handy for kids' accounts.
 
+**Two-step sign-in** (`hub/src/totp.ts`): anyone with a Hub password can add an authenticator app (RFC 6238
+TOTP: SHA-1, 6 digits, 30 s, one step of clock drift either way). Once it's on, every password sign-in
+(`/auth/login`, the `/link` page, `/auth/sso/connect`) also needs `otp`: the current code, or one of 10
+single-use recovery codes. A password that's right without a code answers `401 { twoFactor: true }`. A code
+can't be used twice. The secret is sealed with the Hub's secret key, recovery codes are kept as SHA-256 hashes.
+Sign-in through tinyauth is tinyauth's to protect.
+
 Every device has its own token. Tokens are stored hashed on the Hub, so a database leak doesn't leak
 working tokens. Signing a device out (from the device, from your profile, or by an admin) revokes just
 that token; disabling a user signs out all their devices at once.
@@ -450,7 +457,19 @@ with a 4xx status.
 | `POST /auth/device` | anyone | `{ deviceName?, platform? }` → `{ deviceCode, userCode, verificationUrl, verificationUrlComplete, expiresIn, interval }` |
 | `POST /auth/device/token` | the pairing device | `{ deviceCode }` → `202 {status:'pending'}`, `403 denied`, `410 expired`, or `200` session |
 | `POST /auth/logout` | signed in | signs this device out |
-| `GET /api/me` | signed in | `{ user, device, permissions }` |
+| `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids }` (`kids`: the kids this person is a parent of) |
+| `GET /api/me/2fa` | signed in | `{ enabled, recoveryLeft }` |
+| `POST /api/me/2fa/setup` | signed in, Hub-password users | `{ password }` → `{ secret, uri }` (`otpauth://`, for a QR code) |
+| `POST /api/me/2fa/enable` | signed in | `{ code }` → `{ recovery: [10 codes] }`, shown once |
+| `DELETE /api/me/2fa` | signed in | `{ password, otp }` turns it off |
+| `DELETE /api/admin/users/:id/2fa` | `users.manage` | turn off someone's two-step sign-in |
+| `PUT /api/admin/users/:id/guardians` | `users.manage` | `{ ids }`: a kid's parents (grown-up accounts) |
+| `GET /api/household/playlists`, `POST …` | signed in, not kids | household playlists / start one `{ name, tracks? }` (everyone else is notified, kind `share`) |
+| `GET /api/household/playlists/:id` | signed in, not kids | `{ playlist, tracks: [{ id, track: { title, artist, album?, duration?, coverUrl? }, addedBy, addedAt }] }` |
+| `PATCH …/:id`, `DELETE …/:id` | its owner or `users.manage` | `{ name }` / delete it |
+| `POST …/:id/tracks` | signed in, not kids | `{ tracks }` (up to 500 at a time, 2000 in all) → `{ added }` |
+| `DELETE …/:id/tracks/:entry` | whoever added it, the owner, or `users.manage` | take a song off |
+| `PUT …/:id/order` | signed in, not kids | `{ ids }`: entries in their new order; ones not listed follow |
 | `PATCH /api/me` | signed in | `{ displayName }` |
 | `PUT /api/me/password` | signed in, Hub-password users | `{ currentPassword, newPassword }` |
 | `GET /api/me/devices`, `DELETE /api/me/devices/:id` | signed in | your devices |
@@ -560,6 +579,15 @@ with a 4xx status.
 | `PUT /api/admin/kids/:userId` | `users.manage` | `{ bedtimeFrom?, bedtimeTo?, dailyMinutes? }` ('HH:MM' device time; null clears) |
 | `PUT /api/admin/kid-pin` | `users.manage` | `{ pin }` (4 to 8 digits, stored hashed) or `{ pin: null }` |
 | `GET /api/admin/audit?limit=&before=` | `audit.view` | newest first |
+
+**Parents** (`hub/src/family.ts`): a kid's requests notify the admins and the kid's parents. `GET
+/api/admin/requests` and the approve / reject / already-have routes also answer a parent, for their own kids'
+requests only (another request is a 404); picking Soulseek files and `DELETE` stay with `requests.approve`.
+
+**Digests** (`hub/src/digests.ts`) run hourly: on Monday from 08:00 UTC each kid's last week (songs, minutes,
+days, top artists) goes to their parents, or the admins when they have none (kind `report`); on the 1st everyone
+who listened gets last month's summary (kind `rewind`). The first run only notes the date, so a new Hub doesn't
+report a week it wasn't watching.
 
 A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`,
 `/auth/sso/connect` (the last two sit behind tinyauth).

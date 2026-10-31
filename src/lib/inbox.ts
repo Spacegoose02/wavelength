@@ -94,7 +94,7 @@ export function publicCover(url?: string): string | undefined {
   }
 }
 
-const sharedTrack = (t: Track): SharedTrack => ({ title: t.title, artist: t.artist, album: t.album, duration: t.duration, coverUrl: publicCover(t.coverUrl) });
+export const sharedTrack = (t: Track): SharedTrack => ({ title: t.title, artist: t.artist, album: t.album, duration: t.duration, coverUrl: publicCover(t.coverUrl) });
 
 /** What to share, built when the person presses Share (so a long list isn't copied on every render). */
 export type ShareWhat = Omit<HubShareInput, 'to' | 'note'>;
