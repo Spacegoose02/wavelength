@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.17.7
 - **A shark and an alien join the raccoons** in Now Playing. The **drummer shark** plays a drum kit on the sea
   floor: snare on the beat, cymbal crashes on sharp hits, a thumping kick, bubbles that rise faster with the
   bass. The **theremin alien** plays a theremin on the moon under a hovering UFO: its hands follow the bass
