@@ -7,6 +7,7 @@ import { usePlayer } from '../store/player';
 import { enabledSources } from '../store/settings';
 import { albumNotForKids, isKid, trackNotForKids } from './kids';
 import { findInLibrary, pool, primaryArtist } from './match';
+import { myPlaylists, playlistTracks } from './myPlaylists';
 
 /**
  * The AI DJ in the app (docs/AI-DJ.md). The chat itself runs on the Hub, which keeps the API key and pays the
@@ -20,12 +21,14 @@ import { findInLibrary, pool, primaryArtist } from './match';
 interface Refs {
   tracks: Map<string, Track>;
   albums: Map<string, Album>;
+  /** p… → the playlist's key (lib/myPlaylists.ts). */
+  playlists: Map<string, string>;
   n: number;
 }
 const refsByChat = new Map<number, Refs>();
 const refsFor = (chatId: number): Refs => {
   let r = refsByChat.get(chatId);
-  if (!r) refsByChat.set(chatId, (r = { tracks: new Map(), albums: new Map(), n: 0 }));
+  if (!r) refsByChat.set(chatId, (r = { tracks: new Map(), albums: new Map(), playlists: new Map(), n: 0 }));
   return r;
 };
 
@@ -140,6 +143,23 @@ export async function runAppTool(chatId: number, call: HubDjCall): Promise<{ con
       lastPlaylist.set(chatId, id);
       return out({ ok: true, name, songs: tracks.length, ...(unknown.length && { unknownRefs: unknown }) });
     }
+    case 'list_playlists': {
+      const list = await myPlaylists();
+      const refOf = (key: string) => {
+        for (const [k, v] of r.playlists) if (v === key) return k;
+        const k = `p${++r.n}`;
+        r.playlists.set(k, key);
+        return k;
+      };
+      return out({ playlists: list.map((p) => ({ ref: refOf(p.key), name: p.name, ...(p.songs !== undefined && { songs: p.songs }), on: p.where })) });
+    }
+    case 'playlist_songs': {
+      const key = r.playlists.get(text(input.playlist, 20));
+      if (!key) return { content: 'Unknown playlist ref. Call list_playlists first.', isError: true };
+      const limit = Math.min(Math.max(Number(input.limit) || 100, 1), 300);
+      const all = kidTracks((await playlistTracks(key)).filter((t) => t.kind === 'track'));
+      return out({ total: all.length, songs: all.slice(0, limit).map((t) => songOut(r, t)) });
+    }
   }
   return { content: `This app doesn’t know the tool ${call.name}. It may need updating.`, isError: true };
 }
@@ -180,6 +200,8 @@ const LABELS: Record<string, string> = {
   now_playing: 'Checking what’s playing',
   play: 'Queueing it up',
   save_playlist: 'Saving the playlist',
+  list_playlists: 'Looking at your playlists',
+  playlist_songs: 'Reading your playlist',
   listening_stats: 'Looking at what you play',
   deezer_search: 'Searching Deezer',
   artist_discography: 'Checking the discography',

@@ -104,12 +104,56 @@ export async function say(text: string, audio?: Promise<Blob | null> | null): Pr
   return sayOnDevice(text);
 }
 
-/** Play the Hub's MP3 over the ducked music. */
-function play(blob: Blob): Promise<void> {
+/** How loud the DJ is next to the music (Settings → Playback → Talking DJ): 1 = as loud as the music. */
+const loudness = () => Math.max(0.5, Math.min(2.5, useSettings.getState().djVoice.loudness ?? 1.6));
+/** The music's level while the DJ talks: lower when the DJ is set louder. */
+const duckLevel = () => Math.max(0.08, Math.min(0.4, 0.3 / loudness()));
+
+let audioCtx: AudioContext | null = null;
+
+/**
+ * Play the Hub's MP3 over the ducked music, through Web Audio so it can be louder than the music's own volume
+ * (an <audio> element stops at 100%), with a compressor so a boost doesn't clip.
+ */
+async function play(blob: Blob): Promise<void> {
+  const gain = loudness() * Math.max(0.05, usePlayer.getState().volume ?? 1);
+  try {
+    audioCtx ??= new AudioContext();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    const buf = await audioCtx.decodeAudioData(await blob.arrayBuffer());
+    const ctx = audioCtx;
+    return await new Promise<void>((resolve) => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -12;
+      comp.ratio.value = 6;
+      src.connect(g).connect(comp).connect(ctx.destination);
+      let done = false;
+      const end = () => {
+        if (done) return;
+        done = true;
+        engine.duck(1, 1.2);
+        resolve();
+      };
+      src.onended = end;
+      engine.duck(duckLevel(), 0.6);
+      src.start();
+      setTimeout(end, (buf.duration + 5) * 1000);
+    });
+  } catch {
+    return playElement(blob, Math.min(1, gain));
+  }
+}
+
+/** Without Web Audio: a plain <audio> element, at most at full volume. */
+function playElement(blob: Blob, volume: number): Promise<void> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(blob);
     const a = new Audio(url);
-    a.volume = Math.max(0, Math.min(1, usePlayer.getState().volume ?? 1));
+    a.volume = Math.max(0, volume);
     let done = false;
     const end = () => {
       if (done) return;
@@ -120,7 +164,7 @@ function play(blob: Blob): Promise<void> {
     };
     a.onended = end;
     a.onerror = end;
-    engine.duck(0.25, 0.6);
+    engine.duck(duckLevel(), 0.6);
     a.play().catch(end);
     // a stuck element mustn't keep the music down
     setTimeout(end, 30_000);
@@ -145,7 +189,8 @@ function sayOnDevice(text: string): Promise<void> {
     };
     u.onend = end;
     u.onerror = end;
-    engine.duck(0.25, 0.6);
+    u.volume = 1;
+    engine.duck(duckLevel(), 0.6);
     speechSynthesis.speak(u);
     // some engines never fire onend; give up after a generous guess at the length
     setTimeout(end, 4000 + text.length * 120);

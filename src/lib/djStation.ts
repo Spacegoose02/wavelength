@@ -9,6 +9,7 @@ import { say, stationTalks } from './djVoice';
 import { kidSafe } from './kids';
 import { findInLibrary, pool } from './match';
 import { findSong } from './mixes';
+import { playlistTracks } from './myPlaylists';
 
 /**
  * DJ mode (docs/AI-DJ.md "DJ mode"): a station DJ Trash Panda runs for you. The Hub picks each segment (your
@@ -17,7 +18,7 @@ import { findSong } from './mixes';
  * (lib/djVoice.ts) and asks for the next segment as the last songs play. Playing something else stops it.
  */
 
-export const SEGMENT_LABELS: Record<Exclude<HubStationKind, 'ask'>, string> = {
+export const SEGMENT_LABELS: Record<Exclude<HubStationKind, 'ask' | 'playlist'>, string> = {
   favourites: 'Your favourites',
   discover: 'New for you',
   throwbacks: 'Throwbacks',
@@ -39,10 +40,12 @@ interface StationState {
   open: boolean;
   /** Read the intros aloud (kept). */
   talk: boolean;
+  /** The panel is open to choose what to play; nothing plays until a choice. */
+  picking: boolean;
 }
 
 export const useStation = create<StationState>()(
-  persist(() => ({ on: false, kind: null, title: '', intro: '', busy: false, error: '', open: true, talk: true }) as StationState, {
+  persist(() => ({ on: false, kind: null, title: '', intro: '', busy: false, error: '', open: true, talk: true, picking: false }) as StationState, {
     name: 'tonearm.djStation',
     partialize: (s) => ({ talk: s.talk }),
   }),
@@ -55,6 +58,8 @@ const ours = new Set<string>();
 const upcoming = new Map<string, HubStationSegment>();
 /** Recently played (title + artist), so segments don't repeat songs. */
 let recent: { title: string; artist: string }[] = [];
+/** The playlist the station is built on, when started from one: every segment builds on it until you pick another. */
+let anchor: { name: string; songs: { title: string; artist: string }[] } | null = null;
 let topping = false;
 let lastTry = 0;
 
@@ -65,6 +70,7 @@ async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?:
   const seg = await hub.djStation({
     ...(o.kind && { kind: o.kind }),
     ...(o.ask && { ask: o.ask }),
+    ...(!o.ask && !o.kind && anchor && { playlist: anchor }),
     ...(o.previous && o.previous !== 'ask' && { previous: o.previous }),
     recent: recent.slice(-150),
     name: v.name || undefined,
@@ -85,12 +91,22 @@ async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?:
 
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
 
-/** Start DJ mode, or jump to a segment / your request now. */
-export async function startStation(o: { kind?: HubStationKind; ask?: string } = {}) {
+/** Open the panel to pick what DJ mode plays first (the raccoon button). Nothing plays yet. */
+export function pickStation() {
+  useStation.setState({ picking: true, open: true, error: '' });
+}
+
+/** Start DJ mode, or jump to a segment / your request / one of your playlists (`playlist`: lib/myPlaylists.ts key). */
+export async function startStation(o: { kind?: HubStationKind; ask?: string; playlist?: { key: string; name: string } } = {}) {
   const st = useStation.getState();
   if (st.busy) return;
   useStation.setState({ busy: true, error: '', open: true });
   try {
+    if (o.playlist) {
+      const songs = (await playlistTracks(o.playlist.key)).filter((t) => t.kind === 'track' && t.title).map((t) => ({ title: t.title, artist: t.artist }));
+      if (!songs.length) throw new Error('That playlist is empty');
+      anchor = { name: o.playlist.name, songs: songs.slice(0, 300) };
+    } else if (o.kind || o.ask || !st.on) anchor = null;
     let { seg, tracks } = await fetchSegment({ ...o, previous: st.on ? st.kind : null });
     // a segment none of whose songs are here: try the next one (not for requests, which say so)
     for (let i = 0; !tracks.length && !o.ask && i < 3; i++) ({ seg, tracks } = await fetchSegment({ previous: seg.kind }));
@@ -100,7 +116,7 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string } = 
     lastTry = 0;
     tracks.forEach((t) => ours.add(keyOf(t)));
     stationTalks.add(keyOf(tracks[0]));
-    useStation.setState({ on: true, kind: seg.kind, title: seg.title, intro: seg.intro ?? '', busy: false });
+    useStation.setState({ on: true, picking: false, kind: seg.kind, title: seg.title, intro: seg.intro ?? '', busy: false });
     usePlayer.getState().playTracks(tracks);
     if (seg.intro && useStation.getState().talk) void say(seg.intro);
   } catch (e) {
@@ -109,9 +125,10 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string } = 
 }
 
 export function stopStation() {
+  anchor = null;
   ours.clear();
   upcoming.clear();
-  useStation.setState({ on: false, busy: false, kind: null, title: '', intro: '', error: '' });
+  useStation.setState({ on: false, picking: false, busy: false, kind: null, title: '', intro: '', error: '' });
 }
 
 /** Queue the next segment when the last songs of this one are playing. */
