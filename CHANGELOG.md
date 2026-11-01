@@ -9,7 +9,6 @@
   switch, off); the cap on searches per step is under **Settings → AI DJ → Web**. Searches ($10 per 1,000 at Anthropic) count toward everyone's limits.
 - **Meet DJ Trash Panda.** The AI DJ is now a rave raccoon in headphones and shades, next to each reply and bopping
   while he works.
-
 - **iPhone and iPad app (TestFlight).** The app builds for iOS, with background audio, the iOS keychain and
   local-network access. Releases build it and send it to TestFlight once the Apple secrets are added
   (docs/IOS.md).
