@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from '../components/common';
 import { forgetTagValues, TagLists } from '../components/TagLists';
-import { renameArtist } from '../lib/merge';
+import { renameArtist, splitCredit, splitCreditOptions } from '../lib/merge';
 import { sourceFor } from '../sources/registry';
 import type { HubTags, HubTagSong } from '../sources/hub';
 import type { Artist } from '../sources/types';
@@ -25,7 +25,9 @@ export function ArtistTagEditor({ artist }: { artist: Artist }) {
   const [songs, setSongs] = useState<Song[]>();
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [from, setFrom] = useState(artist.name);
-  const [to, setTo] = useState(artist.name);
+  // a credit joined with ";" ("Lil Baby;Jeremih") starts out as just its first artist
+  const split = splitCredit(artist.name);
+  const [to, setTo] = useState(split?.[0] ?? artist.name);
   const [genre, setGenre] = useState('');
   const [credits, setCredits] = useState(true);
   const [skip, setSkip] = useState<Set<string>>(new Set());
@@ -37,8 +39,11 @@ export function ArtistTagEditor({ artist }: { artist: Artist }) {
     try {
       const refs = (artist.refs ?? [artist]).filter((r) => sources.find((s) => s.id === r.sourceId)?.kind === 'navidrome');
       const albums = (await Promise.all(refs.map(async (r) => {
-        const cfg = sources.find((s) => s.id === r.sourceId)!;
-        return (await sourceFor(cfg).getArtistAlbums?.(r.id)) ?? [];
+        const src = sourceFor(sources.find((s) => s.id === r.sourceId)!);
+        const own = (await src.getArtistAlbums?.(r.id)) ?? [];
+        // only a track artist (often a joined credit like "Lil Baby;Jeremih", or someone only ever featured): Navidrome
+        // lists no albums of theirs, so take the albums their songs are on
+        return own.length ? own : ((await src.getAppearsOn?.({ id: r.id, name: artist.name }).catch(() => [])) ?? []);
       }))).flat();
       if (!albums.length) throw new Error('Navidrome has no albums for this artist');
       setTitles(Object.fromEntries(albums.map((a) => [a.id, a.title])));
@@ -103,7 +108,7 @@ export function ArtistTagEditor({ artist }: { artist: Artist }) {
       const r = await c.undoTags(lastBatch);
       setLastBatch(null);
       setFrom(artist.name);
-      setTo(artist.name);
+      setTo(split?.[0] ?? artist.name);
       setMsg(`Put ${r.undone} file${r.undone === 1 ? '' : 's'} back as they were`);
       await load();
     } catch (e) {
@@ -135,6 +140,14 @@ export function ArtistTagEditor({ artist }: { artist: Artist }) {
               <label>Change to<input list="tag-artists" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Leave as is" /></label>
               <label>Genre for their songs<input list="tag-genres" value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="Leave as is" /></label>
             </div>
+            {split && from.trim() === artist.name && (
+              <div className="row gap wrap">
+                <small className="muted">“{artist.name}” is {split.length} artists in one credit. Change it to:</small>
+                {splitCreditOptions(split).map((o) => (
+                  <button key={o} className={`btn small ${to.trim() === o ? 'primary' : 'ghost'}`} onClick={() => setTo(o)}>{o}</button>
+                ))}
+              </div>
+            )}
             <label className="check">
               <input type="checkbox" checked={credits} onChange={(e) => setCredits(e.target.checked)} />
               <small>Also where they’re credited with others (“{from || 'Artist'} feat. …”, “… & {from || 'Artist'}”)</small>

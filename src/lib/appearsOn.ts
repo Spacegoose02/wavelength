@@ -36,6 +36,8 @@ export function isCredited(song: CreditedSong, artist: { ids: Set<string>; name:
   const name = norm(artist.name);
   if (!name) return false;
   if (song.artists?.some((a) => (a.id && artist.ids.has(a.id)) || norm(a.name) === name)) return true;
+  // the whole line too: a credit joined with ";" ("Lil Baby;Jeremih") is one artist on the server but splits here
+  if (norm(song.artist) === name) return true;
   return creditsOf(song.artist, song.title).some((c) => norm(c) === name);
 }
 
