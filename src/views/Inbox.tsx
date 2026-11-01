@@ -15,12 +15,14 @@ import { Cover, Empty, Spinner, timeAgo } from '../components/common';
 import { IconPlay, IconX } from '../components/Icons';
 import { useCleanOffers } from '../lib/cleanVersions';
 import { CleanVersions } from './CleanVersions';
+import { useTabStrip } from '../components/TabStrip';
 
 export type InboxTab = 'shared' | 'requests' | 'approve' | 'sent' | 'clean';
 type Tab = InboxTab;
 
 /** Everything the household sends you: things shared with you, answers to your requests, and (admins) requests to approve. */
 export function Inbox({ tab: start }: { tab?: InboxTab } = {}) {
+  const tabsRef = useTabStrip();
   const signedIn = useHub((s) => !!s.token);
   // parents decide their own kids' requests (hub/src/family.ts)
   const approver = useHub((s) => s.permissions.includes('requests.approve') || s.kids.length > 0);
@@ -35,7 +37,7 @@ export function Inbox({ tab: start }: { tab?: InboxTab } = {}) {
   return (
     <div className="page">
       <header className="page-head"><h1>Inbox</h1></header>
-      <div className="tabs">
+      <div className="tabs" ref={tabsRef}>
         <button className={tab === 'shared' ? 'on' : ''} onClick={() => setTab('shared')}>Shared with you {counts.shared > 0 && <span className="badge">{counts.shared}</span>}</button>
         <button className={tab === 'requests' ? 'on' : ''} onClick={() => setTab('requests')}>My requests {counts.decided > 0 && <span className="badge">{counts.decided}</span>}</button>
         {approver && <button className={tab === 'approve' ? 'on' : ''} onClick={() => setTab('approve')}>To approve {counts.pending > 0 && <span className="badge">{counts.pending}</span>}</button>}

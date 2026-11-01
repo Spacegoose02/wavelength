@@ -10,10 +10,12 @@ import { Cover, Empty, Spinner, fmtTime } from '../components/common';
 import { IconHeart, IconPause, IconPlay } from '../components/Icons';
 import { QueueSearch, SwControl, SwSchedule, SwShows, SwStats } from './SubWaveAdmin';
 import { SwList, usePoll } from './subwaveShared';
+import { useTabStrip } from '../components/TabStrip';
 
 type Tab = 'air' | 'control' | 'schedule' | 'shows' | 'stats';
 
 export function SubWave({ sourceId }: { sourceId?: string }) {
+  const tabsRef = useTabStrip();
   const sources = useSettings(useShallow((s) => s.sources.filter((x) => x.kind === 'subwave' && x.enabled)));
   const cfg = sources.find((s) => s.id === sourceId) ?? sources[0];
   const [tab, setTab] = useState<Tab>('air');
@@ -38,7 +40,7 @@ export function SubWave({ sourceId }: { sourceId?: string }) {
 
   return (
     <div className="page sw">
-      <div className="tabs">
+      <div className="tabs" ref={tabsRef}>
         {tabs.map(([k, label, admin]) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
             {label}{admin && <small>admin</small>}

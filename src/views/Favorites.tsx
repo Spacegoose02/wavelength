@@ -12,10 +12,12 @@ import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfTracks } from '../lib/inbox';
 import { useHub } from '../store/hub';
+import { useTabStrip } from '../components/TabStrip';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
 export function Favorites() {
+  const tabsRef = useTabStrip();
   // Only Navidrome stars: SUB/WAVE likes are mirrored there, and SUB/WAVE has no getFavorites of its own.
   const sources = useSettings(useShallow((s) => s.sources.filter((x) => x.enabled && x.kind === 'navidrome')));
   const [tab, setTab] = useState(sources[0]?.id);
@@ -26,7 +28,7 @@ export function Favorites() {
     <div className="page">
       <header className="page-head"><h1>Favorites</h1></header>
       {sources.length > 1 && (
-        <div className="tabs">
+        <div className="tabs" ref={tabsRef}>
           {sources.map((s) => (
             <button key={s.id} className={cfg.id === s.id ? 'on' : ''} onClick={() => setTab(s.id)}>
               <i className="dot" style={{ background: SOURCE_COLORS[s.kind] }} /> {s.name}

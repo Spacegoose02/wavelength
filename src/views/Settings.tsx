@@ -25,6 +25,7 @@ import { HifiSettings } from '../components/HifiSettings';
 import { UpdatesTab } from '../components/Updates';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
+import { useTabStrip } from '../components/TabStrip';
 
 /** Settings → Discover charts: tick which charts feed each genre's tabs and Mix. */
 function DiscoverCharts() {
@@ -682,6 +683,7 @@ function VersionsPicker() {
 }
 
 export function Settings({ tab: initial }: { tab?: SettingsTab }) {
+  const tabsRef = useTabStrip();
   const [tab, setTab] = useState<SettingsTab>(initial ?? 'sources');
   // Users is for Hub admins only (the Hub refuses its calls from anyone else anyway)
   const isAdmin = useHub((s) => !!s.token && s.permissions.includes('users.manage'));
@@ -693,7 +695,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   return (
     <div className="page narrow">
       <header className="page-head"><h1>Settings</h1></header>
-      <div className="tabs" role="tablist">
+      <div className="tabs" ref={tabsRef} role="tablist">
         {tabs.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
