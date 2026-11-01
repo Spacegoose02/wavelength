@@ -148,6 +148,8 @@ object MediaBridge {
     }
   }
 
+  private var multicastLock: android.net.wifi.WifiManager.MulticastLock? = null
+
   private class Js(private val ctx: Context) {
     @JavascriptInterface
     fun update(json: String) {
@@ -171,6 +173,23 @@ object MediaBridge {
         true
       } catch (e: Exception) {
         false
+      }
+    }
+
+    /**
+     * Cast: Android drops multicast packets unless an app holds a MulticastLock, so speaker discovery
+     * (src-tauri/src/cast.rs) takes one while it looks, and lets it go after.
+     */
+    @JavascriptInterface
+    fun multicast(on: Boolean) {
+      try {
+        val wifi = ctx.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+        if (on) {
+          if (multicastLock == null) multicastLock = wifi.createMulticastLock("wavelength-cast").apply { setReferenceCounted(false) }
+          multicastLock?.acquire()
+        } else multicastLock?.release()
+      } catch (e: Exception) {
+        // no Wi-Fi service: discovery just finds less
       }
     }
 

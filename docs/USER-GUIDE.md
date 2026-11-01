@@ -823,6 +823,19 @@ for kids are left out.
 > YouTube goes through the Hub's `POST /api/import/youtube`; Spotify's embed page and Deezer's API go through
 > `/api/fetch` in a browser.
 
+## Cast to a speaker
+
+The speaker button next to **Devices** (player bar and Now Playing) finds Chromecasts, Google and Nest
+speakers, TVs with Chromecast built in, and DLNA/UPnP speakers and receivers on the same Wi-Fi. Pick one and
+what's playing moves there, at the same spot. The queue, skipping, seeking, volume and scrobbling all keep
+working from Wavelength; the speaker just does the playing. **Play on this device instead** brings it back.
+
+- Works in the desktop and Android apps (a web browser can't look for speakers).
+- The speaker fetches songs from your server itself, so the server address must be one the speaker can reach
+  (not `localhost`). Songs you downloaded play from the server while casting.
+- Visualizers and the critters' singing don't follow the sound while it's on a speaker.
+- A Hub admin can turn casting off in **Settings → Features**.
+
 ## Control your other devices
 
 Signed in to a Hub, the **Devices** button in the player (and on Now Playing) lists your other devices that

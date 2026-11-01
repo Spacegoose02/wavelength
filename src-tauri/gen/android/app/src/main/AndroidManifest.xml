@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- keep the CPU and Wi-Fi awake while streaming with the screen off (MediaPlaybackService) -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Cast: find Chromecasts (mDNS) and DLNA speakers (SSDP) on the Wi-Fi, which needs multicast -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- in-app updates: hand the downloaded APK to the system installer (user still confirms) -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

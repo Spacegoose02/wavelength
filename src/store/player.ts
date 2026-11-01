@@ -238,7 +238,16 @@ function begin(t: Track, startAt: number) {
   watchNowPlaying(t);
   applyLevel(t);
   aheadFor = undefined;
+  engine.setMeta({ title: t.title, artist: t.artist, album: t.album, cover: t.coverUrl, duration: t.duration });
   return ++loadSeq;
+}
+
+/** Load the current song again at `startAt` (casting moved playback to a speaker or back here). */
+export function reloadCurrent(startAt: number, play: boolean) {
+  ahead = undefined;
+  void loadCurrent(startAt).then(() => {
+    if (!play) engine.pause();
+  });
 }
 
 async function loadCurrent(startAt = 0) {
@@ -256,8 +265,8 @@ async function loadCurrent(startAt = 0) {
       return;
     }
     ahead = undefined;
-    // Downloaded on this device? Play the local file — no server, works offline.
-    const local = await offlinePlaybackUrl(t);
+    // Downloaded on this device? Play the local file — no server, works offline. (Not to a speaker: it can't reach it.)
+    const local = engine.isRemote() ? undefined : await offlinePlaybackUrl(t);
     if (token !== loadSeq) {
       if (local?.startsWith('blob:')) URL.revokeObjectURL(local);
       return;

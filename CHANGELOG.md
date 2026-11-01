@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Cast to speakers.** A new speaker button finds Chromecasts, Google/Nest speakers and DLNA/UPnP renderers on
+  your Wi-Fi and moves playback there, with the queue, seeking, volume and scrobbling still run from Wavelength.
+  Desktop and Android.
 - **Tune the critters' mouths.** A **Tune mouth** button beside the critter (and **Settings → Playback → Critter
   mouths**, with a live critter) opens a tuner with a live graph of what the voice detector hears against what
   the mouth does. Sliders for sensitivity, how centred the voice must be, noise rejection, the voice range, drum

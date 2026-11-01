@@ -46,6 +46,30 @@ let fading: HTMLAudioElement | undefined;
 let pendingPreload: string | undefined;
 const listeners = new Map<string, Listener[]>();
 
+/**
+ * Casting (lib/cast.ts): while a speaker plays, songs, play/pause, seek and volume go to it instead of the
+ * decks, and its status comes back through `remoteUpdate` as the same events the decks send, on a stand-in
+ * element. No EQ, visualizer analysis, ReplayGain or crossfade there: the speaker plays the stream as is.
+ */
+export interface RemoteOutput {
+  load(url: string, startAt: number, meta: RemoteMeta): Promise<void>;
+  play(): Promise<void>;
+  pause(): Promise<void>;
+  seek(t: number): Promise<void>;
+  setVolume(v: number): Promise<void>;
+}
+export interface RemoteMeta {
+  title: string;
+  artist?: string;
+  album?: string;
+  cover?: string;
+  duration?: number;
+}
+let remote: RemoteOutput | null = null;
+let remoteMeta: RemoteMeta = { title: '' };
+const remoteEl = { currentTime: 0, duration: NaN, paused: true, error: null as MediaError | null, readyState: 4, volume: 1 };
+const emit = (type: string) => listeners.get(type)?.forEach((fn) => fn(new Event(type), remoteEl as unknown as HTMLAudioElement));
+
 function host(url: string) {
   try {
     return new URL(url).host;
@@ -203,15 +227,57 @@ function endFade() {
 }
 
 export const engine = {
-  get el() {
-    return current;
+  get el(): HTMLAudioElement {
+    return remote ? (remoteEl as unknown as HTMLAudioElement) : current;
   },
   analyser() {
-    return isDeck(current) ? analyser : null;
+    return isDeck(current) && !remote ? analyser : null;
   },
   /** Mid and side spectra for vocal detection (player/voice.ts), or null when the song can't be read. */
   voiceTaps() {
-    return isDeck(current) && midTap && sideTap ? { mid: midTap, side: sideTap, sampleRate: ctx!.sampleRate } : null;
+    return isDeck(current) && !remote && midTap && sideTap ? { mid: midTap, side: sideTap, sampleRate: ctx!.sampleRate } : null;
+  },
+  /** Send playback to a speaker (lib/cast.ts), or back to this device with null. */
+  setRemote(r: RemoteOutput | null) {
+    remote = r;
+    endFade();
+    for (const el of all) el.pause();
+    preloaded = undefined;
+    Object.assign(remoteEl, { currentTime: 0, duration: NaN, paused: true, error: null });
+  },
+  isRemote() {
+    return !!remote;
+  },
+  /** The song about to load, for the speaker's display. */
+  setMeta(m: RemoteMeta) {
+    remoteMeta = m;
+  },
+  /** The speaker's state, from lib/cast.ts's polling: sends the usual events. */
+  remoteUpdate(st: { state: string; position: number; duration: number }) {
+    if (!remote) return;
+    const wasPaused = remoteEl.paused;
+    remoteEl.currentTime = st.position;
+    if (st.duration > 0 && st.duration !== remoteEl.duration) {
+      remoteEl.duration = st.duration;
+      emit('durationchange');
+    }
+    if (st.state === 'playing') {
+      remoteEl.paused = false;
+      if (wasPaused) emit('play');
+      emit('playing');
+      emit('timeupdate');
+    } else if (st.state === 'paused' || st.state === 'idle') {
+      remoteEl.paused = true;
+      if (!wasPaused) emit('pause');
+    } else if (st.state === 'buffering') emit('waiting');
+    else if (st.state === 'ended' && !wasPaused) {
+      remoteEl.paused = true;
+      emit('ended');
+    } else if (st.state === 'error' && !wasPaused) {
+      remoteEl.paused = true;
+      remoteEl.error = { code: 4 } as MediaError;
+      emit('error');
+    }
   },
   on(type: string, fn: Listener) {
     listeners.set(type, [...(listeners.get(type) ?? []), fn]);
@@ -219,6 +285,13 @@ export const engine = {
   async load(url: string, startAt = 0, autoplay = true): Promise<void> {
     const token = ++loadToken;
     current.pause();
+    if (remote) {
+      Object.assign(remoteEl, { currentTime: startAt, duration: remoteMeta.duration ?? NaN, paused: true, error: null });
+      emit('waiting');
+      await remote.load(url, startAt, remoteMeta);
+      if (token === loadToken && !autoplay) await remote.pause();
+      return;
+    }
     fading = undefined;
     pendingPreload = undefined;
     // the next song is already loaded on the idle deck: switch to it straight away
@@ -258,6 +331,7 @@ export const engine = {
   },
   /** Load the next song on the idle deck so it can start without a gap. Hosts without CORS are skipped. */
   preload(url: string) {
+    if (remote) return;
     if (preloaded?.url === url || noCorsHosts.has(host(url)) || !isDeck(current)) return;
     ensureGraph();
     const el = idleDeck();
@@ -273,7 +347,7 @@ export const engine = {
   },
   /** True when `url` is preloaded and buffered enough to fade in now. */
   canCrossfade(url: string) {
-    return !!ctx && preloaded?.url === url && isDeck(current) && preloaded.el.readyState >= 3;
+    return !remote && !!ctx && preloaded?.url === url && isDeck(current) && preloaded.el.readyState >= 3;
   },
   /**
    * Fade the preloaded `url` in over `seconds` while the current song fades out, then make it the current song.
@@ -325,6 +399,7 @@ export const engine = {
     return true;
   },
   async play() {
+    if (remote) return remote.play();
     if (ctx?.state === 'suspended') await ctx.resume();
     try {
       await current.play();
@@ -333,12 +408,17 @@ export const engine = {
     }
   },
   pause() {
+    if (remote) return void remote.pause().catch(() => undefined);
     // a crossfade under way: the old song stops too, not just the new one
     endFade();
     current.pause();
   },
   seek(t: number) {
     if (!Number.isFinite(t)) return;
+    if (remote) {
+      remoteEl.currentTime = t;
+      return void remote.seek(t).catch(() => undefined);
+    }
     endFade();
     current.currentTime = t;
   },
@@ -353,6 +433,7 @@ export const engine = {
   },
   setVolume(v: number) {
     volume = v;
+    if (remote) void remote.setVolume(v).catch(() => undefined);
     applyVolume();
   },
   /** ReplayGain for the song about to play or playing (linear; 1 = unchanged). */
@@ -366,6 +447,7 @@ export const engine = {
    * paused; a new load or play in the meantime cancels the fade.
    */
   async fadeOut(seconds: number) {
+    if (remote) return remote.pause();
     endFade();
     const token = loadToken;
     const el = current;

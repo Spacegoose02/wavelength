@@ -3,6 +3,7 @@ import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
 import { Cover, fmtTime } from './common';
 import { DevicesButton } from './Devices';
+import { CastButton } from './CastButton';
 import { TogetherButton } from './Together';
 import { EqButton } from './Equalizer';
 import { IconNext, IconPause, IconPlay, IconPrev, IconQueue, IconRepeat, IconShuffle, IconVolume } from './Icons';
@@ -65,6 +66,7 @@ export function PlayerBar() {
       <div className="deck-right">
         <TogetherButton />
         <DevicesButton />
+        <CastButton />
         <EqButton />
         <button className={`tbtn small ${ui.queueOpen ? 'on' : ''}`} onClick={ui.toggleQueue} title="Queue"><IconQueue /></button>
         <IconVolume className="vol-icon" />
