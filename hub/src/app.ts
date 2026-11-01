@@ -58,6 +58,7 @@ import { YtdlpRunner, type YtResult } from './ytdlp.ts';
 import { DjAgent } from './dj/agent.ts';
 import { DjVoice, type Fetch } from './dj/voice.ts';
 import { Station } from './dj/station.ts';
+import { ollamaProvider } from './dj/ollama.ts';
 import { anthropicProvider, type ProviderFactory } from './dj/provider.ts';
 import { djRoutes } from './routes/dj.ts';
 
@@ -105,7 +106,7 @@ export interface Ctx {
   videos: Videos;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]> } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -118,7 +119,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     ytdlp: new YtdlpRunner(config.ytdlpBin, config.musicDir),
     charts: new ChartCache(),
     restart: opts.restart ?? (() => undefined),
-    dj: new DjAgent(db, config, opts.djProvider ?? anthropicProvider),
+    dj: new DjAgent(db, config, opts.djProvider ?? anthropicProvider, ollamaProvider(opts.ollamaFetch), opts.ollamaFetch),
     voice: new DjVoice(db, config.secretKey, opts.ttsFetch),
     mixes: new Mixes(db, opts.mixLookups ?? deezerLookups()),
     sonic: new SonicWorker(db, config.secretKey, config.musicDir, config.navidromeMusicDir),

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **The AI DJ can run on your own Ollama server.** Under **Settings → AI DJ → Ollama**, point the Hub at Ollama and
+  pick a model from its list. Run the whole DJ on it for free, or keep the chat on Claude and let Ollama write the
+  talking DJ's lines and DJ mode's intros. With a free ollama.com key the Hub searches the web for it too.
 - **DJ mode.** Press the raccoon in the player and DJ Trash Panda runs a station for you: your favourites, new
   finds, throwbacks and top hits in segments, each introduced in the DJ's voice. Tap a segment to jump to it, or
   type what you want ("90s house", "chill for cooking") to change course. Songs come from your Made for you mixes

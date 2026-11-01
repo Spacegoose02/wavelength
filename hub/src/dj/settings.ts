@@ -13,6 +13,7 @@ import type { User } from '../users.ts';
 const KEY = 'dj.settings';
 const AAD = 'hub-setting:dj.apiKey';
 const OPENAI_AAD = 'hub-setting:dj.openaiKey';
+const OLLAMA_AAD = 'hub-setting:dj.ollamaKey';
 
 /**
  * Who reads the talking DJ's lines aloud (dj/voice.ts). `device`: each device's own text-to-speech voices, as
@@ -43,7 +44,7 @@ export const VOICE_DEFAULTS: VoiceSettings = {
   openaiPrice: 15,
 };
 
-export const PROVIDERS = ['anthropic'] as const;
+export const PROVIDERS = ['anthropic', 'ollama'] as const;
 export type Provider = (typeof PROVIDERS)[number];
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type Effort = (typeof EFFORTS)[number];
@@ -97,11 +98,20 @@ export interface DjSettings {
   webSearchPrice: number;
   /** The talking DJ's voice. */
   voice: VoiceSettings;
+  /** Your own Ollama server (provider.ts `ollamaProvider`), e.g. http://192.168.1.20:11434. */
+  ollamaUrl: string;
+  /** The Ollama model, as `ollama list` names it. */
+  ollamaModel: string;
+  /** Ollama's context window for the DJ, in tokens (num_ctx). */
+  ollamaContext: number;
+  /** Who writes the short lines (the talking DJ, DJ mode): the chat's provider, or Ollama for free. */
+  quickProvider: 'same' | 'ollama';
 }
 
 interface Stored extends DjSettings {
   apiKey?: string; // sealed
   openaiKey?: string; // sealed
+  ollamaKey?: string; // sealed: ollama.com's web search, for the DJ on Ollama
 }
 
 export const DEFAULTS: DjSettings = {
@@ -117,6 +127,10 @@ export const DEFAULTS: DjSettings = {
   webMaxSearches: 3,
   webSearchPrice: 10,
   voice: VOICE_DEFAULTS,
+  ollamaUrl: '',
+  ollamaModel: 'qwen3.5:9b',
+  ollamaContext: 16384,
+  quickProvider: 'same',
 };
 
 function readStored(db: Db): Stored {
@@ -135,12 +149,12 @@ function writeStored(db: Db, s: Stored) {
 }
 
 export function getSettings(db: Db): DjSettings {
-  const { apiKey: _k, openaiKey: _o, ...s } = readStored(db);
+  const { apiKey: _k, openaiKey: _o, ollamaKey: _ol, ...s } = readStored(db);
   return s;
 }
 
-type KeyName = 'apiKey' | 'openaiKey';
-const aadOf = (which: KeyName) => (which === 'apiKey' ? AAD : OPENAI_AAD);
+type KeyName = 'apiKey' | 'openaiKey' | 'ollamaKey';
+const aadOf = (which: KeyName) => (which === 'apiKey' ? AAD : which === 'openaiKey' ? OPENAI_AAD : OLLAMA_AAD);
 
 /** The API key (or the OpenAI voice key), or null when there is none or it was sealed with a different secret key. */
 export function getApiKey(db: Db, secretKey: Buffer, which: KeyName = 'apiKey'): string | null {
@@ -223,7 +237,7 @@ export function saveSettings(db: Db, secretKey: Buffer, body: unknown): { settin
     for (const [id, p] of Object.entries(b.prices as Record<string, unknown>).slice(0, 50)) if (/^[a-zA-Z0-9._:@/-]{1,100}$/.test(id)) prices[id] = readPrice(p);
     next.prices = prices;
   }
-  for (const which of ['apiKey', 'openaiKey'] as const) {
+  for (const which of ['apiKey', 'openaiKey', 'ollamaKey'] as const) {
     if (b[which] === undefined) continue;
     const k = typeof b[which] === 'string' ? (b[which] as string).trim() : '';
     if (k.length > 500) throw new HttpError(400, 'That API key is too long');
@@ -232,6 +246,25 @@ export function saveSettings(db: Db, secretKey: Buffer, body: unknown): { settin
     changed.push(which);
   }
   if (b.voice !== undefined) next.voice = readVoice(b.voice, cur.voice);
+  if (b.ollamaUrl !== undefined) {
+    const u = typeof b.ollamaUrl === 'string' ? b.ollamaUrl.trim().replace(/\/+$/, '') : '';
+    if (u && !/^https?:\/\/\S+$/i.test(u)) throw new HttpError(400, 'Ollama’s address must start with http:// or https://');
+    next.ollamaUrl = u;
+  }
+  if (b.ollamaModel !== undefined) {
+    const m = typeof b.ollamaModel === 'string' ? b.ollamaModel.trim() : '';
+    if (!/^[a-zA-Z0-9._:/-]{1,120}$/.test(m)) throw new HttpError(400, 'Pick an Ollama model');
+    next.ollamaModel = m;
+  }
+  if (b.ollamaContext !== undefined) {
+    const n = Number(b.ollamaContext);
+    if (!Number.isInteger(n) || n < 2048 || n > 262_144) throw new HttpError(400, 'Ollama’s context must be 2,048 to 262,144 tokens');
+    next.ollamaContext = n;
+  }
+  if (b.quickProvider !== undefined) {
+    if (b.quickProvider !== 'same' && b.quickProvider !== 'ollama') throw new HttpError(400, 'quickProvider must be same or ollama');
+    next.quickProvider = b.quickProvider;
+  }
   for (const k of Object.keys(DEFAULTS) as (keyof DjSettings)[]) if (JSON.stringify(cur[k]) !== JSON.stringify(next[k])) changed.push(k);
   writeStored(db, next);
   return { settings: getSettings(db), changed };
@@ -269,6 +302,12 @@ function readVoice(v: unknown, cur: VoiceSettings): VoiceSettings {
 
 /** Kokoro names voices like af_heart (and mixes like af_heart+am_adam); OpenAI like coral. */
 export const isVoiceName = (v: unknown): v is string => typeof v === 'string' && /^[a-zA-Z0-9_+.()-]{1,80}$/.test(v);
+
+/** What a call to `model` costs per token: Ollama runs on your own server, so nothing. */
+export function priceFor(s: DjSettings, model: string): Price | null {
+  if (model.startsWith('ollama:')) return null;
+  return priceOf(s, model) ?? priceOf(s, s.model);
+}
 
 export function priceOf(s: DjSettings, model: string): Price | null {
   return s.prices[model] ?? MODELS.find((m) => m.id === model)?.price ?? null;
@@ -346,7 +385,9 @@ export function blockedReason(db: Db, secretKey: Buffer, user: User): string | n
   const s = getSettings(db);
   if (!s.enabled) return 'The AI DJ is turned off on this Hub';
   if (!getAccess(db, user.id).enabled) return 'The AI DJ isn’t turned on for your account. Ask your admin';
-  if (!getApiKey(db, secretKey)) return 'The AI DJ isn’t set up yet: the Hub has no API key';
+  if (s.provider === 'ollama' ? !s.ollamaUrl : !getApiKey(db, secretKey)) {
+    return s.provider === 'ollama' ? 'The AI DJ isn’t set up yet: the Hub has no Ollama address' : 'The AI DJ isn’t set up yet: the Hub has no API key';
+  }
   return null;
 }
 

@@ -3,6 +3,7 @@ import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { featureOn, requireFeature } from '../features.ts';
 import { usageSummary } from '../dj/agent.ts';
+import { ollamaModels } from '../dj/ollama.ts';
 import {
   blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, OPENAI_VOICE_MODELS, priceOf, VOICE_ENGINES, saveSettings, setAccess, spentSince, webFor,
 } from '../dj/settings.ts';
@@ -115,6 +116,7 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
       settings,
       key: keyInfo(db, key),
       openaiKey: keyInfo(db, key, 'openaiKey'),
+      ollamaKey: keyInfo(db, key, 'ollamaKey'),
       voiceEngines: VOICE_ENGINES,
       openaiVoiceModels: OPENAI_VOICE_MODELS,
       providers: PROVIDERS,
@@ -166,8 +168,22 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
   });
 
   /** Check the key and model without spending tokens. */
+  /** `{ which?: 'chat' | 'quick' }`: check the chat's provider, or the one writing the short lines. */
   app.post('/api/admin/dj/test', async (req) => {
     need(req, 'keys.manage');
-    return { message: await dj.provider().test() };
+    const which = (req.body as { which?: unknown } | null)?.which === 'quick' ? 'quick' : 'chat';
+    return { message: await dj.provider(which).test() };
+  });
+
+  /** The models on the saved Ollama server, for the admin page's picker. */
+  app.get('/api/admin/dj/ollama', async (req) => {
+    need(req, 'keys.manage');
+    const s = getSettings(db);
+    if (!s.ollamaUrl) return { models: [], error: null };
+    try {
+      return { models: await ollamaModels(s.ollamaUrl, dj.ollamaWebFetch), error: null };
+    } catch {
+      return { models: [], error: `Couldn’t reach Ollama at ${s.ollamaUrl}` };
+    }
   });
 }

@@ -3,8 +3,9 @@ import type { Db } from '../db.ts';
 import { HttpError } from '../http.ts';
 import type { User } from '../users.ts';
 import type { DjContentBlock, DjContentParam, DjMessage, DjProvider, ProviderFactory } from './provider.ts';
-import { checkBudget, costOf, getApiKey, getSettings, priceOf, recordUsage, webFor } from './settings.ts';
-import { ALL_TOOLS, isAppTool, isHubTool, runHubTool } from './tools.ts';
+import { checkBudget, costOf, getApiKey, getSettings, priceFor, recordUsage, webFor } from './settings.ts';
+import { ALL_TOOLS, isAppTool, isHubTool, OLLAMA_WEB_TOOLS, runHubTool } from './tools.ts';
+import { ollamaProvider, ollamaWeb, type Fetch as OllamaFetch } from './ollama.ts';
 
 /**
  * The DJ's agent loop (docs/AI-DJ.md). One message from the listener can take several model calls: the model
@@ -149,6 +150,9 @@ export class DjAgent {
   private db: Db;
   private config: Config;
   private factory: ProviderFactory;
+  private ollama: ProviderFactory;
+  /** ollama.com's web search for the DJ on Ollama (a test can answer instead). */
+  ollamaWebFetch: OllamaFetch | undefined;
   /** Chats with a model call running, so two can't append at once. */
   private busy = new Set<number>();
   /** Make a download request as this person; set by routes/requests.ts. */
@@ -156,16 +160,21 @@ export class DjAgent {
     throw new HttpError(503, 'Requests aren’t available');
   };
 
-  constructor(db: Db, config: Config, factory: ProviderFactory) {
+  constructor(db: Db, config: Config, factory: ProviderFactory, ollama: ProviderFactory = ollamaProvider(), ollamaWebFetch?: OllamaFetch) {
     this.db = db;
     this.config = config;
     this.factory = factory;
+    this.ollama = ollama;
+    this.ollamaWebFetch = ollamaWebFetch;
   }
 
-  provider(): DjProvider {
+  /** `chat`: the chat's provider. `quick`: the talking DJ and DJ mode, which can use Ollama for free. */
+  provider(kind: 'chat' | 'quick' = 'chat'): DjProvider {
+    const s = getSettings(this.db);
+    if (s.provider === 'ollama' || (kind === 'quick' && s.quickProvider === 'ollama')) return this.ollama(s, '');
     const key = getApiKey(this.db, this.config.secretKey);
     if (!key) throw new HttpError(409, 'Add an API key in the AI DJ settings first');
-    return this.factory(getSettings(this.db), key);
+    return this.factory(s, key);
   }
 
   /**
@@ -212,8 +221,8 @@ export class DjAgent {
    */
   async oneShot(user: User, system: string, ask: string, maxTokens = 2000): Promise<string> {
     const settings = getSettings(this.db);
-    const res = await this.provider().create({ system, tools: [], messages: [{ role: 'user', content: ask }], effort: 'low', maxTokens });
-    recordUsage(this.db, user.id, null, res.model, res.usage, costOf(priceOf(settings, res.model) ?? priceOf(settings, settings.model), res.usage));
+    const res = await this.provider('quick').create({ system, tools: [], messages: [{ role: 'user', content: ask }], effort: 'low', maxTokens });
+    recordUsage(this.db, user.id, null, res.model, res.usage, costOf(priceFor(settings, res.model), res.usage));
     return res.content.flatMap((c) => (c.type === 'text' ? [c.text] : [])).join(' ');
   }
 
@@ -294,14 +303,18 @@ export class DjAgent {
     return { chat: toChat(r), status, reply, ...(calls && { calls }), ...(this.full(r) && { full: true }) };
   }
 
-  private async loop(user: User, id: number, messages: DjMessage[], state: { steps: number; requests: number; replyFrom: number }): Promise<TurnResult> {
+  private async loop(user: User, id: number, messages: DjMessage[], state: { steps: number; requests: number; replyFrom: number; searches?: number }): Promise<TurnResult> {
     if (this.busy.has(id)) throw new HttpError(409, 'The DJ is already answering in this chat');
     this.busy.add(id);
     try {
       const provider = this.provider();
       const settings = getSettings(this.db);
-      const web = webFor(this.db, user);
+      // Anthropic searches on its side; on Ollama the Hub runs ollama.com's search as its own tools
+      const onOllama = settings.provider === 'ollama';
+      const ollamaKey = onOllama ? getApiKey(this.db, this.config.secretKey, 'ollamaKey') : null;
+      const web = webFor(this.db, user) && (!onOllama || !!ollamaKey);
       const system = systemPrompt(user, web);
+      const tools = onOllama && web ? [...ALL_TOOLS, ...OLLAMA_WEB_TOOLS] : ALL_TOOLS;
       let { steps, requests } = state;
       for (;;) {
         checkBudget(this.db, user.id);
@@ -309,13 +322,13 @@ export class DjAgent {
         const last = steps >= MAX_STEPS;
         let res;
         try {
-          res = await provider.create({ system, tools: ALL_TOOLS, messages, noTools: last, ...(web && { web: { maxSearches: settings.webMaxSearches } }) });
+          res = await provider.create({ system, tools, messages, noTools: last, ...(web && !onOllama && { web: { maxSearches: settings.webMaxSearches } }) });
         } catch (e) {
           // keep what we have: the chat stays valid (a later message just follows on) and can be tried again
           this.save(id, messages, null);
           throw e;
         }
-        recordUsage(this.db, user.id, id, res.model, res.usage, costOf(priceOf(settings, res.model) ?? priceOf(settings, settings.model), res.usage, settings.webSearchPrice));
+        recordUsage(this.db, user.id, id, res.model, res.usage, costOf(priceFor(settings, res.model), res.usage, settings.webSearchPrice));
         messages.push({ role: 'assistant', content: res.content as unknown as DjContentParam[] });
 
         const uses = res.content.filter((b): b is Extract<DjContentBlock, { type: 'tool_use' }> => b.type === 'tool_use');
@@ -344,7 +357,14 @@ export class DjAgent {
         // Hub tools now; app tools go to the app
         const hubResults: ToolResult[] = [];
         const calls: ToolCall[] = [];
-        const ctx = { db: this.db, user, request: (b: Parameters<DjAgent['request']>[1]) => this.request(user, b), requestsThisTurn: requests };
+        const ctx = {
+          db: this.db,
+          user,
+          request: (b: Parameters<DjAgent['request']>[1]) => this.request(user, b),
+          requestsThisTurn: requests,
+          ...(ollamaKey && web && { web: ollamaWeb(ollamaKey, this.ollamaWebFetch), maxSearches: settings.webMaxSearches * 3 }),
+          searches: state.searches ?? 0,
+        };
         for (const u of uses) {
           if (isAppTool(u.name)) calls.push({ id: u.id, name: u.name, input: u.input });
           else if (isHubTool(u.name)) {
@@ -357,6 +377,7 @@ export class DjAgent {
           } else hubResults.push({ type: 'tool_result', tool_use_id: u.id, content: `No tool called ${u.name}`, is_error: true });
         }
         requests = ctx.requestsThisTurn;
+        state.searches = ctx.searches;
         if (calls.length) {
           const pending: Pending = { calls, hubResults, order: uses.map((u) => u.id), steps, requests, replyFrom: state.replyFrom };
           this.save(id, messages, pending);

@@ -132,9 +132,26 @@ export const HUB_TOOLS: DjTool[] = [
   },
 ];
 
+/**
+ * Web search for the DJ on Ollama, which can't search itself: the Hub runs these with ollama.com's web search
+ * (ollama.ts `ollamaWeb`). On Anthropic the provider's own server tools do this instead (provider.ts).
+ */
+export const OLLAMA_WEB_TOOLS: DjTool[] = [
+  {
+    name: 'web_search',
+    description: 'Search the web: today’s charts and top hits, a festival or DJ setlist, news about an artist. Returns titles, links and a snippet of each page.',
+    input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+  },
+  {
+    name: 'web_fetch',
+    description: 'Read a web page: a link the listener pasted, or one from web_search. Returns the page’s text.',
+    input_schema: { type: 'object', properties: { url: { type: 'string', description: 'https://…' } }, required: ['url'] },
+  },
+];
+
 export const ALL_TOOLS = [...APP_TOOLS, ...HUB_TOOLS];
 export const isAppTool = (name: string) => APP_TOOLS.some((t) => t.name === name);
-export const isHubTool = (name: string) => HUB_TOOLS.some((t) => t.name === name);
+export const isHubTool = (name: string) => HUB_TOOLS.some((t) => t.name === name) || OLLAMA_WEB_TOOLS.some((t) => t.name === name);
 
 /** At most this many download requests per message the listener sends. */
 export const MAX_REQUESTS_PER_TURN = 10;
@@ -148,6 +165,11 @@ interface HubToolCtx {
   request(b: { link: string; kind: string; title: string; artist: string; note: string }): Promise<{ status: string }>;
   /** Download requests made so far this turn. */
   requestsThisTurn: number;
+  /** ollama.com's web search, when the DJ runs on Ollama with web search on. */
+  web?: { search(q: string): Promise<unknown>; fetch(url: string): Promise<unknown> };
+  /** Web searches this message, and the most allowed. */
+  searches: number;
+  maxSearches?: number;
 }
 
 async function artistId(name: string): Promise<{ id: number; name: string } | null> {
@@ -208,6 +230,20 @@ export async function runHubTool(name: string, input: Record<string, unknown>, c
       if (!a) return { error: 'Deezer doesn’t know that artist' };
       const r = await deezer(`/artist/${a.id}/top?limit=20`);
       return { artist: a.name, songs: ((r?.data ?? []) as any[]).filter((t) => !kid || !t.explicit_lyrics).map((t) => ({ title: t.title, album: t.album?.title })) };
+    }
+    case 'web_search':
+    case 'web_fetch': {
+      if (!c.web) throw new HttpError(400, 'Web search isn’t turned on');
+      if (name === 'web_fetch') {
+        const url = s(input.url, 2000);
+        if (!/^https?:\/\/\S+$/i.test(url)) throw new HttpError(400, 'Give a full https:// link');
+        return c.web.fetch(url);
+      }
+      if (c.searches >= (c.maxSearches ?? 9)) throw new HttpError(429, 'That’s enough searching for one message: answer with what you found');
+      const q = s(input.query, 300);
+      if (!q) throw new HttpError(400, 'Empty search');
+      c.searches++;
+      return c.web.search(q);
     }
     case 'request_download': {
       if (c.requestsThisTurn >= MAX_REQUESTS_PER_TURN) throw new HttpError(429, `At most ${MAX_REQUESTS_PER_TURN} download requests per message`);

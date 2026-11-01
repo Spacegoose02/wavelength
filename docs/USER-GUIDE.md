@@ -1002,7 +1002,7 @@ If an admin turned on **AI DJ web search** (**Settings → Features**), the DJ c
 paste a setlist link and say "build me a new EDM mix from this". It plays or saves the songs you have and can
 request the rest.
 
-Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only), the model, prices, monthly limits,
+Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only) or your own Ollama server, the model, prices, monthly limits,
 who can use it, and how many web searches it may make per step. The full setup guide is [AI-DJ.md](AI-DJ.md).
 
 ### DJ mode

@@ -46,7 +46,7 @@ export function DjAdminTab() {
     load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const save = async (b: Omit<Partial<HubDjSettings>, 'voice'> & { voice?: Partial<HubDjVoiceSettings>; apiKey?: string; openaiKey?: string }, done = '') => {
+  const save = async (b: Omit<Partial<HubDjSettings>, 'voice'> & { voice?: Partial<HubDjVoiceSettings>; apiKey?: string; openaiKey?: string; ollamaKey?: string }, done = '') => {
     if (!c) return;
     try {
       setData(await c.saveDjAdmin(b));
@@ -97,15 +97,16 @@ export function DjAdminTab() {
           <div className="editor-grid">
             <label>Provider
               <select value={s.provider} onChange={(e) => save({ provider: e.target.value })}>
-                {data.providers.map((p) => <option key={p} value={p}>{p === 'anthropic' ? 'Anthropic (Claude)' : p}</option>)}
+                {data.providers.map((p) => <option key={p} value={p}>{p === 'anthropic' ? 'Anthropic (Claude)' : p === 'ollama' ? 'Ollama (your own server, free)' : p}</option>)}
               </select>
             </label>
-            <label>API key {data.key.set && <small className="muted">saved{data.key.hint ? ` (${data.key.hint})` : ''}</small>}
+            {s.provider !== 'ollama' && <label>API key {data.key.set && <small className="muted">saved{data.key.hint ? ` (${data.key.hint})` : ''}</small>}
               <input type="password" value={key} autoComplete="off" placeholder={data.key.set ? 'Paste a new key to replace it' : 'sk-ant-…'} onChange={(e) => setKey(e.target.value)} />
-            </label>
+            </label>}
           </div>
-          {data.key.unreadable && <div className="errors">The saved key can’t be read (the Hub’s secret key changed). Paste it again.</div>}
-          <div className="row gap">
+          {s.provider === 'ollama' && <p className="muted small">The DJ runs on your Ollama server, set up below. Nothing to pay; no API key needed.</p>}
+          {s.provider !== 'ollama' && data.key.unreadable && <div className="errors">The saved key can’t be read (the Hub’s secret key changed). Paste it again.</div>}
+          {s.provider !== 'ollama' && <div className="row gap">
             <button className="btn" disabled={!key.trim()} onClick={async () => { await save({ apiKey: key.trim() }, 'Key saved on the Hub.'); setKey(''); }}>Save key</button>
             {data.key.set && <button className="btn ghost" onClick={() => confirm('Remove the API key? The DJ stops working until you add one.') && save({ apiKey: '' }, 'Key removed.')}>Remove key</button>}
             {data.key.set && <button className="btn small" onClick={async () => {
@@ -116,12 +117,14 @@ export function DjAdminTab() {
                 setErr(errText(e));
               }
             }}>Test</button>}
-          </div>
-          <p className="muted small">Get a key at console.anthropic.com → API keys. Set a spending limit there too, as a backstop to the limits here.</p>
+          </div>}
+          {s.provider !== 'ollama' && <p className="muted small">Get a key at console.anthropic.com → API keys. Set a spending limit there too, as a backstop to the limits here.</p>}
         </div>
       </section>
 
-      <section>
+      <OllamaSection c={c} data={data} save={save} setErr={setErr} setNote={setNote} />
+
+      {s.provider !== 'ollama' && <section>
         <h2>Model</h2>
         <div className="editor">
           <div className="editor-grid">
@@ -165,7 +168,7 @@ export function DjAdminTab() {
             </div>
           </details>
         </div>
-      </section>
+      </section>}
 
       <section>
         <h2>Web</h2>
@@ -178,6 +181,12 @@ export function DjAdminTab() {
           Turn it on, for grown-ups and for kids separately, under <b>Settings → Features → AI DJ web search</b>. It’s
           off until you do.
         </p>
+        {s.provider === 'ollama' && (
+          <p className="muted small">
+            On Ollama the Hub searches through ollama.com instead, with the key in the Ollama section (free within ollama.com’s
+            limits), at most three times the number below per message.
+          </p>
+        )}
         <div className="editor-grid">
           <label>Searches per step, at most
             <select value={s.webMaxSearches ?? 3} onChange={(e) => save({ webMaxSearches: Number(e.target.value) })}>
@@ -340,6 +349,113 @@ function VoiceSection({ c, data, voice: v, save, setErr, setNote }: {
             Get a key at platform.openai.com → API keys. A line is about 150 characters, so each one costs about
             {' '}{money((150 * v.openaiPrice) / 1e6)}; it counts toward the AI DJ limits above. The key never leaves the Hub.
           </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Ollama on your own server (hub/src/dj/ollama.ts): the whole DJ, or only the short lines (the talking DJ and
+ * DJ mode's intros) while the chat stays on Claude. Free; ollama.com's web search needs its own key.
+ */
+function OllamaSection({ c, data, save, setErr, setNote }: {
+  c: HubClient;
+  data: HubDjAdmin;
+  save: (b: Omit<Partial<HubDjSettings>, 'voice'> & { ollamaKey?: string }, done?: string) => Promise<void>;
+  setErr: (s: string) => void;
+  setNote: (s: string) => void;
+}) {
+  const s = data.settings;
+  const [models, setModels] = useState<{ name: string; tools: boolean; size: number }[] | null>(null);
+  const [problem, setProblem] = useState('');
+  const [key, setKey] = useState('');
+  const [open, setOpen] = useState(s.provider === 'ollama' || s.quickProvider === 'ollama' || !!s.ollamaUrl);
+  useEffect(() => {
+    setModels(null);
+    setProblem('');
+    if (s.ollamaUrl) void c.djOllamaModels().then((r) => { setModels(r.models); setProblem(r.error ?? ''); }, (e) => setProblem(errText(e)));
+  }, [s.ollamaUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  const on = s.provider === 'ollama';
+  const model = s.ollamaModel ?? 'qwen3.5:9b';
+  const list = models?.length ? (models.some((m) => m.name === model) ? models : [{ name: model, tools: true, size: 0 }, ...models]) : [{ name: model, tools: true, size: 0 }];
+  const picked = models?.find((m) => m.name === model);
+  const gb = (n: number) => (n ? ` · ${(n / 1e9).toFixed(1)} GB` : '');
+  const test = async (which: 'chat' | 'quick') => {
+    try {
+      setNote((await c.testDj(which)).message);
+      setErr('');
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+
+  if (!open) {
+    return (
+      <section>
+        <h2>Ollama</h2>
+        <p className="muted small">Have your own Ollama server? The DJ can run on it for free, or use it just for the talking DJ and DJ mode.</p>
+        <button className="btn small" onClick={() => setOpen(true)}>Set up Ollama</button>
+      </section>
+    );
+  }
+  return (
+    <section>
+      <h2>Ollama</h2>
+      <p className="muted small">
+        A model on your own server: free, and nothing leaves your house except web searches. A GPU with 8 GB or more runs a
+        9B model like qwen3.5:9b in a second or two. Smaller models are fine for the talking DJ and DJ mode, but pick songs and
+        follow the chat less well than Claude.
+      </p>
+      <div className="editor">
+        <div className="editor-grid">
+          <label>Ollama’s address
+            <input defaultValue={s.ollamaUrl ?? ''} placeholder="http://192.168.1.20:11434" onBlur={(e) => e.target.value.trim() !== (s.ollamaUrl ?? '') && save({ ollamaUrl: e.target.value.trim() })} />
+          </label>
+          <label>Model
+            <select value={model} onChange={(e) => save({ ollamaModel: e.target.value })}>
+              {list.map((m) => <option key={m.name} value={m.name}>{m.name}{gb(m.size)}{m.tools ? '' : ' (no tools: short lines only)'}</option>)}
+            </select>
+          </label>
+          <label>Context <small className="muted">(how much of a chat it reads)</small>
+            <select value={s.ollamaContext ?? 16384} onChange={(e) => save({ ollamaContext: Number(e.target.value) })}>
+              {[8192, 16384, 32768, 65536].map((n) => <option key={n} value={n}>{n.toLocaleString()} tokens{n === 16384 ? ' (default)' : ''}</option>)}
+            </select>
+          </label>
+        </div>
+        {problem && <div className="errors">{problem}. Is Ollama running, and listening on the network (OLLAMA_HOST=0.0.0.0)?</div>}
+        {picked && !picked.tools && on && <div className="errors">{model} can’t use tools, so the chat can’t search or play. Pick a model with tools, or use Ollama only for the short lines.</div>}
+        <label className="check">
+          <span className="switch"><input type="checkbox" checked={on} disabled={!s.ollamaUrl} onChange={(e) => save({ provider: e.target.checked ? 'ollama' : 'anthropic' })} /><span /></span>
+          <span>Run the whole DJ on Ollama <small className="muted">(the chat too)</small></span>
+        </label>
+        {!on && (
+          <label className="check">
+            <span className="switch"><input type="checkbox" checked={s.quickProvider === 'ollama'} disabled={!s.ollamaUrl} onChange={(e) => save({ quickProvider: e.target.checked ? 'ollama' : 'same' })} /><span /></span>
+            <span>Use Ollama for the talking DJ and DJ mode <small className="muted">(free; the chat stays on Claude)</small></span>
+          </label>
+        )}
+        <div className="row gap">
+          {s.ollamaUrl && <button className="btn small" onClick={() => void test(on ? 'chat' : 'quick')}>Test</button>}
+        </div>
+        {on && (
+          <>
+            <h3>Web search key <small className="muted">(optional)</small></h3>
+            <p className="muted small">
+              Ollama can’t search the web by itself. With a key from a free ollama.com account (ollama.com/settings/keys), the
+              Hub searches for it, so the DJ can look up top hits and read setlists. Then turn on AI DJ web search in Settings →
+              Features. The key never leaves the Hub.
+            </p>
+            <div className="editor-grid">
+              <label>Ollama API key {data.ollamaKey?.set && <small className="muted">saved{data.ollamaKey.hint ? ` (${data.ollamaKey.hint})` : ''}</small>}
+                <input type="password" value={key} autoComplete="off" placeholder={data.ollamaKey?.set ? 'Paste a new key to replace it' : 'From ollama.com/settings/keys'} onChange={(e) => setKey(e.target.value)} />
+              </label>
+            </div>
+            <div className="row gap">
+              <button className="btn" disabled={!key.trim()} onClick={async () => { await save({ ollamaKey: key.trim() }, 'Ollama key saved on the Hub.'); setKey(''); }}>Save key</button>
+              {data.ollamaKey?.set && <button className="btn ghost" onClick={() => confirm('Remove the Ollama web search key?') && save({ ollamaKey: '' }, 'Ollama key removed.')}>Remove key</button>}
+            </div>
+          </>
         )}
       </div>
     </section>

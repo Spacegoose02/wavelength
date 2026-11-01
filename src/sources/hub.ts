@@ -635,6 +635,10 @@ export interface HubDjSettings {
   webMaxSearches?: number;
   webSearchPrice?: number;
   voice?: HubDjVoiceSettings;
+  ollamaUrl?: string;
+  ollamaModel?: string;
+  ollamaContext?: number;
+  quickProvider?: 'same' | 'ollama';
 }
 export type HubStationKind = 'favourites' | 'discover' | 'throwbacks' | 'tophits' | 'ask';
 export interface HubStationSegment { kind: HubStationKind; title: string; songs: HubMixSong[]; intro: string | null; spent: number; limit: number | null }
@@ -652,6 +656,7 @@ export interface HubDjAdmin {
   settings: HubDjSettings;
   key: { set: boolean; hint: string | null; unreadable: boolean };
   openaiKey?: { set: boolean; hint: string | null; unreadable: boolean };
+  ollamaKey?: { set: boolean; hint: string | null; unreadable: boolean };
   openaiVoiceModels?: string[];
   providers: string[];
   efforts: HubDjSettings['effort'][];
@@ -968,8 +973,10 @@ export class HubClient {
   testDjVoice = (b: { voice?: string; text?: string }) => this.blob('/api/admin/dj/voice/test', b);
   djAdmin = () => this.call<HubDjAdmin>('GET', '/api/admin/dj');
   /** `apiKey`: a new key, '' to remove it, left out to keep it. */
-  saveDjAdmin = (b: Omit<Partial<HubDjSettings>, 'voice'> & { voice?: Partial<HubDjVoiceSettings>; apiKey?: string; openaiKey?: string }) => this.call<HubDjAdmin>('PUT', '/api/admin/dj', b);
+  saveDjAdmin = (b: Omit<Partial<HubDjSettings>, 'voice'> & { voice?: Partial<HubDjVoiceSettings>; apiKey?: string; openaiKey?: string; ollamaKey?: string }) => this.call<HubDjAdmin>('PUT', '/api/admin/dj', b);
   setDjAccess = (userId: number, b: { enabled?: boolean; monthlyLimit?: number | null }) => this.call('PUT', `/api/admin/dj/users/${userId}`, b);
-  testDj = () => this.call<{ message: string }>('POST', '/api/admin/dj/test', {});
+  testDj = (which: 'chat' | 'quick' = 'chat') => this.call<{ message: string }>('POST', '/api/admin/dj/test', { which });
+  /** The models on the Hub's Ollama server. */
+  djOllamaModels = () => this.call<{ models: { name: string; tools: boolean; size: number }[]; error: string | null }>('GET', '/api/admin/dj/ollama');
   audit = (limit = 50) => this.call<{ entries: HubAuditEntry[] }>('GET', `/api/admin/audit?limit=${limit}`);
 }
