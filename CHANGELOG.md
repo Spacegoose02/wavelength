@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.19.1
 - **Fixed: the page crashed ("l is not a function") while chatting with the AI DJ.** Scrolling the chat to
   the newest reply handed React a Promise in current WebView2/Chromium, which React then tried to call. A new test
   keeps effects from returning anything but a cleanup.
