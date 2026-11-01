@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
-import { isAndroid } from '../lib/platform';
+import { isAndroid, isMobileApp } from '../lib/platform';
 import { Equalizer } from '../components/Equalizer';
 import { SCENES } from '../components/Scenes';
 import { ACTS, Critter, SPECIES } from '../components/critters/Critter';
@@ -328,7 +328,7 @@ function DownloadsTab() {
         </div>
       </section>
 
-      {(hubYt || !isAndroid) && <section>
+      {(hubYt || !isMobileApp) && <section>
         <h2>yt-dlp <small className="muted">backup downloader</small></h2>
         <div className="editor">
           {hubYt ? (

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secretStorage } from '../lib/secrets';
-import { isAndroid, isLinux, isMac } from '../lib/platform';
+import { isAndroid, isIOS, isLinux, isMac } from '../lib/platform';
 import { isTauri, setHubFetch } from '../lib/http';
 import { HubClient, HubError, type HubDevice, type HubPermission, type HubService, type HubSession, type HubUser } from '../sources/hub';
 
@@ -197,6 +197,7 @@ export function useCan(perm: HubPermission): boolean {
 export function thisDevice(): { deviceName: string; platform: string } {
   const tv = typeof document !== 'undefined' && document.documentElement.classList.contains('tv');
   if (isAndroid) return tv ? { deviceName: 'Android TV', platform: 'android-tv' } : { deviceName: 'Android', platform: 'android' };
+  if (isIOS && isTauri) return /iPad/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent) ? { deviceName: 'iPad', platform: 'ios' } : { deviceName: 'iPhone', platform: 'ios' };
   if (isTauri && isMac) return { deviceName: 'Mac', platform: 'macos' };
   if (isTauri && isLinux) return { deviceName: 'Linux PC', platform: 'linux' };
   if (isTauri) return { deviceName: 'Windows PC', platform: 'windows' };

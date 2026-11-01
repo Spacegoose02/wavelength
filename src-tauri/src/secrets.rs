@@ -19,7 +19,9 @@ fn ready() -> bool {
         let store = apple_native_keyring_store::keychain::Store::new();
         #[cfg(target_os = "linux")]
         let store = zbus_secret_service_keyring_store::Store::new();
-        #[cfg(any(windows, target_os = "android", target_os = "macos", target_os = "linux"))]
+        #[cfg(target_os = "ios")]
+        let store = apple_native_keyring_store::protected::Store::new();
+        #[cfg(any(windows, target_os = "android", target_os = "macos", target_os = "linux", target_os = "ios"))]
         return match store {
             Ok(s) => {
                 keyring_core::set_default_store(s);
@@ -30,7 +32,7 @@ fn ready() -> bool {
                 false
             }
         };
-        #[cfg(not(any(windows, target_os = "android", target_os = "macos", target_os = "linux")))]
+        #[cfg(not(any(windows, target_os = "android", target_os = "macos", target_os = "linux", target_os = "ios")))]
         false
     })
 }

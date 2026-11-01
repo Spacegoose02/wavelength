@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **iPhone and iPad app (TestFlight).** The app builds for iOS, with background audio, the iOS keychain and
+  local-network access. Releases build it and send it to TestFlight once the Apple secrets are added
+  (docs/IOS.md).
 - **Bit-perfect output on Windows.** Settings → Playback can send songs straight to the sound card in WASAPI
   exclusive mode at their own sample rate and bit depth, decoded by the app itself (FLAC, ALAC, WAV, AIFF, MP3,
   AAC, Vorbis), with the format shown as it plays.

@@ -11,7 +11,7 @@ import { Cover, Spinner } from '../components/common';
 import { IconDownload, IconPause, IconPlay, IconRefresh } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { QueueAllOnSubwave, QueueOnSubwave } from '../components/TrackButtons';
-import { isAndroid } from '../lib/platform';
+import { isMobileApp } from '../lib/platform';
 import { useMustRequest } from '../lib/inbox';
 import { getSong, NotOnDeezer, viaYtdlp as ytdlpGet } from '../lib/getSong';
 import { isKid, useHidden, useIsKid } from '../lib/kids';
@@ -115,7 +115,7 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
     if (r.explicit === undefined) return true;
     return hidden.track({ kind: 'track', id: '', sourceId: '', title: r.title, artist: r.artist, explicit: r.explicit ? 'explicit' : 'clean' });
   };
-  const ytAvailable = hubYt || (!isAndroid && !!yt.outDir);
+  const ytAvailable = hubYt || (!isMobileApp && !!yt.outDir);
   const nowPlayingId = usePlayer((s) => s.queue[s.index]?.id);
   const playing = usePlayer((s) => s.playing);
 

@@ -14,7 +14,7 @@ import { useCan } from '../store/hub';
 import { Spinner, fmtTime } from '../components/common';
 import { DeemixQueuePanel } from '../components/DeemixQueue';
 import { IconDownload, IconRefresh } from '../components/Icons';
-import { isAndroid } from '../lib/platform';
+import { isMobileApp } from '../lib/platform';
 import { SoulseekTab } from './SoulseekTab';
 import { BrowseBar, CleanChips, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, useDeezerBrowse } from './DeezerBrowse';
 import { cleanOnly, withVersions } from '../lib/deezerVersions';
@@ -32,7 +32,7 @@ export function Downloads({ soulseek }: { soulseek?: { q: string; requestId?: nu
   const ask = useMustRequest();
   // the Hub runs yt-dlp for every device, Android included; otherwise it needs the desktop app
   const hubYt = useHubRuns('ytdlp');
-  const ytHere = hubYt || !isAndroid;
+  const ytHere = hubYt || !isMobileApp;
 
   const rescan = async () => {
     await Promise.all(sources.filter((s) => s.enabled).map((cfg) => sourceFor(cfg).rescan?.().catch(() => {})));

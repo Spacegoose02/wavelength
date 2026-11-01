@@ -9,9 +9,9 @@ import { useSettings } from '../store/settings';
 import { featureOn } from './features';
 import { isTauri } from './http';
 import { activityFor } from './discordActivity';
-import { isAndroid } from './platform';
+import { isMobileApp } from './platform';
 
-export const canDiscord = isTauri && !isAndroid;
+export const canDiscord = isTauri && !isMobileApp;
 
 /** The last problem (Discord not running, a wrong ID), for Settings. */
 export let discordProblem = '';
