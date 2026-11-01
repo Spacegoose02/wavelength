@@ -3,9 +3,11 @@ import { pickStation, SEGMENT_LABELS, startStation, stopStation, useStation } fr
 import { useSettings } from '../store/settings';
 import { useDjAvailable } from '../lib/djStatus';
 import { useFeature } from '../lib/features';
+import { getSong, NotOnDeezer } from '../lib/getSong';
+import { useMustRequest } from '../lib/inbox';
 import { myPlaylists, type MyPlaylist } from '../lib/myPlaylists';
-import type { HubStationKind } from '../sources/hub';
-import { IconX } from './Icons';
+import type { HubMixSong, HubStationKind } from '../sources/hub';
+import { IconDownload, IconX } from './Icons';
 import { DJ_NAME, TrashPanda } from './TrashPanda';
 
 /** Whether this person can use DJ mode (the feature is on and the AI DJ is on for them). */
@@ -98,6 +100,7 @@ export function DjStationPanel({ inline = false }: { inline?: boolean }) {
           ))}
         </select>
       )}
+      {s.on && s.missing.length > 0 && <MissingSongs songs={s.missing} title={s.title} />}
       <form className="dj-station-ask" onSubmit={(e) => { e.preventDefault(); send(); }}>
         <input value={ask} maxLength={300} placeholder="Tell the DJ what you want: “90s house”, “chill for cooking”…" onChange={(e) => setAsk(e.target.value)} disabled={s.busy} />
         <button className="btn small" disabled={s.busy || !ask.trim()}>Go</button>
@@ -113,5 +116,48 @@ export function DjStationPanel({ inline = false }: { inline?: boolean }) {
         </label>
       )}
     </div>
+  );
+}
+
+const songKey = (x: HubMixSong) => `${x.artist}\u0000${x.title}`.toLowerCase();
+
+/** The songs this segment's list has that your library doesn't: Get (or Request) them one by one or all at once. */
+function MissingSongs({ songs, title }: { songs: HubMixSong[]; title: string }) {
+  const ask = useMustRequest();
+  const [state, setState] = useState<Record<string, string>>({});
+  const [all, setAll] = useState(false);
+  const get = async (x: HubMixSong) => {
+    const k = songKey(x);
+    setState((m) => ({ ...m, [k]: '…' }));
+    try {
+      const via = await getSong({ title: x.title, artist: x.artist, cover: x.coverUrl });
+      setState((m) => ({ ...m, [k]: via === 'request' ? 'Requested' : 'Downloading' }));
+    } catch (e) {
+      setState((m) => ({ ...m, [k]: e instanceof NotOnDeezer ? 'Not on Deezer' : String((e as Error)?.message ?? e).slice(0, 60) }));
+    }
+  };
+  const getAll = async () => {
+    setAll(true);
+    for (const x of songs) if (!state[songKey(x)]) await get(x);
+  };
+  const left = songs.filter((x) => !state[songKey(x)]).length;
+  return (
+    <details className="dj-station-missing">
+      <summary>{songs.length} {songs.length === 1 ? 'song' : 'songs'} on {title || 'this list'} you don’t have</summary>
+      <ul>
+        {songs.map((x) => {
+          const st = state[songKey(x)];
+          return (
+            <li key={songKey(x)}>
+              <span><b>{x.title}</b> <small className="muted">{x.artist}</small></span>
+              <button className="chip" disabled={!!st} title={st ?? `${ask ? 'Request' : 'Get'} ${x.title} by ${x.artist}`} onClick={() => void get(x)}>
+                {st ?? <><IconDownload /> {ask ? 'Request' : 'Get'}</>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {left > 1 && <button className="btn small" disabled={all} onClick={() => void getAll()}>{ask ? 'Request' : 'Get'} all {left}</button>}
+    </details>
   );
 }

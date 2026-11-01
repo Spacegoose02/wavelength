@@ -131,7 +131,7 @@ export class Station {
     for (let tries = 0; tries < (picked ? 1 : SEGMENTS.length); tries++) {
       const songs = (await this.pool(user, kind as (typeof SEGMENTS)[number], kid)).filter((s) => !recent.has(key(s)));
       if (songs.length >= 3) {
-        const chosen = kind === 'tophits' ? songs.slice(0, SIZE * 3) : shuffle(dedupe(songs)).slice(0, SIZE * 2);
+        const chosen = kind === 'tophits' ? songs.slice(0, 50) : shuffle(dedupe(songs)).slice(0, SIZE * 2);
         const intro = talk ? await this.intro(user, kind, chosen.slice(0, 3), { name, style }) : null;
         return { kind, title: TITLES[kind], songs: chosen, intro };
       }
