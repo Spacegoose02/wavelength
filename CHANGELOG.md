@@ -6,6 +6,9 @@
   the mouth does. Sliders for sensitivity, how centred the voice must be, noise rejection, the voice range, drum
   hits, lyrics timing (for every song, or nudged for the song playing and remembered), syllable length, and how
   fast and wide the mouth moves. Synced with a Hub. See the [user guide](docs/USER-GUIDE.md#critters).
+- **Mac and Linux apps.** Each release now has a universal Mac `.dmg` (Apple silicon and Intel) and a Linux
+  AppImage and `.deb`. Passwords go in the macOS Keychain or the Secret Service (GNOME Keyring, KWallet).
+  They don't update themselves yet.
 - **Smart offline.** **Settings → Downloads → Smart offline** keeps your ♥ songs, your mixes and what you've
   played lately on the device by itself, on Wi-Fi, under a size cap, and deletes what drops off. See the
   [user guide](docs/USER-GUIDE.md#smart-offline).

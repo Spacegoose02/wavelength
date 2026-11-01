@@ -1,6 +1,7 @@
 //! Passwords and tokens kept in the OS keychain instead of the app's own storage (src/lib/secrets.ts):
-//! Windows Credential Manager, and on Android the Keystore (values encrypted with a key that never leaves
-//! it). Elsewhere `secrets_available` says no and the app keeps them where it always did.
+//! Windows Credential Manager, the macOS Keychain, the Linux Secret Service (GNOME Keyring, KWallet), and on
+//! Android the Keystore (values encrypted with a key that never leaves it). Where none is available (a Linux
+//! desktop with no Secret Service running) `secrets_available` says no and the app keeps them where it always did.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -14,7 +15,11 @@ fn ready() -> bool {
         let store = windows_native_keyring_store::Store::new();
         #[cfg(target_os = "android")]
         let store = android_native_keyring_store::Store::new();
-        #[cfg(any(windows, target_os = "android"))]
+        #[cfg(target_os = "macos")]
+        let store = apple_native_keyring_store::keychain::Store::new();
+        #[cfg(target_os = "linux")]
+        let store = zbus_secret_service_keyring_store::Store::new();
+        #[cfg(any(windows, target_os = "android", target_os = "macos", target_os = "linux"))]
         return match store {
             Ok(s) => {
                 keyring_core::set_default_store(s);
@@ -25,7 +30,7 @@ fn ready() -> bool {
                 false
             }
         };
-        #[cfg(not(any(windows, target_os = "android")))]
+        #[cfg(not(any(windows, target_os = "android", target_os = "macos", target_os = "linux")))]
         false
     })
 }

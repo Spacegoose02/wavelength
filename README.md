@@ -5,7 +5,7 @@
 <p align="center">
   <b>One player for every self-hosted audio source.</b><br>
   Navidrome · Plex · Audiobookshelf · SUB/WAVE · internet radio — with deemix &amp; yt-dlp downloads,<br>
-  live charts, offline playback and 62 skins. Windows, Android phones/tablets, and Android TV.
+  live charts, offline playback and 62 skins. Windows, macOS, Linux, Android phones/tablets, and Android TV.
 </p>
 
 <p align="center">
@@ -61,6 +61,8 @@ Grab the files from the [latest release](../../releases/latest):
 | Platform | File | Notes |
 |---|---|---|
 | Windows 10/11 | `Wavelength_x.y.z_x64-setup.exe` | Installer (recommended). A portable `Wavelength.exe` is attached too. |
+| macOS 11+ | `Wavelength_x.y.z_universal.dmg` | Apple silicon and Intel. If it's unsigned, right-click → **Open** the first time. |
+| Linux | `Wavelength_x.y.z_amd64.AppImage` or `.deb` | AppImage: `chmod +x` and run. Needs WebKitGTK 4.1 (Ubuntu 22.04+, Fedora 38+). |
 | Android phone / tablet / TV | `Wavelength-x.y.z-android.apk` | One APK for arm64 + armv7. Allow "install unknown apps" for your file manager. On Android 17+ tap **Allow** for local-network access, or it can't reach your servers. |
 
 Then open **Settings → Sources** and add your servers. Each source has a **Test connection** button.

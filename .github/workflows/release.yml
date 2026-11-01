@@ -11,6 +11,9 @@
 #   ANDROID_KEYSTORE_PASSWORD storePassword from keystore.properties
 #   ANDROID_KEY_ALIAS         keyAlias from keystore.properties (normally "wavelength")
 #   ANDROID_KEY_PASSWORD      keyPassword from keystore.properties
+# Optional, for signed and notarised Mac builds (without them the .dmg is unsigned; see docs/RELEASING.md "Mac"):
+#   APPLE_CERTIFICATE (base64 .p12), APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#   APPLE_ID, APPLE_PASSWORD (app-specific password), APPLE_TEAM_ID
 # Optional, for update signing (docs/RELEASING.md "Update signing"):
 #   TAURI_SIGNING_PRIVATE_KEY           private key from `npx tauri signer generate`
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password
@@ -93,6 +96,107 @@ jobs:
             for f in "${FILES[@]}"; do npx tauri signer sign "$f"; FILES+=("$f.sig"); done
           fi
           gh release upload "$TAG" --clobber "${FILES[@]}"
+
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libdbus-1-dev patchelf
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Set version from tag
+        shell: bash
+        run: |
+          # Inline (not a script file) so it also works when building older tags.
+          node -e '
+            const fs = require("fs"), v = process.argv[1];
+            if (!/^\d+\.\d+\.\d+$/.test(v)) { console.error("Bad version: " + v); process.exit(1); }
+            for (const f of ["package.json", "src-tauri/tauri.conf.json"]) {
+              const j = JSON.parse(fs.readFileSync(f, "utf8"));
+              console.log(f + ": " + j.version + " -> " + v);
+              j.version = v;
+              fs.writeFileSync(f, JSON.stringify(j, null, 2) + "\n");
+            }' "${TAG#v}"
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run tauri build -- --bundles appimage deb
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" --clobber src-tauri/target/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/deb/*.deb
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Set version from tag
+        shell: bash
+        run: |
+          # Inline (not a script file) so it also works when building older tags.
+          node -e '
+            const fs = require("fs"), v = process.argv[1];
+            if (!/^\d+\.\d+\.\d+$/.test(v)) { console.error("Bad version: " + v); process.exit(1); }
+            for (const f of ["package.json", "src-tauri/tauri.conf.json"]) {
+              const j = JSON.parse(fs.readFileSync(f, "utf8"));
+              console.log(f + ": " + j.version + " -> " + v);
+              j.version = v;
+              fs.writeFileSync(f, JSON.stringify(j, null, 2) + "\n");
+            }' "${TAG#v}"
+
+      - run: npm ci
+
+      - name: Build (universal, Apple silicon and Intel)
+        env:
+          # Tauri signs and notarises when these are set; without them the app is unsigned (right-click → Open)
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run tauri build -- --target universal-apple-darwin --bundles dmg
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" --clobber src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
 
   android:
     runs-on: ubuntu-latest
