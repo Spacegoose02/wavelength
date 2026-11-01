@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Fix joined artist credits.** An artist like "Lil Baby;Jeremih" (several artists joined with ";" in the tags)
+  can now be edited: **Edit artist** no longer stops at "Navidrome has no albums for this artist" but finds the albums
+  their songs are on, starts **Change to** as the first artist, and offers "Lil Baby", "Lil Baby feat. Jeremih" or
+  "Lil Baby & Jeremih". Appears On also finds songs credited to such a joined name.
 
 ## 0.23.1
 - **More songs find lyrics.** Titles tagged like YouTube uploads ("Adele - Hello (Official Music Video)" by

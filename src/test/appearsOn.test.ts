@@ -32,3 +32,11 @@ describe('Appears On', () => {
     expect(appearsOnSongs(songs, future, new Set(['a6'])).map((s) => s.albumId)).toEqual(['a1', 'a5']);
   });
 });
+
+describe('joined credits', () => {
+  test('an artist named for a whole ";" credit is credited on songs with that line', () => {
+    const joined = { ids: new Set<string>(), name: 'Lil Baby;Jeremih' };
+    expect(isCredited({ title: 'Forever', artist: 'Lil Baby;Jeremih', albumArtist: 'Lil Baby' }, joined)).toBe(true);
+    expect(isCredited({ title: 'Forever', artist: 'Lil Baby', albumArtist: 'Lil Baby' }, joined)).toBe(false);
+  });
+});

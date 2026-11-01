@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { albumTarget, planAlbumMerge, planArtistMerge, renameArtist } from '../lib/merge';
+import { albumTarget, planAlbumMerge, planArtistMerge, renameArtist, splitCredit, splitCreditOptions } from '../lib/merge';
 import type { HubTags } from '../sources/hub';
 
 const song = (path: string, tags: HubTags, albumId = 'a1') => ({ id: path, path, albumId, tags });
@@ -59,5 +59,23 @@ describe('merging artists', () => {
       ['1.mp3', { artist: 'B.o.B', albumArtist: 'B.o.B' }],
       ['2.mp3', { artist: 'B.o.B & Future', albumArtist: 'B.o.B' }],
     ]);
+  });
+});
+
+describe('splitting joined credits', () => {
+  test('finds the artists in a ";" or " / " credit and leaves single names alone', () => {
+    expect(splitCredit('Lil Baby;Jeremih')).toEqual(['Lil Baby', 'Jeremih']);
+    expect(splitCredit('Lil Baby; Jeremih; Future')).toEqual(['Lil Baby', 'Jeremih', 'Future']);
+    expect(splitCredit('Lil Baby / Jeremih')).toEqual(['Lil Baby', 'Jeremih']);
+    expect(splitCredit('AC/DC')).toBeNull();
+    expect(splitCredit('Lil Baby')).toBeNull();
+  });
+  test('offers the first artist alone, featuring the rest, or all of them', () => {
+    expect(splitCreditOptions(['Lil Baby', 'Jeremih'])).toEqual(['Lil Baby', 'Lil Baby feat. Jeremih', 'Lil Baby & Jeremih']);
+    expect(splitCreditOptions(['A', 'B', 'C'])).toEqual(['A', 'A feat. B & C', 'A, B & C']);
+  });
+  test('the whole joined credit renames to the chosen one', () => {
+    expect(renameArtist('Lil Baby;Jeremih', 'Lil Baby;Jeremih', 'Lil Baby', true)).toBe('Lil Baby');
+    expect(renameArtist('Lil Baby', 'Lil Baby;Jeremih', 'Lil Baby', true)).toBe('Lil Baby');
   });
 });

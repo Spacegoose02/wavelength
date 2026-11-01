@@ -1434,6 +1434,10 @@ how the files name them now, **Change to** is the new name. To merge two spellin
 Beatles"), open one and change it to the other. It can also set one genre for all their songs. With **Also
 where they're credited with others** on, "Artist feat. Someone" and "Someone & Artist" change too. Every song
 that will change is listed first, by album; untick an album to leave it alone. **Undo** works as for albums.
+Some taggers join several artists into one credit with a semicolon, so the library shows an artist like
+"Lil Baby;Jeremih". Open that artist's **Edit artist**: it finds the songs with that credit (even when they're on
+someone else's album) and starts **Change to** as the first artist, with buttons for "Lil Baby", "Lil Baby feat.
+Jeremih" and "Lil Baby & Jeremih".
 To merge several artists at once, or to merge albums, use **Select → Merge** on Albums or Artists (see
 [Merging albums and artists](#merging-albums-and-artists-admins)).
 

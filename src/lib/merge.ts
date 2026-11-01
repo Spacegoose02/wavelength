@@ -35,6 +35,22 @@ export function renameArtist(value: string | undefined, from: string, to: string
     k >= 0 && value.slice(at - k, at - k + to.length) === to ? m : to);
 }
 
+/**
+ * The artists in a credit that several were joined into with ";" or " / " (how some taggers write multi-artist tags,
+ * which Navidrome then lists as one artist like "Lil Baby;Jeremih"), or null when it's one name. "AC/DC" stays one.
+ */
+export function splitCredit(name: string): string[] | null {
+  const parts = name.split(/\s*;\s*|\s+\/\s+/).map((s) => s.trim()).filter(Boolean);
+  return parts.length > 1 ? parts : null;
+}
+
+/** What a split credit could become: just the first artist, or the first featuring the rest, or all of them. */
+export function splitCreditOptions(parts: string[]): string[] {
+  const [main, ...rest] = parts;
+  const list = rest.length === 1 ? rest[0] : `${rest.slice(0, -1).join(', ')} & ${rest[rest.length - 1]}`;
+  return [main, `${main} feat. ${list}`, `${parts.slice(0, -1).join(', ')} & ${parts[parts.length - 1]}`];
+}
+
 /** The value most of these songs have for a tag (the first one on a tie), or undefined when none have it. */
 function usual(songs: HubTagSong[], key: keyof HubTags): string | undefined {
   const counts = new Map<string, number>();
