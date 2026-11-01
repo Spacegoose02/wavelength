@@ -181,15 +181,31 @@ jobs:
 
       - run: npm ci
 
-      - name: Build (universal, Apple silicon and Intel)
+      # Tauri signs and notarises when the APPLE_* variables are set; without them the app is unsigned
+      # (right-click → Open). A missing secret still arrives as an empty variable, which Tauri treats as
+      # "set" and then fails to import, so they're only exported when the certificate is really there.
+      - name: Apple signing (only when the secrets are set)
+        shell: bash
         env:
-          # Tauri signs and notarises when these are set; without them the app is unsigned (right-click → Open)
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "No Apple certificate: building an unsigned .dmg"
+            exit 0
+          fi
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!v}" ]; then
+              d="EOF_$(openssl rand -hex 8)"
+              { echo "$v<<$d"; echo "${!v}"; echo "$d"; } >> "$GITHUB_ENV"
+            fi
+          done
+
+      - name: Build (universal, Apple silicon and Intel)
         run: npm run tauri build -- --target universal-apple-darwin --bundles dmg
 
       - name: Upload to release
