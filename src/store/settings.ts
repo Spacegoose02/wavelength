@@ -158,6 +158,9 @@ interface SettingsState {
   /** Show Inbox news from the Hub as system notifications (lib/notify.ts). Per device, not synced. */
   notifications: boolean;
   setNotifications(v: boolean): void;
+  /** Settings → Downloads → Smart offline (lib/smartOffline.ts). Per device, not synced. */
+  smartOffline: SmartOfflineSettings;
+  setSmartOffline(p: Partial<SmartOfflineSettings>): void;
   /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
   updates: { auto: boolean; prerelease: boolean };
   setUpdates(u: Partial<SettingsState['updates']>): void;
@@ -176,6 +179,24 @@ interface SettingsState {
   setThemeMode(m: Partial<Pick<SettingsState, 'seasonal' | 'randomDaily'>>): void;
   setDeemix(d: Partial<SettingsState['deemix']>): void;
 }
+
+/** Smart offline's settings (lib/smartOffline.ts), kept here so the store doesn't import that module. */
+export interface SmartOfflineSettings {
+  enabled: boolean;
+  favorites: boolean;
+  /** songs played in the last N days; 0 = off */
+  recentDays: number;
+  /** Made for you mixes and Blend (lib/homeMixes.ts registers them) */
+  mixes: boolean;
+  /** largest total for smart offline's songs, MB */
+  capMb: number;
+  /** only on Wi-Fi (where the device can tell; Windows always counts as Wi-Fi) */
+  wifiOnly: boolean;
+  /** last finished run, ms */
+  lastRun?: number;
+}
+
+export const DEFAULT_SMART_OFFLINE: SmartOfflineSettings = { enabled: false, favorites: true, recentDays: 30, mixes: true, capMb: 4000, wifiOnly: true };
 
 export const useSettings = create<SettingsState>()(
   persist(
@@ -198,6 +219,8 @@ export const useSettings = create<SettingsState>()(
       setAct: (act) => set({ act }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
+      smartOffline: DEFAULT_SMART_OFFLINE,
+      setSmartOffline: (p) => set((st) => ({ smartOffline: { ...st.smartOffline, ...p } })),
       mouthTune: DEFAULT_TUNE,
       setMouthTune: (t) => set((st) => ({ mouthTune: t === null ? DEFAULT_TUNE : cleanTune({ ...st.mouthTune, ...t }) })),
       mouthOffsets: {},
@@ -319,7 +342,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, mouthTune: cleanTune(s.mouthTune) };
+        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, mouthTune: cleanTune(s.mouthTune) };
       },
     },
   ),

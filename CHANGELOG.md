@@ -6,6 +6,9 @@
   the mouth does. Sliders for sensitivity, how centred the voice must be, noise rejection, the voice range, drum
   hits, lyrics timing (for every song, or nudged for the song playing and remembered), syllable length, and how
   fast and wide the mouth moves. Synced with a Hub. See the [user guide](docs/USER-GUIDE.md#critters).
+- **Smart offline.** **Settings → Downloads → Smart offline** keeps your ♥ songs, your mixes and what you've
+  played lately on the device by itself, on Wi-Fi, under a size cap, and deletes what drops off. See the
+  [user guide](docs/USER-GUIDE.md#smart-offline).
 - **Feature switches (Hub admins).** **Settings → Features** turns each newer feature on or off for the
   household and separately for kid profiles. **Hub:** `GET/PUT /api/admin/features`, and `GET /api/me` now
   says which features are on (see [docs/HUB.md](docs/HUB.md#feature-switches)).

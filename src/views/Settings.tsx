@@ -16,6 +16,7 @@ import { AccountTab, HubAccess, UsersTab } from './HubSettings';
 import { ServerTab } from './ServerTab';
 import { DjAdminTab } from './DjAdmin';
 import { FeaturesAdminTab } from './FeaturesAdmin';
+import { SmartOfflineSettings } from '../components/SmartOfflineSettings';
 import { MouthTuner } from '../components/MouthTuner';
 import { useFeature } from '../lib/features';
 import { UpdatesTab } from '../components/Updates';
@@ -699,7 +700,12 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           </section>
         </>
       )}
-      {tab === 'downloads' && <DownloadsTab />}
+      {tab === 'downloads' && (
+        <>
+          <SmartOfflineSettings />
+          <DownloadsTab />
+        </>
+      )}
       {tab === 'themes' && <ThemesTab />}
       {tab === 'discover' && <DiscoverCharts />}
       {tab === 'updates' && <UpdatesTab />}

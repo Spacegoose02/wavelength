@@ -1,3 +1,4 @@
+import { startSmartOffline } from './lib/smartOffline';
 import { startArtworkChecks } from './lib/artwork';
 import { startPlaylistCoverChecks } from './lib/playlistCovers';
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
@@ -193,6 +194,7 @@ export default function App() {
     startListeningReports();
     startRemote();
     startTogether();
+    startSmartOffline();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back

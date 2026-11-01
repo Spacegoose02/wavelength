@@ -828,6 +828,21 @@ busiest day and longest streak, and when you listen most. **Play your top songs*
 from every device you're signed in on, not radio, audiobooks or podcasts, and starts from the history your
 Hub already has.
 
+## Smart offline
+
+**Settings → Downloads → Smart offline** keeps music on the device by itself, so the phone plays in the car or on
+a plane without you picking albums first. Turn it on and choose what to keep:
+
+- **♥ Favourites**: every song you've starred.
+- **Made for you mixes**: your [Home](#home-and-made-for-you-mixes) mixes and Blends, as they change.
+- **Songs played in the last 7–90 days**, most played first.
+
+It checks every few hours while Wavelength is open (or press **Update now**), only on **Wi-Fi** unless you untick
+it, and stays under the size you pick (1–32 GB): favourites fill first, then mixes, then recent plays. Songs
+that drop off a shelf are deleted, unless an album or playlist you downloaded yourself has them. The shelves show
+in **Downloaded** as *Kept automatically*. It's per device, so the phone and the PC can keep different things.
+Windows and Android only; a Hub admin can switch it off in **Settings → Features**.
+
 ## Following downloads
 
 **Downloads → deemix queue** shows everything deemix has, as it happens:
