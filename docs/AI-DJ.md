@@ -274,7 +274,9 @@ to the music, up to 250%; the music dips under the voice more the louder it is.
 
 The station goes round favourites → new for you → throwbacks → top hits; tap a segment to jump straight to it (it plays that segment, or says why it can't), or type
 in the box to change course. In the rotation, a segment whose songs aren't in your library (or that has nothing new) is skipped.
-Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing anything else stops DJ mode; **×** stops it
+Songs a segment wanted that aren't in your library are listed under **N songs on <segment> you don't have** in
+the panel (Top hits checks the chart's top 50), each with **Get** (deemix, or yt-dlp as a backup) or **Request**
+for people without Autodownload, plus **Get all**. Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing anything else stops DJ mode; **×** stops it
 too, and **–** folds the panel into a small pill.
 
 **Cost.** Picking songs costs nothing: they come from the Made for you mixes (made once a day) and the chart.

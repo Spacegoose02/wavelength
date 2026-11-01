@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **DJ mode shows what you're missing.** Each segment lists the songs it wanted that aren't in your library (Top hits
+  checks the chart's top 50), with **Get** / **Request** for each and **Get all**.
 
 ## 0.22.0
 - **DJ Trash Panda knows your playlists.** In DJ mode, pick one of your playlists and the DJ builds the station on
