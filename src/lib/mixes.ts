@@ -42,8 +42,8 @@ export async function loadMixes(fresh = false): Promise<HubMix[]> {
   return r.mixes;
 }
 
-/** One song in this library, or undefined. */
-async function findSong(s: HubMixSong, find: ReturnType<typeof findInLibrary>): Promise<Track | undefined> {
+/** One song in this library, or undefined (also DJ mode, lib/djStation.ts). */
+export async function findSong(s: HubMixSong, find: ReturnType<typeof findInLibrary>): Promise<Track | undefined> {
   const t = s.track;
   if (t?.sourceId && t.id && useSettings.getState().sources.some((x) => x.id === t.sourceId && x.enabled)) {
     const { streamUrl: _u, ...rest } = t;

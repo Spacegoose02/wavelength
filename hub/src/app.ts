@@ -4,7 +4,7 @@ import { tourRoutes, videoRoutes } from './routes/tours.ts';
 import { Videos } from './videos.ts';
 import { publicLinkRoutes } from './routes/publicLinks.ts';
 import { Tours } from './tours.ts';
-import { deezerLookups, Mixes, type MixLookups } from './mixes.ts';
+import { deezerLookups, Mixes, type MixLookups, type MixSong } from './mixes.ts';
 import { mixRoutes } from './routes/mixes.ts';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Config } from './config.ts';
@@ -57,6 +57,7 @@ import { webRoutes } from './web.ts';
 import { YtdlpRunner, type YtResult } from './ytdlp.ts';
 import { DjAgent } from './dj/agent.ts';
 import { DjVoice, type Fetch } from './dj/voice.ts';
+import { Station } from './dj/station.ts';
 import { anthropicProvider, type ProviderFactory } from './dj/provider.ts';
 import { djRoutes } from './routes/dj.ts';
 
@@ -92,6 +93,8 @@ export interface Ctx {
   dj: DjAgent;
   /** The talking DJ's Hub voices: Kokoro or OpenAI (dj/voice.ts). */
   voice: DjVoice;
+  /** DJ mode's segments (dj/station.ts). */
+  station: Station;
   /** Made for you mixes and Blends (mixes.ts). */
   mixes: Mixes;
   /** Sound-alike analysis of the library (sonic/). */
@@ -102,7 +105,7 @@ export interface Ctx {
   videos: Videos;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]> } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -122,6 +125,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     tours: new Tours(db, config.secretKey, opts.tourFetch),
     videos: undefined as unknown as Videos,
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
+  ctx.station = new Station(db, ctx.dj, ctx.mixes, opts.stationChart);
   ctx.videos = new Videos(opts.videoSearch ?? ((q, n) => ctx.ytdlp.search(q, n)));
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);

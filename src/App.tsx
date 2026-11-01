@@ -1,6 +1,7 @@
 import { BlendView, MixView } from './views/Mix';
 import { startSmartOffline } from './lib/smartOffline';
 import { startDjVoice } from './lib/djVoice';
+import { startDjStation } from './lib/djStation';
 import { startSingMode } from './lib/singMode';
 import { startDiscord } from './lib/discord';
 import { startHifi } from './lib/hifi';
@@ -203,6 +204,7 @@ export default function App() {
     startTogether();
     startSmartOffline();
     startDjVoice();
+    startDjStation();
     startSingMode();
     startDiscord();
     void startHifi();

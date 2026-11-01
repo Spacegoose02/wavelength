@@ -14,6 +14,7 @@ import { TogetherButton } from './Together';
 import { RadioGetButton } from './RadioGetButton';
 import { SongRadioButton } from './SongRadioButton';
 import { SleepButton } from './SleepButton';
+import { DjModeButton } from './DjStation';
 import { LyricsPanel } from './Lyrics';
 import { SingButton, SingControls } from './SingButton';
 import { VideoButton } from './VideoButton';
@@ -74,6 +75,7 @@ export function NowPlaying() {
               <VideoButton track={t} />
             </>}
             <SleepButton />
+            <DjModeButton />
           </div>
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && (

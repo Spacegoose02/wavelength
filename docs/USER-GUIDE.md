@@ -1005,6 +1005,13 @@ request the rest.
 Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only), the model, prices, monthly limits,
 who can use it, and how many web searches it may make per step. The full setup guide is [AI-DJ.md](AI-DJ.md).
 
+### DJ mode
+
+When an admin turns on **DJ mode** (**Settings → Features**), press the raccoon button in the player and DJ Trash
+Panda runs a station for you: your favourites, new finds, throwbacks and top hits in turns, each introduced out loud.
+Tap a segment to jump to it, or type what you want ("90s house", "something chill for cooking") and the DJ changes
+course. Play anything else and DJ mode steps aside. See [AI-DJ.md](AI-DJ.md#dj-mode).
+
 ### Talking DJ
 
 When an admin turns on **Talking AI DJ** (**Settings → Features**), **Settings → Playback → Talking DJ** makes the

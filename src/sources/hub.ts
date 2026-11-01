@@ -636,6 +636,8 @@ export interface HubDjSettings {
   webSearchPrice?: number;
   voice?: HubDjVoiceSettings;
 }
+export type HubStationKind = 'favourites' | 'discover' | 'throwbacks' | 'tophits' | 'ask';
+export interface HubStationSegment { kind: HubStationKind; title: string; songs: HubMixSong[]; intro: string | null; spent: number; limit: number | null }
 export type HubVoiceEngine = 'device' | 'kokoro' | 'openai';
 export interface HubDjVoiceInfo { engine: HubVoiceEngine; voices: string[]; default: string; error?: string }
 export interface HubDjVoiceSettings {
@@ -955,6 +957,9 @@ export class HubClient {
   /** The talking DJ's spoken link before `next` (needs the djVoice feature). */
   djPatter = (b: { previous?: { title: string; artist?: string; album?: string; year?: number }; next: { title: string; artist?: string; album?: string; year?: number }; name?: string; style?: string }) =>
     this.call<{ text: string; spent: number; limit: number | null }>('POST', '/api/dj/patter', b);
+  /** DJ mode's next segment (hub/src/dj/station.ts; needs the djMode feature). */
+  djStation = (b: { kind?: HubStationKind; ask?: string; previous?: HubStationKind; recent?: { title: string; artist: string }[]; name?: string; style?: string; talk?: boolean }) =>
+    this.call<HubStationSegment>('POST', '/api/dj/station', b);
   /** The talking DJ's Hub voices (Kokoro or OpenAI); `engine: 'device'` = read it with this device's voice. */
   djVoice = () => this.call<HubDjVoiceInfo>('GET', '/api/dj/voice');
   /** An MP3 of `text` in the Hub's voice. */

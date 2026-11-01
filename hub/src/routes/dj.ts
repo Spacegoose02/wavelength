@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { requireFeature } from '../features.ts';
+import { featureOn, requireFeature } from '../features.ts';
 import { usageSummary } from '../dj/agent.ts';
 import {
   blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, OPENAI_VOICE_MODELS, priceOf, VOICE_ENGINES, saveSettings, setAccess, spentSince, webFor,
@@ -13,7 +13,7 @@ import { getUser, listUsers } from '../users.ts';
  * The AI DJ (docs/AI-DJ.md). Listeners chat in the app; the app sends each message here, and the Hub runs the
  * model with the key it keeps. Admins (keys.manage) set it up and switch it on per account.
  */
-export function djRoutes(app: FastifyInstance, { db, config, dj, voice }: Ctx) {
+export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station }: Ctx) {
   const key = config.secretKey;
 
   /** Signed in, and allowed to use the DJ right now. */
@@ -65,17 +65,29 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice }: Ctx) {
     return { ...(await dj.patter(user, req.body)), ...allowance(user.id) };
   });
 
+  /** DJ mode: `{ kind?, ask?, previous?, recent?, name?, style?, talk? }` → `{ kind, title, songs, intro }`, the next segment. */
+  app.post('/api/dj/station', async (req) => {
+    const user = listener(req);
+    requireFeature(db, 'djMode', user);
+    return { ...(await station.next(user, req.body)), ...allowance(user.id) };
+  });
+
   /** The talking DJ's voices: `{ engine, voices, default, error? }`. `engine: 'device'` = each device reads it. */
+  /** The Hub's voice reads the talking DJ's lines and DJ mode's intros: either feature will do. */
+  const voiceFeature = (user: Parameters<typeof featureOn>[2]) => {
+    if (!featureOn(db, 'djMode', user)) requireFeature(db, 'djVoice', user);
+  };
+
   app.get('/api/dj/voice', async (req) => {
     const user = listener(req);
-    requireFeature(db, 'djVoice', user);
+    voiceFeature(user);
     return voice.info();
   });
 
   /** `{ text, voice?, speed?, style? }` → an MP3 of the line, read by the Hub's voice (Kokoro or OpenAI). */
   app.post('/api/dj/speak', async (req, reply) => {
     const user = listener(req);
-    requireFeature(db, 'djVoice', user);
+    voiceFeature(user);
     const { audio, type } = await voice.speak(user, req.body);
     return reply.type(type).header('cache-control', 'no-store').send(audio);
   });

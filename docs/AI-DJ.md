@@ -14,6 +14,7 @@ API key; the app never sees the key.
 - [Adding a provider](#adding-a-provider)
 - [Not yet](#not-yet)
 - [The talking DJ](#the-talking-dj) and its [voices](#voices)
+- [DJ mode](#dj-mode)
 
 ## Setting it up (admins)
 
@@ -171,6 +172,7 @@ All need a device token. Listener routes answer 403 with the reason when the DJ 
 | DELETE | `/api/dj/chats/:id` | delete a chat |
 | POST | `/api/dj/chat` | `{ chatId?, message }` → `{ chat, status: 'done' \| 'tools', reply, calls?, full?, spent, limit }`; 402 when a limit is used up |
 | POST | `/api/dj/patter` | Talking DJ: `{ previous?, next, name?, style? }` → `{ text, spent, limit }`, one or two sentences to read between songs. Needs the **Talking AI DJ** feature switch; low effort, counted against the allowance |
+| POST | `/api/dj/station` | DJ mode: `{ kind?, ask?, previous?, recent?, name?, style?, talk? }` → `{ kind, title, songs, intro, spent, limit }`, the next segment. Needs the **DJ mode** feature switch |
 | GET | `/api/dj/voice` | Talking DJ: `{ engine: 'device' \| 'kokoro' \| 'openai', voices, default, error? }` |
 | POST | `/api/dj/speak` | Talking DJ: `{ text, voice?, speed?, style? }` → `audio/mpeg`; 409 while the voice is each device's own. OpenAI is counted against the allowance |
 | POST | `/api/dj/chats/:id/tools` | `{ results: [{ id, content, isError? }] }` → same as above |
@@ -241,3 +243,32 @@ model with an OpenAI-style API on port 8880. The CPU image is fine: a line takes
 
 Voices are named like `am_michael`: the first letter is the accent (a = American, b = British, …), the second
 f or m, then the name. The pickers show them as "Michael (American, male)".
+
+## DJ mode
+
+With **DJ mode** on in **Settings → Features** (off by default, kids separately), people the AI DJ is on for get a
+DJ Trash Panda button in the player (next to the other player buttons on a computer, in the mini player on phones,
+and in Now Playing). Press it and DJ Trash Panda runs a station that keeps going: a segment of about 12 songs, then
+the next, each introduced in the [DJ's voice](#voices) over the start of its first song.
+
+| Segment | Where the songs come from |
+|---|---|
+| **Your favourites** | On Repeat and your own songs in the Daily Mixes |
+| **New for you** | Discover Weekly and the Daily Mixes' songs from artists like yours |
+| **Throwbacks** | Forgotten favourites and Time Capsule |
+| **Top hits** | Deezer's worldwide chart (kid profiles: no explicit songs) |
+| **Your request** | type anything ("90s house", "something chill for cooking", "build me an EDM set"): the AI picks songs from the 250 you play most, plus up to 10 it knows that fit |
+
+The station goes round favourites → new for you → throwbacks → top hits; tap a segment to jump straight to it, or type
+in the box to change course. A segment whose songs aren't in your library (or that has nothing new) is skipped.
+Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing anything else stops DJ mode; **×** stops it
+too, and **–** folds the panel into a small pill.
+
+**Cost.** Picking songs costs nothing: they come from the Made for you mixes (made once a day) and the chart.
+Each segment's intro is one short, low-effort AI call (a fraction of a cent), and a request is one call that
+also picks the songs. Turn off **The DJ talks between segments** for no AI calls at all except requests. With
+the talking DJ on as well, its usual lines play between songs, but not at a segment change, where the intro takes
+their place.
+
+Code: `hub/src/dj/station.ts` (segments), `src/lib/djStation.ts` (finding the songs, queueing the next segment,
+the intros), `src/components/DjStation.tsx` (button and panel).
