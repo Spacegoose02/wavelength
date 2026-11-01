@@ -56,6 +56,7 @@ import { CleanDownloads } from './cleanDownloads.ts';
 import { webRoutes } from './web.ts';
 import { YtdlpRunner, type YtResult } from './ytdlp.ts';
 import { DjAgent } from './dj/agent.ts';
+import { DjVoice, type Fetch } from './dj/voice.ts';
 import { anthropicProvider, type ProviderFactory } from './dj/provider.ts';
 import { djRoutes } from './routes/dj.ts';
 
@@ -89,6 +90,8 @@ export interface Ctx {
   restart: () => void;
   /** The AI DJ's chats and agent loop (dj/agent.ts). */
   dj: DjAgent;
+  /** The talking DJ's Hub voices: Kokoro or OpenAI (dj/voice.ts). */
+  voice: DjVoice;
   /** Made for you mixes and Blends (mixes.ts). */
   mixes: Mixes;
   /** Sound-alike analysis of the library (sonic/). */
@@ -99,7 +102,7 @@ export interface Ctx {
   videos: Videos;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]> } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -113,6 +116,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     charts: new ChartCache(),
     restart: opts.restart ?? (() => undefined),
     dj: new DjAgent(db, config, opts.djProvider ?? anthropicProvider),
+    voice: new DjVoice(db, config.secretKey, opts.ttsFetch),
     mixes: new Mixes(db, opts.mixLookups ?? deezerLookups()),
     sonic: new SonicWorker(db, config.secretKey, config.musicDir, config.navidromeMusicDir),
     tours: new Tours(db, config.secretKey, opts.tourFetch),

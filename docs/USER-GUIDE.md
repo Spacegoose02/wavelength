@@ -1005,6 +1005,10 @@ of the song with the music turned down. Choose how often (every song up to every
 **Hype** or **Trivia**), a name for it to call you, and the voice and speed on this device. **Hear the voice**
 tries it. It uses a little of your AI DJ allowance each time.
 
+If your admin set up a Hub voice (**Kokoro**, free, or **OpenAI**), the **Voice** list has **DJ voices** that sound
+far more natural than the built-in ones. Pick one, or choose one of **This device's voices** to keep the old one.
+Admins: **Settings → AI DJ → Talking DJ voice**, and [AI-DJ.md](AI-DJ.md#voices) for running Kokoro.
+
 > **Developer notes.** `src/views/DJ.tsx` (chat), `src/lib/dj.ts` (the tools that run in the app),
 > `src/views/DjAdmin.tsx` (admin tab), `hub/src/dj/` and `hub/src/routes/dj.ts` on the Hub. See
 > [AI-DJ.md](AI-DJ.md#how-it-works).

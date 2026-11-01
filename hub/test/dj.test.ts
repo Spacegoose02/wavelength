@@ -279,3 +279,63 @@ test('AI DJ: the talking DJ writes a short link between songs, only with the swi
   assert.ok(r.body.spent > 0, 'counted against the allowance');
   assert.equal((db.prepare('SELECT COUNT(*) AS n FROM dj_usage WHERE conversation_id IS NULL').get() as { n: number }).n, 1);
 });
+
+test('Talking DJ voices: device by default, Kokoro and OpenAI on the Hub, OpenAI counted, keys never shown', async () => {
+  const calls: { url: string; body: Record<string, unknown> | null; auth: string | null }[] = [];
+  const ttsFetch = async (url: string, init?: RequestInit) => {
+    const headers = new Headers(init?.headers);
+    calls.push({ url, body: init?.body ? JSON.parse(String(init.body)) : null, auth: headers.get('authorization') });
+    if (url.endsWith('/v1/audio/voices')) return Response.json({ voices: [{ id: 'am_michael', name: 'am_michael' }, 'af_heart', { id: 'bad name!' }], default_voice: 'af_heart' });
+    if (url.includes('kokoro-down')) throw new TypeError('fetch failed');
+    return new Response(new Uint8Array([0x49, 0x44, 0x33, 1, 2, 3]), { headers: { 'content-type': 'audio/mpeg' } });
+  };
+  const { app, tokens, ids, db } = await seeded({}, {}, { djProvider: scripted([]).factory, ttsFetch });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { enabled: true, apiKey: 'sk-ant-x-1234' } });
+  await json(app, 'PUT', `/api/admin/dj/users/${ids.member}`, { token: tokens.admin, body: { enabled: true, monthlyLimit: null } });
+  const speak = (body: unknown) => app.inject({ method: 'POST', url: '/api/dj/speak', headers: { authorization: `Bearer ${tokens.member}` }, payload: body as object });
+
+  assert.equal((await json(app, 'GET', '/api/dj/voice', { token: tokens.member })).status, 403, 'needs the talking DJ feature');
+  await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { djVoice: { on: true } } } });
+  assert.deepEqual((await json(app, 'GET', '/api/dj/voice', { token: tokens.member })).body, { engine: 'device', voices: [], default: '' });
+  assert.equal((await speak({ text: 'hi' })).statusCode, 409, 'no Hub voice until an admin picks one');
+
+  // Kokoro: the list comes from its container, the speech from its OpenAI-style endpoint
+  assert.equal((await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { voice: { engine: 'robot' } } })).status, 400);
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { voice: { engine: 'kokoro', kokoroUrl: 'http://kokoro:8880/' } } });
+  const info = (await json(app, 'GET', '/api/dj/voice', { token: tokens.member })).body;
+  assert.deepEqual(info, { engine: 'kokoro', voices: ['af_heart', 'am_michael'], default: 'am_michael' });
+  const r = await speak({ text: '  That was Dreams.  Here is Hey Jude. ', voice: 'af_heart', speed: 3, style: 'hype' });
+  assert.equal(r.statusCode, 200);
+  assert.match(String(r.headers['content-type']), /audio\/mpeg/);
+  assert.equal(r.rawPayload.length, 6);
+  assert.deepEqual(calls.at(-1), { url: 'http://kokoro:8880/v1/audio/speech', auth: null, body: { model: 'kokoro', input: 'That was Dreams. Here is Hey Jude.', voice: 'af_heart', response_format: 'mp3', speed: 1.4, stream: false } });
+  assert.equal((await speak({ text: 'x'.repeat(601) })).statusCode, 400);
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { voice: { kokoroUrl: 'http://kokoro-down:8880' } } });
+  const down = await speak({ text: 'hi' });
+  assert.equal(down.statusCode, 502);
+  assert.match(down.json().error, /Kokoro can’t be reached.*container running/);
+
+  // OpenAI: needs its own key, sends the DJ style, and is billed per character
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { voice: { engine: 'openai', openaiVoice: 'coral' } } });
+  assert.equal((await speak({ text: 'hi' })).statusCode, 409);
+  const saved = await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { openaiKey: 'sk-openai-secret-9876' } });
+  assert.deepEqual(saved.body.openaiKey, { set: true, hint: '…9876', unreadable: false });
+  assert.ok(!JSON.stringify(saved.body).includes('sk-openai-secret'), 'the OpenAI key never leaves the Hub');
+  const line = 'Here comes the drop, Sam!';
+  assert.equal((await speak({ text: line, voice: 'not-a-voice', style: 'hype' })).statusCode, 200);
+  const sent = calls.at(-1)!;
+  assert.equal(sent.url, 'https://api.openai.com/v1/audio/speech');
+  assert.equal(sent.auth, 'Bearer sk-openai-secret-9876');
+  assert.equal(sent.body?.voice, 'coral', 'an unknown voice falls back to the admin’s pick');
+  assert.equal(sent.body?.model, 'gpt-4o-mini-tts');
+  assert.match(String(sent.body?.instructions), /high-energy/);
+  const usage = db.prepare("SELECT model, cost FROM dj_usage WHERE user_id = ? AND model LIKE 'openai:%'").all(ids.member) as { model: string; cost: number }[];
+  assert.deepEqual(usage.map((u) => ({ ...u })), [{ model: 'openai:gpt-4o-mini-tts', cost: (line.length * 15) / 1e6 }]);
+
+  // admins can hear it without spending anyone's allowance; listeners can't use the admin route
+  const test = await app.inject({ method: 'POST', url: '/api/admin/dj/voice/test', headers: { authorization: `Bearer ${tokens.admin}` }, payload: { voice: 'nova' } });
+  assert.equal(test.statusCode, 200);
+  assert.equal(calls.at(-1)?.body?.voice, 'nova');
+  assert.equal((await json(app, 'POST', '/api/admin/dj/voice/test', { token: tokens.member, body: {} })).status, 403);
+  assert.equal((db.prepare("SELECT COUNT(*) AS n FROM dj_usage WHERE model LIKE 'openai:%'").get() as { n: number }).n, 1);
+});

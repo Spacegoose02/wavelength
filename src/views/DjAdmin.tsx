@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { HubDjAdmin, HubDjPrice, HubDjSettings } from '../sources/hub';
+import { voiceLabel } from '../lib/djVoiceNames';
+import type { HubClient, HubDjAdmin, HubDjPrice, HubDjSettings, HubDjVoiceInfo, HubDjVoiceSettings } from '../sources/hub';
 import { hubClient } from '../store/hub';
 
 /**
@@ -45,7 +46,7 @@ export function DjAdminTab() {
     load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const save = async (b: Partial<HubDjSettings> & { apiKey?: string }, done = '') => {
+  const save = async (b: Omit<Partial<HubDjSettings>, 'voice'> & { voice?: Partial<HubDjVoiceSettings>; apiKey?: string; openaiKey?: string }, done = '') => {
     if (!c) return;
     try {
       setData(await c.saveDjAdmin(b));
@@ -189,6 +190,8 @@ export function DjAdminTab() {
         </div>
       </section>
 
+      {s.voice && <VoiceSection c={c} data={data} voice={s.voice} save={save} setErr={setErr} setNote={setNote} />}
+
       <section>
         <h2>Spending</h2>
         <p>This month: <b>{money(data.month.spent)}</b>{s.householdLimit !== null && <> of the household’s {money(s.householdLimit)}</>} <span className="muted small">· all time {money(data.allTime)}</span></p>
@@ -234,5 +237,111 @@ export function DjAdminTab() {
         ))}
       </section>
     </>
+  );
+}
+
+/** Who reads the talking DJ's lines (hub/src/dj/voice.ts): each device, Kokoro next to the Hub, or OpenAI. */
+function VoiceSection({ c, data, voice: v, save, setErr, setNote }: {
+  c: HubClient;
+  data: HubDjAdmin;
+  voice: HubDjVoiceSettings;
+  save: (b: { voice?: Partial<HubDjVoiceSettings>; openaiKey?: string }, done?: string) => Promise<void>;
+  setErr: (s: string) => void;
+  setNote: (s: string) => void;
+}) {
+  const [info, setInfo] = useState<HubDjVoiceInfo | null>(null);
+  const [key, setKey] = useState('');
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => {
+    setInfo(null);
+    if (v.engine !== 'device') void c.djAdminVoice().then(setInfo, (e) => setInfo({ engine: v.engine, voices: [], default: '', error: errText(e) }));
+  }, [v.engine, v.kokoroUrl, v.openaiModel]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ok = data.openaiKey?.set;
+  const current = v.engine === 'kokoro' ? v.kokoroVoice : v.openaiVoice;
+  const list = info?.voices.length ? (info.voices.includes(current) ? info.voices : [current, ...info.voices]) : [current];
+
+  const hear = async () => {
+    setPlaying(true);
+    try {
+      const blob = await c.testDjVoice({});
+      const url = URL.createObjectURL(blob);
+      const a = new Audio(url);
+      a.onended = () => URL.revokeObjectURL(url);
+      await a.play();
+      setErr('');
+    } catch (e) {
+      setErr(errText(e));
+    } finally {
+      setPlaying(false);
+    }
+  };
+
+  return (
+    <section>
+      <h2>Talking DJ voice</h2>
+      <p className="muted small">
+        Who reads the talking DJ’s lines between songs (turn the talking DJ on in Settings → Features). Each person can pick
+        another of these voices in Settings → Playback, or keep their device’s own.
+      </p>
+      <div className="editor">
+        <div className="editor-grid">
+          <label>Voice
+            <select value={v.engine} onChange={(e) => save({ voice: { engine: e.target.value as HubDjVoiceSettings['engine'] } })}>
+              <option value="device">Each device’s own voice (free)</option>
+              <option value="kokoro">Kokoro on your Hub (free, natural)</option>
+              <option value="openai">OpenAI (paid, most expressive)</option>
+            </select>
+          </label>
+          {v.engine === 'kokoro' && (
+            <label>Kokoro’s address
+              <input defaultValue={v.kokoroUrl} placeholder="http://kokoro:8880" onBlur={(e) => e.target.value.trim() !== v.kokoroUrl && save({ voice: { kokoroUrl: e.target.value.trim() } })} />
+            </label>
+          )}
+          {v.engine === 'openai' && (
+            <label>OpenAI API key {ok && <small className="muted">saved{data.openaiKey?.hint ? ` (${data.openaiKey.hint})` : ''}</small>}
+              <input type="password" value={key} autoComplete="off" placeholder={ok ? 'Paste a new key to replace it' : 'sk-…'} onChange={(e) => setKey(e.target.value)} />
+            </label>
+          )}
+          {v.engine === 'openai' && (
+            <label>Model
+              <select value={v.openaiModel} onChange={(e) => save({ voice: { openaiModel: e.target.value } })}>
+                {(data.openaiVoiceModels ?? [v.openaiModel]).map((m) => <option key={m} value={m}>{m === 'gpt-4o-mini-tts' ? 'gpt-4o-mini-tts (acts out the DJ style)' : m}</option>)}
+              </select>
+            </label>
+          )}
+          {v.engine !== 'device' && (
+            <label>Default voice
+              <select value={current} onChange={(e) => save({ voice: v.engine === 'kokoro' ? { kokoroVoice: e.target.value } : { openaiVoice: e.target.value } })}>
+                {list.map((x) => <option key={x} value={x}>{voiceLabel(x, v.engine)}</option>)}
+              </select>
+            </label>
+          )}
+          {v.engine === 'openai' && (
+            <label>Price per million characters (US$)
+              <input type="number" min={0} step="1" defaultValue={v.openaiPrice} onBlur={(e) => Number(e.target.value) !== v.openaiPrice && save({ voice: { openaiPrice: Number(e.target.value) || 0 } })} />
+            </label>
+          )}
+        </div>
+        {data.openaiKey?.unreadable && v.engine === 'openai' && <div className="errors">The saved OpenAI key can’t be read (the Hub’s secret key changed). Paste it again.</div>}
+        {info?.error && <div className="errors">{info.error}</div>}
+        <div className="row gap">
+          {v.engine === 'openai' && <button className="btn" disabled={!key.trim()} onClick={async () => { await save({ openaiKey: key.trim() }, 'OpenAI key saved on the Hub.'); setKey(''); }}>Save key</button>}
+          {v.engine === 'openai' && ok && <button className="btn ghost" onClick={() => confirm('Remove the OpenAI key?') && save({ openaiKey: '' }, 'OpenAI key removed.')}>Remove key</button>}
+          {v.engine !== 'device' && <button className="btn small" disabled={playing} onClick={() => { setNote(''); void hear(); }}>{playing ? 'Getting it…' : 'Hear it'}</button>}
+        </div>
+        {v.engine === 'kokoro' && (
+          <p className="muted small">
+            Kokoro runs in its own container next to the Hub (ghcr.io/remsky/kokoro-fastapi-cpu, port 8880); nothing leaves your
+            server. See docs/AI-DJ.md → Voices for the Docker and Unraid setup.
+          </p>
+        )}
+        {v.engine === 'openai' && (
+          <p className="muted small">
+            Get a key at platform.openai.com → API keys. A line is about 150 characters, so each one costs about
+            {' '}{money((150 * v.openaiPrice) / 1e6)}; it counts toward the AI DJ limits above. The key never leaves the Hub.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }

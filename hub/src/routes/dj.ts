@@ -4,7 +4,7 @@ import { audit } from '../audit.ts';
 import { requireFeature } from '../features.ts';
 import { usageSummary } from '../dj/agent.ts';
 import {
-  blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, priceOf, saveSettings, setAccess, spentSince, webFor,
+  blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, OPENAI_VOICE_MODELS, priceOf, VOICE_ENGINES, saveSettings, setAccess, spentSince, webFor,
 } from '../dj/settings.ts';
 import { clientIp, HttpError, need, signedIn } from '../http.ts';
 import { getUser, listUsers } from '../users.ts';
@@ -13,7 +13,7 @@ import { getUser, listUsers } from '../users.ts';
  * The AI DJ (docs/AI-DJ.md). Listeners chat in the app; the app sends each message here, and the Hub runs the
  * model with the key it keeps. Admins (keys.manage) set it up and switch it on per account.
  */
-export function djRoutes(app: FastifyInstance, { db, config, dj }: Ctx) {
+export function djRoutes(app: FastifyInstance, { db, config, dj, voice }: Ctx) {
   const key = config.secretKey;
 
   /** Signed in, and allowed to use the DJ right now. */
@@ -65,6 +65,21 @@ export function djRoutes(app: FastifyInstance, { db, config, dj }: Ctx) {
     return { ...(await dj.patter(user, req.body)), ...allowance(user.id) };
   });
 
+  /** The talking DJ's voices: `{ engine, voices, default, error? }`. `engine: 'device'` = each device reads it. */
+  app.get('/api/dj/voice', async (req) => {
+    const user = listener(req);
+    requireFeature(db, 'djVoice', user);
+    return voice.info();
+  });
+
+  /** `{ text, voice?, speed?, style? }` → an MP3 of the line, read by the Hub's voice (Kokoro or OpenAI). */
+  app.post('/api/dj/speak', async (req, reply) => {
+    const user = listener(req);
+    requireFeature(db, 'djVoice', user);
+    const { audio, type } = await voice.speak(user, req.body);
+    return reply.type(type).header('cache-control', 'no-store').send(audio);
+  });
+
   /** `{ results: [{ id, content, isError? }] }` for the calls the app was given. */
   app.post<{ Params: { id: string } }>('/api/dj/chats/:id/tools', async (req) => {
     const user = listener(req);
@@ -87,6 +102,9 @@ export function djRoutes(app: FastifyInstance, { db, config, dj }: Ctx) {
     return {
       settings,
       key: keyInfo(db, key),
+      openaiKey: keyInfo(db, key, 'openaiKey'),
+      voiceEngines: VOICE_ENGINES,
+      openaiVoiceModels: OPENAI_VOICE_MODELS,
       providers: PROVIDERS,
       efforts: EFFORTS,
       models: MODELS,
@@ -108,6 +126,20 @@ export function djRoutes(app: FastifyInstance, { db, config, dj }: Ctx) {
     const { changed } = saveSettings(db, key, req.body);
     if (changed.length) audit(db, { actorId: user.id, action: 'dj.settings', detail: { changed }, ip: clientIp(req) });
     return adminView();
+  });
+
+  /** The voice list for the admin page (Kokoro's comes from its container). */
+  app.get('/api/admin/dj/voice', async (req) => {
+    need(req, 'keys.manage');
+    return voice.info();
+  });
+
+  /** `{ text?, voice? }` → an MP3 in the saved voice, so admins can hear it. Not counted against anyone. */
+  app.post('/api/admin/dj/voice/test', async (req, reply) => {
+    need(req, 'keys.manage');
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const { audio, type } = await voice.speak(null, { text: 'Hey, this is DJ Trash Panda. Here’s how I sound between your songs.', ...b });
+    return reply.type(type).header('cache-control', 'no-store').send(audio);
   });
 
   /** `{ enabled?, monthlyLimit? }` for one account. */

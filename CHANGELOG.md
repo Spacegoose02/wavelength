@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Better voices for the talking DJ.** Admins can pick who reads the DJ's lines under **Settings → AI DJ →
+  Talking DJ voice**: each device's own voice as before, **Kokoro** (free natural voices in a container next to the
+  Hub), or **OpenAI** (the most expressive, acting out the hype, laid back or trivia style; about $15 per million
+  characters, counted toward the AI DJ limits). Everyone can pick their voice in **Settings → Playback → Talking DJ**.
+  If the Hub's voice fails, the device reads the line instead.
 
 ## 0.19.0
 - **The AI DJ can search the web.** Ask for today's top hits, or paste a festival or DJ setlist and say "build me

@@ -29,3 +29,9 @@ services:
   #     POST: "1"
   #   volumes:
   #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  # Optional: Kokoro, a free natural voice for the talking DJ (Settings → AI DJ → Talking DJ voice → Kokoro).
+  # The Hub's default address http://kokoro:8880 reaches it on this network. See docs/AI-DJ.md "Voices".
+  # kokoro:
+  #   image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+  #   container_name: kokoro
+  #   restart: unless-stopped
