@@ -3,6 +3,8 @@
 ## Unreleased
 - **DJ mode shows what you're missing.** Each segment lists the songs it wanted that aren't in your library (Top hits
   checks the chart's top 50), with **Get** / **Request** for each and **Get all**.
+
+## 0.22.0
 - **DJ Trash Panda knows your playlists.** In DJ mode, pick one of your playlists and the DJ builds the station on
   it: some of its songs plus more like them. In the DJ chat, ask for "something like my Gym playlist".
 - **DJ mode asks first.** The raccoon button opens a picker (Mix it up, a segment, a playlist, or type a request)
