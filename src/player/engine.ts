@@ -178,7 +178,10 @@ for (const el of all) {
   });
 }
 
-const effectiveVolume = (el: HTMLAudioElement) => (el === plain ? volume * Math.min(1, levelValue) : volume);
+/** Turned down under the talking DJ (lib/djVoice.ts); 1 = not ducked. */
+let duckValue = 1;
+let duckTimer: ReturnType<typeof setInterval> | undefined;
+const effectiveVolume = (el: HTMLAudioElement) => (el === plain ? volume * Math.min(1, levelValue) : volume) * duckValue;
 function applyVolume() {
   for (const el of all) el.volume = effectiveVolume(el);
 }
@@ -435,6 +438,18 @@ export const engine = {
     volume = v;
     if (remote) void remote.setVolume(v).catch(() => undefined);
     applyVolume();
+  },
+  /** Glide the music to `level` (0..1 of the set volume) over `seconds`: the talking DJ speaks over it. */
+  duck(level: number, seconds = 0.6) {
+    clearInterval(duckTimer);
+    const from = duckValue, to = Math.max(0, Math.min(1, level)), steps = Math.max(1, Math.round(seconds * 20));
+    let i = 0;
+    duckTimer = setInterval(() => {
+      i++;
+      duckValue = from + (to - from) * (i / steps);
+      if (i >= steps) clearInterval(duckTimer);
+      if (!remote) applyVolume();
+    }, 50);
   },
   /** ReplayGain for the song about to play or playing (linear; 1 = unchanged). */
   setLevel(g: number) {

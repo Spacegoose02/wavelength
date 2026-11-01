@@ -141,6 +141,7 @@ All need a device token. Listener routes answer 403 with the reason when the DJ 
 | GET | `/api/dj/chats/:id` | `{ chat, messages: [{ role, text, tools? }], calls, full }`; `calls` = tool calls waiting for the app |
 | DELETE | `/api/dj/chats/:id` | delete a chat |
 | POST | `/api/dj/chat` | `{ chatId?, message }` → `{ chat, status: 'done' \| 'tools', reply, calls?, full?, spent, limit }`; 402 when a limit is used up |
+| POST | `/api/dj/patter` | Talking DJ: `{ previous?, next, name?, style? }` → `{ text, spent, limit }`, one or two sentences to read between songs. Needs the **Talking AI DJ** feature switch; low effort, counted against the allowance |
 | POST | `/api/dj/chats/:id/tools` | `{ results: [{ id, content, isError? }] }` → same as above |
 | GET | `/api/admin/dj` | settings (never the key, only `key: { set, hint }`), models and prices, people with their switch, limit and spend, this month's spend by model and day |
 | PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, apiKey? }`; `apiKey: ''` removes it |
@@ -168,3 +169,12 @@ Ideas for later, roughly in order:
 - Remember what each person likes between chats.
 - A daily cost chart on the admin page (the API already returns `month.byDay`).
 - Long chats: summarise older turns (compaction) instead of closing the chat at 40 messages.
+
+## The talking DJ
+
+With **Talking AI DJ** on in **Settings → Features**, people can turn on **Settings → Playback → Talking DJ**.
+Every few songs (they choose how often, and a laid back, hype or trivia style) the app asks the Hub for a line
+about the song that just played and the one coming up, a few seconds before it starts, then reads it with the
+device's own text-to-speech voice while the music dips. Each line is one small, low-effort call (a fraction of a
+cent on the default model) counted against the same monthly allowance as the chat. Nothing else to set up: no
+separate speech service.

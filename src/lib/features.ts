@@ -26,7 +26,7 @@ export const FEATURE_INFO: FeatureInfo[] = [
   { key: 'sonic', label: 'Sound-alike analysis', help: 'The Hub listens to every song once (tempo, key, energy, sound) for “Sounds like this” radio, mood filters and AutoMix. Needs the analysis container.', standalone: false },
   { key: 'automix', label: 'AutoMix', help: 'Blends songs on the beat instead of a plain crossfade.', standalone: true },
   { key: 'cast', label: 'Cast to speakers', help: 'Play on Chromecast, Google/Nest and DLNA/UPnP speakers and TVs.', standalone: true },
-  { key: 'djVoice', label: 'Talking AI DJ', help: 'The AI DJ introduces songs out loud between tracks. Uses the AI DJ’s key and limits, plus a text-to-speech service.', standalone: false },
+  { key: 'djVoice', label: 'Talking AI DJ', help: 'The AI DJ introduces songs out loud between tracks. Uses the AI DJ’s key and limits; each device reads it with its own voice. People turn it on in Settings → Playback.', standalone: false },
   { key: 'artistInfo', label: 'Artist bios and credits', help: 'Artist stories, photos and song credits from Wikipedia, Last.fm and MusicBrainz.', standalone: true },
   { key: 'tourDates', label: 'Tour dates', help: 'Upcoming concerts for artists people follow. Needs a Ticketmaster or Bandsintown key.', standalone: false },
   { key: 'singMode', label: 'Sing mode', help: 'Turns the lead vocal down so people can sing along with the lyrics.', standalone: true },

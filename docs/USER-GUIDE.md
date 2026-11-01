@@ -946,6 +946,14 @@ Request button does. **This month** under the box shows how much of your allowan
 Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only), the model, prices, monthly limits
 and who can use it. The full setup guide is [AI-DJ.md](AI-DJ.md).
 
+### Talking DJ
+
+When an admin turns on **Talking AI DJ** (**Settings → Features**), **Settings → Playback → Talking DJ** makes the
+DJ speak between songs like a radio presenter: a line about what you just heard and what's next, over the start
+of the song with the music turned down. Choose how often (every song up to every 10th), a style (**Laid back**,
+**Hype** or **Trivia**), a name for it to call you, and the voice and speed on this device. **Hear the voice**
+tries it. It uses a little of your AI DJ allowance each time.
+
 > **Developer notes.** `src/views/DJ.tsx` (chat), `src/lib/dj.ts` (the tools that run in the app),
 > `src/views/DjAdmin.tsx` (admin tab), `hub/src/dj/` and `hub/src/routes/dj.ts` on the Hub. See
 > [AI-DJ.md](AI-DJ.md#how-it-works).

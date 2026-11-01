@@ -888,6 +888,9 @@ export class HubClient {
   djDeleteChat = (id: number) => this.call('DELETE', `/api/dj/chats/${id}`);
   djSend = (chatId: number | null, message: string) => this.call<HubDjTurn>('POST', '/api/dj/chat', { chatId: chatId ?? undefined, message });
   djToolResults = (chatId: number, results: { id: string; content: string; isError?: boolean }[]) => this.call<HubDjTurn>('POST', `/api/dj/chats/${chatId}/tools`, { results });
+  /** The talking DJ's spoken link before `next` (needs the djVoice feature). */
+  djPatter = (b: { previous?: { title: string; artist?: string; album?: string; year?: number }; next: { title: string; artist?: string; album?: string; year?: number }; name?: string; style?: string }) =>
+    this.call<{ text: string; spent: number; limit: number | null }>('POST', '/api/dj/patter', b);
   djAdmin = () => this.call<HubDjAdmin>('GET', '/api/admin/dj');
   /** `apiKey`: a new key, '' to remove it, left out to keep it. */
   saveDjAdmin = (b: Partial<HubDjSettings> & { apiKey?: string }) => this.call<HubDjAdmin>('PUT', '/api/admin/dj', b);

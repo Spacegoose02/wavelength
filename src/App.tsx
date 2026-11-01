@@ -1,5 +1,6 @@
 import { BlendView, MixView } from './views/Mix';
 import { startSmartOffline } from './lib/smartOffline';
+import { startDjVoice } from './lib/djVoice';
 import { startArtworkChecks } from './lib/artwork';
 import { startPlaylistCoverChecks } from './lib/playlistCovers';
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
@@ -198,6 +199,7 @@ export default function App() {
     startRemote();
     startTogether();
     startSmartOffline();
+    startDjVoice();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back

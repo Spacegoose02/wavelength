@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Talking DJ.** The AI DJ can now speak between songs, with the music ducked under it: every Nth song, in a
+  laid back, hype or trivia style, read by the device's own voice (Settings → Playback). Admins switch it on in
+  Settings → Features; each line counts against the AI DJ allowance.
 - **Cast to speakers.** A new speaker button finds Chromecasts, Google/Nest speakers and DLNA/UPnP renderers on
   your Wi-Fi and moves playback there, with the queue, seeking, volume and scrobbling still run from Wavelength.
   Desktop and Android.

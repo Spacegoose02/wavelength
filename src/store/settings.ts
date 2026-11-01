@@ -142,6 +142,9 @@ interface SettingsState {
   /** Lyrics offsets for single songs, seconds, by `sourceId:trackId` (player/singing.ts `offsetKey`). Synced. */
   mouthOffsets: Record<string, number>;
   setMouthOffset(key: string, seconds: number): void;
+  /** The talking DJ (lib/djVoice.ts): a spoken link between songs. Synced, except the voice is per device. */
+  djVoice: DjVoiceSettings;
+  setDjVoice(p: Partial<DjVoiceSettings>): void;
   /** Settings → Playback: ReplayGain (player/replayGain.ts) and crossfade between songs (seconds, 0 = off). */
   playback: { replayGain: ReplayGainMode; replayGainPreamp: number; crossfade: number; /** player/automix.ts */ automix?: boolean };
   setPlayback(p: Partial<SettingsState['playback']>): void;
@@ -196,6 +199,19 @@ export interface SmartOfflineSettings {
   lastRun?: number;
 }
 
+export interface DjVoiceSettings {
+  on: boolean;
+  /** Talk before every Nth song. */
+  every: number;
+  style: 'chill' | 'hype' | 'trivia';
+  /** What the DJ calls you; empty = no name. */
+  name: string;
+  /** speechSynthesis voice name on this device; empty = the system's default. */
+  voice: string;
+  rate: number;
+}
+export const DEFAULT_DJ_VOICE: DjVoiceSettings = { on: false, every: 3, style: 'chill', name: '', voice: '', rate: 1 };
+
 export const DEFAULT_SMART_OFFLINE: SmartOfflineSettings = { enabled: false, favorites: true, recentDays: 30, mixes: true, capMb: 4000, wifiOnly: true };
 
 export const useSettings = create<SettingsState>()(
@@ -234,6 +250,8 @@ export const useSettings = create<SettingsState>()(
           for (const k of keys.slice(0, Math.max(0, keys.length - 300))) delete next[k];
           return { mouthOffsets: next };
         }),
+      djVoice: DEFAULT_DJ_VOICE,
+      setDjVoice: (p) => set((st) => ({ djVoice: { ...st.djVoice, ...p } })),
       playback: { replayGain: 'off', replayGainPreamp: 0, crossfade: 0 },
       setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',

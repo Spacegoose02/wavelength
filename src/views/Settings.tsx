@@ -19,6 +19,7 @@ import { FeaturesAdminTab } from './FeaturesAdmin';
 import { SmartOfflineSettings } from '../components/SmartOfflineSettings';
 import { MouthTuner } from '../components/MouthTuner';
 import { useFeature } from '../lib/features';
+import { DjVoiceSettings } from '../components/DjVoiceSettings';
 import { UpdatesTab } from '../components/Updates';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
@@ -707,6 +708,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <NowPlayingPicker />
           <MouthTunerSection />
           <PlaybackOptions />
+          <DjVoiceSettings />
           <VersionsPicker />
           <section id="equalizer">
             <h2>Equalizer</h2>
