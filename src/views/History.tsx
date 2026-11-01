@@ -7,8 +7,10 @@ import { useHub } from '../store/hub';
 import { useUi } from '../store/ui';
 import { AlbumCard, Empty, Spinner, TrackList, timeAgo } from '../components/common';
 import { IconRefresh } from '../components/Icons';
+import { useTabStrip } from '../components/TabStrip';
 
 export function History() {
+  const tabsRef = useTabStrip();
   const sources = useSettings((s) => s.sources);
   const navidromes = sources.filter((s) => s.enabled && s.kind === 'navidrome');
   const local = useLibrary((s) => s.history);
@@ -48,7 +50,7 @@ export function History() {
         {useHub.getState().token && <button className="btn small" onClick={() => useUi.getState().go({ view: 'rewind' })}>Rewind</button>}
         {!isLocal && <button className="btn small" onClick={() => setNonce(nonce + 1)}><IconRefresh /> Refresh</button>}
       </header>
-      <div className="tabs">
+      <div className="tabs" ref={tabsRef}>
         {navidromes.map((s) => (
           <button key={s.id} className={tab === s.id ? 'on' : ''} onClick={() => setTab(s.id)}>{s.name} <small>server</small></button>
         ))}

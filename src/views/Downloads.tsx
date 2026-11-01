@@ -18,10 +18,12 @@ import { isMobileApp } from '../lib/platform';
 import { SoulseekTab } from './SoulseekTab';
 import { BrowseBar, CleanChips, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, useDeezerBrowse } from './DeezerBrowse';
 import { cleanOnly, withVersions } from '../lib/deezerVersions';
+import { useTabStrip } from '../components/TabStrip';
 
 type Tab = 'deezer' | 'ytdlp' | 'slskd';
 
 export function Downloads({ soulseek }: { soulseek?: { q: string; requestId?: number } } = {}) {
+  const tabsRef = useTabStrip();
   const sources = useSettings((s) => s.sources);
   const [tab, setTab] = useState<Tab>(soulseek ? 'slskd' : 'deezer');
   const hubSl = useHubRuns('slskd');
@@ -50,7 +52,7 @@ export function Downloads({ soulseek }: { soulseek?: { q: string; requestId?: nu
         <input className="search-big" autoFocus placeholder="Search Deezer for music to request…" value={q} onChange={(e) => setQ(e.target.value)} />
         <DeezerTab q={q} request />
       </> : !canDownload ? <p className="muted">Your Hub admin looks after downloads. Ask them to turn on <b>Autodownload</b> for you to download music yourself.</p> : <>
-      <div className="tabs">
+      <div className="tabs" ref={tabsRef}>
         <button className={tab === 'deezer' ? 'on' : ''} onClick={() => setTab('deezer')}>Deezer <small>via deemix</small></button>
         {ytHere && <button className={tab === 'ytdlp' ? 'on' : ''} onClick={() => setTab('ytdlp')}>YouTube &amp; more <small>via yt-dlp</small></button>}
         {hubSl && <button className={tab === 'slskd' ? 'on' : ''} onClick={() => setTab('slskd')}>Soulseek <small>via slskd</small></button>}

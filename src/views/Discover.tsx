@@ -23,6 +23,7 @@ import { RadarStrip, ReleaseRadar } from '../components/ReleaseRadar';
 import { chartMoves, moveLabel, type ChartMoves } from '../lib/chartMoves';
 import { matchChart } from '../lib/discoverMatch';
 import { clearGetAll, getAll, getOne, stopGetAll, useChartGets } from '../lib/chartGets';
+import { useTabStrip } from '../components/TabStrip';
 
 type View = 'mix' | 'foryou' | ChartSource;
 type Show = 'all' | 'missing' | 'owned';
@@ -52,6 +53,7 @@ function goArtist(name: string) {
 }
 
 export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
+  const tabsRef = useTabStrip();
   const [genre, setGenre] = useState<Genre>(initialGenre ?? 'all');
   const [view, setView] = useState<View>('mix');
   const [rows, setRows] = useState<Row[]>();
@@ -234,7 +236,7 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
       {genre === 'new' ? <ReleaseRadar /> : <RadarStrip onSeeAll={() => setGenre('new')} />}
       {genre === 'new' && <h2 className="mt">Editors' new music</h2>}
 
-      <div className="tabs">
+      <div className="tabs" ref={tabsRef}>
         <button className={view === 'mix' ? 'on' : ''} onClick={() => setView('mix')}>Mix <small>all charts combined</small></button>
         {signedIn && <button className={view === 'foryou' ? 'on' : ''} onClick={() => setView('foryou')} title="The combined chart, only songs close to what you play">For you</button>}
         {available.map((s) => (

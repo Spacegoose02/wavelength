@@ -75,6 +75,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--panel-2); border-radius: 10px; border: 2px solid var(--bg); }
 ::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
 
 /* ============ layout ============ */
 .app {
@@ -421,8 +422,8 @@ input[type='range']:hover::-webkit-slider-thumb { opacity: 1; }
 .sleep-pop { width: min(360px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 10px; }
 
 /* ============ v0.2: tabs, menus, playlists, history, podcasts, yt-dlp ============ */
-.tabs { display: flex; gap: 4px; margin: 0 0 18px; border-bottom: 1px solid var(--line); }
-.tabs button { padding: 9px 16px; color: var(--muted); font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs { display: flex; gap: 2px; margin: 0 0 18px; border-bottom: 1px solid var(--line); }
+.tabs button { padding: 9px 10px; color: var(--muted); font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs button small { font-weight: 500; opacity: 0.7; margin-left: 4px; }
 .tabs button:hover { color: var(--text); }
 .tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
@@ -543,8 +544,13 @@ textarea:focus { border-color: var(--accent); }
 .crash { max-width: 760px; margin: 40px auto; background: var(--panel); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--bevel); display: flex; flex-direction: column; gap: 12px; }
 .crash pre { background: var(--bg); color: #ff9b9b; padding: 14px; border-radius: var(--radius); overflow: auto; font-size: 12px; user-select: text; white-space: pre-wrap; }
 .part-crash { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 14px; background: var(--bg-2); border-top: 1px solid var(--line); color: var(--muted, inherit); }
-.tabs button { white-space: nowrap; }
-.tabs { overflow-x: auto; }
+.tabs button { white-space: nowrap; flex: none; }
+/* too many tabs to fit: scroll sideways with no scrollbar; the edge with more tabs fades (useTabStrip) */
+.tabs { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs.fade-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); }
+.tabs.fade-l { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); }
+.tabs.fade-l.fade-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 
 /* ============ v0.4: discover, favorites, wave queue ============ */
 .discover-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; padding: 10px 12px; background: var(--panel); border-radius: var(--radius); }
