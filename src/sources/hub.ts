@@ -69,6 +69,8 @@ export interface HubFamilyMember extends HubFamilyPerson {
   familyManager: boolean;
   disabled: boolean;
   devices: number;
+  /** A kid's parents (grown-ups in the family), whose Inbox gets their requests and weekly report. */
+  guardians?: number[];
 }
 
 export interface HubDevice {
@@ -1043,6 +1045,7 @@ export class HubClient {
   myFamilyAdmin = () => this.call<{ family: HubFamily; people: HubFamilyMember[]; keys?: HubSharedKey[] }>('GET', '/api/family');
   addFamilyMember = (b: { username: string; displayName?: string; role: 'member' | 'kid'; password: string }) => this.call<{ user: HubFamilyMember }>('POST', '/api/family/users', b);
   updateFamilyMember = (id: number, b: Partial<{ displayName: string; role: 'member' | 'kid'; password: string; disabled: boolean }>) => this.call<{ user: HubFamilyMember }>('PATCH', `/api/family/users/${id}`, b);
+  setFamilyGuardians = (kidId: number, ids: number[]) => this.call<{ ok: true }>('PUT', `/api/family/users/${kidId}/guardians`, { ids });
   saveFamilyKeys = (values: Partial<Record<HubSharedKeyName, string | null>>) => this.call<{ keys: HubSharedKey[] }>('PUT', '/api/family/keys', { values });
   // everyone: switching profiles on a shared device
   myFamily = () => this.call<{ name?: string | null; people: HubFamilyPerson[] }>('GET', '/api/me/family');

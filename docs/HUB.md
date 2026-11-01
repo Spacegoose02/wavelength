@@ -521,7 +521,7 @@ Users → Families); everyone else's calls to them get `403`, and the app never 
   | Switch | What the family's managers may do |
   |---|---|
   | **Can register people** | Add members and kids to their family, make invite links into it (`POST /api/admin/invites` makes them for their family only), rename, change between member and kid, set passwords, turn off. Never admins or other managers. |
-  | **Kid controls** | Bedtimes and daily limits for their family's kids (`/api/admin/kids`, only those kids), and a **grown-up PIN for their family** that their kids' devices ask for instead of the Hub's. |
+  | **Kid controls** | Each kid's **Parents** (grown-ups in the family, who approve the kid's requests and get their weekly report), bedtimes and daily limits for their family's kids (`/api/admin/kids`, only those kids), and a **grown-up PIN for their family** that their kids' devices ask for instead of the Hub's. |
   | **Own keys** | Set the family's own shared keys (below). |
 
   The Hub admin is above every family: they see everyone, every family's kids and keys, and every Hub setting.

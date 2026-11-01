@@ -1276,7 +1276,7 @@ have signed in on this device before. Set yours under **Settings → Account →
 switch to you. Grown-ups can switch to their family's kids without a PIN; kids always need one.
 
 A family's **manager** gets **Settings → My family**: depending on what the Hub admin allows for the family, they add
-people to it, look after its kids (bedtimes, limits and the family's own grown-up PIN) and set its own keys. The Hub
+people to it, look after its kids (parents, bedtimes, limits and the family's own grown-up PIN) and set its own keys. The Hub
 admin sees and decides everything; nobody else sees family settings.
 
 ### Shared keys (admins)

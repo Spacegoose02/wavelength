@@ -8,7 +8,7 @@ import {
   createFamily, deleteFamily, familyMembers, familySize, getFamily, isSharedKey, keyStatus, listFamilies, managedFamily,
   managerMayTouch, saveKey, SHARED_KEYS, setMembership, updateFamily, type Family,
 } from '../families.ts';
-import { setGuardians } from '../family.ts';
+import { guardiansOf, setGuardians } from '../family.ts';
 import { clientIp, HttpError, need, signedIn, str } from '../http.ts';
 import { createUser, getUser, getUserForLogin, updateUser, USERNAME_RE, type User } from '../users.ts';
 import { MIN_PASSWORD, session } from './auth.ts';
@@ -123,7 +123,7 @@ export function familyRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
     const f = getFamily(db, user.familyId)!;
     return {
       family: withCounts(f),
-      people: familyMembers(db, f.id).map((u) => ({ ...person(u), devices: listDevices(db, u.id).length })),
+      people: familyMembers(db, f.id).map((u) => ({ ...person(u), devices: listDevices(db, u.id).length, ...(u.role === 'kid' && { guardians: guardiansOf(db, u.id) }) })),
       ...(f.ownKeys && { keys: keyStatus(db, key, f.id) }),
     };
   });

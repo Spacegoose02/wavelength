@@ -232,6 +232,20 @@ export function FamilyTab() {
               }}>Set password</button>
               <button className="btn small ghost" onClick={() => run(() => c.updateFamilyMember(p.id, { disabled: !p.disabled }))}>{p.disabled ? 'Turn on' : 'Turn off'}</button>
             </>}
+            {f.kidControls && p.role === 'kid' && p.guardians && (
+              <details className="hub-guardians">
+                <summary className="btn small" title="Their requests and weekly report go to these grown-ups">Parents{p.guardians.length ? ` (${p.guardians.length})` : ''}</summary>
+                <div className="hub-guardians-list">
+                  {data.people.filter((g) => g.role !== 'kid').map((g) => (
+                    <label key={g.id} className="check">
+                      <input type="checkbox" checked={p.guardians!.includes(g.id)}
+                        onChange={(e) => run(() => c.setFamilyGuardians(p.id, e.target.checked ? [...p.guardians!, g.id] : p.guardians!.filter((x) => x !== g.id)))} />
+                      <small>{g.displayName}</small>
+                    </label>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
         ))}
         {f.canRegister && (

@@ -57,6 +57,13 @@ test('only the Hub admin sees and changes families; managers only do what their 
   assert.equal((await json(app, 'POST', '/api/kid/unlock', { token: sidToken, body: { pin: '2468' } })).status, 200);
   assert.equal((await json(app, 'POST', '/api/kid/unlock', { token: tokens.kid, body: { pin: '1357' } })).status, 200, 'everyone else keeps the Hub’s');
 
+  // parents: grown-ups in the family only
+  const sue = (await json(app, 'GET', '/api/family', { token: samToken })).body.people.find((x: { username: string }) => x.username === 'sue');
+  assert.equal((await json(app, 'PUT', `/api/family/users/${sid.body.user.id}/guardians`, { token: samToken, body: { ids: [ids.admin] } })).status, 400);
+  assert.equal((await json(app, 'PUT', `/api/family/users/${sid.body.user.id}/guardians`, { token: samToken, body: { ids: [sue.id] } })).status, 200);
+  assert.deepEqual((await json(app, 'GET', '/api/family', { token: samToken })).body.people.find((x: { username: string }) => x.username === 'sid').guardians, [sue.id]);
+  assert.equal((await json(app, 'PUT', `/api/family/users/${ids.kid}/guardians`, { token: samToken, body: { ids: [] } })).status, 404);
+
   // the admin takes a power away
   await json(app, 'PATCH', `/api/admin/families/${smiths.id}`, { token: tokens.admin, body: { kidControls: false, canRegister: false } });
   assert.equal((await json(app, 'GET', '/api/admin/kids?day=2026-11-01', { token: samToken })).status, 403);
