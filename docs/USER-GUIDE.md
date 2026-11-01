@@ -556,6 +556,21 @@ Levelling, gapless and crossfade are for music. Radio, audiobooks and podcasts p
 from a server that doesn't let the app process its audio (the same ones the EQ can't reach) play without
 crossfade. These settings sync between your devices with a Hub.
 
+
+### AutoMix
+
+**Settings → Playback → AutoMix** blends songs the way a DJ would instead of one fixed crossfade:
+
+- The next song on the **same album**, straight after this one, follows with no fade, so live albums and segues
+  stay as recorded.
+- With [sound-alike analysis](#sounds-like-this-and-sonic-journeys) on the Hub, two songs at **close tempos**
+  (within 8%, or at half or double time) blend over 8 beats starting on a beat, and the next song is nudged to the
+  same tempo for the blend (without changing its pitch), then eased back to its own.
+- Otherwise the fade is longer between calm songs and shorter between energetic ones, or the Crossfade length
+  above (6 seconds when it's off) for songs the Hub hasn't analysed.
+
+Fades use equal-power curves now, so there's no dip in the middle. Like crossfade, AutoMix needs a server that
+allows it (CORS) and isn't used during a listening party or the sleep timer's last song.
 ## Skins and themes
 
 **Settings → Themes** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this

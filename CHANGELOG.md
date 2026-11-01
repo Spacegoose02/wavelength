@@ -6,6 +6,9 @@
   the mouth does. Sliders for sensitivity, how centred the voice must be, noise rejection, the voice range, drum
   hits, lyrics timing (for every song, or nudged for the song playing and remembered), syllable length, and how
   fast and wide the mouth moves. Synced with a Hub. See the [user guide](docs/USER-GUIDE.md#critters).
+- **AutoMix.** **Settings → Playback → AutoMix** blends songs like a DJ: no fade inside an album, 8-beat
+  beat-matched blends between songs at close tempos (with sound-alike analysis on the Hub), and longer fades
+  for calm songs. Crossfades now use equal-power curves. See the [user guide](docs/USER-GUIDE.md#automix).
 - **Sounds like this.** With **Sound-alike analysis** on (Hub admins, Settings → Features), the Hub measures
   how every song sounds (tempo, key, energy, timbre) with ffmpeg, no AI model needed. Now Playing gets
   **Sounds like this** and **Journey to…**, and smart playlists get mood and tempo rules. See the

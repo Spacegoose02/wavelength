@@ -143,7 +143,7 @@ interface SettingsState {
   mouthOffsets: Record<string, number>;
   setMouthOffset(key: string, seconds: number): void;
   /** Settings → Playback: ReplayGain (player/replayGain.ts) and crossfade between songs (seconds, 0 = off). */
-  playback: { replayGain: ReplayGainMode; replayGainPreamp: number; crossfade: number };
+  playback: { replayGain: ReplayGainMode; replayGainPreamp: number; crossfade: number; /** player/automix.ts */ automix?: boolean };
   setPlayback(p: Partial<SettingsState['playback']>): void;
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';

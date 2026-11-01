@@ -134,6 +134,7 @@ function setGain(el: HTMLAudioElement, value: number) {
 
 function reset(el: HTMLAudioElement) {
   el.pause();
+  el.playbackRate = 1;
   el.removeAttribute('src');
   el.load();
   if (preloaded?.el === el) preloaded = undefined;
@@ -239,6 +240,7 @@ export const engine = {
     if (preloaded?.el === el) preloaded = undefined;
     current = el;
     applyVolume();
+    el.playbackRate = 1;
     el.src = url;
     if (startAt > 0) el.currentTime = startAt;
 
@@ -277,7 +279,7 @@ export const engine = {
    * Fade the preloaded `url` in over `seconds` while the current song fades out, then make it the current song.
    * `level` is the new song's ReplayGain. Returns false (and does nothing) when it isn't ready.
    */
-  crossfade(url: string, seconds: number, level: number): boolean {
+  crossfade(url: string, seconds: number, level: number, rate = 1): boolean {
     if (!engine.canCrossfade(url) || !ctx) return false;
     const next = preloaded!.el;
     const old = current;
@@ -286,12 +288,32 @@ export const engine = {
     const now = ctx.currentTime;
     const fadeIn = deckGain.get(next)!.gain;
     const fadeOut = deckGain.get(old)!.gain;
+    // equal-power curves: the overall loudness stays even through the blend
+    const steps = 64;
+    const from = Math.max(0.0001, fadeOut.value);
+    const inCurve = Float32Array.from({ length: steps }, (_, i) => Math.max(0.0001, level * Math.sin(((i / (steps - 1)) * Math.PI) / 2)));
+    const outCurve = Float32Array.from({ length: steps }, (_, i) => from * Math.cos(((i / (steps - 1)) * Math.PI) / 2));
     fadeIn.cancelScheduledValues(now);
-    fadeIn.setValueAtTime(0.0001, now);
-    fadeIn.linearRampToValueAtTime(level, now + seconds);
+    fadeIn.setValueCurveAtTime(inCurve, now, seconds);
     fadeOut.cancelScheduledValues(now);
-    fadeOut.setValueAtTime(fadeOut.value, now);
-    fadeOut.linearRampToValueAtTime(0, now + seconds);
+    fadeOut.setValueCurveAtTime(outCurve, now, seconds);
+    // AutoMix: the new song at the old one's tempo during the blend, then eased back to its own
+    next.preservesPitch = true;
+    next.playbackRate = rate;
+    if (rate !== 1) {
+      const started = Date.now();
+      const ease = window.setInterval(() => {
+        const t = (Date.now() - started) / 1000 - seconds;
+        if (current !== next) return window.clearInterval(ease);
+        if (t < 0) return;
+        const r = rate + (1 - rate) * Math.min(1, t / 8);
+        next.playbackRate = r;
+        if (r === 1 || t >= 8) {
+          next.playbackRate = 1;
+          window.clearInterval(ease);
+        }
+      }, 250);
+    }
     levelValue = level;
     current = next;
     fading = old;
