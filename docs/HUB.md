@@ -523,6 +523,16 @@ On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favourites and Time Capsu
 artist (plus the track that played, for songs the person played), and each app finds them in its own library.
 Blends mix two to six people who have all said yes (`blend_optin`).
 
+## Sound-alike analysis
+
+Off until an admin turns on **Sound-alike analysis** in Settings → Features. Then the Hub lists the Navidrome
+library every hour (it needs the Navidrome admin login under Library updates, and the music folder mapped to
+`/music` like the tag editor) and analyses each song once, one at a time at low priority: ffmpeg decodes a
+minute from about a third of the way in, and `hub/src/sonic/analyse.ts` measures its tempo and beat, key,
+loudness, energy, brightness, and the timbre and harmony numbers "sounds like" compares. No AI model and no
+extra container; about 1–2 seconds a song on a NAS, so a big library takes a night the first time. Progress
+shows under the switch. Results are in the `sonic_songs` table; a song whose file changes is analysed again.
+
 ## AI DJ
 
 The Hub runs the AI DJ chat and keeps its API key, model choice, prices, per-account switch and spending limits.
@@ -548,6 +558,11 @@ with a 4xx status.
 | `GET /api/blend/people` | signed in, `blend` on | `{ optedIn, people: [{ id, displayName, optedIn }] }`: who you may blend with (grown-ups with grown-ups and their own kids; kids with their parents) |
 | `PUT /api/blend/optin` | signed in, `blend` on | `{ on }`: let others make Blends with you |
 | `GET /api/blend?with=<id,id>` | signed in, `blend` on | `{ mix }`; `409` until you and each of them opted in |
+| `GET /api/sonic/similar?id=\|artist=&title=[&limit=]` | signed in, `sonic` on | `{ song, songs: [{ id, title, artist, album, duration, bpm, key, energy, mood, match }] }`: closest first, at most 3 per artist; `404` until that song is analysed |
+| `GET /api/sonic/journey?from=&to=[&steps=]` | signed in, `sonic` on | `{ songs }` from one song to another (ids, or `fromArtist`/`fromTitle`, `toArtist`/`toTitle`) |
+| `GET /api/sonic/search?q=` | signed in, `sonic` on | analysed songs whose title and artist contain the words |
+| `POST /api/sonic/lookup` | signed in, `sonic` on | `{ songs: [{ id? , artist?, title? }] }` (500 at most) → `{ features: [… or null] }` with `beatStrength`, `beatPhase`, `offset`, `loudness` too |
+| `GET /api/admin/sonic`, `POST /api/admin/sonic/rescan` | `server.view` | progress `{ on, blocked, total, analysed, failed, running, current, lastListAt, lastError }` / list the library again now |
 | `GET /api/admin/features` | `users.manage` | `{ features: { homeMixes: { on, kids }, … } }` (see "Feature switches") |
 | `PUT /api/admin/features` | `users.manage` | `{ features: { blend: { on: false }, musicVideos: { kids: true } } }`: only what's sent changes; audited |
 | `GET /api/me/2fa` | signed in | `{ enabled, recoveryLeft }` |

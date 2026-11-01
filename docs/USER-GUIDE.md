@@ -646,6 +646,20 @@ vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day
 > a hash of the local date). `App` re-checks every 10 minutes while either mode is on, so it rolls over at
 > midnight. Everything uses the device's local date; nothing needs a server.
 
+## Sounds like this and sonic journeys
+
+When a Hub admin turns on **Sound-alike analysis** (Settings → Features), the Hub listens to every song in your
+Navidrome library once and measures how it sounds: tempo, key, energy, brightness and timbre. Then Now Playing
+has two more buttons:
+
+- **≈ Sounds like this** keeps the song playing and queues up songs from your library that *sound* like it,
+  not just songs by related artists (that's **Song radio**). At most three by any one artist.
+- **↝ Journey to…** asks where you want to end up, then queues 20 songs that move step by step from this song
+  to that one: from a slow ballad to a party track, say.
+
+Smart playlists get **Mood** (energetic, upbeat, chill, mellow, dark) and **Tempo** rules too, and AutoMix uses
+the beat it found. The first analysis of a big library takes a night; songs show up as they're done.
+
 ## Smart playlists
 
 **Playlists → Smart playlists** are rules instead of a list of songs: genres, your star rating, ♥ only, not

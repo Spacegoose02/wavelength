@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FEATURE_INFO, type FeatureKey } from '../lib/features';
 import { hubClient, useHub } from '../store/hub';
+import type { HubSonicStatus } from '../sources/hub';
 
 /**
  * Settings → Features (Hub admins): switch each newer feature on or off for the household, and separately
@@ -9,6 +10,31 @@ import { hubClient, useHub } from '../store/hub';
 
 type Switches = Record<string, { on: boolean; kids: boolean }>;
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
+
+/** How far the Hub's sound-alike analysis has got (hub/src/sonic/worker.ts). */
+function SonicProgress() {
+  const [st, setSt] = useState<HubSonicStatus>();
+  useEffect(() => {
+    const c = hubClient();
+    const load = () => c?.sonicStatus().then(setSt).catch(() => undefined);
+    load();
+    const id = setInterval(load, 10_000);
+    return () => clearInterval(id);
+  }, []);
+  if (!st) return null;
+  const pct = st.total ? Math.round((st.analysed / st.total) * 100) : 0;
+  return (
+    <div className="sonic-progress small">
+      {st.blocked ? <span className="errors">{st.blocked}</span> : (
+        <span className="muted">
+          {st.total ? `${st.analysed} of ${st.total} songs analysed (${pct}%)` : 'Listing the library…'}
+          {st.failed ? `, ${st.failed} couldn’t be read` : ''}{st.current ? ` · now: ${st.current}` : ''}
+        </span>
+      )}
+      {' '}<button className="link small" onClick={() => hubClient()?.sonicRescan().then(setSt)}>Look for new songs</button>
+    </div>
+  );
+}
 
 export function FeaturesAdminTab() {
   const c = hubClient();
@@ -59,6 +85,7 @@ export function FeaturesAdminTab() {
                     <small className="muted">{f.help}</small>
                   </span>
                 </label>
+                {f.key === 'sonic' && s.on && <SonicProgress />}
                 <label className="check feature-kids" title="Also on for kid profiles">
                   <input type="checkbox" checked={s.on && s.kids} disabled={!s.on} onChange={(e) => save(f.key, { kids: e.target.checked })} />
                   <small>Kids</small>

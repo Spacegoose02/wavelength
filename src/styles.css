@@ -1931,3 +1931,11 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .blend-art { aspect-ratio: 1; border-radius: var(--radius); background: conic-gradient(from 200deg, var(--accent), #6c5ce7, #00cec9, var(--accent)); }
 .hero-art .mix-label { font-size: 22px; padding: 30px 14px 12px; }
 .page-top-actions { padding: 12px 24px 0; }
+
+/* Sonic journey picker (components/SoundsLikeButton.tsx) */
+.journey-pop { width: min(380px, calc(100vw - 24px)); display: flex; flex-direction: column; gap: 8px; }
+.journey-pop input { width: 100%; }
+.journey-hits { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
+.journey-hits button { text-align: left; padding: 4px 0; }
+.feature-row { flex-wrap: wrap; }
+.sonic-progress { flex-basis: 100%; order: 3; padding-left: 48px; }

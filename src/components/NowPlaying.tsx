@@ -1,3 +1,4 @@
+import { SoundsLikeButton } from './SoundsLikeButton';
 import { trackArt, useArtworkList } from '../lib/artwork';
 import { usePlayer } from '../store/player';
 import { Cover, fmtTime } from './common';
@@ -60,6 +61,7 @@ export function NowPlaying() {
             <TogetherButton className="chip" />
             {live && <RadioGetButton text={p.liveTitle} />}
             {t.kind === 'track' && t.sourceId !== 'preview' && <SongRadioButton artist={t.artist} track={t} className="chip" />}
+            {t.kind === 'track' && t.sourceId !== 'preview' && <SoundsLikeButton track={t} />}
             {t.kind === 'track' && (
               <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>
             )}

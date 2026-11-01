@@ -229,7 +229,12 @@ export interface HubPush {
   subscribeUrl: string | null;
   webUrl: string | null;
 }
-/** A Made for you mix or a Blend (hub/src/mixes.ts). Songs are found in each person's own library. */
+/** A song the Hub analysed (hub/src/sonic/). `id` is the Navidrome song id. */
+export interface HubSonicHit { id: string; title: string; artist: string; album: string; duration: number; bpm: number; key: string; energy: number; mood: string; match?: number }
+export interface HubSonicFeatures extends HubSonicHit { beatStrength: number; beatPhase: number; offset: number; loudness: number }
+export interface HubSonicStatus { on: boolean; blocked: string | null; total: number; analysed: number; failed: number; running: boolean; current: string | null; lastListAt: number | null; lastError: string | null }
+
+/** A Made for you mix (hub/src/mixes.ts). Songs are found in each person's own library. */
 export interface HubMixSong {
   title: string;
   artist: string;
@@ -653,6 +658,12 @@ export class HubClient {
   blendPeople = () => this.call<{ optedIn: boolean; people: { id: number; displayName: string; optedIn: boolean }[] }>('GET', '/api/blend/people');
   setBlendOptIn = (on: boolean) => this.call<{ optedIn: boolean }>('PUT', '/api/blend/optin', { on });
   blend = (ids: number[]) => this.call<{ mix: HubMix }>('GET', `/api/blend?with=${ids.join(',')}`);
+  sonicSimilar = (q: { id?: string; artist?: string; title?: string }, limit = 50) => this.call<{ song: HubSonicHit; songs: HubSonicHit[] }>('GET', `/api/sonic/similar?${new URLSearchParams({ ...(q.id && { id: q.id }), ...(q.artist && { artist: q.artist }), ...(q.title && { title: q.title }), limit: String(limit) })}`);
+  sonicJourney = (from: { artist: string; title: string }, to: { id: string }, steps = 20) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/journey?${new URLSearchParams({ fromArtist: from.artist, fromTitle: from.title, to: to.id, steps: String(steps) })}`);
+  sonicSearch = (q: string) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/search?q=${encodeURIComponent(q)}`);
+  sonicLookup = (songs: { id?: string; artist?: string; title?: string }[]) => this.call<{ features: (HubSonicFeatures | null)[] }>('POST', '/api/sonic/lookup', { songs });
+  sonicStatus = () => this.call<HubSonicStatus>('GET', '/api/admin/sonic');
+  sonicRescan = () => this.call<HubSonicStatus>('POST', '/api/admin/sonic/rescan', {});
   adminFeatures = () => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('GET', '/api/admin/features');
   saveAdminFeatures = (features: Record<string, { on?: boolean; kids?: boolean }>) => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('PUT', '/api/admin/features', { features });
   setDisplayName = (displayName: string) => this.call<{ user: HubUser }>('PATCH', '/api/me', { displayName });

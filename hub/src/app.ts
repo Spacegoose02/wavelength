@@ -1,3 +1,5 @@
+import { SonicWorker } from './sonic/worker.ts';
+import { sonicRoutes } from './routes/sonic.ts';
 import { deezerLookups, Mixes, type MixLookups } from './mixes.ts';
 import { mixRoutes } from './routes/mixes.ts';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -85,6 +87,8 @@ export interface Ctx {
   dj: DjAgent;
   /** Made for you mixes and Blends (mixes.ts). */
   mixes: Mixes;
+  /** Sound-alike analysis of the library (sonic/). */
+  sonic: SonicWorker;
 }
 
 export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups } = {}): FastifyInstance {
@@ -102,6 +106,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     restart: opts.restart ?? (() => undefined),
     dj: new DjAgent(db, config, opts.djProvider ?? anthropicProvider),
     mixes: new Mixes(db, opts.mixLookups ?? deezerLookups()),
+    sonic: new SonicWorker(db, config.secretKey, config.musicDir, config.navidromeMusicDir),
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
@@ -115,12 +120,15 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.scrobbler = new Scrobbler(db, config);
   if (opts.watchLibrary ?? true) ctx.scrobbler.start();
   app.addHook('onClose', async () => ctx.scrobbler.stop());
+  if (opts.watchLibrary ?? true) ctx.sonic.start();
+  app.addHook('onClose', async () => ctx.sonic.stop());
   ctx.digests = new Digests(db);
   if (opts.watchLibrary ?? true) ctx.digests.start();
   app.addHook('onClose', async () => ctx.digests.stop());
   app.decorate('hubLibrary', ctx.library);
   app.decorate('hubClean', ctx.clean);
   app.decorate('hubScrobbler', ctx.scrobbler);
+  app.decorate('hubSonic', ctx.sonic);
 
   // database backups, for restore (routes/server.ts); the route sets how big
   app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
@@ -201,6 +209,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   householdRoutes(app, ctx);
   djRoutes(app, ctx);
   mixRoutes(app, ctx);
+  sonicRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

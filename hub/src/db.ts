@@ -508,6 +508,22 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     at      INTEGER NOT NULL
   );
   `,
+  `
+  -- What each library song sounds like (sonic/worker.ts): tempo, key, energy and the numbers "sounds like"
+  -- compares. Keyed by Navidrome's song id; path notices a file that changed under the same id.
+  CREATE TABLE sonic_songs (
+    id          TEXT PRIMARY KEY,
+    path        TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    artist      TEXT NOT NULL,
+    album       TEXT NOT NULL,
+    duration    INTEGER NOT NULL,
+    features    TEXT,               -- JSON SonicFeatures + offset, null until analysed (or when it failed)
+    error       TEXT,
+    analysed_at INTEGER
+  );
+  CREATE INDEX sonic_songs_name ON sonic_songs(artist COLLATE NOCASE, title COLLATE NOCASE);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
