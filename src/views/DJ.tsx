@@ -50,7 +50,11 @@ export function DJ() {
     }).catch((e) => setError(String((e as Error).message)));
   }, []);
 
-  useEffect(() => bottom.current?.scrollIntoView({ block: 'end' }), [entries, busy]);
+  // Braces matter: scrollIntoView returns a Promise in current WebView2/Chromium, and React calls whatever an
+  // effect returns as its cleanup, which crashed the page ("l is not a function") on the next update.
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ block: 'end' });
+  }, [entries, busy]);
 
   if (!hub) return <Empty title="AI DJ">Sign in to a Wavelength Hub to use the DJ.</Empty>;
   if (!status) return error ? <Empty title="AI DJ">{error}</Empty> : <Spinner />;

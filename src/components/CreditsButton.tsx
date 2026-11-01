@@ -10,7 +10,9 @@ export function CreditsButton({ track }: { track: Track }) {
   const [credits, setCredits] = useState<Credit[] | null>();
   const ref = useRef<HTMLDivElement>(null);
   const id = `${track.sourceId}:${track.id}`;
-  useEffect(() => setCredits(undefined), [id]);
+  useEffect(() => {
+    setCredits(undefined);
+  }, [id]);
   useEffect(() => {
     if (!open) return;
     if (credits === undefined) songCredits(track).then(setCredits, () => setCredits(null));
