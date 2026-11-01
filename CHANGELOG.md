@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Sing mode.** A **Sing** button in Now Playing turns the lead vocal down (adjustable) and opens the lyrics,
+  for karaoke at home.
 - **Artist bios, song credits and tour dates.** Artist pages get an About section (Wikipedia story, members,
   where and when they started, links) and Now Playing gets **Credits** (writers, producers, players, from
   MusicBrainz). With a Ticketmaster key or Bandsintown app ID saved on the Hub, artist pages list upcoming shows.

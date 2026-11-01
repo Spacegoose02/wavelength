@@ -29,6 +29,9 @@ let analyser: AnalyserNode | null = null;
 let midTap: AnalyserNode | null = null;
 let sideTap: AnalyserNode | null = null;
 let preamp: GainNode | null = null;
+/** Sing mode: the centre of the vocal range, taken back off both channels (−amount); 0 = off. */
+let vocalCut: GainNode | null = null;
+let vocalCutValue = 0;
 let bands: BiquadFilterNode[] = [];
 /** per deck: ReplayGain for its song, and the crossfade */
 const deckGain = new Map<HTMLAudioElement, GainNode>();
@@ -130,10 +133,36 @@ function ensureGraph() {
   mix(0, 0.5, sideTap);
   mix(1, -0.5, sideTap);
   analyser.connect(stereo);
+  // Sing mode (vocal reduction): the lead vocal usually sits in the centre (equal in both channels). Take the
+  // centre (L+R)/2, keep only the voice's range so bass and kick stay, and subtract it from both channels. Side
+  // sound (L−R: guitars, reverb, backing panned wide) is untouched. A mono song loses its whole mid range.
+  const deckBus = c.createGain();
+  deckBus.channelCount = 2;
+  deckBus.channelCountMode = 'explicit';
+  deckBus.channelInterpretation = 'speakers';
+  deckBus.connect(preamp);
+  const centre = c.createGain();
+  centre.channelCount = 1;
+  centre.channelCountMode = 'explicit';
+  centre.channelInterpretation = 'speakers'; // stereo → mono is (L+R)/2
+  const hp = c.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 180;
+  const lp = c.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 6500;
+  vocalCut = c.createGain();
+  vocalCut.gain.value = -vocalCutValue;
+  const back = c.createGain(); // mono → both channels
+  back.channelCount = 2;
+  back.channelCountMode = 'explicit';
+  back.channelInterpretation = 'speakers';
+  deckBus.connect(centre);
+  [centre, hp, lp, vocalCut, back, preamp].reduce((a: AudioNode, b) => (a.connect(b), b));
   for (const d of decks) {
     const g = c.createGain();
     g.gain.value = d === current ? levelValue : 0;
-    c.createMediaElementSource(d).connect(g).connect(preamp);
+    c.createMediaElementSource(d).connect(g).connect(deckBus);
     deckGain.set(d, g);
   }
   applyEq();
@@ -438,6 +467,15 @@ export const engine = {
     volume = v;
     if (remote) void remote.setVolume(v).catch(() => undefined);
     applyVolume();
+  },
+  /** Sing mode: turn the lead vocal down by `amount` (0 = off, 1 = as far as it goes). Not on the plain element. */
+  setVocalCut(amount: number) {
+    vocalCutValue = Math.max(0, Math.min(1, amount));
+    if (ctx && vocalCut) vocalCut.gain.setTargetAtTime(-vocalCutValue, ctx.currentTime, 0.05);
+  },
+  /** False while playing through the plain (no-CORS) element or a speaker, which sing mode can't reach. */
+  vocalCutAvailable() {
+    return !remote && isDeck(current);
   },
   /** Glide the music to `level` (0..1 of the set volume) over `seconds`: the talking DJ speaks over it. */
   duck(level: number, seconds = 0.6) {

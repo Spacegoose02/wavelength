@@ -15,6 +15,7 @@ import { RadioGetButton } from './RadioGetButton';
 import { SongRadioButton } from './SongRadioButton';
 import { SleepButton } from './SleepButton';
 import { LyricsPanel } from './Lyrics';
+import { SingButton, SingControls } from './SingButton';
 import { useState } from 'react';
 import { useCatalog } from '../store/catalog';
 import { useUi } from '../store/ui';
@@ -66,9 +67,10 @@ export function NowPlaying() {
             {live && <RadioGetButton text={p.liveTitle} />}
             {t.kind === 'track' && t.sourceId !== 'preview' && <SongRadioButton artist={t.artist} track={t} className="chip" />}
             {t.kind === 'track' && t.sourceId !== 'preview' && <SoundsLikeButton track={t} />}
-            {t.kind === 'track' && (
+            {t.kind === 'track' && <>
               <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>
-            )}
+              <SingButton onOn={() => setShowLyrics(true)} />
+            </>}
             <SleepButton />
           </div>
           <Visualizer className="np-viz" bars={48} mode="smooth" />
@@ -87,7 +89,7 @@ export function NowPlaying() {
             <button className="tbtn" onClick={p.next}><IconNext /></button>
             <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat}><IconRepeat /></button>
           </div>
-          {showLyrics && t.kind === 'track' && <LyricsPanel track={t} />}
+          {showLyrics && t.kind === 'track' && <><SingControls /><LyricsPanel track={t} /></>}
           {!(showLyrics && t.kind === 'track') && upNext.length > 0 && (
             <div className="np-next">
               <div className="np-kicker">Up next</div>

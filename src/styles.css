@@ -1954,3 +1954,4 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .credits-pop dl { margin: 6px 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
 .credits-pop dt { color: var(--muted, #999); }
 .credits-pop dd { margin: 0; }
+.sing-controls { display: grid; gap: 4px; margin: 0 0 10px; }

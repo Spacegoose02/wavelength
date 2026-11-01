@@ -545,6 +545,15 @@ words online.
 > [critters](#critters) look up the playing song's lyrics too (same cache) while their scene is on screen,
 > to know when someone is singing (`src/lib/singAlong.ts`).
 
+### Sing mode
+
+**Sing** next to **Lyrics** in Now Playing turns the singer down and opens the lyrics, karaoke style. The slider
+above the lyrics sets how far down the voice goes. It works by taking out what's in the middle of the stereo
+picture in the voice's range, so it's best on studio recordings with the singer in the centre; bass and drums
+stay, wide guitars and backing vocals mostly stay, and a song in mono loses its whole middle. It can't reach a
+song playing on a speaker (casting) or from a server that blocks the equalizer. The critters sing less too,
+since they listen for the same voice. Admins can turn it off in **Settings → Features**.
+
 ## Sleep timer
 
 **Now Playing → Sleep** stops playback after 15, 30 or 45 minutes, 1 hour, 1½ hours, or at the end of the
