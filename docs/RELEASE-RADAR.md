@@ -10,6 +10,10 @@ Release Radar sits at the top of **Discover → New releases**. It has two lists
 Without a Hub (or with a Hub older than Release Radar) only **Artists you play** shows, as before, and the
 Follow buttons are hidden.
 
+Every other genre in Discover opens with a strip of the newest releases from the artists you follow
+(`RadarStrip` in `src/components/ReleaseRadar.tsx`, from the same `GET /api/radar`), with **See all in Release
+Radar** to open New releases. It shows only with a Hub, at least one follow, and something new.
+
 ## For listeners
 
 ### Following an artist

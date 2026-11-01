@@ -74,11 +74,11 @@ can't prove it updated recently (21 days by default; RadioWave 35, iHeart R&B Hi
 | Source | How | Genres | Notes |
 |---|---|---|---|
 | Billboard | Scrape `billboard.com/charts/<slug>/` (DOMParser, `h3#title-of-a-story`), "Week of" date | Hot 100, Pop, Country, Rock | Rap, R&B/Hip-Hop, Dance and Latin pages are stale — not used |
-| Apple Music | RSS `rss.marketingtools.apple.com/.../most-played/100/songs.json` (moved from `rss.applemarketingtools.com` in Oct 2026), filtered by genre name | all but EDM | One shared fetch for all genres; the service has outages (504) |
+| Apple Music | RSS `rss.marketingtools.apple.com/.../most-played/100/songs.json` (moved from `rss.applemarketingtools.com` in Oct 2026), filtered by genre name | all but EDM (Alternative = alternative or indie) | One shared fetch for all genres; the service has outages (504) |
 | Deezer | `api.deezer.com/chart/0/tracks` | Top overall | Deezer's **genre** charts are frozen — don't use them |
 | Deezer editors | `api.deezer.com/playlist/<id>`; fresh = newest `time_add`. Ids in `DEEZER_PLAYLISTS`: Radar Weekly `1282495565` (new releases, Fridays), Fresh Rap `6682665064` (daily), Fresh Pop `2228601362`, Fresh R&B `2021225582`, Metal Radar `1050179021`, Electronic Hits `1902101402`, New Dance `2249258602`, Global Dance Hits `706093725` | New, Rap, Pop, R&B, Rock, EDM | Includes 30 s `preview` URLs. To add one: the number at the end of a deezer.com playlist link, owned by a "Deezer … Editor" account |
 | Spotify editors | Spotify's public embed page `open.spotify.com/embed/playlist/<id>` (`__NEXT_DATA__`, read by `src/lib/spotifyEmbed.ts`, shared with playlist import). New Music Friday `37i9dQZF1DX4JAvHpjipBk` | New | No dates on the page, so it's treated as live (Spotify replaces it every Friday). Spotify's Web API stopped serving its own editorial playlists to new apps in Nov 2024, so the API isn't an option; the embed page needs no login |
-| RadioWave Monitor | Scrape `radiowavemonitor.com/pub_charts/r100_<n>.aspx` (1 Alt Rock, 4 Pop/Top 40, 6 Hot Country, 8 Big Rock, 9 Rhythmic) | several | ~2-week publishing lag; titles are UPPERCASE → title-cased |
+| RadioWave Monitor | Scrape `radiowavemonitor.com/pub_charts/r100_<n>.aspx` (1 Alt Rock, 4 Pop/Top 40, 6 Hot Country, 8 Big Rock, 9 Rhythmic) | several (Alt Rock is the Alternative genre's main chart) | ~2-week publishing lag; titles are UPPERCASE → title-cased |
 | iHeartRadio editors | `us.api.iheart.com/api/v3/collection/user/312064750/collection/<id>` + `api/v3/catalog/tracks/<ids>`; freshness = `lastUpdated` | many | Playlist ids are in the `IHEART` map. To add one: take the id at the end of an iheart.com playlist URL |
 | ~~Shazam~~ | — | — | Removed |
 | Beatport, Traxsource | — | — | Cloudflare / 403 — apps can't read them. Don't scrape around bot checks. |
@@ -95,6 +95,13 @@ Hub older than this, it fetches directly as before. On top of that the app keeps
 (**Refresh** skips that) and keeps the last copy that loaded, shown with a note when fetching again fails.
 
 Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others).
+
+**Around the charts** (`src/views/Discover.tsx`): `songKey()` names a song the same on every chart (main artist
+plus title without brackets); `getMix` merges on it, and Not interested (`discoverHidden`) and Get all missing
+(`src/lib/chartGets.ts`) keep songs by it. `chartKey()` names a chart for its movement history
+(`src/lib/chartMoves.ts`; the Hub's `chart_history`, or localStorage without a Hub). "In your library?" goes
+through `src/lib/discoverMatch.ts`: the Hub's whole-chart match first (`POST /api/discover/match`), then
+`findInLibrary()` for whatever is left. See HUB.md "Discover".
 
 ### Release Radar — `src/sources/releaseRadar.ts`, `hub/src/radar.ts`
 **Artists you play** (any device, no Hub): your top ~60 artists (Navidrome play counts + stars + local

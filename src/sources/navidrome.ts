@@ -104,6 +104,11 @@ export class NavidromeSource implements MusicSource {
     replayGain: replayGain(s.replayGain),
   });
 
+  /** A song in Subsonic's own fields (as the Hub sends them, hub/src/libraryIndex.ts) as a playable track here. */
+  fromSubsonic(s: Record<string, unknown>): Track {
+    return this.track(s);
+  }
+
   /** OpenSubsonic `getLyricsBySongId` (Navidrome 0.53+): lyrics from tags or a .lrc file. Synced preferred. */
   async getLyrics(t: Track): Promise<Lyrics | undefined> {
     if (t.kind !== 'track') return undefined;

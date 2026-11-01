@@ -143,7 +143,7 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 
 | Store / key | Contents | Persisted as |
 |---|---|---|
-| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations and their order, hidden/ordered server stations (`hiddenStations`, `stationOrder`), skin plus `seasonal`/`randomDaily`, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`), equalizer (`eq`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
+| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations and their order, hidden/ordered server stations (`hiddenStations`, `stationOrder`), skin plus `seasonal`/`randomDaily`, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`) and songs marked Not interested (`discoverHidden`), equalizer (`eq`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
 | `store/library.ts` | Mixed-source playlists, local play history | `tonearm.library` |
 | `store/offline.ts` | Downloaded tracks (path, size), covers, downloaded collections | `tonearm.offline` (files in `<app data>/offline/`) |
 | `store/catalog.ts` | Merged albums/artists/books/podcasts loaded at start | memory |
