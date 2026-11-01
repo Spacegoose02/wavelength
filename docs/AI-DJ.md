@@ -15,6 +15,7 @@ API key; the app never sees the key.
 - [Not yet](#not-yet)
 - [The talking DJ](#the-talking-dj) and its [voices](#voices)
 - [DJ mode](#dj-mode)
+- [Ollama](#ollama): run the DJ on your own server
 
 ## Setting it up (admins)
 
@@ -177,9 +178,10 @@ All need a device token. Listener routes answer 403 with the reason when the DJ 
 | POST | `/api/dj/speak` | Talking DJ: `{ text, voice?, speed?, style? }` → `audio/mpeg`; 409 while the voice is each device's own. OpenAI is counted against the allowance |
 | POST | `/api/dj/chats/:id/tools` | `{ results: [{ id, content, isError? }] }` → same as above |
 | GET | `/api/admin/dj` | settings (never the key, only `key: { set, hint }`), models and prices, people with their switch, limit and spend, this month's spend by model and day |
-| PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, webMaxSearches?, webSearchPrice?, voice?: { engine?, kokoroUrl?, kokoroVoice?, openaiModel?, openaiVoice?, openaiPrice? }, apiKey?, openaiKey? }`; `apiKey: ''` / `openaiKey: ''` removes a key |
+| PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, webMaxSearches?, webSearchPrice?, ollamaUrl?, ollamaModel?, ollamaContext?, quickProvider?: 'same' \| 'ollama', voice?: { engine?, kokoroUrl?, kokoroVoice?, openaiModel?, openaiVoice?, openaiPrice? }, apiKey?, openaiKey?, ollamaKey? }`; `''` removes a key |
 | PUT | `/api/admin/dj/users/:userId` | `{ enabled?, monthlyLimit? }` (`null` = no limit) |
-| POST | `/api/admin/dj/test` | checks the key and model, no tokens used |
+| POST | `/api/admin/dj/test` | `{ which?: 'chat' \| 'quick' }`: checks the chat's provider (or the one writing the short lines), no tokens used |
+| GET | `/api/admin/dj/ollama` | `{ models: [{ name, tools, size }], error }`, the models on the saved Ollama server |
 | GET | `/api/admin/dj/voice` | the voice list, as `/api/dj/voice` |
 | POST | `/api/admin/dj/voice/test` | `{ voice?, text? }` → `audio/mpeg` in the saved voice; not counted against anyone |
 
@@ -187,19 +189,19 @@ Admin routes need `keys.manage` (admins). Changes are in the audit log (`dj.sett
 
 ## Adding a provider
 
-1. Write a `ProviderFactory` in `hub/src/dj/provider.ts`: `create()` takes the system prompt, tools and messages
-   and returns the content, stop reason, model and token usage; `test()` checks the key without spending.
-2. Add its name to `PROVIDERS` in `hub/src/dj/settings.ts`, its models and prices to `MODELS`, and pick the factory
-   by `settings.provider` in `app.ts`.
-3. Stored chats are in the provider's own message format, so a chat started on one provider can't go on with
-   another: clear chats (or start new ones) when switching.
+1. Write a `ProviderFactory` (see `anthropicProvider` in `hub/src/dj/provider.ts` and `ollamaProvider` in
+   `hub/src/dj/ollama.ts`): `create()` takes the system prompt, tools and messages and returns the content, stop
+   reason, model and token usage; `test()` checks the setup without spending.
+2. Chats are stored in Anthropic's message format. A provider with its own format translates on the way out and
+   back (as `toOllama` / `fromOllama` do), so chats carry on when an admin switches provider.
+3. Add its name to `PROVIDERS` in `hub/src/dj/settings.ts` (and its models and prices to `MODELS` when it costs
+   money), and pick the factory in `DjAgent.provider()` (`hub/src/dj/agent.ts`).
 
 ## Not yet
 
 Ideas for later, roughly in order:
 
 - Stream the reply word by word (the reply arrives whole now, with a progress line while it works).
-- An OpenAI-compatible provider (OpenAI, a local Ollama).
 - Let the DJ add songs to an existing playlist and to household playlists.
 - Remember what each person likes between chats.
 - A daily cost chart on the admin page (the API already returns `month.byDay`).
@@ -272,3 +274,35 @@ their place.
 
 Code: `hub/src/dj/station.ts` (segments), `src/lib/djStation.ts` (finding the songs, queueing the next segment,
 the intros), `src/components/DjStation.tsx` (button and panel).
+
+## Ollama
+
+The DJ can run on your own [Ollama](https://ollama.com) server instead of Claude: free, and nothing leaves your house
+except web searches. Set it up under **Settings → AI DJ → Ollama**:
+
+1. **Ollama's address**, as the Hub reaches it, e.g. `http://192.168.1.20:11434`. Ollama only listens on its own
+   machine unless you set `OLLAMA_HOST=0.0.0.0` (`systemctl edit ollama` → `Environment="OLLAMA_HOST=0.0.0.0"`).
+2. **Model**: the list comes from the server. Pick one that can use tools for the chat (qwen3.5:9b, qwen2.5:14b,
+   llama3.1:8b…). Models that can't are marked: fine for the short lines, not for the chat.
+3. Then either:
+   - **Run the whole DJ on Ollama**: the chat, the talking DJ and DJ mode. No Anthropic key needed.
+   - **Use Ollama for the talking DJ and DJ mode**: the chat stays on Claude (better at searching and building
+     playlists), and the many short lines (between songs, segment intros, requests) cost nothing.
+4. **Test** checks the server answers and has the model.
+
+**Hardware.** A GPU with 8 GB runs a 9B model (Q4, about 6.5 GB) in a second or two per answer; a 14B model needs
+about 9 GB and spills onto the CPU on an 8 GB card. On the CPU alone, short lines are fine but the chat is slow.
+If other apps use the same Ollama with a different model, the first answer after a swap takes a few seconds longer.
+
+**Context** (default 16,384 tokens) is how much of the chat the model reads (`num_ctx`). More uses more GPU memory.
+
+**How it talks to Ollama** (`hub/src/dj/ollama.ts`): `POST /api/chat` with `stream: false`, the DJ's tools as
+functions, `think: true` for the chat (dropped for models that can't think) and `false` for the short lines. Chats
+are kept in the same format as with Claude, so switching provider carries on the same chats. Calls are recorded as
+`ollama:<model>` at no cost.
+
+**Web search.** Ollama can't search by itself. With **AI DJ web search** on (Settings → Features) and a key from a
+free ollama.com account (ollama.com/settings/keys) saved under **Ollama → Web search key**, the Hub gives the model
+`web_search` and `web_fetch` tools and runs them with ollama.com's web search API (`/api/web_search`,
+`/api/web_fetch`). Only the Hub needs internet for that, not the Ollama server. At most three times **Searches per
+step** per message. The key is sealed on the Hub like the others.
