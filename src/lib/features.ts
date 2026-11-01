@@ -30,7 +30,7 @@ export const FEATURE_INFO: FeatureInfo[] = [
   { key: 'artistInfo', label: 'Artist bios and credits', help: 'Artist stories and facts from Wikipedia and MusicBrainz, and who wrote and produced each song.', standalone: true },
   { key: 'tourDates', label: 'Tour dates', help: 'Upcoming concerts for artists people follow. Needs a Ticketmaster or Bandsintown key.', standalone: false },
   { key: 'singMode', label: 'Sing mode', help: 'Turns the lead vocal down so people can sing along with the lyrics.', standalone: true },
-  { key: 'musicVideos', label: 'Music videos', help: 'Finds a song’s official video and plays it in Now Playing.', standalone: true },
+  { key: 'musicVideos', label: 'Music videos', help: 'Finds a song’s official video on YouTube (with the Hub’s yt-dlp) and plays it from Now Playing.', standalone: false },
   { key: 'publicShares', label: 'Share links for anyone', help: 'Links to a song, album or playlist that people without an account can open in a browser.', standalone: false },
   { key: 'discordStatus', label: 'Discord status', help: 'Shows “Listening to …” on Discord from the Windows app (each person still turns it on).', standalone: true },
   { key: 'mouthTuner', label: 'Critter mouth tuner', help: 'Lets people tune how the critters’ mouths follow the singing. Off puts everyone back on the defaults.', standalone: true },

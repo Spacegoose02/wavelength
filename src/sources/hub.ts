@@ -678,6 +678,9 @@ export class HubClient {
   sonicLookup = (songs: { id?: string; artist?: string; title?: string }[]) => this.call<{ features: (HubSonicFeatures | null)[] }>('POST', '/api/sonic/lookup', { songs });
   sonicStatus = () => this.call<HubSonicStatus>('GET', '/api/admin/sonic');
   sonicRescan = () => this.call<HubSonicStatus>('POST', '/api/admin/sonic/rescan', {});
+  /** Music videos (hub/src/videos.ts): the official video's YouTube id, or null. */
+  video = (artist: string, title: string, duration?: number) =>
+    this.call<{ video: { id: string; title: string; channel: string; duration?: number } | null }>('GET', `/api/videos?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}${duration ? `&duration=${Math.round(duration)}` : ''}`);
   /** Tour dates (hub/src/tours.ts). */
   tours = (artist: string) => this.call<{ events: HubTourEvent[] }>('GET', `/api/tours?artist=${encodeURIComponent(artist)}`);
   toursStatus = () => this.call<{ available: boolean }>('GET', '/api/tours/status');

@@ -1955,3 +1955,6 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .credits-pop dt { color: var(--muted, #999); }
 .credits-pop dd { margin: 0; }
 .sing-controls { display: grid; gap: 4px; margin: 0 0 10px; }
+.video-dialog { display: grid; gap: 10px; width: min(1100px, 100%); padding: 14px; border-radius: var(--radius); background: var(--panel); }
+.video-dialog iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; background: #000; }
+.video-dialog .grow { flex: 1; }

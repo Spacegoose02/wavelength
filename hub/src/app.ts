@@ -1,6 +1,7 @@
 import { SonicWorker } from './sonic/worker.ts';
 import { sonicRoutes } from './routes/sonic.ts';
-import { tourRoutes } from './routes/tours.ts';
+import { tourRoutes, videoRoutes } from './routes/tours.ts';
+import { Videos } from './videos.ts';
 import { Tours } from './tours.ts';
 import { deezerLookups, Mixes, type MixLookups } from './mixes.ts';
 import { mixRoutes } from './routes/mixes.ts';
@@ -52,7 +53,7 @@ import { getUser } from './users.ts';
 import { Library } from './library.ts';
 import { CleanDownloads } from './cleanDownloads.ts';
 import { webRoutes } from './web.ts';
-import { YtdlpRunner } from './ytdlp.ts';
+import { YtdlpRunner, type YtResult } from './ytdlp.ts';
 import { DjAgent } from './dj/agent.ts';
 import { anthropicProvider, type ProviderFactory } from './dj/provider.ts';
 import { djRoutes } from './routes/dj.ts';
@@ -93,9 +94,11 @@ export interface Ctx {
   sonic: SonicWorker;
   /** Tour dates (tours.ts). */
   tours: Tours;
+  /** Music videos (videos.ts). */
+  videos: Videos;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown> } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]> } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -112,7 +115,9 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     mixes: new Mixes(db, opts.mixLookups ?? deezerLookups()),
     sonic: new SonicWorker(db, config.secretKey, config.musicDir, config.navidromeMusicDir),
     tours: new Tours(db, config.secretKey, opts.tourFetch),
+    videos: undefined as unknown as Videos,
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
+  ctx.videos = new Videos(opts.videoSearch ?? ((q, n) => ctx.ytdlp.search(q, n)));
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
   if (opts.watchLibrary ?? true) ctx.library.start();
@@ -216,6 +221,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   mixRoutes(app, ctx);
   sonicRoutes(app, ctx);
   tourRoutes(app, ctx);
+  videoRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

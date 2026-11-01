@@ -36,7 +36,7 @@ export const APP_CSP = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "frame-src 'none'",
+  'frame-src https://www.youtube-nocookie.com',
   "frame-ancestors 'none'",
 ].join('; ');
 

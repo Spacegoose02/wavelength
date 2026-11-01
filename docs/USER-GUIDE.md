@@ -554,6 +554,13 @@ stay, wide guitars and backing vocals mostly stay, and a song in mono loses its 
 song playing on a speaker (casting) or from a server that blocks the equalizer. The critters sing less too,
 since they listen for the same voice. Admins can turn it off in **Settings → Features**.
 
+## Music videos
+
+With a Hub where **Music videos** is on (**Settings → Features**; off for kid profiles unless an admin ticks
+**Kids**), Now Playing shows **Video** when the song has an official video on YouTube. The Hub's yt-dlp finds it
+(skipping lyric videos, live versions and covers), and it plays in a YouTube player that doesn't set cookies.
+The music pauses while you watch and carries on from the same spot when you close it.
+
 ## Sleep timer
 
 **Now Playing → Sleep** stops playback after 15, 30 or 45 minutes, 1 hour, 1½ hours, or at the end of the

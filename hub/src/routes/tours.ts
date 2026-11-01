@@ -31,3 +31,13 @@ export function tourRoutes(app: FastifyInstance, { db, config, tours }: Ctx) {
     return out;
   });
 }
+
+/** Music videos (videos.ts): the official video for a song, as a YouTube id. */
+export function videoRoutes(app: FastifyInstance, { db, videos }: Ctx) {
+  app.get<{ Querystring: { artist?: string; title?: string; duration?: string } }>('/api/videos', async (req) => {
+    const { user } = signedIn(req);
+    requireFeature(db, 'musicVideos', user);
+    const d = Number(req.query.duration);
+    return { video: await videos.find(req.query.artist ?? '', req.query.title ?? '', Number.isFinite(d) && d > 0 ? d : undefined) };
+  });
+}

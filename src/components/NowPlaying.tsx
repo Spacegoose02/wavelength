@@ -16,6 +16,7 @@ import { SongRadioButton } from './SongRadioButton';
 import { SleepButton } from './SleepButton';
 import { LyricsPanel } from './Lyrics';
 import { SingButton, SingControls } from './SingButton';
+import { VideoButton } from './VideoButton';
 import { useState } from 'react';
 import { useCatalog } from '../store/catalog';
 import { useUi } from '../store/ui';
@@ -70,6 +71,7 @@ export function NowPlaying() {
             {t.kind === 'track' && <>
               <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>
               <SingButton onOn={() => setShowLyrics(true)} />
+              <VideoButton track={t} />
             </>}
             <SleepButton />
           </div>

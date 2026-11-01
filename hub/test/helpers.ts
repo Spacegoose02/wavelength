@@ -1,3 +1,4 @@
+import type { YtResult } from '../src/ytdlp.ts';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.ts';
 import type { Config, SsoConfig } from '../src/config.ts';
@@ -7,7 +8,7 @@ import type { MixLookups } from '../src/mixes.ts';
 
 export const ADMIN_PW = 'correct horse battery';
 
-export function makeHub(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {}, opts: { djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown> } = {}): { app: FastifyInstance; db: Db; config: Config } {
+export function makeHub(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {}, opts: { djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]> } = {}): { app: FastifyInstance; db: Db; config: Config } {
   const db = openDb(':memory:');
   const config: Config = {
     version: 'test',
@@ -52,7 +53,7 @@ export async function form(app: FastifyInstance, url: string, fields: Record<str
 }
 
 /** A Hub with an admin (`boss`), a member (`mia`) and a kid (`kit`), each signed in on one device. */
-export async function seeded(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {}, opts: { djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown> } = {}) {
+export async function seeded(sso: Partial<SsoConfig> = {}, extra: Partial<Config> = {}, opts: { djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]> } = {}) {
   const hub = makeHub(sso, extra, opts);
   const setup = await json(hub.app, 'POST', '/auth/setup', { body: { username: 'boss', password: ADMIN_PW, deviceName: 'PC' } });
   const admin = setup.body.token as string;

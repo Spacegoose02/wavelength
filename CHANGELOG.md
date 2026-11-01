@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Music videos.** Now Playing offers the song's official video when the Hub's yt-dlp finds one, in a
+  no-cookie YouTube player; the music pauses and picks up again afterwards. Off for kids by default.
 - **Sing mode.** A **Sing** button in Now Playing turns the lead vocal down (adjustable) and opens the lyrics,
   for karaoke at home.
 - **Artist bios, song credits and tour dates.** Artist pages get an About section (Wikipedia story, members,

@@ -73,11 +73,11 @@ export class YtdlpRunner {
   }
 
   /** Search YouTube, or expand any URL yt-dlp supports (playlist, Bandcamp album, SoundCloud set …). */
-  async search(query: string): Promise<YtResult[]> {
+  async search(query: string, count = 25): Promise<YtResult[]> {
     const q = query.trim().slice(0, 500);
     if (!q) return [];
     // `--` so a query can never be read as an option
-    const r = await run(this.bin, ['-J', '--flat-playlist', '--no-warnings', '--', isUrl(q) ? q : `ytsearch25:${q}`]);
+    const r = await run(this.bin, ['-J', '--flat-playlist', '--no-warnings', '--', isUrl(q) ? q : `ytsearch${Math.max(1, Math.min(50, Math.round(count)))}:${q}`]);
     if (r.code !== 0) throw new HttpError(502, lastLine(r.err));
     const json = JSON.parse(r.out);
     const entries: any[] = json.entries ?? [json];
