@@ -74,6 +74,10 @@ export function DjVoiceSettings() {
           </label>
           </div>
           <label className="range-field">
+            <span>DJ loudness {Math.round((v.loudness ?? 1.6) * 100)}% <small className="muted">(next to the music)</small></span>
+            <input type="range" min={0.5} max={2.5} step={0.1} value={v.loudness ?? 1.6} onChange={(e) => set({ loudness: Number(e.target.value) })} style={{ ['--pct' as string]: `${(((v.loudness ?? 1.6) - 0.5) / 2) * 100}%` }} />
+          </label>
+          <label className="range-field">
             <span>Speed {v.rate.toFixed(1)}×</span>
             <input type="range" min={0.7} max={1.4} step={0.1} value={v.rate} onChange={(e) => set({ rate: Number(e.target.value) })} style={{ ['--pct' as string]: `${((v.rate - 0.7) / 0.7) * 100}%` }} />
           </label>

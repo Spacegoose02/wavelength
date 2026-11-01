@@ -66,7 +66,7 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
     return { ...(await dj.patter(user, req.body)), ...allowance(user.id) };
   });
 
-  /** DJ mode: `{ kind?, ask?, previous?, recent?, name?, style?, talk? }` → `{ kind, title, songs, intro }`, the next segment. */
+  /** DJ mode: `{ kind?, ask?, playlist?, previous?, recent?, name?, style?, talk? }` → `{ kind, title, songs, intro }`, the next segment. */
   app.post('/api/dj/station', async (req) => {
     const user = listener(req);
     requireFeature(db, 'djMode', user);

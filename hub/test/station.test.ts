@@ -28,6 +28,7 @@ function scripted(answer: (req: DjRequest) => string) {
 test('DJ mode: segments from mixes and the charts, an intro each, requests picked by the AI', async () => {
   const ai = scripted((req) => {
     const ask = String(req.messages[0].content);
+    if (ask.includes('to build the show on')) return '{"intro": "More from Road Trip.", "songs": [{"title": "Like It", "artist": "Similar"}, {"title": "Song B", "artist": "Band"}]}';
     if (ask.includes('The listener asked')) return 'Sure! ```json\n{"title": "Kitchen grooves", "intro": "Something **smooth** for the cooking.", "songs": [{"title": "Two", "artist": "Drake"}, {"title": "Not Mine", "artist": "Someone"}, {"title": "Two", "artist": "drake"}]}\n```';
     return 'Here come your favourites, Sam.';
   });
@@ -87,6 +88,18 @@ test('DJ mode: segments from mixes and the charts, an intro each, requests picke
   assert.deepEqual(r.body.songs, [{ title: 'Two', artist: 'Drake' }, { title: 'Not Mine', artist: 'Someone' }]);
   assert.match(String(ai.seen.at(-1)!.messages[0].content), /Two — Drake/);
   assert.ok(r.body.spent > 0, 'counted against the allowance');
+
+  // a playlist of theirs: the AI's picks first (its own songs and ones like them), then the rest of the playlist
+  const playlist = { name: 'Road Trip', songs: [{ title: 'Song A', artist: 'Band' }, { title: 'Song B', artist: 'Band' }, { title: 'Song C', artist: 'Band' }, { title: '', artist: 'x' }] };
+  r = await station({ playlist, recent: [{ title: 'Song C', artist: 'Band' }] });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.kind, 'playlist');
+  assert.equal(r.body.title, 'More like Road Trip');
+  assert.equal(r.body.intro, 'More from Road Trip.');
+  assert.deepEqual(r.body.songs.slice(0, 2), [{ title: 'Like It', artist: 'Similar' }, { title: 'Song B', artist: 'Band' }]);
+  assert.ok(r.body.songs.some((s: any) => s.title === 'Song A'), 'the rest of the playlist follows');
+  assert.match(String(ai.seen.at(-1)!.messages[0].content), /"Road Trip"[\s\S]*Song A — Band/);
+  assert.equal((await station({ playlist: { name: 'Empty', songs: [] } })).status, 400);
 
   // kids: the DJ has to be on for them, and the chart drops explicit songs
   await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { djMode: { kids: true } } } });

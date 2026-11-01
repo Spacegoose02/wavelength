@@ -143,11 +143,12 @@ App (views/DJ.tsx, lib/dj.ts)            Hub (hub/src/dj/, routes/dj.ts)        
 
 - **Why split the tools.** The music lives with the app: each device reaches Navidrome and Plex with its own
   logins (or the Hub's relay), plays the songs and keeps the person's playlists. So **app tools** run in the app:
-  `search_library`, `find_songs`, `library_albums`, `now_playing`, `play`, `save_playlist`. **Hub tools** run on
+  `search_library`, `find_songs`, `library_albums`, `now_playing`, `play`, `save_playlist`, and `list_playlists` /
+  `playlist_songs` (the person's Wavelength playlists plus the ones on their Navidrome / Plex). **Hub tools** run on
   the Hub: `listening_stats` (the plays table Rewind uses), `deezer_search`, `artist_discography`,
   `similar_artists`, `artist_top_songs` and `request_download` (the same code as `POST /api/requests`, at most 10
   per message).
-- **Refs.** Songs and albums the app finds are given short refs (`t4`, `a2`) that the model passes back to `play` and
+- **Refs.** Songs, albums and playlists the app finds are given short refs (`t4`, `a2`, `p3`) that the model passes back to `play` and
   `save_playlist`. The app keeps them per chat while it's open; after a restart the DJ searches again.
 - **The loop** (`hub/src/dj/agent.ts`): up to 12 model calls per message; the last one must answer without tools.
   Messages are stored exactly as the provider returned them and only appended to, so thinking blocks and the prompt
@@ -250,8 +251,11 @@ f or m, then the name. The pickers show them as "Michael (American, male)".
 
 With **DJ mode** on in **Settings → Features** (off by default, kids separately), people the AI DJ is on for get a
 DJ Trash Panda button in the player (next to the other player buttons on a computer, in the mini player on phones,
-and in Now Playing). Press it and DJ Trash Panda runs a station that keeps going: a segment of about 12 songs, then
-the next, each introduced in the [DJ's voice](#voices) over the start of its first song.
+and in Now Playing). Press it and the panel asks what to play first: **Mix it up**, a segment, one of your
+playlists, or anything you type. Nothing plays until you choose. From there DJ Trash Panda runs a station that keeps
+going: a segment of about 12 songs, then the next, each introduced in the [DJ's voice](#voices) over the start of its
+first song. **DJ loudness** in the panel (also in **Settings → Playback → Talking DJ**) sets how loud the DJ is next
+to the music, up to 250%; the music dips under the voice more the louder it is.
 
 | Segment | Where the songs come from |
 |---|---|
@@ -259,6 +263,7 @@ the next, each introduced in the [DJ's voice](#voices) over the start of its fir
 | **New for you** | Discover Weekly and the Daily Mixes' songs from artists like yours |
 | **Throwbacks** | Forgotten favourites and Time Capsule |
 | **Top hits** | Deezer's worldwide chart (kid profiles: no explicit songs) |
+| **Your playlist** | pick one of your playlists (Wavelength's or your server's): the AI picks some of its songs plus up to 12 it knows that fit its mood and artists, then the rest of the playlist. Every segment after builds on it, until you pick something else |
 | **Your request** | type anything ("90s house", "something chill for cooking", "build me an EDM set"): the AI picks songs from the 250 you play most, plus up to 10 it knows that fit |
 
 The station goes round favourites → new for you → throwbacks → top hits; tap a segment to jump straight to it, or type

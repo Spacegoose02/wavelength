@@ -1007,10 +1007,12 @@ who can use it, and how many web searches it may make per step. The full setup g
 
 ### DJ mode
 
-When an admin turns on **DJ mode** (**Settings → Features**), press the raccoon button in the player and DJ Trash
-Panda runs a station for you: your favourites, new finds, throwbacks and top hits in turns, each introduced out loud.
-Tap a segment to jump to it, or type what you want ("90s house", "something chill for cooking") and the DJ changes
-course. Play anything else and DJ mode steps aside. See [AI-DJ.md](AI-DJ.md#dj-mode).
+When an admin turns on **DJ mode** (**Settings → Features**), press the raccoon button in the player and pick how to
+start: **Mix it up**, a segment, one of your playlists ("more like Road Trip"), or type what you want ("90s house",
+"something chill for cooking"). DJ Trash Panda then runs a station for you: your favourites, new finds, throwbacks
+and top hits in turns, or more like your playlist, each introduced out loud. Tap a segment or type to change course,
+and use **DJ loudness** if the DJ is hard to hear over the music. In the DJ chat you can also ask about your playlists
+("make me something like my Gym playlist"). Play anything else and DJ mode steps aside. See [AI-DJ.md](AI-DJ.md#dj-mode).
 
 ### Talking DJ
 

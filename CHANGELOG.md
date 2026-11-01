@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **DJ Trash Panda knows your playlists.** In DJ mode, pick one of your playlists and the DJ builds the station on
+  it: some of its songs plus more like them. In the DJ chat, ask for "something like my Gym playlist".
+- **DJ mode asks first.** The raccoon button opens a picker (Mix it up, a segment, a playlist, or type a request)
+  instead of starting music straight away.
+- **A louder DJ.** The DJ's voice is louder by default, with a **DJ loudness** slider (up to 250%) in the DJ mode
+  panel and in **Settings → Playback → Talking DJ**.
 
 ## 0.21.0
 - **The AI DJ can run on your own Ollama server.** Under **Settings → AI DJ → Ollama**, point the Hub at Ollama and

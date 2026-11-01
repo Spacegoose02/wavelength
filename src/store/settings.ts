@@ -216,8 +216,10 @@ export interface DjVoiceSettings {
   hubVoice: string;
   /** Use this device's voice even when the Hub has one. */
   useDevice: boolean;
+  /** How loud the DJ is next to the music: 1 = the music's volume, up to 2.5 (Hub voices; this device's voice is ducked under instead). */
+  loudness: number;
 }
-export const DEFAULT_DJ_VOICE: DjVoiceSettings = { on: false, every: 3, style: 'chill', name: '', voice: '', rate: 1, hubVoice: '', useDevice: false };
+export const DEFAULT_DJ_VOICE: DjVoiceSettings = { on: false, every: 3, style: 'chill', name: '', voice: '', rate: 1, hubVoice: '', useDevice: false, loudness: 1.6 };
 
 export const DEFAULT_SMART_OFFLINE: SmartOfflineSettings = { enabled: false, favorites: true, recentDays: 30, mixes: true, capMb: 4000, wifiOnly: true };
 

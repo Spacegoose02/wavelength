@@ -17,7 +17,7 @@ import { checkBudget } from './settings.ts';
  */
 
 export const SEGMENTS = ['favourites', 'discover', 'throwbacks', 'tophits'] as const;
-export type Segment = (typeof SEGMENTS)[number] | 'ask';
+export type Segment = (typeof SEGMENTS)[number] | 'ask' | 'playlist';
 
 const TITLES: Record<Segment, string> = {
   favourites: 'Your favourites',
@@ -25,6 +25,7 @@ const TITLES: Record<Segment, string> = {
   throwbacks: 'Throwbacks',
   tophits: 'Top hits',
   ask: 'Your request',
+  playlist: 'From your playlist',
 };
 
 const ABOUT: Record<Segment, string> = {
@@ -33,6 +34,7 @@ const ABOUT: Record<Segment, string> = {
   throwbacks: 'songs the listener loved a while ago and hasn’t played for months',
   tophits: 'songs from the current worldwide charts',
   ask: '',
+  playlist: '',
 };
 
 /** Songs per segment the app should end up with (it asks for more, as some won't be in the library). */
@@ -90,7 +92,8 @@ export class Station {
 
   /**
    * `{ kind?, ask?, recent?, previous?, name?, style?, talk? }` → the next segment. `kind` defaults to the one
-   * after `previous` in the rotation; `ask` makes a request segment; `recent` (title + artist) are left out.
+   * after `previous` in the rotation; `ask` makes a request segment; `playlist` (`{ name, songs }`, one of the
+   * listener's own) makes a segment built on it; `recent` (title + artist) are left out.
    */
   async next(user: User, b: unknown): Promise<StationSegment> {
     const o = (b ?? {}) as Record<string, unknown>;
@@ -109,6 +112,18 @@ export class Station {
     if (talk || kind === 'ask') checkBudget(this.db, user.id);
 
     if (kind === 'ask') return this.request(user, ask, recent, { name, style, talk });
+    const list = (o.playlist ?? null) as Record<string, unknown> | null;
+    if (list && typeof list === 'object' && Array.isArray(list.songs)) {
+      const songs = dedupe(list.songs.slice(0, 300).flatMap((s) => {
+        const x = (s ?? {}) as Record<string, unknown>;
+        const title = str(x.title, 200);
+        const artist = str(x.artist, 200);
+        return title && artist ? [{ title, artist }] : [];
+      }));
+      if (!songs.length) throw new HttpError(400, 'That playlist has no songs');
+      checkBudget(this.db, user.id);
+      return this.fromPlaylist(user, str(list.name, 80) || 'your playlist', songs, recent, { name, style, talk });
+    }
 
     // a segment with nothing new (no plays yet, everything heard) moves on to the next kind
     for (let tries = 0; tries < SEGMENTS.length; tries++) {
@@ -166,6 +181,38 @@ export class Station {
       if (e instanceof HttpError && e.statusCode === 402) throw e;
       return null;
     }
+  }
+
+  /**
+   * A segment built on one of the listener's playlists: some of its songs (ones not played lately) and songs
+   * like them that the AI knows. If the AI can't answer, the playlist's own songs, shuffled.
+   */
+  private async fromPlaylist(user: User, list: string, songs: Song[], recent: Set<string>, o: { name: string; style: string; talk: boolean }): Promise<StationSegment> {
+    const fresh = songs.filter((s) => !recent.has(key(s)));
+    const from = shuffle(fresh.length >= 6 ? fresh : songs).slice(0, 120);
+    const prompt = [
+      `The listener picked their playlist "${list}" to build the show on. Its songs (title — artist):\n${from.map((s) => `${s.title} — ${s.artist}`).join('\n')}`,
+      `Pick ${SIZE / 2 + 2} songs from that list, then up to ${SIZE} other songs that are not on it but fit its mood, era and artists (well-known songs by the same or similar artists). Mix them together in a good play order.`,
+      `Answer with JSON only, no other text: {"intro": "one or two short spoken sentences introducing this part of the show, built on their playlist ${JSON.stringify(list)}, under 35 words", "songs": [{"title": "", "artist": ""}]}`,
+    ].join('\n\n');
+    let picked: Song[] = [];
+    let intro: string | null = null;
+    try {
+      const parsed = parseJson(await this.dj.oneShot(user, this.system(user, o.style, o.name), prompt, 4000));
+      picked = dedupe((Array.isArray(parsed?.songs) ? parsed.songs : []).flatMap((s: unknown) => {
+        const x = (s ?? {}) as Record<string, unknown>;
+        const title = typeof x.title === 'string' ? x.title.trim().slice(0, 200) : '';
+        const artist = typeof x.artist === 'string' ? x.artist.trim().slice(0, 200) : '';
+        return title && artist && !recent.has(key({ title, artist })) ? [{ title, artist }] : [];
+      })).slice(0, 40);
+      if (o.talk && typeof parsed?.intro === 'string') intro = spoken(parsed.intro) || null;
+    } catch (e) {
+      if (e instanceof HttpError && e.statusCode === 402) throw e;
+    }
+    // the AI's picks first, then the playlist's own songs, as some won't be in the library
+    const have = new Set(picked.map(key));
+    const songsOut = [...picked, ...from.filter((s) => !have.has(key(s)))].slice(0, SIZE * 3);
+    return { kind: 'playlist', title: `More like ${list}`.slice(0, 60), songs: songsOut, intro };
   }
 
   /** "Something chill for cooking": the AI picks from what the person plays, plus a few it knows. */

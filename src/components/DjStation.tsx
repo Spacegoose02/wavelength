@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { SEGMENT_LABELS, startStation, stopStation, useStation } from '../lib/djStation';
+import { useEffect, useState } from 'react';
+import { pickStation, SEGMENT_LABELS, startStation, stopStation, useStation } from '../lib/djStation';
+import { useSettings } from '../store/settings';
 import { useDjAvailable } from '../lib/djStatus';
 import { useFeature } from '../lib/features';
+import { myPlaylists, type MyPlaylist } from '../lib/myPlaylists';
 import type { HubStationKind } from '../sources/hub';
 import { IconX } from './Icons';
 import { DJ_NAME, TrashPanda } from './TrashPanda';
@@ -26,7 +28,7 @@ export function DjModeButton({ className = 'tbtn small' }: { className?: string 
       onClick={(e) => {
         e.stopPropagation();
         if (on) useStation.setState({ open: true });
-        else void startStation();
+        else pickStation();
       }}
     >
       <TrashPanda busy={busy} />
@@ -38,7 +40,14 @@ export function DjModeButton({ className = 'tbtn small' }: { className?: string 
 export function DjStationPanel({ inline = false }: { inline?: boolean }) {
   const s = useStation();
   const [ask, setAsk] = useState('');
-  if (!s.on && !s.error && !s.busy) return null;
+  const loud = useSettings((x) => x.djVoice.loudness ?? 1.6);
+  const setVoice = useSettings((x) => x.setDjVoice);
+  const [lists, setLists] = useState<MyPlaylist[]>([]);
+  const shown = s.open && (s.on || s.picking);
+  useEffect(() => {
+    if (shown) void myPlaylists().then(setLists).catch(() => undefined);
+  }, [shown]);
+  if (!s.on && !s.picking && !s.error && !s.busy) return null;
   if (!s.open) {
     return (
       <button className={`dj-station-pill ${inline ? 'inline' : ''}`} onClick={() => useStation.setState({ open: true })}>
@@ -58,18 +67,37 @@ export function DjStationPanel({ inline = false }: { inline?: boolean }) {
         <TrashPanda busy={s.busy} />
         <div className="dj-station-now">
           <small>{s.on ? `${DJ_NAME} · on air` : DJ_NAME}</small>
-          <b>{s.busy && !s.title ? 'Picking songs…' : s.title || 'DJ mode'}</b>
+          <b>{s.busy && !s.title ? 'Picking songs…' : s.on ? s.title || 'DJ mode' : 'What should I play?'}</b>
         </div>
         <button className="tbtn small" title="Fold away" onClick={() => useStation.setState({ open: false })}>–</button>
-        <button className="tbtn small" title="Stop DJ mode" onClick={stopStation}><IconX /></button>
+        <button className="tbtn small" title={s.on ? 'Stop DJ mode' : 'Close'} onClick={stopStation}><IconX /></button>
       </div>
-      {s.intro && <p className="dj-station-intro">“{s.intro}”</p>}
+      {s.on && s.intro && <p className="dj-station-intro">“{s.intro}”</p>}
+      {!s.on && <p className="muted small">Pick a segment or one of your playlists, tell me what you’re in the mood for, or let me mix it up. I’ll keep it going from there.</p>}
       {s.error && <p className="errors small">{s.error}</p>}
       <div className="chips">
-        {(Object.keys(SEGMENT_LABELS) as Exclude<HubStationKind, 'ask'>[]).map((k) => (
+        {!s.on && <button className="chip on" disabled={s.busy} onClick={() => void startStation()}>Mix it up</button>}
+        {(Object.keys(SEGMENT_LABELS) as Exclude<HubStationKind, 'ask' | 'playlist'>[]).map((k) => (
           <button key={k} className={`chip ${s.kind === k ? 'on' : ''}`} disabled={s.busy} onClick={() => void startStation({ kind: k })}>{SEGMENT_LABELS[k]}</button>
         ))}
       </div>
+      {lists.length > 0 && (
+        <select
+          className="dj-station-playlist"
+          value=""
+          disabled={s.busy}
+          aria-label="Build on one of your playlists"
+          onChange={(e) => {
+            const p = lists.find((x) => x.key === e.target.value);
+            if (p) void startStation({ playlist: { key: p.key, name: p.name } });
+          }}
+        >
+          <option value="">{s.kind === 'playlist' ? `🎵 ${s.title}` : 'Build on one of your playlists…'}</option>
+          {lists.map((p) => (
+            <option key={p.key} value={p.key}>{p.name}{p.songs !== undefined ? ` (${p.songs})` : ''}{p.where !== 'Wavelength' ? ` · ${p.where}` : ''}</option>
+          ))}
+        </select>
+      )}
       <form className="dj-station-ask" onSubmit={(e) => { e.preventDefault(); send(); }}>
         <input value={ask} maxLength={300} placeholder="Tell the DJ what you want: “90s house”, “chill for cooking”…" onChange={(e) => setAsk(e.target.value)} disabled={s.busy} />
         <button className="btn small" disabled={s.busy || !ask.trim()}>Go</button>
@@ -78,6 +106,12 @@ export function DjStationPanel({ inline = false }: { inline?: boolean }) {
         <span className="switch"><input type="checkbox" checked={s.talk} onChange={(e) => useStation.setState({ talk: e.target.checked })} /><span /></span>
         <span>The DJ talks between segments</span>
       </label>
+      {s.talk && (
+        <label className="range-field small">
+          <span>DJ loudness {Math.round(loud * 100)}%</span>
+          <input type="range" min={0.5} max={2.5} step={0.1} value={loud} onChange={(e) => setVoice({ loudness: Number(e.target.value) })} style={{ ['--pct' as string]: `${((loud - 0.5) / 2) * 100}%` }} />
+        </label>
+      )}
     </div>
   );
 }

@@ -640,7 +640,7 @@ export interface HubDjSettings {
   ollamaContext?: number;
   quickProvider?: 'same' | 'ollama';
 }
-export type HubStationKind = 'favourites' | 'discover' | 'throwbacks' | 'tophits' | 'ask';
+export type HubStationKind = 'favourites' | 'discover' | 'throwbacks' | 'tophits' | 'ask' | 'playlist';
 export interface HubStationSegment { kind: HubStationKind; title: string; songs: HubMixSong[]; intro: string | null; spent: number; limit: number | null }
 export type HubVoiceEngine = 'device' | 'kokoro' | 'openai';
 export interface HubDjVoiceInfo { engine: HubVoiceEngine; voices: string[]; default: string; error?: string }
@@ -963,7 +963,7 @@ export class HubClient {
   djPatter = (b: { previous?: { title: string; artist?: string; album?: string; year?: number }; next: { title: string; artist?: string; album?: string; year?: number }; name?: string; style?: string }) =>
     this.call<{ text: string; spent: number; limit: number | null }>('POST', '/api/dj/patter', b);
   /** DJ mode's next segment (hub/src/dj/station.ts; needs the djMode feature). */
-  djStation = (b: { kind?: HubStationKind; ask?: string; previous?: HubStationKind; recent?: { title: string; artist: string }[]; name?: string; style?: string; talk?: boolean }) =>
+  djStation = (b: { kind?: HubStationKind; ask?: string; playlist?: { name: string; songs: { title: string; artist: string }[] }; previous?: HubStationKind; recent?: { title: string; artist: string }[]; name?: string; style?: string; talk?: boolean }) =>
     this.call<HubStationSegment>('POST', '/api/dj/station', b);
   /** The talking DJ's Hub voices (Kokoro or OpenAI); `engine: 'device'` = read it with this device's voice. */
   djVoice = () => this.call<HubDjVoiceInfo>('GET', '/api/dj/voice');

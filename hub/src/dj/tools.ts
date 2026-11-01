@@ -79,6 +79,23 @@ export const APP_TOOLS: DjTool[] = [
       required: ['name', 'refs'],
     },
   },
+  {
+    name: 'list_playlists',
+    description: 'The listener’s own playlists: their Wavelength playlists and the ones on their music servers. Returns refs (p…) to use with playlist_songs.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'playlist_songs',
+    description: 'The songs in one of the listener’s playlists, with refs to use with play and save_playlist. Use it to build on a playlist they made: its mood, its artists, more like it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        playlist: { type: 'string', description: 'A playlist ref (p…) from list_playlists' },
+        limit: { type: 'integer', description: 'Most songs to return (default 100, at most 300)' },
+      },
+      required: ['playlist'],
+    },
+  },
 ];
 
 export const HUB_TOOLS: DjTool[] = [
