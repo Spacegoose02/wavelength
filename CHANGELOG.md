@@ -5,6 +5,11 @@
   it: some of its songs plus more like them. In the DJ chat, ask for "something like my Gym playlist".
 - **DJ mode asks first.** The raccoon button opens a picker (Mix it up, a segment, a playlist, or type a request)
   instead of starting music straight away.
+- **Fixed: pressing Throwbacks in DJ mode played Top hits.** Throwbacks come from months of listening; with less
+  than that, the DJ fell through to the next segment. A segment you press now plays that segment (for Throwbacks,
+  the AI picks older songs that fit your taste) or says why it can't.
+- **Blended Kokoro voices.** Type a blend like `af_bella(2)+af_sky(1)` under **Settings → AI DJ → Voice** to make a
+  new voice; it shows up in everyone's picker.
 - **A louder DJ.** The DJ's voice is louder by default, with a **DJ loudness** slider (up to 250%) in the DJ mode
   panel and in **Settings → Playback → Talking DJ**.
 

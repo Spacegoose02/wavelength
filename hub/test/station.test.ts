@@ -46,8 +46,12 @@ test('DJ mode: segments from mixes and the charts, an intro each, requests picke
   assert.equal((await station({})).status, 403, 'off until the DJ mode feature is on');
   await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { djMode: { on: true } } } });
 
-  // no plays yet: favourites, new for you and throwbacks are empty, so it moves on to the charts
+  // no plays yet: a segment you pick says so instead of playing another one
   let r = await station({ kind: 'favourites', talk: false });
+  assert.equal(r.status, 404);
+  assert.match(r.body.error, /Nothing new for Your favourites/);
+  // the rotation: favourites, new for you and throwbacks are empty, so it moves on to the charts
+  r = await station({ talk: false });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.kind, 'tophits');
   assert.equal(r.body.intro, null, 'no intro when the app says not to talk');
@@ -79,6 +83,15 @@ test('DJ mode: segments from mixes and the charts, an intro each, requests picke
   r = await station({ previous: 'discover', talk: false });
   assert.equal(r.body.kind, 'throwbacks');
   assert.ok(r.body.songs.every((s: any) => s.artist === 'Oldies'));
+
+  // a segment you pick plays that segment: with too little history for throwbacks, the AI picks older songs
+  db.prepare("DELETE FROM plays WHERE artist = 'Oldies'").run();
+  db.prepare('DELETE FROM mixes').run();
+  r = await station({ kind: 'throwbacks', talk: false });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.kind, 'throwbacks', 'not top hits');
+  assert.equal(r.body.title, 'Throwbacks');
+  assert.match(String(ai.seen.at(-1)!.messages[0].content), /Throwbacks: well-known older songs/);
 
   // a request: the AI picks from what they play (and a few it knows), deduped, its intro cleaned up for the voice
   r = await station({ ask: 'something chill for cooking' });

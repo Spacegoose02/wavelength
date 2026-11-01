@@ -55,7 +55,9 @@ export class DjVoice {
     }
     if (v.engine === 'kokoro') {
       try {
-        return { engine: 'kokoro', voices: await this.kokoroList(v.kokoroUrl), default: v.kokoroVoice };
+        const voices = await this.kokoroList(v.kokoroUrl);
+        // a blend the admin made (af_bella+af_sky) is offered to everyone too
+        return { engine: 'kokoro', voices: voices.includes(v.kokoroVoice) ? voices : [v.kokoroVoice, ...voices], default: v.kokoroVoice };
       } catch (e) {
         return { engine: 'kokoro', voices: [], default: v.kokoroVoice, error: (e as Error).message };
       }
