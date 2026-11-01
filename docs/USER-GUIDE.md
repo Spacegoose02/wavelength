@@ -539,8 +539,16 @@ song, Navidrome 0.53 or newer), otherwise from **LRCLIB** (lrclib.net, free and 
 profiles** see lyrics with strong words hidden (`f•••`), since clean versions of songs only have the original
 words online.
 
-> **Developer notes.** `src/lib/lyrics.ts` (LRC parsing, LRCLIB lookup with a search fallback that prefers synced
-> lyrics with a matching length, the kid filter), `NavidromeSource.getLyrics` (OpenSubsonic
+LRCLIB often has several entries for a song, including instrumental or karaoke uploads filed under the same
+name, so Wavelength looks a few ways (the exact song, a search by name and artist, a search by the first-listed
+artist, a free-text search) and takes an entry with words over one marked instrumental. A song only shows
+"Instrumental" when its name says so or every matching entry is marked that way. Version notes like
+"(2011 Remaster)", "- Radio Edit" or "(feat. …)" are left off when searching. When the only match is a different
+length (a live take, say), you get its words without the karaoke timing.
+
+> **Developer notes.** `src/lib/lyrics.ts` (LRC parsing, the LRCLIB lookup: `cleanTitle` and `artistVariants`
+> build the queries, every reply is pooled, entries with words and a matching name win, then a length within
+> 10 s, then synced; an unreachable LRCLIB throws so the miss isn't cached; the kid filter), `NavidromeSource.getLyrics` (OpenSubsonic
 > `getLyricsBySongId`), and `src/components/Lyrics.tsx`. Lyrics are cached per song for the session. The
 > [critters](#critters) look up the playing song's lyrics too (same cache) while their scene is on screen,
 > to know when someone is singing (`src/lib/singAlong.ts`).

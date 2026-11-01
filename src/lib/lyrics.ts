@@ -67,43 +67,111 @@ export function maskForKids(text: string): string {
 }
 
 interface LrcLibHit {
+  id?: number;
+  trackName?: string;
+  artistName?: string;
+  albumName?: string;
   instrumental?: boolean;
   plainLyrics?: string | null;
   syncedLyrics?: string | null;
   duration?: number;
 }
 
-function fromLrcLib(hit: LrcLibHit): Lyrics | undefined {
-  if (hit.instrumental) return { lines: [], synced: false, instrumental: true, source: 'LRCLIB' };
-  if (hit.syncedLyrics) return { lines: parseLrc(hit.syncedLyrics), synced: true, source: 'LRCLIB' };
+const LRCLIB = 'https://lrclib.net/api';
+/** Words that mark a version of a song rather than a different song: "(2011 Remaster)", "- Radio Edit", "(feat. X)". */
+const VERSIONY = /\b(feat|ft|featuring|with|clean|explicit|edit|edited|censored|remaster|remastered|radio|single|album version|version|mono|stereo|deluxe|bonus|anniversary|expanded|edition|live|acoustic|unplugged|demo|from)\b|\b(19|20)\d\d\b/i;
+/** Recordings without the words (LRCLIB marks them `instrumental`, often filed under the plain song name). */
+const NO_VOCALS = /\b(instrumental|karaoke|backing track|minus one)\b/i;
+
+/** A song or album name without version notes, so it matches LRCLIB's: "Song (feat. X) - 2011 Remaster" → "Song". */
+export function cleanTitle(s = ''): string {
+  return s
+    .replace(/\s*[([]([^)\]]*)[)\]]/g, (m, inner: string) => (VERSIONY.test(inner) ? '' : m))
+    .replace(/\s+[-–—]\s+(.*)$/, (m, tail: string) => (VERSIONY.test(tail) ? '' : m))
+    .trim();
+}
+
+/** For comparing names: lower case, no accents, letters and digits only. */
+const norm = (s = '') =>
+  cleanTitle(s)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+
+/** The full artist ("Simon & Garfunkel") first, then the first-listed one ("Drake" of "Drake, Future"). */
+export function artistVariants(artist = ''): string[] {
+  const first = artist.split(/\s*(?:,|;|\/|&| x | feat\.? | ft\.? | featuring | with )\s*/i)[0].trim();
+  return [...new Set([artist.trim(), first].filter(Boolean))];
+}
+
+function fromLrcLib(hit: LrcLibHit, timed = true): Lyrics | undefined {
+  if (hit.syncedLyrics && timed) return { lines: parseLrc(hit.syncedLyrics), synced: true, source: 'LRCLIB' };
   if (hit.plainLyrics) return { lines: plainLines(hit.plainLyrics), synced: false, source: 'LRCLIB' };
+  // a different length (a live take, say): the words are right but the times aren't
+  if (hit.syncedLyrics) return { lines: parseLrc(hit.syncedLyrics).map((l) => ({ text: l.text })), synced: false, source: 'LRCLIB' };
   return undefined;
 }
 
-const LRCLIB = 'https://lrclib.net/api';
-const clean = (s = '') => s.replace(/\s*[([](feat|ft|with|clean|explicit|remaster)[^)\]]*[)\]]/gi, '').trim();
+const INSTRUMENTAL = (source: string): Lyrics => ({ lines: [], synced: false, instrumental: true, source });
 
+/**
+ * LRCLIB has several entries for most songs, some marked instrumental (an instrumental or karaoke upload filed
+ * under the song's name, or a wrong flag), so one instrumental entry doesn't settle it: every lookup is pooled
+ * and an entry with words wins. "Instrumental" is the answer only when the song's own name says so, or when
+ * nothing matching has words but an entry for it is marked instrumental.
+ */
 async function lrclib(t: Pick<Track, 'title' | 'artist' | 'album' | 'duration'>): Promise<Lyrics | undefined> {
-  const title = clean(t.title);
-  const artist = t.artist.split(/\s*(?:,|&| feat\.? | ft\.? )\s*/i)[0];
-  // exact lookup first (title + artist + album + duration within 2 s), then a search
-  try {
-    const params: Record<string, string> = { track_name: title, artist_name: artist };
-    if (t.album) params.album_name = clean(t.album);
-    if (t.duration) params.duration = String(Math.round(t.duration));
-    const hit = await getJson<LrcLibHit>(`${LRCLIB}/get?${qs(params)}`);
-    const got = fromLrcLib(hit);
-    if (got) return got;
-  } catch {
-    /* 404 when there's no exact match */
-  }
-  const list = await getJson<LrcLibHit[]>(`${LRCLIB}/search?${qs({ track_name: title, artist_name: artist })}`).catch(() => []);
-  // prefer synced, and a length close to ours
+  if (NO_VOCALS.test(t.title)) return INSTRUMENTAL('LRCLIB');
+  const title = cleanTitle(t.title);
+  const want = norm(t.title);
+  const artists = artistVariants(t.artist);
   const near = (h: LrcLibHit) => (t.duration && h.duration ? Math.abs(h.duration - t.duration) : 0);
-  const best = list
-    .filter((h) => !t.duration || !h.duration || near(h) < 10)
-    .sort((a, b) => Number(!!b.syncedLyrics) - Number(!!a.syncedLyrics) || near(a) - near(b))[0];
-  return best ? fromLrcLib(best) : undefined;
+  const nameOk = (h: LrcLibHit) => {
+    const got = norm(h.trackName);
+    return !!got && !!want && (got === want || (Math.min(got.length, want.length) >= 3 && (got.includes(want) || want.includes(got))));
+  };
+  const lengthOk = (h: LrcLibHit) => near(h) <= 10;
+  const words = (h: LrcLibHit) => !h.instrumental && !NO_VOCALS.test(`${h.trackName ?? ''} ${h.albumName ?? ''}`) && !!(h.syncedLyrics || h.plainLyrics);
+
+  const pool: LrcLibHit[] = [];
+  let answered = 0;
+  let failed: unknown;
+  const ask = async (path: string, params: Record<string, string>) => {
+    try {
+      const res = await getJson<LrcLibHit | LrcLibHit[]>(`${LRCLIB}/${path}?${qs(params)}`);
+      answered++;
+      pool.push(...(Array.isArray(res) ? res : [res]));
+    } catch (e) {
+      if (/^404\b/.test((e as Error).message)) answered++; // no exact match
+      else failed = e;
+    }
+  };
+  const best = () =>
+    pool
+      .filter((h) => words(h) && nameOk(h))
+      .sort((a, b) => Number(lengthOk(b)) - Number(lengthOk(a)) || Number(!!b.syncedLyrics) - Number(!!a.syncedLyrics) || near(a) - near(b))[0];
+  const settled = () => {
+    const b = best();
+    return !!b && lengthOk(b) && !!b.syncedLyrics;
+  };
+
+  // exact lookup (title + artist + album + length within 2 s), then searches by fields, then a free-text search
+  if (t.duration) {
+    const params: Record<string, string> = { track_name: title, artist_name: artists[0], duration: String(Math.round(t.duration)) };
+    if (t.album) params.album_name = cleanTitle(t.album);
+    await ask('get', params);
+  }
+  for (const artist of artists) if (!settled()) await ask('search', { track_name: title, artist_name: artist });
+  if (!settled()) await ask('search', { q: `${artists[0]} ${title}` });
+
+  const hit = best();
+  if (hit) return fromLrcLib(hit, lengthOk(hit));
+  if (pool.some((h) => h.instrumental && nameOk(h) && lengthOk(h))) return INSTRUMENTAL('LRCLIB');
+  // LRCLIB couldn't be reached at all: throw so the miss isn't cached for the session
+  if (!answered && failed) throw failed;
+  return undefined;
 }
 
 /** A source that can give lyrics itself (Navidrome). */

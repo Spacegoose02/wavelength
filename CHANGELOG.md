@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Fixed: lyrics showing "Instrumental" for songs with words, or not found at all.** LRCLIB often files
+  instrumental and karaoke uploads under the song's own name, and the first one found used to win. Now every
+  lookup is pooled and an entry with words wins. Lookups also leave off version notes ("- 2011 Remaster",
+  "- Radio Edit", "(Live)"), search bands like Simon & Garfunkel by their whole name before the first artist, and
+  finish with a free-text search. If LRCLIB can't be reached, the song is tried again later instead of staying
+  blank for the session. Synced lyrics for the critters' mouths come through the same lookup.
 
 ## 0.20.0
 - **Better voices for the talking DJ.** Admins can pick who reads the DJ's lines under **Settings → AI DJ →
