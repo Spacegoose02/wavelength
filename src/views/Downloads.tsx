@@ -74,7 +74,9 @@ function DeezerTab({ q, onFallback, request }: { q: string; onFallback?: () => v
   // artist/album pages opened from the results; a new search starts back at the results
   const { stack, setStack, browse } = useDeezerBrowse({ request });
   const { clean, setClean } = browse;
-  useEffect(() => setStack([]), [q]);
+  useEffect(() => {
+    setStack([]);
+  }, [q]);
 
   useEffect(() => {
     if (q.trim().length < 2) {
