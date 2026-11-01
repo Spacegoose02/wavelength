@@ -2,6 +2,7 @@ import { norm, sourceFor } from '../sources/registry';
 import type { NavidromeSource } from '../sources/navidrome';
 import type { Track } from '../sources/types';
 import { enabledSources } from '../store/settings';
+import { featuresFor } from './sonic';
 
 /**
  * Smart playlists: rules ("Rap; Hip-Hop, rated 4+, not played in 90 days") instead of a list of songs. Each time
@@ -26,6 +27,23 @@ export interface SmartPlaylist {
   toYear?: number;
   /** At most this many songs, picked at random from the ones that match. */
   limit: number;
+  /** Sound-alike analysis on the Hub (lib/sonic.ts): any of these moods; tempo range in BPM. Songs it hasn't analysed are left out while one is set. */
+  moods?: string[];
+  minBpm?: number;
+  maxBpm?: number;
+}
+
+export const MOODS = ['energetic', 'upbeat', 'chill', 'mellow', 'dark'] as const;
+
+/** Whether a song's sound fits the playlist's mood and tempo rules (no rules: yes). */
+export function soundMatches(p: SmartPlaylist, f: { mood: string; bpm: number } | null): boolean {
+  const any = !!(p.moods?.length || p.minBpm || p.maxBpm);
+  if (!any) return true;
+  if (!f) return false;
+  if (p.moods?.length && !p.moods.includes(f.mood)) return false;
+  // a song at half or double the tempo feels the same: count either
+  const fits = (b: number) => (!p.minBpm || b >= p.minBpm) && (!p.maxBpm || b <= p.maxBpm);
+  return fits(f.bpm) || fits(f.bpm / 2) || fits(f.bpm * 2);
 }
 
 /** What smart playlists filter on, from Navidrome's song listing. */
@@ -77,6 +95,8 @@ export function describe(p: SmartPlaylist): string {
     p.notPlayedDays ? `not played in ${p.notPlayedDays} days` : '',
     p.addedDays ? `added in the last ${p.addedDays} days` : '',
     p.fromYear || p.toYear ? `${p.fromYear ?? '…'}–${p.toYear ?? '…'}` : '',
+    p.moods?.length ? p.moods.join(' or ') : '',
+    p.minBpm || p.maxBpm ? `${p.minBpm ?? '…'}–${p.maxBpm ?? '…'} BPM` : '',
   ].filter(Boolean);
   return `${bits.join(', ')} · up to ${p.limit}`;
 }
@@ -101,6 +121,12 @@ export async function smartTracks(p: SmartPlaylist): Promise<Track[]> {
     return songs.filter((s) => matches(p, s.facts, now)).map((s) => s.track);
   }));
   const seen = new Set<string>();
-  const all = lists.flat().filter((t) => !seen.has(`${t.sourceId}:${t.id}`) && !!seen.add(`${t.sourceId}:${t.id}`));
+  let all = lists.flat().filter((t) => !seen.has(`${t.sourceId}:${t.id}`) && !!seen.add(`${t.sourceId}:${t.id}`));
+  if (p.moods?.length || p.minBpm || p.maxBpm) {
+    // pick from a shuffled sample so a big library doesn't mean a huge lookup
+    all = shuffle(all).slice(0, 3000);
+    const feats = await featuresFor(all);
+    all = all.filter((_, i) => soundMatches(p, feats[i]));
+  }
   return shuffle(all).slice(0, Math.max(1, p.limit));
 }

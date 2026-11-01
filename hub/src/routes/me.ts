@@ -9,6 +9,7 @@ import { getUser, getUserForLogin, updateUser } from '../users.ts';
 import { kidsOf } from '../family.ts';
 import { beginTotp, disableTotp, enableTotp, passTotp, recoveryLeft, totpEnabled } from '../totp.ts';
 import { MIN_PASSWORD } from './auth.ts';
+import { FEATURE_KEYS, featureOn } from '../features.ts';
 
 /** The signed-in person's own account, devices and synced preferences. */
 export function meRoutes(app: FastifyInstance, { db, limits, config }: Ctx) {
@@ -16,7 +17,9 @@ export function meRoutes(app: FastifyInstance, { db, limits, config }: Ctx) {
     const { user, device, permissions } = signedIn(req);
     // a parent's kids (family.ts), for the Inbox's approvals and reports
     const kids = kidsOf(db, user.id).map((id) => getUser(db, id)).filter((k) => !!k).map((k) => ({ id: k.id, displayName: k.displayName }));
-    return { user, device, permissions, twoFactor: totpEnabled(db, user.id), kids };
+    // which feature switches (features.ts) are on for this person
+    const features = Object.fromEntries(FEATURE_KEYS.map((k) => [k, featureOn(db, k, user)]));
+    return { user, device, permissions, twoFactor: totpEnabled(db, user.id), kids, features };
   });
 
   app.patch('/api/me', async (req) => {

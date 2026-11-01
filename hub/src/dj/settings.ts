@@ -1,6 +1,7 @@
 import { seal, unseal } from '../crypto.ts';
 import type { Db } from '../db.ts';
 import { HttpError } from '../http.ts';
+import { featureOn } from '../features.ts';
 import type { User } from '../users.ts';
 
 /**
@@ -60,12 +61,8 @@ export interface DjSettings {
   householdLimit: number | null;
   /** New accounts' own monthly limit when they're switched on, USD. null = none. */
   defaultUserLimit: number | null;
-  /** Let the DJ search the web and read pages (the provider's own web search and web fetch tools). */
-  web: boolean;
   /** Most web searches in one model call. */
   webMaxSearches: number;
-  /** Kid profiles get web access too. */
-  webKids: boolean;
   /** USD per 1,000 web searches (Anthropic: $10). */
   webSearchPrice: number;
 }
@@ -84,9 +81,7 @@ export const DEFAULTS: DjSettings = {
   prices: {},
   householdLimit: null,
   defaultUserLimit: 5,
-  web: false,
   webMaxSearches: 3,
-  webKids: false,
   webSearchPrice: 10,
 };
 
@@ -174,8 +169,6 @@ export function saveSettings(db: Db, secretKey: Buffer, body: unknown): { settin
   if (b.fallback !== undefined) next.fallback = b.fallback === true;
   if (b.householdLimit !== undefined) next.householdLimit = money(b.householdLimit, 'The household limit');
   if (b.defaultUserLimit !== undefined) next.defaultUserLimit = money(b.defaultUserLimit, 'The limit for new people');
-  if (b.web !== undefined) next.web = b.web === true;
-  if (b.webKids !== undefined) next.webKids = b.webKids === true;
   if (b.webMaxSearches !== undefined) {
     const n = Number(b.webMaxSearches);
     if (!Number.isInteger(n) || n < 1 || n > 10) throw new HttpError(400, 'Web searches per step must be 1 to 10');
@@ -227,8 +220,11 @@ export function costOf(p: Price | null, u: TokenUsage, searchPrice = DEFAULTS.we
   return (u.input * p.input + u.output * p.output + u.cacheRead * p.cacheRead + u.cacheWrite * p.cacheWrite) / 1e6 + searches;
 }
 
-/** Whether this person's DJ may use the web right now. */
-export const webFor = (s: DjSettings, user: Pick<User, 'role'>) => s.web && (user.role !== 'kid' || s.webKids);
+/**
+ * Whether this person's DJ may search the web and read pages (the provider's own web search and web fetch tools).
+ * Switched in Settings → Features (`djWeb`, with its own kids switch); the cap and price are DJ settings.
+ */
+export const webFor = (db: Db, user: Pick<User, 'role'>) => featureOn(db, 'djWeb', user);
 
 // ---- who may use it ----
 

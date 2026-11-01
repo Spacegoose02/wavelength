@@ -505,6 +505,34 @@ The Hub checks the permission on **every** request (`need(req, …)` in `hub/src
 the list from `GET /api/me` only to decide what to show. A role change applies on the user's next request,
 no re-login. The Hub refuses to demote, disable or delete the last admin.
 
+## Feature switches
+
+**Settings → Features** (admins) turns each newer feature on or off for the whole household, and separately for
+kid profiles: Home and Made for you mixes, Blend, smart offline, sound-alike analysis, AutoMix, casting, the
+talking AI DJ, AI DJ web search, artist bios and credits, tour dates, Sing mode, music videos, share links for anyone, Discord
+status, the critter mouth tuner and bit-perfect output. The switches are kept in `hub_settings` (`features`,
+see `hub/src/features.ts`); each device gets what's on for its person with `GET /api/me` and hides the rest, and
+Hub routes that serve a feature refuse with `403 { feature }` while it's off. Features that cost money or need
+an outside service (talking DJ, DJ web search, tour dates, sound-alike analysis, share links, bit-perfect output) start off.
+
+## Made for you mixes
+
+The Hub makes each person's mixes once a day (`hub/src/mixes.ts`), the first time their app asks for them that
+day, from their plays (the same table Rewind uses) and Deezer's related artists and top songs (cached for a day):
+On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favourites and Time Capsule. Songs are sent by title and
+artist (plus the track that played, for songs the person played), and each app finds them in its own library.
+Blends mix two to six people who have all said yes (`blend_optin`).
+
+## Sound-alike analysis
+
+Off until an admin turns on **Sound-alike analysis** in Settings → Features. Then the Hub lists the Navidrome
+library every hour (it needs the Navidrome admin login under Library updates, and the music folder mapped to
+`/music` like the tag editor) and analyses each song once, one at a time at low priority: ffmpeg decodes a
+minute from about a third of the way in, and `hub/src/sonic/analyse.ts` measures its tempo and beat, key,
+loudness, energy, brightness, and the timbre and harmony numbers "sounds like" compares. No AI model and no
+extra container; about 1–2 seconds a song on a NAS, so a big library takes a night the first time. Progress
+shows under the switch. Results are in the `sonic_songs` table; a song whose file changes is analysed again.
+
 ## AI DJ
 
 The Hub runs the AI DJ chat and keeps its API key, model choice, prices, per-account switch and spending limits.
@@ -525,7 +553,22 @@ with a 4xx status.
 | `POST /auth/device` | anyone | `{ deviceName?, platform? }` → `{ deviceCode, userCode, verificationUrl, verificationUrlComplete, expiresIn, interval }` |
 | `POST /auth/device/token` | the pairing device | `{ deviceCode }` → `202 {status:'pending'}`, `403 denied`, `410 expired`, or `200` session |
 | `POST /auth/logout` | signed in | signs this device out |
-| `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids }` (`kids`: the kids this person is a parent of) |
+| `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids, features }` (`kids`: the kids this person is a parent of; `features`: `{ homeMixes: true, … }`, which feature switches are on for this person) |
+| `GET /api/mixes[?fresh=1]` | signed in, `homeMixes` on | `{ mixes: [{ id, name, description, kind, songs: [{ title, artist, album?, duration?, coverUrl?, track?, because? }] }], builtAt }`; made once a day (or now with `fresh=1`) |
+| `GET /api/blend/people` | signed in, `blend` on | `{ optedIn, people: [{ id, displayName, optedIn }] }`: who you may blend with (grown-ups with grown-ups and their own kids; kids with their parents) |
+| `PUT /api/blend/optin` | signed in, `blend` on | `{ on }`: let others make Blends with you |
+| `GET /api/blend?with=<id,id>` | signed in, `blend` on | `{ mix }`; `409` until you and each of them opted in |
+| `GET /api/tours?artist=` | signed in, `tourDates` on | `{ events: [{ date, time?, venue, city, country?, url? }] }`: upcoming, this artist only, kept 6 hours; `409` until an admin saves a key |
+| `GET /api/videos?artist=&title=[&duration=]` | signed in, `musicVideos` on | `{ video: { id, title, channel, duration? } \| null }`: the official video's YouTube id, found with yt-dlp, kept a month |
+| `GET /api/tours/status` | signed in | `{ available }`: the feature is on for you and a key is saved |
+| `GET`/`PUT /api/admin/tours` | `users.manage` | `{ provider: 'ticketmaster'\|'bandsintown', key? }` (`''` removes it) → `{ provider, keySet, hint }`; the key is sealed and never sent back |
+| `GET /api/sonic/similar?id=\|artist=&title=[&limit=]` | signed in, `sonic` on | `{ song, songs: [{ id, title, artist, album, duration, bpm, key, energy, mood, match }] }`: closest first, at most 3 per artist; `404` until that song is analysed |
+| `GET /api/sonic/journey?from=&to=[&steps=]` | signed in, `sonic` on | `{ songs }` from one song to another (ids, or `fromArtist`/`fromTitle`, `toArtist`/`toTitle`) |
+| `GET /api/sonic/search?q=` | signed in, `sonic` on | analysed songs whose title and artist contain the words |
+| `POST /api/sonic/lookup` | signed in, `sonic` on | `{ songs: [{ id? , artist?, title? }] }` (500 at most) → `{ features: [… or null] }` with `beatStrength`, `beatPhase`, `offset`, `loudness` too |
+| `GET /api/admin/sonic`, `POST /api/admin/sonic/rescan` | `server.view` | progress `{ on, blocked, total, analysed, failed, running, current, lastListAt, lastError }` / list the library again now |
+| `GET /api/admin/features` | `users.manage` | `{ features: { homeMixes: { on, kids }, … } }` (see "Feature switches") |
+| `PUT /api/admin/features` | `users.manage` | `{ features: { blend: { on: false }, musicVideos: { kids: true } } }`: only what's sent changes; audited |
 | `GET /api/me/2fa` | signed in | `{ enabled, recoveryLeft }` |
 | `POST /api/me/2fa/setup` | signed in, Hub-password users | `{ password }` → `{ secret, uri }` (`otpauth://`, for a QR code) |
 | `POST /api/me/2fa/enable` | signed in | `{ code }` → `{ recovery: [10 codes] }`, shown once |
@@ -591,6 +634,10 @@ with a 4xx status.
 | `POST /api/admin/requests/:id/reject`, `/have`, `DELETE …/:id` | `requests.approve` | reject `{ reason? }` / "already in the library" / remove |
 | `GET /api/people` | signed in | who you can share with: `{ people: [{ id, username, displayName, kid }] }` |
 | `POST /api/shares` | signed in | `{ to: userId \| null (everyone), kind, title, subtitle?, cover?, note?, payload }`; `kind` is playlist, album, track, artist, station or favorites; `payload` is `{ tracks: [{ title, artist, album?, duration?, coverUrl? }] }`, `{ station: { name, streamUrl, … } }` or `{ artist }` (512 KB at most) |
+| `POST /api/public-links` | signed in, `publicShares` on, not kids | `{ kind: playlist\|album\|track\|artist, title, subtitle?, cover?, note?, payload, days? }` → `{ link, url }`; only names are kept (500 songs at most), a cover with a login in it is dropped |
+| `GET /api/public-links` | signed in | your links with `views`, `songs` and `url` |
+| `DELETE /api/public-links/:token` | the owner, or `users.manage` | takes it down |
+| `GET /s/:token` | anyone | the public page; `404` when expired, taken down, its owner disabled or the feature off |
 | `GET /api/shares?sent=1` | signed in | shared with you (or `sent=1`: what you shared), newest first |
 | `GET /api/shares/counts`, `POST /api/shares/seen` | signed in | `{ unseen }` / mark `{ ids? }` (or all) as seen |
 | `POST /api/shares/:id/hide`, `DELETE /api/shares/:id` | signed in | take one off your list / unshare (the sender, or an admin) |

@@ -234,9 +234,13 @@ test('AI DJ: web search is off until turned on, kids only with their own switch,
 
   await json(app, 'POST', '/api/dj/chat', { token: tokens.member, body: { message: 'top EDM hits?' } });
   assert.equal((await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { webMaxSearches: 50 } })).status, 400);
-  const on = await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { web: true, webMaxSearches: 2 } });
-  assert.equal(on.body.settings.web, true);
-  assert.equal(on.body.settings.webKids, false);
+  assert.equal((await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { webMaxSearches: 2 } })).status, 200);
+  assert.equal((await json(app, 'GET', '/api/dj', { token: tokens.member })).body.web, false, 'the cap alone doesn’t turn it on');
+  const features = (await json(app, 'GET', '/api/admin/features', { token: tokens.admin })).body.features;
+  assert.deepEqual(features.djWeb, { on: false, kids: false });
+  await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { djWeb: { on: true } } } });
+  assert.equal((await json(app, 'GET', '/api/dj', { token: tokens.member })).body.web, true);
+  assert.equal((await json(app, 'GET', '/api/dj', { token: tokens.kid })).body.web, false);
 
   const r = await json(app, 'POST', '/api/dj/chat', { token: tokens.member, body: { message: 'top EDM hits?' } });
   assert.equal(r.body.reply, 'Here are this week’s top EDM hits.');
@@ -246,6 +250,32 @@ test('AI DJ: web search is off until turned on, kids only with their own switch,
   assert.ok(Math.abs(r.body.spent - ((1000 * 4 + 500 * 20) / 1e6 + 0.02)) < 1e-9, `spent ${r.body.spent}`);
 
   await json(app, 'POST', '/api/dj/chat', { token: tokens.kid, body: { message: 'hi' } });
-  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { webKids: true } });
+  await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { djWeb: { kids: true } } } });
   await json(app, 'POST', '/api/dj/chat', { token: tokens.kid, body: { message: 'hi' } });
+});
+
+test('AI DJ: the talking DJ writes a short link between songs, only with the switch on', async () => {
+  const script = scripted([(req) => {
+    assert.equal(req.tools.length, 0);
+    assert.equal(req.effort, 'low');
+    assert.match(String(req.messages[0].content), /That was "Dreams" by Fleetwood Mac.*Coming up: "Hey Jude" by The Beatles/);
+    return text('That was **Dreams**. Here is Hey Jude, Sam.');
+  }]);
+  const { app, tokens, ids, db } = await seeded({}, {}, { djProvider: script.factory });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { enabled: true, apiKey: 'sk-ant-x-1234' } });
+  await json(app, 'PUT', `/api/admin/dj/users/${ids.member}`, { token: tokens.admin, body: { enabled: true } });
+  const body = { previous: { title: 'Dreams', artist: 'Fleetwood Mac' }, next: { title: 'Hey Jude', artist: 'The Beatles' }, name: 'Sam' };
+
+  const off = await json(app, 'POST', '/api/dj/patter', { token: tokens.member, body });
+  assert.equal(off.status, 403, 'the talking DJ is off until an admin turns it on');
+  assert.equal(off.body.feature, 'djVoice');
+
+  const features = (await json(app, 'GET', '/api/admin/features', { token: tokens.admin })).body.features;
+  await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { ...features, djVoice: { on: true, kids: false } } } });
+  assert.equal((await json(app, 'POST', '/api/dj/patter', { token: tokens.member, body: { next: {} } })).status, 400);
+  const r = await json(app, 'POST', '/api/dj/patter', { token: tokens.member, body });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.text, 'That was Dreams. Here is Hey Jude, Sam.');
+  assert.ok(r.body.spent > 0, 'counted against the allowance');
+  assert.equal((db.prepare('SELECT COUNT(*) AS n FROM dj_usage WHERE conversation_id IS NULL').get() as { n: number }).n, 1);
 });

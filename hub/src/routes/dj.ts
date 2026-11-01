@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
+import { requireFeature } from '../features.ts';
 import { usageSummary } from '../dj/agent.ts';
 import {
   blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, priceOf, saveSettings, setAccess, spentSince, webFor,
@@ -33,7 +34,7 @@ export function djRoutes(app: FastifyInstance, { db, config, dj }: Ctx) {
     const { user } = signedIn(req);
     const why = blockedReason(db, key, user);
     const s = getSettings(db);
-    return { available: !why, reason: why, model: MODELS.find((m) => m.id === s.model)?.label ?? s.model, web: webFor(s, user), ...allowance(user.id) };
+    return { available: !why, reason: why, model: MODELS.find((m) => m.id === s.model)?.label ?? s.model, web: webFor(db, user), ...allowance(user.id) };
   });
 
   app.get('/api/dj/chats', async (req) => {
@@ -55,6 +56,13 @@ export function djRoutes(app: FastifyInstance, { db, config, dj }: Ctx) {
     const chatId = typeof b.chatId === 'number' ? b.chatId : null;
     const out = await dj.send(user, chatId, typeof b.message === 'string' ? b.message : '');
     return { ...out, ...allowance(user.id) };
+  });
+
+  /** The talking DJ: `{ previous?, next, name?, style? }` → `{ text }` to read aloud between songs. */
+  app.post('/api/dj/patter', async (req) => {
+    const user = listener(req);
+    requireFeature(db, 'djVoice', user);
+    return { ...(await dj.patter(user, req.body)), ...allowance(user.id) };
   });
 
   /** `{ results: [{ id, content, isError? }] }` for the calls the app was given. */

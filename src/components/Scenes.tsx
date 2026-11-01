@@ -3,6 +3,8 @@ import { createAudioReader } from '../player/analysis';
 import { useSettings, type NpScene } from '../store/settings';
 import { Cover } from './common';
 import { Critter, critterLabel, nextAct, nextSpecies } from './critters/Critter';
+import { MouthTuner } from './MouthTuner';
+import { useFeature } from '../lib/features';
 
 /**
  * Now Playing "scenes": tap the artwork to cycle through full-size visualizers that react to the
@@ -250,7 +252,8 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
 /**
  * The artwork slot of Now Playing. Tap (or Enter) to move to the next scene; the choice is remembered.
  * On the critter scene two small buttons in the corner switch to the next critter (raccoon, shark, aliens, bears)
- * and to the next act (DJ, country, rapper, rocker, drums, theremin, synth, accordion).
+ * and to the next act (DJ, country, rapper, rocker, drums, theremin, synth, accordion), and a third opens the
+ * mouth tuner (components/MouthTuner.tsx) beside the critter, unless a Hub admin switched the tuner off.
  */
 export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
   const scene = useSettings((s) => s.npScene);
@@ -260,6 +263,8 @@ export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
   const act = useSettings((s) => s.act);
   const setAct = useSettings((s) => s.setAct);
   const [hint, setHint] = useState<string>();
+  const [tuning, setTuning] = useState(false);
+  const canTune = useFeature('mouthTuner');
   const sceneLabel = (id: NpScene) => (id === 'raccoon' ? critterLabel(critter, act) : SCENES.find((s) => s.id === id)?.label ?? 'Artwork');
   const label = sceneLabel(scene);
 
@@ -302,6 +307,16 @@ export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
           <button onClick={switchAct} title="Switch act" aria-label={`${label}. Switch to the next act.`}>
             Switch act
           </button>
+          {canTune && (
+            <button onClick={() => setTuning((v) => !v)} title="Tune how the mouth follows the singing" aria-pressed={tuning}>
+              Tune mouth
+            </button>
+          )}
+        </div>
+      )}
+      {tuning && canTune && scene === 'raccoon' && (
+        <div className="mouth-tuner-pop" role="dialog" aria-label="Tune mouths">
+          <MouthTuner onClose={() => setTuning(false)} />
         </div>
       )}
     </div>

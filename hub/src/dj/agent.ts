@@ -165,6 +165,53 @@ export class DjAgent {
     return this.factory(getSettings(this.db), key);
   }
 
+  /**
+   * The talking DJ: one or two spoken sentences to go between two songs, like a radio presenter. Short and
+   * cheap (low effort, few tokens), but counted against the same allowance as the chat.
+   */
+  async patter(user: User, b: unknown): Promise<{ text: string }> {
+    const o = (b ?? {}) as Record<string, unknown>;
+    const song = (v: unknown) => {
+      const x = (v ?? {}) as Record<string, unknown>;
+      const str = (k: string) => (typeof x[k] === 'string' ? (x[k] as string).replace(/\s+/g, ' ').trim().slice(0, 200) : '');
+      const year = typeof x.year === 'number' && x.year > 1000 && x.year < 3000 ? x.year : undefined;
+      return str('title') ? { title: str('title'), artist: str('artist'), album: str('album'), year } : null;
+    };
+    const next = song(o.next);
+    if (!next) throw new HttpError(400, 'Which song is next?');
+    const prev = song(o.previous);
+    const name = typeof o.name === 'string' ? o.name.trim().slice(0, 40) : '';
+    const style = typeof o.style === 'string' && ['chill', 'hype', 'trivia'].includes(o.style) ? o.style : 'chill';
+    checkBudget(this.db, user.id);
+    const describe = (s: NonNullable<typeof next>) => `"${s.title}" by ${s.artist || 'an unknown artist'}${s.album ? ` from ${s.album}` : ''}${s.year ? ` (${s.year})` : ''}`;
+    const hour = new Date().getHours();
+    const system = [
+      'You are the DJ on a personal music station, speaking between songs. What you write is read aloud by a text-to-speech voice.',
+      'Write one or two short spoken sentences (under 40 words), no lists, no emoji, no stage directions, no quotation marks around the whole thing.',
+      style === 'hype' ? 'Be upbeat and energetic.' : style === 'trivia' ? 'Share one true, interesting fact about the next song or artist if you are sure of it; otherwise just introduce it.' : 'Be warm and relaxed.',
+      'Never invent facts. If you are not sure about something, leave it out.',
+      user.role === 'kid' ? 'The listener is a child: keep it friendly and simple.' : '',
+    ].filter(Boolean).join(' ');
+    const ask = [
+      prev ? `That was ${describe(prev)}.` : 'This is the start of the session.',
+      `Coming up: ${describe(next)}.`,
+      name ? `The listener's name is ${name}; use it now and then, not every time.` : '',
+      `It is ${hour < 5 ? 'late at night' : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}.`,
+    ].filter(Boolean).join(' ');
+    const settings = getSettings(this.db);
+    const res = await this.provider().create({ system, tools: [], messages: [{ role: 'user', content: ask }], effort: 'low', maxTokens: 2000 });
+    recordUsage(this.db, user.id, null, res.model, res.usage, costOf(priceOf(settings, res.model) ?? priceOf(settings, settings.model), res.usage));
+    const text = res.content
+      .flatMap((c) => (c.type === 'text' ? [c.text] : []))
+      .join(' ')
+      .replace(/[*_#`]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 400);
+    if (!text) throw new HttpError(502, 'The DJ had nothing to say');
+    return { text };
+  }
+
   list(userId: number): Chat[] {
     return (this.db.prepare('SELECT * FROM dj_conversations WHERE user_id = ? ORDER BY updated_at DESC LIMIT 100').all(userId) as unknown as Row[]).map(toChat);
   }
@@ -248,7 +295,7 @@ export class DjAgent {
     try {
       const provider = this.provider();
       const settings = getSettings(this.db);
-      const web = webFor(settings, user);
+      const web = webFor(this.db, user);
       const system = systemPrompt(user, web);
       let { steps, requests } = state;
       for (;;) {

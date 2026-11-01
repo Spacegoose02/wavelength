@@ -214,6 +214,18 @@ Song lists work the same way: in search results, playlists, favorites, history a
 "Artist — Album" under a song, the artist opens the artist's page and the album opens the album scrolled to the
 song. On an album page, the artist under each song is a link too.
 
+## About the artist, song credits and tour dates
+
+At the bottom of an artist page, **About** tells the artist's story (from Wikipedia), where and when they
+started, the members of a band (past members greyed), and links to their website and socials (from
+MusicBrainz). In Now Playing, **Credits** shows who wrote, produced, mixed and played on the song, when
+MusicBrainz knows. Both need no setup and are kept on the device for a week. An admin can turn them off with
+**Artist bios and credits** in **Settings → Features**.
+
+**On tour** lists upcoming shows with a **Tickets** link, when a Hub admin turns on **Tour dates** in
+**Settings → Features** and pastes a free Ticketmaster key (from developer.ticketmaster.com) or a Bandsintown
+app ID there. The key stays on the Hub.
+
 ## Appears On (artist pages)
 
 Under an artist's albums, **Appears On** lists albums by other artists in your library that the artist is
@@ -375,6 +387,31 @@ are no synced lyrics. It can't shape individual words, and a centred instrument 
 voice (a synth lead, say) can still open it in songs without synced lyrics. Mono songs without synced
 lyrics move the mouth with the music rather than the voice.
 
+**Tuning the mouths.** If a mouth opens on the drums, misses quiet singing, or moves a moment before or after
+the words, tap **Tune mouth** (under Switch act) to open the tuner beside the critter, or go to **Settings →
+Playback → Critter mouths**, which has a live critter next to it. Play a song with clear singing and watch the
+graph: the filled shape is the mouth, the line is what the voice detector hears, the band along the bottom marks
+sung lyric lines, and the ticks at the top are drum hits. The line under it says what the mouth is following
+right now (the voice, the lyrics' syllables, or nothing) and whether the song is mono.
+
+| Setting | What it does | Move it when |
+|---|---|---|
+| **This song → Lyrics timing** | Moves the synced lyrics for the song that's playing, and is remembered for that song. **Mouth is late / Mouth is early** nudge it by a tenth of a second | The mouth starts before or after the words in one song |
+| **Sensitivity** | How far below the song's loudest singing the mouth still opens | Raise it if the mouth stays shut on quiet verses |
+| **Centre** | How much of the sound must sit in the middle of the mix, where lead vocals usually are | Raise it if guitars or keys open the mouth; lower it for busy mixes |
+| **Noise rejection** | How noisy (drums, hi-hats, hiss) a sound can be and still count as voice | Lower it if hi-hats flap the mouth; raise it for shouted or breathy vocals |
+| **Voice range** | The pitches that count as voice | Raise *from* for bass-heavy songs; lower *to* to ignore cymbals |
+| **Ignore after a drum hit** | How long the mouth can't open after a kick or snare | Raise it if the mouth snaps on every beat |
+| **Keep the mouth shut between sung lines** | Uses synced lyrics to keep it shut in intros, solos and gaps | Turn off if a song's lyrics are badly timed |
+| **On mono songs, mouth the lyrics** | Follows the words of each line on mono songs, where the voice can't be picked out | Turn off to follow the music instead |
+| **All songs' lyrics timing** | Moves every song's lyrics | Mouths are early or late on most songs |
+| **Syllable length** | How long each syllable lasts when mouthing the lyrics | Lower for fast rap, higher for ballads |
+| **Opens / Closes / Widest** | How fast the mouth opens and closes, and how wide | To taste: snappier or smoother |
+
+**Reset to defaults** puts everything back (song timings stay). Your tuning follows you to your other devices
+with a Hub. A Hub admin can turn the tuner off in **Settings → Features**, which puts everyone back on the
+defaults.
+
 **Switching.** On the critter visualizer, tap **Switch critter** in its top-right corner for the next critter
 (keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
 Playback → Now Playing visualizer**: the **Critters** cards show each critter in your current act, and the
@@ -508,6 +545,30 @@ words online.
 > [critters](#critters) look up the playing song's lyrics too (same cache) while their scene is on screen,
 > to know when someone is singing (`src/lib/singAlong.ts`).
 
+### Sing mode
+
+**Sing** next to **Lyrics** in Now Playing turns the singer down and opens the lyrics, karaoke style. The slider
+above the lyrics sets how far down the voice goes. It works by taking out what's in the middle of the stereo
+picture in the voice's range, so it's best on studio recordings with the singer in the centre; bass and drums
+stay, wide guitars and backing vocals mostly stay, and a song in mono loses its whole middle. It can't reach a
+song playing on a speaker (casting) or from a server that blocks the equalizer. The critters sing less too,
+since they listen for the same voice. Admins can turn it off in **Settings → Features**.
+
+## Music videos
+
+With a Hub where **Music videos** is on (**Settings → Features**; off for kid profiles unless an admin ticks
+**Kids**), Now Playing shows **Video** when the song has an official video on YouTube. The Hub's yt-dlp finds it
+(skipping lyric videos, live versions and covers), and it plays in a YouTube player that doesn't set cookies.
+The music pauses while you watch and carries on from the same spot when you close it.
+
+## Discord status
+
+In the desktop app, **Settings → Playback → Discord status** shows **Listening to** the song and artist on your
+Discord profile while music plays, with a progress bar and the cover when it's a public one. It clears when you
+pause. Discord has to be open on the same computer. Discord needs an Application ID for the name it shows: make
+one at discord.com/developers/applications (**New Application**, call it *Wavelength*) and paste its
+**Application ID** into the setting. Admins can turn the feature off in **Settings → Features**.
+
 ## Sleep timer
 
 **Now Playing → Sleep** stops playback after 15, 30 or 45 minutes, 1 hour, 1½ hours, or at the end of the
@@ -530,6 +591,31 @@ tap it again to change it or **Turn off**. The timer belongs to this device and 
 Levelling, gapless and crossfade are for music. Radio, audiobooks and podcasts play as they are, and songs
 from a server that doesn't let the app process its audio (the same ones the EQ can't reach) play without
 crossfade. These settings sync between your devices with a Hub.
+
+
+### AutoMix
+
+**Settings → Playback → AutoMix** blends songs the way a DJ would instead of one fixed crossfade:
+
+- The next song on the **same album**, straight after this one, follows with no fade, so live albums and segues
+  stay as recorded.
+- With [sound-alike analysis](#sounds-like-this-and-sonic-journeys) on the Hub, two songs at **close tempos**
+  (within 8%, or at half or double time) blend over 8 beats starting on a beat, and the next song is nudged to the
+  same tempo for the blend (without changing its pitch), then eased back to its own.
+- Otherwise the fade is longer between calm songs and shorter between energetic ones, or the Crossfade length
+  above (6 seconds when it's off) for songs the Hub hasn't analysed.
+
+Fades use equal-power curves now, so there's no dip in the middle. Like crossfade, AutoMix needs a server that
+allows it (CORS) and isn't used during a listening party or the sleep timer's last song.
+### Bit-perfect output (Windows)
+
+**Settings → Playback → Bit-perfect output** plays songs straight to your sound card in WASAPI exclusive mode,
+at each file's own sample rate and bit depth, without Windows' mixer resampling them. The setting shows what
+the device is getting (for example *96000 Hz · 24-bit*). While it's on, other apps can't play sound, and the
+equalizer, ReplayGain, crossfade, sing mode, the critters and visualizers are off. The volume slider at the top
+is bit-perfect; below it the sound is turned down digitally. It plays FLAC, ALAC, WAV, AIFF, MP3, AAC and Ogg
+Vorbis (not Opus). Casting takes over while a speaker plays and hands back afterwards. Admins can turn the
+feature off in **Settings → Features**.
 
 ## Skins and themes
 
@@ -620,6 +706,20 @@ vision or bright sunlight. **Sakura**, **Solarized Light** and **Valentine's Day
 > which applies Seasonal (`seasonal`, holiday windows in `SEASONS`) and Random daily (`randomDaily`,
 > a hash of the local date). `App` re-checks every 10 minutes while either mode is on, so it rolls over at
 > midnight. Everything uses the device's local date; nothing needs a server.
+
+## Sounds like this and sonic journeys
+
+When a Hub admin turns on **Sound-alike analysis** (Settings → Features), the Hub listens to every song in your
+Navidrome library once and measures how it sounds: tempo, key, energy, brightness and timbre. Then Now Playing
+has two more buttons:
+
+- **≈ Sounds like this** keeps the song playing and queues up songs from your library that *sound* like it,
+  not just songs by related artists (that's **Song radio**). At most three by any one artist.
+- **↝ Journey to…** asks where you want to end up, then queues 20 songs that move step by step from this song
+  to that one: from a slow ballad to a party track, say.
+
+Smart playlists get **Mood** (energetic, upbeat, chill, mellow, dark) and **Tempo** rules too, and AutoMix uses
+the beat it found. The first analysis of a big library takes a night; songs show up as they're done.
 
 ## Smart playlists
 
@@ -769,6 +869,19 @@ for kids are left out.
 > YouTube goes through the Hub's `POST /api/import/youtube`; Spotify's embed page and Deezer's API go through
 > `/api/fetch` in a browser.
 
+## Cast to a speaker
+
+The speaker button next to **Devices** (player bar and Now Playing) finds Chromecasts, Google and Nest
+speakers, TVs with Chromecast built in, and DLNA/UPnP speakers and receivers on the same Wi-Fi. Pick one and
+what's playing moves there, at the same spot. The queue, skipping, seeking, volume and scrobbling all keep
+working from Wavelength; the speaker just does the playing. **Play on this device instead** brings it back.
+
+- Works in the desktop and Android apps (a web browser can't look for speakers).
+- The speaker fetches songs from your server itself, so the server address must be one the speaker can reach
+  (not `localhost`). Songs you downloaded play from the server while casting.
+- Visualizers and the critters' singing don't follow the sound while it's on a speaker.
+- A Hub admin can turn casting off in **Settings → Features**.
+
 ## Control your other devices
 
 Signed in to a Hub, the **Devices** button in the player (and on Now Playing) lists your other devices that
@@ -803,6 +916,50 @@ busiest day and longest streak, and when you listen most. **Play your top songs*
 from every device you're signed in on, not radio, audiobooks or podcasts, and starts from the history your
 Hub already has.
 
+## Home and Made for you mixes
+
+With a [Wavelength Hub](HUB.md), **Home** opens on what's made for you:
+
+- **Jump back in**: the albums you played last (on any device, since your history syncs).
+- **Made for you**: mixes the Hub makes fresh every day from what you play.
+
+| Mix | What's in it |
+|---|---|
+| **On Repeat** | What you've played most in the last 30 days |
+| **Daily Mix 1–4** | Your favourite artists of the last few months, grouped by who sounds alike, with your most played songs by them and one song in four from similar artists |
+| **Discover Weekly** | Best-known songs by artists like your favourites that you haven't played yet. Changes every Monday |
+| **Forgotten favourites** | Songs you played a lot but not for three months |
+| **Time Capsule** | Your most played songs from one to three years ago |
+
+A mix only shows songs your library has: the Hub suggests, and Wavelength finds each one on your Navidrome or Plex
+server. So Discover Weekly gets better as you add music, and a mix that finds nothing tells you so. Open a mix to
+**Play**, **Shuffle** or **Save as playlist** (today's songs, as an ordinary playlist). Mixes need a few days of
+listening before they appear. Kid profiles get no explicit suggestions, and the kid filter applies as everywhere.
+[Smart offline](#smart-offline) can keep every mix downloaded.
+
+### Blend
+
+**Home → Blend** makes one mix from what you and other people in the house listen to: songs by artists you
+share come first, then each person's favourites in turn. Everyone in a Blend has to turn on **Let people in the
+house make Blends with me** first, since a Blend shows a little of what they play. Grown-ups can blend with each
+other and with their own kids; kids only with their parents. A Hub admin can turn mixes and Blend off in
+**Settings → Features**.
+
+## Smart offline
+
+**Settings → Downloads → Smart offline** keeps music on the device by itself, so the phone plays in the car or on
+a plane without you picking albums first. Turn it on and choose what to keep:
+
+- **♥ Favourites**: every song you've starred.
+- **Made for you mixes**: your [Home](#home-and-made-for-you-mixes) mixes and Blends, as they change.
+- **Songs played in the last 7–90 days**, most played first.
+
+It checks every few hours while Wavelength is open (or press **Update now**), only on **Wi-Fi** unless you untick
+it, and stays under the size you pick (1–32 GB): favourites fill first, then mixes, then recent plays. Songs
+that drop off a shelf are deleted, unless an album or playlist you downloaded yourself has them. The shelves show
+in **Downloaded** as *Kept automatically*. It's per device, so the phone and the PC can keep different things.
+Windows and Android only; a Hub admin can switch it off in **Settings → Features**.
+
 ## Following downloads
 
 **Downloads → deemix queue** shows everything deemix has, as it happens:
@@ -833,12 +990,20 @@ finds, saves playlists (**Open the playlist** jumps to one) and, when you say ye
 Request button does. **This month** under the box shows how much of your allowance you've used. Your DJ is
 **DJ Trash Panda**, the rave raccoon next to each reply.
 
-If an admin turned on web search, the DJ can also look things up online: "what are the top EDM hits right now?", or
+If an admin turned on **AI DJ web search** (**Settings → Features**), the DJ can also look things up online: "what are the top EDM hits right now?", or
 paste a setlist link and say "build me a new EDM mix from this". It plays or saves the songs you have and can
 request the rest.
 
-Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only), the model, prices, monthly limits
-who can use it, and whether it may search the web. The full setup guide is [AI-DJ.md](AI-DJ.md).
+Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only), the model, prices, monthly limits,
+who can use it, and how many web searches it may make per step. The full setup guide is [AI-DJ.md](AI-DJ.md).
+
+### Talking DJ
+
+When an admin turns on **Talking AI DJ** (**Settings → Features**), **Settings → Playback → Talking DJ** makes the
+DJ speak between songs like a radio presenter: a line about what you just heard and what's next, over the start
+of the song with the music turned down. Choose how often (every song up to every 10th), a style (**Laid back**,
+**Hype** or **Trivia**), a name for it to call you, and the voice and speed on this device. **Hear the voice**
+tries it. It uses a little of your AI DJ allowance each time.
 
 > **Developer notes.** `src/views/DJ.tsx` (chat), `src/lib/dj.ts` (the tools that run in the app),
 > `src/views/DjAdmin.tsx` (admin tab), `hub/src/dj/` and `hub/src/routes/dj.ts` on the Hub. See
@@ -1260,6 +1425,16 @@ library (by title and artist, since everyone's servers and logins differ) and pl
 keeps them as a Wavelength playlist, and it tells you how many it couldn't find. A station plays straight
 away, and an artist opens a search. **✕** takes it off your list. **You shared** lists what you've sent, with
 **Unshare**.
+
+### Public links
+
+With **Public share links** on (**Settings → Features**, never for kid profiles), **Share** on a playlist, album,
+song or artist also has **Anyone with the link**: **Copy a link for a week** or **Copy a link that lasts**. The
+link opens a page in any browser with the cover, the song list, your note, and buttons to find each song on
+YouTube Music, Spotify, Apple Music or Deezer. No music, files or logins go out, only names. It works for people
+who can reach your Hub's address (`WAVELENGTH_PUBLIC_URL`), so the Hub has to be reachable from the internet for
+friends outside the house. **Settings → Account → Your public links** shows how often each was opened, and
+**Take down** removes one. Turning the feature off hides them all.
 
 ### Household playlists
 

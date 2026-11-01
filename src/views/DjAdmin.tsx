@@ -173,17 +173,13 @@ export function DjAdminTab() {
           page someone pasted. It then plays or saves the songs you have. Searches cost {money((s.webSearchPrice ?? 10) / 1000)} each
           on top of tokens, and count toward everyone’s limits.
         </p>
-        <label className="check">
-          <span className="switch"><input type="checkbox" checked={!!s.web} onChange={(e) => save({ web: e.target.checked })} /><span /></span>
-          <span>Let the DJ search the web</span>
-        </label>
-        <label className="check">
-          <span className="switch"><input type="checkbox" checked={!!s.webKids} disabled={!s.web} onChange={(e) => save({ webKids: e.target.checked })} /><span /></span>
-          <span>Kids too <small className="muted">(off: kid profiles never search the web)</small></span>
-        </label>
+        <p className="muted small">
+          Turn it on, for grown-ups and for kids separately, under <b>Settings → Features → AI DJ web search</b>. It’s
+          off until you do.
+        </p>
         <div className="editor-grid">
           <label>Searches per step, at most
-            <select value={s.webMaxSearches ?? 3} disabled={!s.web} onChange={(e) => save({ webMaxSearches: Number(e.target.value) })}>
+            <select value={s.webMaxSearches ?? 3} onChange={(e) => save({ webMaxSearches: Number(e.target.value) })}>
               {[1, 2, 3, 5, 10].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </label>

@@ -11,6 +11,9 @@ import { useLibrary } from './library';
 import { offlinePlaybackUrl, trackKey, useOffline } from './offline';
 import { isAndroid } from '../lib/platform';
 import { replayGainFactor } from '../player/replayGain';
+import { planTransition, toNextBeat, type SoundInfo, type Transition } from '../player/automix';
+import { featuresFor } from '../lib/sonic';
+import { featureOn } from '../lib/features';
 
 export type Repeat = 'off' | 'all' | 'one';
 
@@ -235,7 +238,16 @@ function begin(t: Track, startAt: number) {
   watchNowPlaying(t);
   applyLevel(t);
   aheadFor = undefined;
+  engine.setMeta({ title: t.title, artist: t.artist, album: t.album, cover: t.coverUrl, duration: t.duration });
   return ++loadSeq;
+}
+
+/** Load the current song again at `startAt` (casting moved playback to a speaker or back here). */
+export function reloadCurrent(startAt: number, play: boolean) {
+  ahead = undefined;
+  void loadCurrent(startAt).then(() => {
+    if (!play) engine.pause();
+  });
 }
 
 async function loadCurrent(startAt = 0) {
@@ -253,8 +265,8 @@ async function loadCurrent(startAt = 0) {
       return;
     }
     ahead = undefined;
-    // Downloaded on this device? Play the local file — no server, works offline.
-    const local = await offlinePlaybackUrl(t);
+    // Downloaded on this device? Play the local file — no server, works offline. (Not to a speaker: it can't reach it.)
+    const local = engine.isRemote() ? undefined : await offlinePlaybackUrl(t);
     if (token !== loadSeq) {
       if (local?.startsWith('blob:')) URL.revokeObjectURL(local);
       return;
@@ -310,7 +322,7 @@ function failed(message: string) {
 // ---- gapless and crossfade ------------------------------------------------
 
 /** The next song, loaded ahead on the idle deck (engine.preload): which song and its stream URL. */
-let ahead: { key: string; url: string } | undefined;
+let ahead: { key: string; url: string; plan?: Transition } | undefined;
 /** the song we last started preparing ahead, so it's only done once */
 let aheadFor: string | undefined;
 const AHEAD_SECONDS = 20;
@@ -341,6 +353,7 @@ async function prepareAhead(cur: Track) {
       if (local) {
         engine.preload(local);
         ahead = { key, url: local };
+        void planAhead(cur, next, key);
       }
       return;
     }
@@ -349,21 +362,51 @@ async function prepareAhead(cur: Track) {
     if (ready !== next) usePlayer.setState((s) => ({ queue: s.queue.map((q, j) => (j === i ? ready : q)) }));
     engine.preload(ready.streamUrl);
     ahead = { key, url: ready.streamUrl };
+    void planAhead(cur, ready, key);
   } catch {
     /* it just loads normally when its turn comes */
   }
 }
 
+/** AutoMix on: work out how to blend into the song loaded ahead (player/automix.ts), with the Hub's analysis when there is one. */
+async function planAhead(cur: Track, next: Track, key: string) {
+  const pb = useSettings.getState().playback;
+  if (!pb.automix || !featureOn('automix')) return;
+  const [a, b] = await featuresFor([cur, next]).catch(() => [null, null]);
+  const info = (f: typeof a): SoundInfo | null => (f ? { bpm: f.bpm, beatStrength: f.beatStrength, beatAt: f.offset + f.beatPhase, energy: f.energy } : null);
+  if (ahead?.key === key) ahead.plan = planTransition(cur, next, info(a), info(b), pb.crossfade);
+}
+
+/** A beat-aligned blend waiting for its beat. */
+let beatTimer: number | undefined;
+
 /** Crossfade into the preloaded next song when the current one is `remaining` seconds from its end. */
 function maybeCrossfade(remaining: number) {
-  const seconds = useSettings.getState().playback.crossfade;
+  const plan = ahead?.plan;
+  const seconds = plan ? plan.seconds : useSettings.getState().playback.crossfade;
+  if (beatTimer !== undefined) return;
+  // AutoMix with a beat: start on the beat of this song that comes just before the blend has to start
+  if (plan?.beat && ahead && seconds && remaining <= seconds + plan.beat.period && remaining > seconds - 0.3 && !stopAfterTrack && !intercept) {
+    const wait = toNextBeat(engine.el.currentTime, plan.beat);
+    const key = ahead.key;
+    beatTimer = window.setTimeout(() => {
+      beatTimer = undefined;
+      if (ahead?.key === key) startCrossfade(Math.max(1, engine.el.duration - engine.el.currentTime), plan.rate);
+    }, wait * 1000);
+    return;
+  }
   if (!seconds || !ahead || remaining > seconds || stopAfterTrack || intercept) return;
+  startCrossfade(remaining, plan?.rate ?? 1);
+}
+
+function startCrossfade(remaining: number, rate: number) {
+  if (!ahead || stopAfterTrack || intercept) return;
   const i = nextIndex();
   const next = i === undefined ? undefined : usePlayer.getState().queue[i];
   if (!next || trackKey(next) !== ahead.key) return;
   const { replayGain, replayGainPreamp } = useSettings.getState().playback;
   const url = ahead.url;
-  if (!engine.crossfade(url, Math.max(1, remaining), replayGainFactor(next.replayGain, replayGain, replayGainPreamp))) return;
+  if (!engine.crossfade(url, Math.max(1, remaining), replayGainFactor(next.replayGain, replayGain, replayGainPreamp), rate)) return;
   ahead = undefined;
   usePlayer.setState({ index: i! });
   begin(next, 0);

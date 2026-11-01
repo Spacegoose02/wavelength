@@ -1,8 +1,9 @@
 import { HubError, type HubPrefs } from '../sources/hub';
 import { hubClient, STAMPS_KEY, useHub } from '../store/hub';
-import { useSettings } from '../store/settings';
+import { DEFAULT_DJ_VOICE, useSettings } from '../store/settings';
 import { applyHubServices, loadHubServices } from './hubServices';
 import { startLibrarySync, syncLibrary } from './librarySync';
+import { cleanTune, type MouthTune } from '../player/voice';
 
 /**
  * Sync settings to the signed-in Hub profile so they follow the person to every device.
@@ -12,7 +13,7 @@ import { startLibrarySync, syncLibrary } from './librarySync';
  * timestamps) and sent when the Hub is reachable again. Server logins come from the Hub separately
  * (hubServices.ts), and playlists and play history from librarySync.ts.
  */
-const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'critter', 'act', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'versions', 'playback', 'smartPlaylists'] as const;
+const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'critter', 'act', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'versions', 'playback', 'smartPlaylists', 'mouthTune', 'mouthOffsets', 'djVoice'] as const;
 type SyncedKey = (typeof SYNCED)[number];
 const prefKey = (k: SyncedKey) => `settings.${k}`;
 
@@ -43,7 +44,12 @@ function apply(prefs: HubPrefs, stamps: Stamps) {
   for (const k of SYNCED) {
     const r = prefs[prefKey(k)];
     if (!r || stamps.pending.includes(k) || r.updatedAt <= (stamps.at[k] ?? 0)) continue;
-    if (r.value !== null && r.value !== undefined) patch[k] = r.value;
+    if (r.value !== null && r.value !== undefined) {
+      patch[k] = k === 'mouthTune' ? cleanTune(r.value as Partial<MouthTune>)
+        // the DJ's voice is whatever this device has, so it stays put
+        : k === 'djVoice' ? { ...DEFAULT_DJ_VOICE, ...(r.value as object), voice: useSettings.getState().djVoice.voice }
+        : r.value;
+    }
     stamps.at[k] = r.updatedAt;
   }
   if (!Object.keys(patch).length) return;

@@ -1,3 +1,9 @@
+import { BlendView, MixView } from './views/Mix';
+import { startSmartOffline } from './lib/smartOffline';
+import { startDjVoice } from './lib/djVoice';
+import { startSingMode } from './lib/singMode';
+import { startDiscord } from './lib/discord';
+import { startHifi } from './lib/hifi';
 import { startArtworkChecks } from './lib/artwork';
 import { startPlaylistCoverChecks } from './lib/playlistCovers';
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
@@ -96,6 +102,8 @@ function View({ route }: { route: Route }) {
     case 'playlists': return <Playlists />;
     case 'playlist': return <PlaylistView key={route.id} id={route.id} />;
     case 'household': return <HouseholdPlaylistView key={route.id} id={route.id} />;
+    case 'mix': return <MixView key={route.id} id={route.id} />;
+    case 'blend': return <BlendView />;
     case 'serverPlaylist': return <ServerPlaylistView key={`${route.playlist.sourceId}:${route.playlist.id}`} playlist={route.playlist} />;
     case 'subwave': return <SubWave key={route.sourceId ?? ''} sourceId={route.sourceId} />;
     case 'discover': return <Discover key={route.genre ?? ''} initialGenre={route.genre} />;
@@ -193,6 +201,11 @@ export default function App() {
     startListeningReports();
     startRemote();
     startTogether();
+    startSmartOffline();
+    startDjVoice();
+    startSingMode();
+    startDiscord();
+    void startHifi();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back

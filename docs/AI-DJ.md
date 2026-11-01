@@ -73,16 +73,16 @@ messages; then start a new one. **This month** under the box shows what you've u
 
 ## Web search
 
-Off until an admin turns it on under **Settings → AI DJ → Web**. Then the DJ can use Anthropic's own **web search**
+Off until an admin turns on **AI DJ web search** under **Settings → Features** (feature `djWeb`; kids have their
+own switch there, off by default). Then the DJ can use Anthropic's own **web search**
 and **web fetch** tools: they run on Anthropic's side, so nothing extra runs on the Hub, and the Hub only adds them
 to its request. Use it for what Deezer and the library don't know: today's charts and top hits, a festival or DJ
 setlist, a playlist page someone pasted, news about an artist. Web fetch only opens links already in the chat (the
 listener's own, or from a search).
 
-- **Searches per step, at most** (default 3): `max_uses` on the search tool for each model call; web fetch gets the
+- **Searches per step, at most** (default 3, under **Settings → AI DJ → Web**): `max_uses` on the search tool for each model call; web fetch gets the
   same number (at least 2). Each page read is capped at 20,000 tokens.
-- **Kids too**: off by default, so kid profiles never search the web even when the DJ is on for them.
-- **Price per 1,000 searches**: $10 at Anthropic. Searches are counted from each call's usage
+- **Price per 1,000 searches** (also under **Settings → AI DJ → Web**): $10 at Anthropic. Searches are counted from each call's usage
   (`server_tool_use.web_search_requests`) and added to the cost, so they count toward every limit. Pages read cost
   only their tokens.
 - Models: Opus 5.5 / 5 / 4.8 / 4.7 / 4.6 and Sonnet 5.5 / 5 / 4.6 get the newer tools (`web_search_20260209`,
@@ -169,9 +169,10 @@ All need a device token. Listener routes answer 403 with the reason when the DJ 
 | GET | `/api/dj/chats/:id` | `{ chat, messages: [{ role, text, tools? }], calls, full }`; `calls` = tool calls waiting for the app |
 | DELETE | `/api/dj/chats/:id` | delete a chat |
 | POST | `/api/dj/chat` | `{ chatId?, message }` → `{ chat, status: 'done' \| 'tools', reply, calls?, full?, spent, limit }`; 402 when a limit is used up |
+| POST | `/api/dj/patter` | Talking DJ: `{ previous?, next, name?, style? }` → `{ text, spent, limit }`, one or two sentences to read between songs. Needs the **Talking AI DJ** feature switch; low effort, counted against the allowance |
 | POST | `/api/dj/chats/:id/tools` | `{ results: [{ id, content, isError? }] }` → same as above |
 | GET | `/api/admin/dj` | settings (never the key, only `key: { set, hint }`), models and prices, people with their switch, limit and spend, this month's spend by model and day |
-| PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, web?, webMaxSearches?, webKids?, webSearchPrice?, apiKey? }`; `apiKey: ''` removes it |
+| PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, webMaxSearches?, webSearchPrice?, apiKey? }`; `apiKey: ''` removes it |
 | PUT | `/api/admin/dj/users/:userId` | `{ enabled?, monthlyLimit? }` (`null` = no limit) |
 | POST | `/api/admin/dj/test` | checks the key and model, no tokens used |
 
@@ -196,3 +197,12 @@ Ideas for later, roughly in order:
 - Remember what each person likes between chats.
 - A daily cost chart on the admin page (the API already returns `month.byDay`).
 - Long chats: summarise older turns (compaction) instead of closing the chat at 40 messages.
+
+## The talking DJ
+
+With **Talking AI DJ** on in **Settings → Features**, people can turn on **Settings → Playback → Talking DJ**.
+Every few songs (they choose how often, and a laid back, hype or trivia style) the app asks the Hub for a line
+about the song that just played and the one coming up, a few seconds before it starts, then reads it with the
+device's own text-to-speech voice while the music dips. Each line is one small, low-effort call (a fraction of a
+cent on the default model) counted against the same monthly allowance as the chat. Nothing else to set up: no
+separate speech service.

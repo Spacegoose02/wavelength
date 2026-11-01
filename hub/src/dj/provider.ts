@@ -20,6 +20,9 @@ export interface DjRequest {
   noTools?: boolean;
   /** Let the model search the web and read pages, at most this many searches in this call. */
   web?: { maxSearches: number };
+  /** Overrides for short one-off calls (the talking DJ's links). */
+  effort?: DjSettings['effort'];
+  maxTokens?: number;
 }
 
 export interface DjResponse {
@@ -81,16 +84,16 @@ export const anthropicProvider: ProviderFactory = (settings, apiKey) => {
   return {
     async create(req) {
       let m: Anthropic.Beta.BetaMessage;
+      const tools = req.web ? [...req.tools, ...webTools(settings.model, req.web.maxSearches)] : req.tools;
       try {
         m = await client.beta.messages.create({
           model: settings.model,
-          max_tokens: 16000,
+          max_tokens: req.maxTokens ?? 16000,
           system: req.system,
-          tools: req.web ? [...req.tools, ...webTools(settings.model, req.web.maxSearches)] : req.tools,
-          tool_choice: req.noTools ? { type: 'none' } : { type: 'auto' },
+          ...(tools.length && { tools, tool_choice: req.noTools ? { type: 'none' as const } : { type: 'auto' as const } }),
           messages: req.messages,
           // thinking is on by default on the current models; effort sets how much
-          output_config: { effort: settings.effort },
+          output_config: { effort: req.effort ?? settings.effort },
           // the system prompt, tools and earlier turns are re-read at the cache price on each step
           cache_control: { type: 'ephemeral' },
           ...(fallback && { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const }),

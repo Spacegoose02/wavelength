@@ -51,7 +51,7 @@ export function UpdatesTab() {
     return (
       <section>
         <h2>Updates</h2>
-        <p className="muted small">Updates are checked in the Windows and Android apps. Get the latest from {RELEASES_URL}.</p>
+        <p className="muted small">Updates install themselves in the Windows and Android apps. On a Mac or Linux, get each new version from {RELEASES_URL}.</p>
       </section>
     );
   }
