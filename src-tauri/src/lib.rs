@@ -1,4 +1,5 @@
 mod cast;
+mod discord;
 mod offline;
 mod secrets;
 mod share;
@@ -23,7 +24,8 @@ pub fn run() {
             offline::offline_save, offline::offline_delete, offline::offline_delete_file,
             update::update_target, update::update_releases, update::update_download, update::update_install,
             secrets::secrets_available, secrets::secrets_get, secrets::secrets_set,
-            cast::cast_discover, cast::cast_load, cast::cast_command, cast::cast_status, cast::cast_disconnect])
+            cast::cast_discover, cast::cast_load, cast::cast_command, cast::cast_status, cast::cast_disconnect,
+            discord::discord_set, discord::discord_clear])
         .run(tauri::generate_context!())
         .expect("error while running Wavelength");
 }

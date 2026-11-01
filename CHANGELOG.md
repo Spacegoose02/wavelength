@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Discord status.** The desktop app can show "Listening to" the current song on your Discord profile
+  (Settings → Playback), cleared on pause. Talks to the Discord app on the same computer; no extra services.
 - **Public share links.** Share a playlist, album, song or artist with anyone as a web page (song names and
   "play it on…" links, never the music), for a week or for good; see and take them down in Settings → Account.
 - **Music videos.** Now Playing offers the song's official video when the Hub's yt-dlp finds one, in a

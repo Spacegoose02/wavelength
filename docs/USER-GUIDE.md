@@ -561,6 +561,14 @@ With a Hub where **Music videos** is on (**Settings → Features**; off for kid 
 (skipping lyric videos, live versions and covers), and it plays in a YouTube player that doesn't set cookies.
 The music pauses while you watch and carries on from the same spot when you close it.
 
+## Discord status
+
+In the desktop app, **Settings → Playback → Discord status** shows **Listening to** the song and artist on your
+Discord profile while music plays, with a progress bar and the cover when it's a public one. It clears when you
+pause. Discord has to be open on the same computer. Discord needs an Application ID for the name it shows: make
+one at discord.com/developers/applications (**New Application**, call it *Wavelength*) and paste its
+**Application ID** into the setting. Admins can turn the feature off in **Settings → Features**.
+
 ## Sleep timer
 
 **Now Playing → Sleep** stops playback after 15, 30 or 45 minutes, 1 hour, 1½ hours, or at the end of the
