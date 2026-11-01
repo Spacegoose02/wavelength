@@ -11,6 +11,12 @@ export interface User {
   autodownload: boolean;
   disabled: boolean;
   createdAt: number;
+  /** The family they're in (families.ts), or null. */
+  familyId: number | null;
+  /** Manages their family (what the admin lets that family do). */
+  familyManager: boolean;
+  /** Has a PIN their family can switch to them with (POST /api/me/switch). */
+  hasSwitchPin: boolean;
 }
 
 interface UserRow {
@@ -23,6 +29,9 @@ interface UserRow {
   autodownload: number;
   disabled: number;
   created_at: number;
+  family_id: number | null;
+  family_manager: number;
+  switch_pin: string | null;
 }
 
 export const toUser = (r: UserRow): User => ({
@@ -35,6 +44,9 @@ export const toUser = (r: UserRow): User => ({
   autodownload: !!r.autodownload,
   disabled: !!r.disabled,
   createdAt: r.created_at,
+  familyId: r.family_id ?? null,
+  familyManager: !!r.family_manager && r.family_id !== null,
+  hasSwitchPin: !!r.switch_pin,
 });
 
 export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{0,31}$/;

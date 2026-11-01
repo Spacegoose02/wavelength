@@ -99,7 +99,7 @@ export class DjVoice {
     }
 
     if (v.engine === 'openai') {
-      const key = getApiKey(this.db, this.secretKey, 'openaiKey');
+      const key = getApiKey(this.db, this.secretKey, 'openaiKey', user?.id);
       if (!key) throw new HttpError(409, 'The OpenAI voice isn’t set up yet: the Hub has no OpenAI key');
       if (user) checkBudget(this.db, user.id);
       const allowed = v.openaiModel.startsWith('tts-1') ? TTS1_VOICES : (OPENAI_VOICES as readonly string[]);

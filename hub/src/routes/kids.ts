@@ -3,7 +3,8 @@ import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { hashPassword, verifyPassword } from '../crypto.ts';
 import type { Db } from '../db.ts';
-import { clientIp, HttpError, need, signedIn } from '../http.ts';
+import { clientIp, HttpError, signedIn } from '../http.ts';
+import { familyActor, familyPinKey, getFamily } from '../families.ts';
 
 /**
  * Kid profiles (docs/USERS-AND-ADMIN.md §6.5): an admin sets each kid's bedtime and daily listening limit,
@@ -30,7 +31,12 @@ function rulesFor(db: Db, userId: number): KidRules {
 const used = (db: Db, userId: number, day: string) =>
   (db.prepare('SELECT seconds FROM listening WHERE user_id = ? AND day = ?').get(userId, day) as { seconds: number } | undefined)?.seconds ?? 0;
 
-const pinHash = (db: Db) => (db.prepare('SELECT value FROM hub_settings WHERE key = ?').get(PIN_KEY) as { value: string } | undefined)?.value ?? null;
+const setting = (db: Db, key: string) => (db.prepare('SELECT value FROM hub_settings WHERE key = ?').get(key) as { value: string } | undefined)?.value ?? null;
+/**
+ * The grown-up PIN for this person: their family's own (set by its manager, families.ts), else the Hub's.
+ * Without `familyId`, the Hub's.
+ */
+const pinHash = (db: Db, familyId?: number | null) => (familyId ? setting(db, familyPinKey(familyId)) : null) ?? setting(db, PIN_KEY);
 
 /** The device's local date, as it sent it; anything else is refused. */
 function dayOf(v: unknown): string {
@@ -50,7 +56,7 @@ export function kidRoutes(app: FastifyInstance, { db, limits }: Ctx) {
   app.get('/api/me/kid', async (req) => {
     const { user } = signedIn(req);
     const day = dayOf((req.query as { day?: unknown }).day);
-    return { kid: user.role === 'kid', rules: user.role === 'kid' ? rulesFor(db, user.id) : NO_RULES, usedSeconds: used(db, user.id, day), pinSet: !!pinHash(db) };
+    return { kid: user.role === 'kid', rules: user.role === 'kid' ? rulesFor(db, user.id) : NO_RULES, usedSeconds: used(db, user.id, day), pinSet: !!pinHash(db, user.familyId) };
   });
 
   /** Add listening time (a device reports every minute or so). `{ day, seconds }`, at most 5 minutes at once. */
@@ -72,7 +78,7 @@ export function kidRoutes(app: FastifyInstance, { db, limits }: Ctx) {
   app.post('/api/kid/unlock', async (req) => {
     const { user } = signedIn(req);
     const pin = (req.body as { pin?: unknown } | null)?.pin;
-    const hash = pinHash(db);
+    const hash = pinHash(db, user.familyId);
     if (!hash) throw new HttpError(404, 'No grown-up PIN is set. An admin sets one under Settings → Users');
     limits.login.hit(`pin:${user.id}`);
     const ok = typeof pin === 'string' && (await verifyPassword(pin, hash));
@@ -82,25 +88,31 @@ export function kidRoutes(app: FastifyInstance, { db, limits }: Ctx) {
     return { ok: true };
   });
 
-  // ---- admins ----
+  // ---- admins, and family managers for their own family's kids (families.ts `kidControls`) ----
 
-  /** Every kid with their rules and listening on `?day=`, and whether the PIN is set. */
+  /** Every kid (a manager: their family's) with their rules and listening on `?day=`, and whether the PIN is set. */
   app.get('/api/admin/kids', async (req) => {
-    need(req, 'users.manage');
+    const actor = familyActor(db, signedIn(req), 'kidControls');
     const day = dayOf((req.query as { day?: unknown }).day);
-    const kids = db.prepare("SELECT id, display_name FROM users WHERE role = 'kid' ORDER BY display_name COLLATE NOCASE").all() as { id: number; display_name: string }[];
+    const familyId = actor.admin ? null : actor.family!.id;
+    const kids = (familyId
+      ? db.prepare("SELECT id, display_name, family_id FROM users WHERE role = 'kid' AND family_id = ? ORDER BY display_name COLLATE NOCASE").all(familyId)
+      : db.prepare("SELECT id, display_name, family_id FROM users WHERE role = 'kid' ORDER BY display_name COLLATE NOCASE").all()) as { id: number; display_name: string; family_id: number | null }[];
     return {
-      pinSet: !!pinHash(db),
-      kids: kids.map((k) => ({ userId: k.id, displayName: k.display_name, rules: rulesFor(db, k.id), usedSeconds: used(db, k.id, day) })),
+      pinSet: familyId ? !!pinHash(db, familyId) : !!setting(db, PIN_KEY),
+      ...(familyId && { familyPinSet: !!setting(db, familyPinKey(familyId)) }),
+      kids: kids.map((k) => ({ userId: k.id, displayName: k.display_name, familyId: k.family_id, rules: rulesFor(db, k.id), usedSeconds: used(db, k.id, day) })),
     };
   });
 
   /** `{ bedtimeFrom?, bedtimeTo?, dailyMinutes? }`; null clears one. */
   app.put<{ Params: { userId: string } }>('/api/admin/kids/:userId', async (req) => {
-    const { user: admin } = need(req, 'users.manage');
+    const auth = signedIn(req);
+    const admin = auth.user;
     const id = Number(req.params.userId);
-    const kid = db.prepare('SELECT id, role, display_name FROM users WHERE id = ?').get(id) as { id: number; role: string; display_name: string } | undefined;
-    if (!kid) throw new HttpError(404, 'No such user');
+    const kid = db.prepare('SELECT id, role, display_name, family_id FROM users WHERE id = ?').get(id) as { id: number; role: string; display_name: string; family_id: number | null } | undefined;
+    const actor = familyActor(db, auth, 'kidControls');
+    if (!kid || (!actor.admin && kid.family_id !== actor.family!.id)) throw new HttpError(404, 'No such user');
     if (kid.role !== 'kid') throw new HttpError(400, 'Bedtime and limits are for kid profiles');
     const b = (req.body ?? {}) as Record<string, unknown>;
     const cur = rulesFor(db, id);
@@ -121,15 +133,23 @@ export function kidRoutes(app: FastifyInstance, { db, limits }: Ctx) {
     return { rules: next };
   });
 
-  /** `{ pin }` (4 to 8 digits) sets the grown-up PIN; `{ pin: null }` removes it. */
+  /**
+   * `{ pin }` (4 to 8 digits) sets the grown-up PIN; `{ pin: null }` removes it. `familyId` sets that family's
+   * own PIN instead (a manager always sets their family's), which its kids' devices ask for in place of the Hub's.
+   */
   app.put('/api/admin/kid-pin', async (req) => {
-    const { user } = need(req, 'users.manage');
-    const pin = (req.body as { pin?: unknown } | null)?.pin;
-    if (pin === null) db.prepare('DELETE FROM hub_settings WHERE key = ?').run(PIN_KEY);
+    const auth = signedIn(req);
+    const b = (req.body ?? {}) as { pin?: unknown; familyId?: unknown };
+    const actor = familyActor(db, auth, 'kidControls', b.familyId === undefined || b.familyId === null ? undefined : Number(b.familyId));
+    if (actor.admin && b.familyId != null && !actor.family) throw new HttpError(404, 'No such family');
+    const family = actor.family ?? (actor.admin ? undefined : getFamily(db, auth.user.familyId));
+    const key = family ? familyPinKey(family.id) : PIN_KEY;
+    const pin = b.pin;
+    if (pin === null) db.prepare('DELETE FROM hub_settings WHERE key = ?').run(key);
     else if (typeof pin === 'string' && /^\d{4,8}$/.test(pin)) {
-      db.prepare('INSERT INTO hub_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value').run(PIN_KEY, await hashPassword(pin));
+      db.prepare('INSERT INTO hub_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value').run(key, await hashPassword(pin));
     } else throw new HttpError(400, 'The PIN is 4 to 8 digits');
-    audit(db, { actorId: user.id, action: pin === null ? 'kid.pin_removed' : 'kid.pin_set', ip: clientIp(req) });
+    audit(db, { actorId: auth.user.id, action: pin === null ? 'kid.pin_removed' : 'kid.pin_set', ...(family && { target: family.name }), ip: clientIp(req) });
     return { pinSet: pin !== null };
   });
 }

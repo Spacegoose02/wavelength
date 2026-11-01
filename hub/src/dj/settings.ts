@@ -1,4 +1,5 @@
 import { seal, unseal } from '../crypto.ts';
+import { familyKeyFor } from '../families.ts';
 import type { Db } from '../db.ts';
 import { HttpError } from '../http.ts';
 import { featureOn } from '../features.ts';
@@ -156,8 +157,15 @@ export function getSettings(db: Db): DjSettings {
 type KeyName = 'apiKey' | 'openaiKey' | 'ollamaKey';
 const aadOf = (which: KeyName) => (which === 'apiKey' ? AAD : which === 'openaiKey' ? OPENAI_AAD : OLLAMA_AAD);
 
-/** The API key (or the OpenAI voice key), or null when there is none or it was sealed with a different secret key. */
-export function getApiKey(db: Db, secretKey: Buffer, which: KeyName = 'apiKey'): string | null {
+const SHARED_NAME = { apiKey: 'anthropic', openaiKey: 'openai', ollamaKey: 'ollama' } as const;
+
+/**
+ * The API key (or the OpenAI voice key), or null when there is none or it was sealed with a different secret key.
+ * With `userId`, that person's family's own key (families.ts) wins over the Hub's.
+ */
+export function getApiKey(db: Db, secretKey: Buffer, which: KeyName = 'apiKey', userId?: number | null): string | null {
+  const own = familyKeyFor(db, secretKey, userId, SHARED_NAME[which]);
+  if (own) return own;
   const sealed = readStored(db)[which];
   if (!sealed) return null;
   try {
@@ -385,7 +393,7 @@ export function blockedReason(db: Db, secretKey: Buffer, user: User): string | n
   const s = getSettings(db);
   if (!s.enabled) return 'The AI DJ is turned off on this Hub';
   if (!getAccess(db, user.id).enabled) return 'The AI DJ isn’t turned on for your account. Ask your admin';
-  if (s.provider === 'ollama' ? !s.ollamaUrl : !getApiKey(db, secretKey)) {
+  if (s.provider === 'ollama' ? !s.ollamaUrl : !getApiKey(db, secretKey, 'apiKey', user.id)) {
     return s.provider === 'ollama' ? 'The AI DJ isn’t set up yet: the Hub has no Ollama address' : 'The AI DJ isn’t set up yet: the Hub has no API key';
   }
   return null;

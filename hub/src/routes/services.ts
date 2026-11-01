@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need, signedIn } from '../http.ts';
-import { createService, deleteService, getService, listServices, removeServiceUser, servicesFor, setServiceUser, updateService } from '../services.ts';
+import { createService, deleteService, getService, listServices, removeServiceUser, servicesFor, setServiceFamilies, setServiceUser, updateService } from '../services.ts';
 import { getUser } from '../users.ts';
 
 /**
@@ -39,6 +39,14 @@ export function serviceRoutes(app: FastifyInstance, { db, config }: Ctx) {
     const r = deleteService(db, Number(req.params.id));
     audit(db, { actorId: user.id, action: 'service.deleted', target: r.name, detail: { kind: r.kind }, ip: clientIp(req) });
     return { ok: true };
+  });
+
+  /** `{ ids }`: only these families get this server (families.ts); `{ ids: [] }` for every family. */
+  app.put<{ Params: { id: string } }>('/api/admin/services/:id/families', async (req) => {
+    const { user } = need(req, 'keys.manage');
+    const s = setServiceFamilies(db, key, Number(req.params.id), body(req.body).ids);
+    audit(db, { actorId: user.id, action: 'service.families', target: s.name, detail: { families: s.families }, ip: clientIp(req) });
+    return { service: s };
   });
 
   /** Let someone use a 'chosen' server and/or give them their own login: `{ secrets?: { token } }`. */

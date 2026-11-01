@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- **Families.** One Hub for several households: under **Settings → Users → Families** the Hub admin makes families,
+  puts people in them, picks **managers**, and decides per family whether its managers may register people, look
+  after its kids (bedtimes, limits, the family's own grown-up PIN) and set its own keys. Only the admin sees these
+  settings; managers get **Settings → My family** with just what's allowed. Hub servers can be kept to some families.
+- **Shared keys on the Hub.** The AI DJ's keys, tour dates, Last.fm (no more Docker variables needed), fanart.tv and
+  the Discord application ID can be set for the whole Hub or per family, and a family's own wins. Keys from the Hub
+  win over ones typed on a device.
+- **Who's listening?** The button with your initial in the sidebar switches to anyone in your family with their
+  switching PIN (Settings → Account), even if they never signed in on that device. Kids always need a PIN.
 - **Fix joined artist credits.** An artist like "Lil Baby;Jeremih" (several artists joined with ";" in the tags)
   can now be edited: **Edit artist** no longer stops at "Navidrome has no albums for this artist" but finds the albums
   their songs are on, starts **Change to** as the first artist, and offers "Lil Baby", "Lil Baby feat. Jeremih" or

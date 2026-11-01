@@ -5,7 +5,8 @@ import { audit } from '../audit.ts';
 import { hashPassword, sha256 } from '../crypto.ts';
 import { tx } from '../db.ts';
 import { createDevice } from '../devices.ts';
-import { clientIp, html, HttpError, need, str } from '../http.ts';
+import { clientIp, html, HttpError, signedIn, str } from '../http.ts';
+import { familySize, getFamily, managedFamily, setMembership } from '../families.ts';
 import { invitePage, message } from '../pages.ts';
 import { isRole, type Role } from '../roles.ts';
 import { createUser, getUserForLogin, USERNAME_RE, type User } from '../users.ts';
@@ -29,6 +30,7 @@ interface InviteRow {
   expires_at: number;
   used_at: number | null;
   used_by: number | null;
+  family_id: number | null;
 }
 
 export function inviteRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
@@ -38,29 +40,56 @@ export function inviteRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
       : undefined;
   const link = (code: string) => `${config.publicUrl}/invite/${code}`;
 
-  /** `{ role, displayName?, autodownload?, days? }` → the link, shown once. */
+  /**
+   * `{ role, displayName?, autodownload?, days?, familyId? }` → the link, shown once. A family manager whose
+   * family may register (families.ts `canRegister`) makes links for members and kids of their own family.
+   */
   app.post('/api/admin/invites', async (req) => {
-    const { user } = need(req, 'users.manage');
+    const auth = signedIn(req);
+    const { user } = auth;
     const b = (req.body ?? {}) as Record<string, unknown>;
     if (!isRole(b.role)) throw new HttpError(400, 'Role must be admin, member or kid');
+    const admin = auth.permissions.includes('users.manage');
+    let familyId: number | null = null;
+    if (admin) {
+      if (b.familyId != null && b.familyId !== '') {
+        familyId = Number(b.familyId);
+        if (!getFamily(db, familyId)) throw new HttpError(404, 'No such family');
+      }
+    } else {
+      const f = managedFamily(db, user, 'canRegister');
+      if (!f) throw new HttpError(403, 'You do not have permission to do that');
+      if (b.role === 'admin') throw new HttpError(400, 'A family manager can invite members and kids');
+      familyId = f.id;
+    }
     const days = Math.min(Math.max(Math.round(Number(b.days) || 7), 1), 30);
     const code = randomBytes(18).toString('base64url');
     const now = Date.now();
-    const auto = b.autodownload === true && b.role === 'member' ? 1 : 0;
+    const auto = admin && b.autodownload === true && b.role === 'member' ? 1 : 0;
     const res = db
-      .prepare('INSERT INTO invites (code_hash, role, display_name, autodownload, created_by, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(sha256(code), b.role, str(b, 'displayName', 60), auto, user.id, now, now + days * DAY);
+      .prepare('INSERT INTO invites (code_hash, role, display_name, autodownload, created_by, created_at, expires_at, family_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(sha256(code), b.role, str(b, 'displayName', 60), auto, user.id, now, now + days * DAY, familyId);
     audit(db, { actorId: user.id, action: 'invite.created', target: b.role, detail: { days }, ip: clientIp(req) });
     return { id: Number(res.lastInsertRowid), url: link(code), code, expiresAt: now + days * DAY };
   });
 
+  /** Who may see and cancel invites: an admin (all), or a registering family's manager (their family's). */
+  const inviteScope = (req: Parameters<typeof signedIn>[0]): number | null => {
+    const auth = signedIn(req);
+    if (auth.permissions.includes('users.manage')) return null;
+    const f = managedFamily(db, auth.user, 'canRegister');
+    if (!f) throw new HttpError(403, 'You do not have permission to do that');
+    return f.id;
+  };
+
   app.get('/api/admin/invites', async (req) => {
-    need(req, 'users.manage');
-    const rows = db
+    const familyId = inviteScope(req);
+    const rows = (db
       .prepare(`SELECT invites.*, a.username AS by_name, u.username AS used_name FROM invites
         LEFT JOIN users a ON a.id = invites.created_by LEFT JOIN users u ON u.id = invites.used_by
         WHERE invites.used_at IS NULL AND invites.expires_at > ? OR invites.used_at > ? ORDER BY invites.created_at DESC LIMIT 100`)
-      .all(Date.now(), Date.now() - 30 * DAY) as unknown as (InviteRow & { by_name: string | null; used_name: string | null })[];
+      .all(Date.now(), Date.now() - 30 * DAY) as unknown as (InviteRow & { by_name: string | null; used_name: string | null })[])
+      .filter((r) => familyId === null || r.family_id === familyId);
     return {
       invites: rows.map((r) => ({
         id: r.id,
@@ -72,13 +101,17 @@ export function inviteRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
         expiresAt: r.expires_at,
         usedAt: r.used_at,
         usedBy: r.used_name,
+        familyId: r.family_id,
       })),
     };
   });
 
   app.delete<{ Params: { id: string } }>('/api/admin/invites/:id', async (req) => {
-    const { user } = need(req, 'users.manage');
-    const res = db.prepare('DELETE FROM invites WHERE id = ? AND used_at IS NULL').run(Number(req.params.id));
+    const familyId = inviteScope(req);
+    const { user } = signedIn(req);
+    const res = familyId === null
+      ? db.prepare('DELETE FROM invites WHERE id = ? AND used_at IS NULL').run(Number(req.params.id))
+      : db.prepare('DELETE FROM invites WHERE id = ? AND used_at IS NULL AND family_id = ?').run(Number(req.params.id), familyId);
     if (!res.changes) throw new HttpError(404, 'No unused invite with that id');
     audit(db, { actorId: user.id, action: 'invite.cancelled', target: req.params.id, ip: clientIp(req) });
     return { ok: true };
@@ -97,7 +130,10 @@ export function inviteRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
       const inv = live(code);
       if (!inv) throw new HttpError(410, 'This invite has been used or has expired. Ask for a new one');
       if (getUserForLogin(db, username)) throw new HttpError(409, 'That username is taken. Pick another');
-      const u = createUser(db, { username, displayName: str(body, 'displayName', 60) || inv.display_name, role: inv.role, passwordHash, autodownload: !!inv.autodownload });
+      const f = getFamily(db, inv.family_id);
+      if (f?.maxPeople != null && familySize(db, f.id) >= f.maxPeople) throw new HttpError(409, `${f.name} is full. Ask whoever sent the invite`);
+      let u = createUser(db, { username, displayName: str(body, 'displayName', 60) || inv.display_name, role: inv.role, passwordHash, autodownload: !!inv.autodownload });
+      if (f) u = setMembership(db, u.id, f.id, false);
       db.prepare('UPDATE invites SET used_at = ?, used_by = ? WHERE id = ?').run(Date.now(), u.id, inv.id);
       audit(db, { actorId: u.id, action: 'invite.accepted', target: u.username, detail: { role: u.role, invite: inv.id, by: inv.created_by }, ip });
       return u;

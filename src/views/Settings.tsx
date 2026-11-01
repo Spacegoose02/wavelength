@@ -13,6 +13,7 @@ import { useUi, type SettingsTab } from '../store/ui';
 import { hubClient, useCan, useHub } from '../store/hub';
 import { deemixClient, hubKeeps, loadHubServices, saveDownloaderToHub, saveSourceToHub, useHubRuns } from '../lib/hubServices';
 import { AccountTab, HubAccess, UsersTab } from './HubSettings';
+import { FamilyTab } from './Families';
 import { ServerTab } from './ServerTab';
 import { DjAdminTab } from './DjAdmin';
 import { FeaturesAdminTab } from './FeaturesAdmin';
@@ -600,8 +601,9 @@ function MouthTunerSection() {
   );
 }
 
-const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
+const TABS: { id: SettingsTab; label: string; admin?: boolean; manager?: boolean }[] = [
   { id: 'account', label: 'Account' },
+  { id: 'family', label: 'My family', manager: true },
   { id: 'users', label: 'Users', admin: true },
   { id: 'server', label: 'Server', admin: true },
   { id: 'dj', label: 'AI DJ', admin: true },
@@ -687,7 +689,9 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   const [tab, setTab] = useState<SettingsTab>(initial ?? 'sources');
   // Users is for Hub admins only (the Hub refuses its calls from anyone else anyway)
   const isAdmin = useHub((s) => !!s.token && s.permissions.includes('users.manage'));
-  const tabs = TABS.filter((t) => !t.admin || isAdmin);
+  // My family is for a family's managers who aren't Hub admins (admins run every family under Users)
+  const isManager = useHub((s) => !!s.token && !!s.user?.familyManager && s.user.role !== 'kid' && !s.permissions.includes('users.manage'));
+  const tabs = TABS.filter((t) => (!t.admin || isAdmin) && (!t.manager || isManager));
   useEffect(() => {
     if (initial) setTab(initial);
   }, [initial]);
@@ -702,6 +706,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       </div>
 
       {tab === 'account' && <AccountTab />}
+      {tab === 'family' && isManager && <FamilyTab />}
       {tab === 'users' && isAdmin && <UsersTab />}
       {tab === 'server' && isAdmin && <ServerTab />}
       {tab === 'dj' && isAdmin && <DjAdminTab />}

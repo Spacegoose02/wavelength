@@ -3,6 +3,7 @@ import type { Config } from './config.ts';
 import { seal, unseal } from './crypto.ts';
 import type { Db } from './db.ts';
 import { HttpError } from './http.ts';
+import { familyKeyFor, storedKey } from './families.ts';
 
 /**
  * Scrobbling: each person can connect ListenBrainz (a user token from listenbrainz.org/settings) and, when the
@@ -50,8 +51,21 @@ export class Scrobbler {
     this.timer = undefined;
   }
 
-  get lastfmAvailable() {
-    return !!(this.config.lastfmKey && this.config.lastfmSecret);
+  /**
+   * The Last.fm API account to use for this person: their family's own (families.ts, both parts), else the one
+   * saved under Settings → Server → Shared keys, else WAVELENGTH_LASTFM_KEY / _SECRET. A Last.fm session only
+   * works with the API account it was made with, so key and secret always come from the same place.
+   */
+  lastfmAccount(userId?: number): { key: string; secret: string } | null {
+    const k = this.config.secretKey;
+    const pair = (key: string | null, secret: string | null) => (key && secret ? { key, secret } : null);
+    return (userId ? pair(familyKeyFor(this.db, k, userId, 'lastfmKey'), familyKeyFor(this.db, k, userId, 'lastfmSecret')) : null)
+      ?? pair(storedKey(this.db, k, 0, 'lastfmKey'), storedKey(this.db, k, 0, 'lastfmSecret'))
+      ?? pair(this.config.lastfmKey, this.config.lastfmSecret);
+  }
+
+  lastfmAvailable(userId?: number) {
+    return !!this.lastfmAccount(userId);
   }
 
   accounts(userId: number): Account[] {
@@ -79,8 +93,8 @@ export class Scrobbler {
 
   /** Log in to Last.fm once (auth.getMobileSession) and keep only the session key, never the password. */
   async connectLastfm(userId: number, username: string, password: string): Promise<Account> {
-    if (!this.lastfmAvailable) throw new HttpError(400, 'Last.fm isn’t set up on this Hub (WAVELENGTH_LASTFM_KEY)');
-    const body = await this.lastfm({ method: 'auth.getMobileSession', username, password }).catch((e) => {
+    if (!this.lastfmAvailable(userId)) throw new HttpError(400, 'Last.fm isn’t set up on this Hub: an admin adds its API key under Settings → Server → Shared keys');
+    const body = await this.lastfm(userId, { method: 'auth.getMobileSession', username, password }).catch((e) => {
       throw new HttpError(400, `Last.fm: ${(e as Error).message}`);
     });
     const session = body?.session as { key?: string; name?: string } | undefined;
@@ -123,7 +137,7 @@ export class Scrobbler {
         const ids = plays.map((p) => p.id);
         try {
           if (a.service === 'listenbrainz') await this.sendListenBrainz(secret, plays);
-          else await this.sendLastfm(secret, plays);
+          else await this.sendLastfm(a.user_id, secret, plays);
           this.db.prepare(`DELETE FROM scrobble_queue WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids);
         } catch (e) {
           const err = e as Error & { fatal?: boolean };
@@ -163,7 +177,7 @@ export class Scrobbler {
     if (!res.ok) throw new Error(`ListenBrainz answered ${res.status}`);
   }
 
-  private async sendLastfm(sk: string, plays: Queued[]) {
+  private async sendLastfm(userId: number, sk: string, plays: Queued[]) {
     const fresh = plays.filter((p) => Date.now() - p.played_at < LASTFM_MAX_AGE_MS);
     if (!fresh.length) return;
     const params: Record<string, string> = { method: 'track.scrobble', sk };
@@ -174,13 +188,15 @@ export class Scrobbler {
       if (p.album) params[`album[${i}]`] = p.album;
       if (p.seconds) params[`duration[${i}]`] = String(p.seconds);
     });
-    await this.lastfm(params);
+    await this.lastfm(userId, params);
   }
 
   /** A signed Last.fm call (POST, JSON). Errors 9 (bad session) and 4/14 (auth) are fatal. */
-  private async lastfm(params: Record<string, string>): Promise<any> {
-    const all: Record<string, string> = { ...params, api_key: this.config.lastfmKey };
-    all.api_sig = lastfmSignature(all, this.config.lastfmSecret);
+  private async lastfm(userId: number, params: Record<string, string>): Promise<any> {
+    const acct = this.lastfmAccount(userId);
+    if (!acct) throw Object.assign(new Error('Last.fm isn’t set up on this Hub any more'), { fatal: true });
+    const all: Record<string, string> = { ...params, api_key: acct.key };
+    all.api_sig = lastfmSignature(all, acct.secret);
     all.format = 'json';
     const res = await fetch(LASTFM, { method: 'POST', body: new URLSearchParams(all), signal: AbortSignal.timeout(20_000) });
     const body = (await res.json().catch(() => ({}))) as { error?: number; message?: string };

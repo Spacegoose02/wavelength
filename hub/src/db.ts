@@ -556,6 +556,40 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   );
   CREATE INDEX chart_history_day ON chart_history(day);
   `,
+  `
+  -- Families (families.ts): a Hub shared by several households. The admin makes the families, puts people in
+  -- them, picks a manager for each and decides what each family may do. Shared keys (the AI DJ's, Last.fm's,
+  -- tour dates', fanart.tv's, Discord's app ID) can have one value per family that wins over the whole Hub's.
+  CREATE TABLE families (
+    id           INTEGER PRIMARY KEY,
+    name         TEXT NOT NULL UNIQUE,
+    can_register INTEGER NOT NULL DEFAULT 0,   -- its managers may add people and make invites into it
+    own_keys     INTEGER NOT NULL DEFAULT 0,   -- its managers may set the family's own shared keys
+    kid_controls INTEGER NOT NULL DEFAULT 0,   -- its managers set bedtimes, limits and a grown-up PIN for its kids
+    max_people   INTEGER,                      -- null = no limit
+    created_at   INTEGER NOT NULL
+  );
+  ALTER TABLE users ADD COLUMN family_id INTEGER;            -- families(id); deleteFamily clears it
+  ALTER TABLE users ADD COLUMN family_manager INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN switch_pin TEXT;  -- scrypt hash of the PIN family members switch to this profile with
+  ALTER TABLE invites ADD COLUMN family_id INTEGER;          -- the family the new account joins
+
+  -- family_id 0 = the whole Hub. Values are sealed (crypto.ts seal), bound to family and name.
+  CREATE TABLE shared_keys (
+    family_id  INTEGER NOT NULL,
+    name       TEXT NOT NULL,
+    value      TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (family_id, name)
+  );
+
+  -- A Hub server only for some families (none listed = every family). Admins always get it.
+  CREATE TABLE service_families (
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    family_id  INTEGER NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+    PRIMARY KEY (service_id, family_id)
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

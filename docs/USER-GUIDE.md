@@ -1267,6 +1267,25 @@ playlists, requests and Inbox. **Ask for a PIN before switching to me** keeps th
 accident (it's checked on this device only). Leaving a kid profile takes the grown-up PIN. **✕** signs someone
 out of this device.
 
+### Who's listening? (families)
+
+On a Hub with families (an admin sets them up under **Settings → Users → Families**), the button with your initial at
+the top of the sidebar (top right of **Library** on phones) shows everyone in your family. Tap someone, type their
+**switching PIN**, and Wavelength is theirs: their settings, playlists, history and requests. They don't need to
+have signed in on this device before. Set yours under **Settings → Account → Switching PIN**; without one, nobody can
+switch to you. Grown-ups can switch to their family's kids without a PIN; kids always need one.
+
+A family's **manager** gets **Settings → My family**: depending on what the Hub admin allows for the family, they add
+people to it, look after its kids (bedtimes, limits and the family's own grown-up PIN) and set its own keys. The Hub
+admin sees and decides everything; nobody else sees family settings.
+
+### Shared keys (admins)
+
+**Settings → Users → Families → Shared keys** keeps keys on the Hub so nobody types them into a device: the AI DJ's
+keys, tour dates, Last.fm, fanart.tv and the Discord application ID. Set them for the whole Hub, or for one family
+(that family's own wins for its people). The Hub's Discord application ID wins over one typed on a device, so
+**Settings → Playback → Discord status** only needs switching on.
+
 ### Managing people (admins)
 
 Admins get a **Users** tab:

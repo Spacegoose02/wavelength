@@ -10,6 +10,7 @@ import { kidsOf } from '../family.ts';
 import { beginTotp, disableTotp, enableTotp, passTotp, recoveryLeft, totpEnabled } from '../totp.ts';
 import { MIN_PASSWORD } from './auth.ts';
 import { FEATURE_KEYS, featureOn } from '../features.ts';
+import { keyFor } from '../families.ts';
 
 /** The signed-in person's own account, devices and synced preferences. */
 export function meRoutes(app: FastifyInstance, { db, limits, config }: Ctx) {
@@ -19,7 +20,9 @@ export function meRoutes(app: FastifyInstance, { db, limits, config }: Ctx) {
     const kids = kidsOf(db, user.id).map((id) => getUser(db, id)).filter((k) => !!k).map((k) => ({ id: k.id, displayName: k.displayName }));
     // which feature switches (features.ts) are on for this person
     const features = Object.fromEntries(FEATURE_KEYS.map((k) => [k, featureOn(db, k, user)]));
-    return { user, device, permissions, twoFactor: totpEnabled(db, user.id), kids, features };
+    // values the device uses itself, from the person's family or the whole Hub (families.ts); they win over the device's own
+    const shared = { discordAppId: keyFor(db, config.secretKey, user.id, 'discordAppId') };
+    return { user, device, permissions, twoFactor: totpEnabled(db, user.id), kids, features, shared };
   });
 
   app.patch('/api/me', async (req) => {

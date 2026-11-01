@@ -157,8 +157,8 @@ Hub sees it) is an extra lock you can add.
 | `WAVELENGTH_NAVIDROME_MUSIC_DIR` | `/music` | Where Navidrome's container sees the same music. The tag editor maps Navidrome's file paths from here onto `WAVELENGTH_MUSIC_DIR`. |
 | `WAVELENGTH_YTDLP` | `yt-dlp` | The yt-dlp command (the image includes it). |
 | `WAVELENGTH_WEB_DIR` | `/app/web` (image) | The app's web build, served at `/`. Without one, `/` goes to the sign-in page. |
-| `WAVELENGTH_FANART_KEY` | — | A [fanart.tv](https://fanart.tv/get-an-api-key/) API key (free). Adds fanart.tv artist pictures and album covers to the cover art picker. Without it the picker uses Deezer, Apple Music and the Cover Art Archive. |
-| `WAVELENGTH_LASTFM_KEY` | — | A [Last.fm API account](https://www.last.fm/api/account/create)'s API key. With the secret below, people can connect Last.fm for scrobbling. ListenBrainz needs nothing here. |
+| `WAVELENGTH_FANART_KEY` | — | A [fanart.tv](https://fanart.tv/get-an-api-key/) API key (free). Adds fanart.tv artist pictures and album covers to the cover art picker. Without it the picker uses Deezer, Apple Music and the Cover Art Archive. Can also be saved in the app instead ([Shared keys](#families)), which wins. |
+| `WAVELENGTH_LASTFM_KEY` | — | A [Last.fm API account](https://www.last.fm/api/account/create)'s API key. With the secret below, people can connect Last.fm for scrobbling. ListenBrainz needs nothing here. Can also be saved in the app instead ([Shared keys](#families)), which wins. |
 | `WAVELENGTH_LASTFM_SECRET` | — | That API account's shared secret. |
 | `WAVELENGTH_DOCKER_URL` | — | A Docker socket proxy, e.g. `http://docker-socket-proxy:2375`. Turns on Docker control (below). Never the Docker socket itself. |
 | `WAVELENGTH_DOCKER_CONTAINERS` | — | Comma-separated container names admins may see, start, stop and restart, e.g. `navidrome,slskd`. Others stay invisible. |
@@ -505,6 +505,56 @@ The Hub checks the permission on **every** request (`need(req, …)` in `hub/src
 the list from `GET /api/me` only to decide what to show. A role change applies on the user's next request,
 no re-login. The Hub refuses to demote, disable or delete the last admin.
 
+## Families
+
+For a Hub shared by more than one household (say yours, your parents' and your sister's). Families are optional:
+a Hub without any works exactly as before. **Only the Hub admin sees or changes family settings** (Settings →
+Users → Families); everyone else's calls to them get `403`, and the app never shows them. Code:
+`hub/src/families.ts`, `hub/src/routes/families.ts`, migration 28; app: `src/views/Families.tsx`,
+`src/components/WhosListening.tsx`.
+
+- **Families and people.** The admin makes families and puts each person in one (or none). A family can have a
+  **most people** limit.
+- **Managers.** The admin ticks **Manager** on a grown-up in a family. A manager gets **Settings → My family**, and
+  can only do what the admin switched on for that family:
+
+  | Switch | What the family's managers may do |
+  |---|---|
+  | **Can register people** | Add members and kids to their family, make invite links into it (`POST /api/admin/invites` makes them for their family only), rename, change between member and kid, set passwords, turn off. Never admins or other managers. |
+  | **Kid controls** | Bedtimes and daily limits for their family's kids (`/api/admin/kids`, only those kids), and a **grown-up PIN for their family** that their kids' devices ask for instead of the Hub's. |
+  | **Own keys** | Set the family's own shared keys (below). |
+
+  The Hub admin is above every family: they see everyone, every family's kids and keys, and every Hub setting.
+- **Shared keys** (Settings → Users → Families → Shared keys). Keys the Hub keeps so nobody types them into a
+  device: the AI DJ's Anthropic, OpenAI voice and ollama.com search keys, the tour dates key, Last.fm's API key and
+  shared secret, fanart.tv's key and the Discord application ID. Each can have a value for the whole Hub and one per
+  family; a family's own **wins** for the people in it, the whole Hub's comes next, and `WAVELENGTH_LASTFM_*` /
+  `WAVELENGTH_FANART_KEY` are only used when neither is saved. The AI DJ's and tour dates' whole-Hub keys stay on
+  their own pages (Settings → AI DJ, Settings → Features). Last.fm's key and secret are always taken as a pair from
+  the same place, since a Last.fm login only works with the API account it was made with (after changing a family's,
+  its people connect Last.fm again). Secret keys never leave the Hub and are sealed like server logins (bound to
+  family and name). The Discord application ID isn't secret: it reaches devices in `GET /api/me` (`shared`) and
+  **wins over one typed on a device**.
+- **Servers per family.** A Hub server (Plex, Audiobookshelf, SUB/WAVE, Navidrome…) can be kept to some families:
+  tick them under its **Who can use it** (none ticked = every family). Admins always get every server; the
+  Navidrome relay checks the same rule.
+- **Switching profiles.** See below.
+
+### Switching profiles
+
+The button with your initial at the top of the sidebar (on phones, top right of Library) opens **Who's listening?**:
+everyone in your family, plus anyone else signed in on this device. Tap someone:
+
+- already on this device: switch at once (with their PIN on this device, if they set one; leaving a kid profile
+  takes the grown-up PIN, as before);
+- in your family but not on this device: type their **switching PIN** and the Hub signs them in here
+  (`POST /api/me/switch` makes a device token for them, named after this device). No pairing, no password.
+
+Everyone sets their switching PIN under **Settings → Account → Switching PIN** (4 to 8 digits, kept as a scrypt
+hash). Without one, nobody can switch to them. A grown-up can switch to a kid in their family without a PIN; a kid
+always needs the other person's PIN, so a kid can't step into a grown-up's profile. Switching never crosses
+families. Wrong PINs are rate limited and audited; the admin can **Clear PIN** for someone who forgot theirs.
+
 ## Feature switches
 
 **Settings → Features** (admins) turns each newer feature on or off for the whole household, and separately for
@@ -573,7 +623,19 @@ with a 4xx status.
 | `POST /auth/device` | anyone | `{ deviceName?, platform? }` → `{ deviceCode, userCode, verificationUrl, verificationUrlComplete, expiresIn, interval }` |
 | `POST /auth/device/token` | the pairing device | `{ deviceCode }` → `202 {status:'pending'}`, `403 denied`, `410 expired`, or `200` session |
 | `POST /auth/logout` | signed in | signs this device out |
-| `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids, features }` (`kids`: the kids this person is a parent of; `features`: `{ homeMixes: true, … }`, which feature switches are on for this person) |
+| `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids, features, shared }` (`kids`: the kids this person is a parent of; `features`: `{ homeMixes: true, … }`, which feature switches are on for this person; `shared`: `{ discordAppId }` from their family or the whole Hub). `user` has `familyId`, `familyManager`, `hasSwitchPin` |
+| `GET /api/me/family` | signed in | `{ name, people: [{ id, displayName, role, hasSwitchPin }] }`: your family, for Who's listening? (no family settings) |
+| `PUT /api/me/switch-pin` | signed in | `{ pin }` (4–8 digits) or `{ pin: null }`: the PIN your family switches to you with |
+| `POST /api/me/switch` | signed in | `{ userId, pin?, deviceName?, platform? }` → session for someone in your family; `403` wrong PIN, `409` they have no PIN (a grown-up may switch to a kid without one), `404` not in your family |
+| `GET`/`POST /api/admin/families`, `PATCH`/`DELETE …/:id` | `users.manage` | families `{ id, name, canRegister, ownKeys, kidControls, maxPeople, people }`; deleting one keeps its people (without a family) and drops its keys |
+| `PUT /api/admin/users/:id/family` | `users.manage` | `{ familyId \| null, manager? }` |
+| `DELETE /api/admin/users/:id/switch-pin` | `users.manage` | takes a forgotten switching PIN off |
+| `GET /api/admin/keys?familyId=`, `PUT /api/admin/keys` | `users.manage` | shared keys of the whole Hub (`familyId` 0) or a family: `[{ name, label, secret, hubWide, set, hint }]`, plus `env`; `PUT { familyId, values: { name: value \| '' } }` |
+| `PUT /api/admin/services/:id/families` | `keys.manage` | `{ ids }`: only these families get the server; `[]` = every family |
+| `GET /api/family` | a family's manager | `{ family, people, keys? }` (keys with **Own keys**) |
+| `POST /api/family/users`, `PATCH /api/family/users/:id` | manager, **Can register people** | add a member or kid to their family `{ username, displayName?, role, password }` / change one `{ displayName?, role?, password?, disabled? }` |
+| `PUT /api/family/users/:id/guardians` | manager, **Kid controls** | `{ ids }`: a kid's parents, grown-ups in the family |
+| `PUT /api/family/keys` | manager, **Own keys** | `{ values }`: the family's own shared keys |
 | `GET /api/mixes[?fresh=1]` | signed in, `homeMixes` on | `{ mixes: [{ id, name, description, kind, songs: [{ title, artist, album?, duration?, coverUrl?, track?, because? }] }], builtAt }`; made once a day (or now with `fresh=1`) |
 | `GET /api/blend/people` | signed in, `blend` on | `{ optedIn, people: [{ id, displayName, optedIn }] }`: who you may blend with (grown-ups with grown-ups and their own kids; kids with their parents) |
 | `PUT /api/blend/optin` | signed in, `blend` on | `{ on }`: let others make Blends with you |

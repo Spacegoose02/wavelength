@@ -170,10 +170,11 @@ export class DjAgent {
   }
 
   /** `chat`: the chat's provider. `quick`: the talking DJ and DJ mode, which can use Ollama for free. */
-  provider(kind: 'chat' | 'quick' = 'chat'): DjProvider {
+  provider(kind: 'chat' | 'quick' = 'chat', userId?: number): DjProvider {
     const s = getSettings(this.db);
     if (s.provider === 'ollama' || (kind === 'quick' && s.quickProvider === 'ollama')) return this.ollama(s, '');
-    const key = getApiKey(this.db, this.config.secretKey);
+    // the person's family may have its own key (families.ts)
+    const key = getApiKey(this.db, this.config.secretKey, 'apiKey', userId);
     if (!key) throw new HttpError(409, 'Add an API key in the AI DJ settings first');
     return this.factory(s, key);
   }
@@ -222,7 +223,7 @@ export class DjAgent {
    */
   async oneShot(user: User, system: string, ask: string, maxTokens = 2000): Promise<string> {
     const settings = getSettings(this.db);
-    const res = await this.provider('quick').create({ system, tools: [], messages: [{ role: 'user', content: ask }], effort: 'low', maxTokens });
+    const res = await this.provider('quick', user.id).create({ system, tools: [], messages: [{ role: 'user', content: ask }], effort: 'low', maxTokens });
     recordUsage(this.db, user.id, null, res.model, res.usage, costOf(priceFor(settings, res.model), res.usage));
     return res.content.flatMap((c) => (c.type === 'text' ? [c.text] : [])).join(' ');
   }
@@ -308,11 +309,11 @@ export class DjAgent {
     if (this.busy.has(id)) throw new HttpError(409, 'The DJ is already answering in this chat');
     this.busy.add(id);
     try {
-      const provider = this.provider();
+      const provider = this.provider('chat', user.id);
       const settings = getSettings(this.db);
       // Anthropic searches on its side; on Ollama the Hub runs ollama.com's search as its own tools
       const onOllama = settings.provider === 'ollama';
-      const ollamaKey = onOllama ? getApiKey(this.db, this.config.secretKey, 'ollamaKey') : null;
+      const ollamaKey = onOllama ? getApiKey(this.db, this.config.secretKey, 'ollamaKey', user.id) : null;
       const web = webFor(this.db, user) && (!onOllama || !!ollamaKey);
       const system = systemPrompt(user, web);
       const tools = onOllama && web ? [...ALL_TOOLS, ...OLLAMA_WEB_TOOLS] : ALL_TOOLS;
