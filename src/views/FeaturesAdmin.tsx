@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FEATURE_INFO, type FeatureKey } from '../lib/features';
 import { hubClient, useHub } from '../store/hub';
-import type { HubSonicStatus } from '../sources/hub';
+import type { HubSonicStatus, HubTourSettings } from '../sources/hub';
 
 /**
  * Settings → Features (Hub admins): switch each newer feature on or off for the household, and separately
@@ -32,6 +32,40 @@ function SonicProgress() {
         </span>
       )}
       {' '}<button className="link small" onClick={() => hubClient()?.sonicRescan().then(setSt)}>Look for new songs</button>
+    </div>
+  );
+}
+
+/** Where tour dates come from, and the key (kept on the Hub). */
+function TourSetup() {
+  const c = hubClient()!;
+  const [st, setSt] = useState<HubTourSettings>();
+  const [key, setKey] = useState('');
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    c.adminTours().then(setSt).catch((e) => setMsg(errText(e)));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!st) return msg ? <div className="errors small">{msg}</div> : null;
+  const save = (b: { provider?: string; key?: string }) =>
+    c.saveAdminTours(b).then((r) => { setSt(r); setKey(''); setMsg(b.key !== undefined ? (b.key ? 'Key saved' : 'Key removed') : ''); }, (e) => setMsg(errText(e)));
+  return (
+    <div className="tour-setup small">
+      <div className="chips">
+        {([['ticketmaster', 'Ticketmaster'], ['bandsintown', 'Bandsintown']] as const).map(([v, label]) => (
+          <button key={v} className={`chip ${st.provider === v ? 'on' : ''}`} onClick={() => save({ provider: v })}>{label}</button>
+        ))}
+      </div>
+      <div className="row gap wrap">
+        <input type="password" value={key} placeholder={st.keySet ? `Key saved (${st.hint})` : st.provider === 'ticketmaster' ? 'Ticketmaster Consumer Key' : 'Bandsintown app ID'} onChange={(e) => setKey(e.target.value)} />
+        <button className="btn small" disabled={!key.trim()} onClick={() => save({ key })}>Save key</button>
+        {st.keySet && <button className="btn small" onClick={() => save({ key: '' })}>Remove</button>}
+      </div>
+      <span className="muted">
+        {st.provider === 'ticketmaster'
+          ? <>A free key from <a href="https://developer.ticketmaster.com/" target="_blank" rel="noreferrer">developer.ticketmaster.com</a> (My Apps → Consumer Key).</>
+          : <>An app ID from <a href="https://help.artists.bandsintown.com/en/articles/9186477-api-documentation" target="_blank" rel="noreferrer">Bandsintown</a>.</>}
+        {' '}It stays on the Hub. {msg}
+      </span>
     </div>
   );
 }
@@ -86,6 +120,7 @@ export function FeaturesAdminTab() {
                   </span>
                 </label>
                 {f.key === 'sonic' && s.on && <SonicProgress />}
+                {f.key === 'tourDates' && s.on && <TourSetup />}
                 <label className="check feature-kids" title="Also on for kid profiles">
                   <input type="checkbox" checked={s.on && s.kids} disabled={!s.on} onChange={(e) => save(f.key, { kids: e.target.checked })} />
                   <small>Kids</small>

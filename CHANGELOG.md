@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Artist bios, song credits and tour dates.** Artist pages get an About section (Wikipedia story, members,
+  where and when they started, links) and Now Playing gets **Credits** (writers, producers, players, from
+  MusicBrainz). With a Ticketmaster key or Bandsintown app ID saved on the Hub, artist pages list upcoming shows.
 - **Talking DJ.** The AI DJ can now speak between songs, with the music ducked under it: every Nth song, in a
   laid back, hype or trivia style, read by the device's own voice (Settings → Playback). Admins switch it on in
   Settings → Features; each line counts against the AI DJ allowance.

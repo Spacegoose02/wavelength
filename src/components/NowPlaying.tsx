@@ -9,6 +9,7 @@ import { AddToPlaylist } from './AddToPlaylist';
 import { EqButton } from './Equalizer';
 import { DevicesButton } from './Devices';
 import { CastButton } from './CastButton';
+import { CreditsButton } from './CreditsButton';
 import { TogetherButton } from './Together';
 import { RadioGetButton } from './RadioGetButton';
 import { SongRadioButton } from './SongRadioButton';
@@ -60,6 +61,7 @@ export function NowPlaying() {
             <EqButton className="chip" />
             <DevicesButton className="chip" />
             <CastButton className="chip" />
+            <CreditsButton track={t} />
             <TogetherButton className="chip" />
             {live && <RadioGetButton text={p.liveTitle} />}
             {t.kind === 'track' && t.sourceId !== 'preview' && <SongRadioButton artist={t.artist} track={t} className="chip" />}

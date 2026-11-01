@@ -27,7 +27,7 @@ export const FEATURE_INFO: FeatureInfo[] = [
   { key: 'automix', label: 'AutoMix', help: 'Blends songs on the beat instead of a plain crossfade.', standalone: true },
   { key: 'cast', label: 'Cast to speakers', help: 'Play on Chromecast, Google/Nest and DLNA/UPnP speakers and TVs.', standalone: true },
   { key: 'djVoice', label: 'Talking AI DJ', help: 'The AI DJ introduces songs out loud between tracks. Uses the AI DJ’s key and limits; each device reads it with its own voice. People turn it on in Settings → Playback.', standalone: false },
-  { key: 'artistInfo', label: 'Artist bios and credits', help: 'Artist stories, photos and song credits from Wikipedia, Last.fm and MusicBrainz.', standalone: true },
+  { key: 'artistInfo', label: 'Artist bios and credits', help: 'Artist stories and facts from Wikipedia and MusicBrainz, and who wrote and produced each song.', standalone: true },
   { key: 'tourDates', label: 'Tour dates', help: 'Upcoming concerts for artists people follow. Needs a Ticketmaster or Bandsintown key.', standalone: false },
   { key: 'singMode', label: 'Sing mode', help: 'Turns the lead vocal down so people can sing along with the lyrics.', standalone: true },
   { key: 'musicVideos', label: 'Music videos', help: 'Finds a song’s official video and plays it in Now Playing.', standalone: true },

@@ -1,5 +1,7 @@
 import { SonicWorker } from './sonic/worker.ts';
 import { sonicRoutes } from './routes/sonic.ts';
+import { tourRoutes } from './routes/tours.ts';
+import { Tours } from './tours.ts';
 import { deezerLookups, Mixes, type MixLookups } from './mixes.ts';
 import { mixRoutes } from './routes/mixes.ts';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -89,9 +91,11 @@ export interface Ctx {
   mixes: Mixes;
   /** Sound-alike analysis of the library (sonic/). */
   sonic: SonicWorker;
+  /** Tour dates (tours.ts). */
+  tours: Tours;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown> } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -107,6 +111,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     dj: new DjAgent(db, config, opts.djProvider ?? anthropicProvider),
     mixes: new Mixes(db, opts.mixLookups ?? deezerLookups()),
     sonic: new SonicWorker(db, config.secretKey, config.musicDir, config.navidromeMusicDir),
+    tours: new Tours(db, config.secretKey, opts.tourFetch),
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
@@ -210,6 +215,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   djRoutes(app, ctx);
   mixRoutes(app, ctx);
   sonicRoutes(app, ctx);
+  tourRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

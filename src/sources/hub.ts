@@ -589,6 +589,20 @@ export class HubError extends Error {
   }
 }
 
+export interface HubTourEvent {
+  date: string;
+  time?: string;
+  venue: string;
+  city: string;
+  country?: string;
+  url?: string;
+}
+export interface HubTourSettings {
+  provider: 'ticketmaster' | 'bandsintown';
+  keySet: boolean;
+  hint: string | null;
+}
+
 /** AI DJ (hub/src/dj/, docs/AI-DJ.md): the chat runs on the Hub, which keeps the API key. */
 export interface HubDjStatus { available: boolean; reason: string | null; model: string; spent: number; limit: number | null }
 export interface HubDjChat { id: number; title: string; createdAt: number; updatedAt: number; turns: number }
@@ -664,6 +678,11 @@ export class HubClient {
   sonicLookup = (songs: { id?: string; artist?: string; title?: string }[]) => this.call<{ features: (HubSonicFeatures | null)[] }>('POST', '/api/sonic/lookup', { songs });
   sonicStatus = () => this.call<HubSonicStatus>('GET', '/api/admin/sonic');
   sonicRescan = () => this.call<HubSonicStatus>('POST', '/api/admin/sonic/rescan', {});
+  /** Tour dates (hub/src/tours.ts). */
+  tours = (artist: string) => this.call<{ events: HubTourEvent[] }>('GET', `/api/tours?artist=${encodeURIComponent(artist)}`);
+  toursStatus = () => this.call<{ available: boolean }>('GET', '/api/tours/status');
+  adminTours = () => this.call<HubTourSettings>('GET', '/api/admin/tours');
+  saveAdminTours = (b: { provider?: string; key?: string }) => this.call<HubTourSettings>('PUT', '/api/admin/tours', b);
   adminFeatures = () => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('GET', '/api/admin/features');
   saveAdminFeatures = (features: Record<string, { on?: boolean; kids?: boolean }>) => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('PUT', '/api/admin/features', { features });
   setDisplayName = (displayName: string) => this.call<{ user: HubUser }>('PATCH', '/api/me', { displayName });

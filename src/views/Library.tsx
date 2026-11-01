@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArtistAbout } from '../components/ArtistAbout';
 import { useCatalog } from '../store/catalog';
 import { useCan } from '../store/hub';
 import { useSettings } from '../store/settings';
@@ -466,6 +467,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
           <Grid>{featured.map((a) => <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={openAlbum} />)}</Grid>
         </section>
       )}
+      {!notOneArtist(artist.name) && <ArtistAbout name={artist.name} />}
     </div>
   );
 }

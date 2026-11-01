@@ -214,6 +214,18 @@ Song lists work the same way: in search results, playlists, favorites, history a
 "Artist — Album" under a song, the artist opens the artist's page and the album opens the album scrolled to the
 song. On an album page, the artist under each song is a link too.
 
+## About the artist, song credits and tour dates
+
+At the bottom of an artist page, **About** tells the artist's story (from Wikipedia), where and when they
+started, the members of a band (past members greyed), and links to their website and socials (from
+MusicBrainz). In Now Playing, **Credits** shows who wrote, produced, mixed and played on the song, when
+MusicBrainz knows. Both need no setup and are kept on the device for a week. An admin can turn them off with
+**Artist bios and credits** in **Settings → Features**.
+
+**On tour** lists upcoming shows with a **Tickets** link, when a Hub admin turns on **Tour dates** in
+**Settings → Features** and pastes a free Ticketmaster key (from developer.ticketmaster.com) or a Bandsintown
+app ID there. The key stays on the Hub.
+
 ## Appears On (artist pages)
 
 Under an artist's albums, **Appears On** lists albums by other artists in your library that the artist is

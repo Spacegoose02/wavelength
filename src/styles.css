@@ -1939,3 +1939,18 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .journey-hits button { text-align: left; padding: 4px 0; }
 .feature-row { flex-wrap: wrap; }
 .sonic-progress { flex-basis: 100%; order: 3; padding-left: 48px; }
+.tour-setup { flex-basis: 100%; order: 3; padding-left: 48px; display: grid; gap: 6px; }
+.tour-setup input { min-width: 220px; }
+.artist-about { max-width: 820px; margin-top: 28px; }
+.artist-about .bio { line-height: 1.55; white-space: pre-line; }
+.artist-about .bio.short { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+.artist-about .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0; }
+.artist-about .members { margin: 8px 0; }
+.artist-about .credit-src { margin-top: 8px; }
+.tour-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; }
+.tour-list li { display: grid; grid-template-columns: 92px 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--panel-2, rgba(255,255,255,.04)); }
+.tour-date { font-weight: 600; }
+.credits-pop { width: min(360px, 90vw); max-height: 60vh; overflow: auto; }
+.credits-pop dl { margin: 6px 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
+.credits-pop dt { color: var(--muted, #999); }
+.credits-pop dd { margin: 0; }

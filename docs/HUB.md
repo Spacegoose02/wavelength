@@ -558,6 +558,9 @@ with a 4xx status.
 | `GET /api/blend/people` | signed in, `blend` on | `{ optedIn, people: [{ id, displayName, optedIn }] }`: who you may blend with (grown-ups with grown-ups and their own kids; kids with their parents) |
 | `PUT /api/blend/optin` | signed in, `blend` on | `{ on }`: let others make Blends with you |
 | `GET /api/blend?with=<id,id>` | signed in, `blend` on | `{ mix }`; `409` until you and each of them opted in |
+| `GET /api/tours?artist=` | signed in, `tourDates` on | `{ events: [{ date, time?, venue, city, country?, url? }] }`: upcoming, this artist only, kept 6 hours; `409` until an admin saves a key |
+| `GET /api/tours/status` | signed in | `{ available }`: the feature is on for you and a key is saved |
+| `GET`/`PUT /api/admin/tours` | `users.manage` | `{ provider: 'ticketmaster'\|'bandsintown', key? }` (`''` removes it) → `{ provider, keySet, hint }`; the key is sealed and never sent back |
 | `GET /api/sonic/similar?id=\|artist=&title=[&limit=]` | signed in, `sonic` on | `{ song, songs: [{ id, title, artist, album, duration, bpm, key, energy, mood, match }] }`: closest first, at most 3 per artist; `404` until that song is analysed |
 | `GET /api/sonic/journey?from=&to=[&steps=]` | signed in, `sonic` on | `{ songs }` from one song to another (ids, or `fromArtist`/`fromTitle`, `toArtist`/`toTitle`) |
 | `GET /api/sonic/search?q=` | signed in, `sonic` on | analysed songs whose title and artist contain the words |
