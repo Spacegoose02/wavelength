@@ -325,6 +325,20 @@ function VoiceSection({ c, data, voice: v, save, setErr, setNote }: {
               </select>
             </label>
           )}
+          {v.engine === 'kokoro' && (
+            <label>Or blend voices
+              <input
+                key={v.kokoroVoice}
+                defaultValue={v.kokoroVoice.includes('+') ? v.kokoroVoice : ''}
+                placeholder="af_bella(2)+af_sky(1)"
+                maxLength={80}
+                onBlur={(e) => {
+                  const mix = e.target.value.replace(/\s+/g, '');
+                  if (mix && mix !== v.kokoroVoice) void save({ voice: { kokoroVoice: mix } }, 'Blend saved. Press Hear it.');
+                }}
+              />
+            </label>
+          )}
           {v.engine === 'openai' && (
             <label>Price per million characters (US$)
               <input type="number" min={0} step="1" defaultValue={v.openaiPrice} onBlur={(e) => Number(e.target.value) !== v.openaiPrice && save({ voice: { openaiPrice: Number(e.target.value) || 0 } })} />
@@ -341,7 +355,8 @@ function VoiceSection({ c, data, voice: v, save, setErr, setNote }: {
         {v.engine === 'kokoro' && (
           <p className="muted small">
             Kokoro runs in its own container next to the Hub (ghcr.io/remsky/kokoro-fastapi-cpu, port 8880); nothing leaves your
-            server. See docs/AI-DJ.md → Voices for the Docker and Unraid setup.
+            server. Blend voices with + (af_bella+af_sky), weighted with numbers in brackets (af_bella(2)+af_sky(1)); a
+            blend you save here is offered to everyone too. See docs/AI-DJ.md → Voices for the Docker and Unraid setup.
           </p>
         )}
         {v.engine === 'openai' && (

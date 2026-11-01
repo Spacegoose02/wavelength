@@ -247,6 +247,12 @@ model with an OpenAI-style API on port 8880. The CPU image is fine: a line takes
 Voices are named like `am_michael`: the first letter is the accent (a = American, b = British, …), the second
 f or m, then the name. The pickers show them as "Michael (American, male)".
 
+**New voices.** Kokoro mixes its voices: in **Settings → AI DJ → Voice**, type a blend into **Or blend voices**,
+like `af_bella+af_sky` (half and half) or `af_bella(2)+af_sky(1)` (two parts Bella to one of Sky), and press
+**Hear it**. A blend saved there becomes the default and shows up in everyone's voice picker as "Bella + Sky
+(blend)". Kokoro can also load extra voice files (`.pt`): mount a folder of them over the container's voices folder
+(`/app/api/src/voices/v1_0` in Kokoro-FastAPI) and restart it; they appear in the pickers by their file name.
+
 ## DJ mode
 
 With **DJ mode** on in **Settings → Features** (off by default, kids separately), people the AI DJ is on for get a
@@ -261,13 +267,13 @@ to the music, up to 250%; the music dips under the voice more the louder it is.
 |---|---|
 | **Your favourites** | On Repeat and your own songs in the Daily Mixes |
 | **New for you** | Discover Weekly and the Daily Mixes' songs from artists like yours |
-| **Throwbacks** | Forgotten favourites and Time Capsule |
+| **Throwbacks** | Forgotten favourites and Time Capsule. Those need months of listening; until then, pressing Throwbacks has the AI pick older songs (10 to 30 years old) that fit what you play |
 | **Top hits** | Deezer's worldwide chart (kid profiles: no explicit songs) |
 | **Your playlist** | pick one of your playlists (Wavelength's or your server's): the AI picks some of its songs plus up to 12 it knows that fit its mood and artists, then the rest of the playlist. Every segment after builds on it, until you pick something else |
 | **Your request** | type anything ("90s house", "something chill for cooking", "build me an EDM set"): the AI picks songs from the 250 you play most, plus up to 10 it knows that fit |
 
-The station goes round favourites → new for you → throwbacks → top hits; tap a segment to jump straight to it, or type
-in the box to change course. A segment whose songs aren't in your library (or that has nothing new) is skipped.
+The station goes round favourites → new for you → throwbacks → top hits; tap a segment to jump straight to it (it plays that segment, or says why it can't), or type
+in the box to change course. In the rotation, a segment whose songs aren't in your library (or that has nothing new) is skipped.
 Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing anything else stops DJ mode; **×** stops it
 too, and **–** folds the panel into a small pill.
 

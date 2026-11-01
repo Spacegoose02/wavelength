@@ -109,8 +109,8 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
     } else if (o.kind || o.ask || !st.on) anchor = null;
     let { seg, tracks } = await fetchSegment({ ...o, previous: st.on ? st.kind : null });
     // a segment none of whose songs are here: try the next one (not for requests, which say so)
-    for (let i = 0; !tracks.length && !o.ask && i < 3; i++) ({ seg, tracks } = await fetchSegment({ previous: seg.kind }));
-    if (!tracks.length) throw new Error('None of those songs are in your library. Try asking for something else');
+    for (let i = 0; !tracks.length && !o.ask && !o.kind && !o.playlist && i < 3; i++) ({ seg, tracks } = await fetchSegment({ previous: seg.kind }));
+    if (!tracks.length) throw new Error(o.kind ? `None of the ${SEGMENT_LABELS[o.kind as keyof typeof SEGMENT_LABELS] ?? ''} songs the DJ picked are in your library. Try another segment` : 'None of those songs are in your library. Try asking for something else');
     ours.clear();
     upcoming.clear();
     lastTry = 0;

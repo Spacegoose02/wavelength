@@ -8,5 +8,10 @@ export function voiceLabel(name: string, engine: HubVoiceEngine): string {
   const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
   const m = engine === 'kokoro' ? /^([a-z])([fm])_([a-z]+)$/.exec(name) : null;
   if (m) return `${cap(m[3])} (${KOKORO_LANG[m[1]] ?? m[1]}, ${m[2] === 'f' ? 'female' : 'male'})`;
+  // a Kokoro blend: af_bella(2)+af_sky(1) → "Bella + Sky (blend)"
+  if (engine === 'kokoro' && name.includes('+')) {
+    const parts = name.split('+').map((p) => /^[a-z][fm]_([a-z]+)/.exec(p)?.[1]).filter((x): x is string => !!x);
+    if (parts.length) return `${parts.map(cap).join(' + ')} (blend)`;
+  }
   return engine === 'openai' ? cap(name) : name;
 }

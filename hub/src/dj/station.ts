@@ -125,16 +125,26 @@ export class Station {
       return this.fromPlaylist(user, str(list.name, 80) || 'your playlist', songs, recent, { name, style, talk });
     }
 
-    // a segment with nothing new (no plays yet, everything heard) moves on to the next kind
-    for (let tries = 0; tries < SEGMENTS.length; tries++) {
+    // a segment you picked plays that segment; in the rotation, one with nothing new moves on to the next kind
+    const picked = (SEGMENTS as readonly string[]).includes(str(o.kind, 20));
+    const asked = TITLES[kind];
+    for (let tries = 0; tries < (picked ? 1 : SEGMENTS.length); tries++) {
       const songs = (await this.pool(user, kind as (typeof SEGMENTS)[number], kid)).filter((s) => !recent.has(key(s)));
       if (songs.length >= 3) {
-        const picked = kind === 'tophits' ? songs.slice(0, SIZE * 3) : shuffle(dedupe(songs)).slice(0, SIZE * 2);
-        const intro = talk ? await this.intro(user, kind, picked.slice(0, 3), { name, style }) : null;
-        return { kind, title: TITLES[kind], songs: picked, intro };
+        const chosen = kind === 'tophits' ? songs.slice(0, SIZE * 3) : shuffle(dedupe(songs)).slice(0, SIZE * 2);
+        const intro = talk ? await this.intro(user, kind, chosen.slice(0, 3), { name, style }) : null;
+        return { kind, title: TITLES[kind], songs: chosen, intro };
+      }
+      // pressed Throwbacks with too little history of their own (they come from months back): the AI picks
+      // older songs that fit their taste
+      if (picked && kind === 'throwbacks') {
+        checkBudget(this.db, user.id);
+        const seg = await this.request(user, 'Throwbacks: well-known older songs, from 10 to 30 years ago, that fit the music they play. Prefer songs from the list that are that old.', recent, { name, style, talk });
+        return { ...seg, kind: 'throwbacks', title: TITLES.throwbacks };
       }
       kind = SEGMENTS[(SEGMENTS.indexOf(kind as (typeof SEGMENTS)[number]) + 1) % SEGMENTS.length];
     }
+    if (picked) throw new HttpError(404, `Nothing new for ${asked} yet. Play some more music and try again, or pick another segment`);
     throw new HttpError(404, 'The DJ has nothing to play yet. Play some music first, so it learns what you like');
   }
 
