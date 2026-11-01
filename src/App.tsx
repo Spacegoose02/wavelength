@@ -3,6 +3,7 @@ import { startSmartOffline } from './lib/smartOffline';
 import { startDjVoice } from './lib/djVoice';
 import { startSingMode } from './lib/singMode';
 import { startDiscord } from './lib/discord';
+import { startHifi } from './lib/hifi';
 import { startArtworkChecks } from './lib/artwork';
 import { startPlaylistCoverChecks } from './lib/playlistCovers';
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
@@ -204,6 +205,7 @@ export default function App() {
     startDjVoice();
     startSingMode();
     startDiscord();
+    void startHifi();
   }, []);
 
   // keyboard: space = play/pause, ctrl+f = search, alt+left = back

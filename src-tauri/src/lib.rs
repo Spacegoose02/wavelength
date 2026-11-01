@@ -1,5 +1,6 @@
 mod cast;
 mod discord;
+mod hifi;
 mod offline;
 mod secrets;
 mod share;
@@ -25,7 +26,8 @@ pub fn run() {
             update::update_target, update::update_releases, update::update_download, update::update_install,
             secrets::secrets_available, secrets::secrets_get, secrets::secrets_set,
             cast::cast_discover, cast::cast_load, cast::cast_command, cast::cast_status, cast::cast_disconnect,
-            discord::discord_set, discord::discord_clear])
+            discord::discord_set, discord::discord_clear,
+            hifi::hifi_available, hifi::hifi_load, hifi::hifi_command, hifi::hifi_status])
         .run(tauri::generate_context!())
         .expect("error while running Wavelength");
 }

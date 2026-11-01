@@ -8,6 +8,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { create } from 'zustand';
 import { engine, type RemoteMeta, type RemoteOutput } from '../player/engine';
 import { reloadCurrent, usePlayer } from '../store/player';
+import { localOutput } from './hifi';
 import { isTauri } from './http';
 
 export interface CastTarget {
@@ -83,6 +84,8 @@ export async function startCasting(target: CastTarget) {
   const p = usePlayer.getState();
   const at = p.position, wasPlaying = p.playing;
   useCast.setState({ active: target, connecting: true, error: '' });
+  // bit-perfect output (lib/hifi.ts) goes quiet while a speaker plays
+  await localOutput()?.pause().catch(() => undefined);
   engine.setRemote(output(target));
   if (p.current()) reloadCurrent(at, wasPlaying);
   useCast.setState({ connecting: false });
@@ -109,7 +112,7 @@ export async function stopCasting(resumeHere = true) {
   poll = undefined;
   const { position: at, playing: wasPlaying } = usePlayer.getState();
   useCast.setState({ active: undefined });
-  engine.setRemote(null);
+  engine.setRemote(localOutput());
   await invoke('cast_disconnect', { target }).catch(() => {});
   if (resumeHere && usePlayer.getState().current()) reloadCurrent(at, wasPlaying);
 }

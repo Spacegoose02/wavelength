@@ -607,6 +607,16 @@ crossfade. These settings sync between your devices with a Hub.
 
 Fades use equal-power curves now, so there's no dip in the middle. Like crossfade, AutoMix needs a server that
 allows it (CORS) and isn't used during a listening party or the sleep timer's last song.
+### Bit-perfect output (Windows)
+
+**Settings → Playback → Bit-perfect output** plays songs straight to your sound card in WASAPI exclusive mode,
+at each file's own sample rate and bit depth, without Windows' mixer resampling them. The setting shows what
+the device is getting (for example *96000 Hz · 24-bit*). While it's on, other apps can't play sound, and the
+equalizer, ReplayGain, crossfade, sing mode, the critters and visualizers are off. The volume slider at the top
+is bit-perfect; below it the sound is turned down digitally. It plays FLAC, ALAC, WAV, AIFF, MP3, AAC and Ogg
+Vorbis (not Opus). Casting takes over while a speaker plays and hands back afterwards. Admins can turn the
+feature off in **Settings → Features**.
+
 ## Skins and themes
 
 **Settings → Themes** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this

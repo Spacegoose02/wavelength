@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Bit-perfect output on Windows.** Settings → Playback can send songs straight to the sound card in WASAPI
+  exclusive mode at their own sample rate and bit depth, decoded by the app itself (FLAC, ALAC, WAV, AIFF, MP3,
+  AAC, Vorbis), with the format shown as it plays.
 - **Discord status.** The desktop app can show "Listening to" the current song on your Discord profile
   (Settings → Playback), cleared on pause. Talks to the Discord app on the same computer; no extra services.
 - **Public share links.** Share a playlist, album, song or artist with anyone as a web page (song names and

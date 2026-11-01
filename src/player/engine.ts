@@ -280,6 +280,10 @@ export const engine = {
   isRemote() {
     return !!remote;
   },
+  /** Whether `r` is the output in use right now. */
+  remoteIs(r: RemoteOutput) {
+    return remote === r;
+  },
   /** The song about to load, for the speaker's display. */
   setMeta(m: RemoteMeta) {
     remoteMeta = m;

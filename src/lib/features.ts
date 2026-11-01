@@ -34,7 +34,7 @@ export const FEATURE_INFO: FeatureInfo[] = [
   { key: 'publicShares', label: 'Share links for anyone', help: 'Links to a song, album or playlist that people without an account can open in a browser.', standalone: false },
   { key: 'discordStatus', label: 'Discord status', help: 'Shows “Listening to …” on Discord from the Windows app (each person still turns it on).', standalone: true },
   { key: 'mouthTuner', label: 'Critter mouth tuner', help: 'Lets people tune how the critters’ mouths follow the singing. Off puts everyone back on the defaults.', standalone: true },
-  { key: 'exclusiveAudio', label: 'Bit-perfect output (Windows)', help: 'Plays files at their own sample rate straight to the sound card. For audiophiles; the equalizer and visualizers are off while it’s in use.', standalone: true },
+  { key: 'exclusiveAudio', label: 'Bit-perfect output (Windows)', help: 'Plays files at their own sample rate and bit depth straight to the sound card (WASAPI exclusive). People turn it on in Settings → Playback; the equalizer and visualizers are off while it’s in use.', standalone: true },
 ];
 
 const STANDALONE = Object.fromEntries(FEATURE_INFO.map((f) => [f.key, f.standalone])) as Record<FeatureKey, boolean>;

@@ -21,6 +21,7 @@ import { MouthTuner } from '../components/MouthTuner';
 import { useFeature } from '../lib/features';
 import { DjVoiceSettings } from '../components/DjVoiceSettings';
 import { DiscordSettings } from '../components/DiscordSettings';
+import { HifiSettings } from '../components/HifiSettings';
 import { UpdatesTab } from '../components/Updates';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
@@ -711,6 +712,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <PlaybackOptions />
           <DjVoiceSettings />
           <DiscordSettings />
+          <HifiSettings />
           <VersionsPicker />
           <section id="equalizer">
             <h2>Equalizer</h2>
