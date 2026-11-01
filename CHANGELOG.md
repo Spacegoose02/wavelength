@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.24.0
 - **Families.** One Hub for several households: under **Settings → Users → Families** the Hub admin makes families,
   puts people in them, picks **managers**, and decides per family whether its managers may register people, look
   after its kids (bedtimes, limits, the family's own grown-up PIN) and set its own keys. Only the admin sees these
