@@ -14,6 +14,7 @@ import { useDjAvailable } from '../lib/djStatus';
 import { inboxBadge, useInbox } from '../lib/inbox';
 import { KID_VIEWS, useIsKid } from '../lib/kids';
 import { useHub } from '../store/hub';
+import { ProfileButton } from './WhosListening';
 
 const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route['view'][] }[] = [
   { view: 'home', label: 'Home', icon: <IconHome />, also: ['mix', 'blend'] },
@@ -93,7 +94,7 @@ export function LibraryHub() {
   ];
   return (
     <div className="page">
-      <header className="page-head"><h1>Library</h1></header>
+      <header className="page-head row gap"><h1 style={{ flex: 1 }}>Library</h1><ProfileButton compact /></header>
       <div className="hub">
         {items.filter((i) => !kid || KID_VIEWS[i.view]).map((i) => (
           <button key={i.view} className="hub-item" onClick={() => go({ view: i.view } as Route)}>

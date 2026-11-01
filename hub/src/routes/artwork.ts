@@ -6,6 +6,7 @@ import type { Ctx } from '../app.ts';
 import { decodeImage, downloadImage, findArt } from '../artwork.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need, signedIn, str } from '../http.ts';
+import { keyFor } from '../families.ts';
 
 /**
  * Cover art kept on the Hub (docs/HUB.md "Cover art"). An admin looks an album or artist up on Deezer, Apple
@@ -55,9 +56,11 @@ export function artworkRoutes(app: FastifyInstance, { db, config }: Ctx) {
   });
 
   app.get('/api/admin/artwork/search', async (req) => {
-    need(req, 'library.edit');
+    const { user } = need(req, 'library.edit');
     const t = target(req.query);
-    return findArt(t.kind, t.artist, t.album, { fanartKey: config.fanartKey, version: config.version });
+    // the Hub's fanart.tv key (Settings → Server → Shared keys, or WAVELENGTH_FANART_KEY); a family's own wins
+    const fanartKey = keyFor(db, config.secretKey, user.id, 'fanart', config.fanartKey) ?? '';
+    return findArt(t.kind, t.artist, t.album, { fanartKey, version: config.version });
   });
 
   /**

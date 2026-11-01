@@ -5,7 +5,7 @@ vi.hoisted(() => {
   const m = new Map<string, string>();
   globalThis.localStorage ??= { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear(), key: () => null, length: 0 } as Storage;
 });
-import { profilePinHash, STAMPS_KEY, useHub } from '../store/hub';
+import { profilePinHash, sameFamily, STAMPS_KEY, useHub } from '../store/hub';
 import type { HubSession } from '../sources/hub';
 
 const session = (id: number, name: string): HubSession =>
@@ -40,6 +40,22 @@ describe('profiles on a shared device', () => {
     expect(s.profiles.map((p) => p.user.id).sort()).toEqual([2, 3]);
     useHub.getState().switchProfile(99);
     expect(useHub.getState().user?.id).toBe(1);
+  });
+
+  test('never switches into another family, even a profile already on this device', () => {
+    const fam = (id: number, name: string, familyId: number | null) => {
+      const s = session(id, name);
+      return { ...s, user: { ...s.user, familyId } } as HubSession;
+    };
+    useHub.getState().signedIn(fam(1, 'Ana', 1));
+    // signed in here before families existed, or by an older app
+    useHub.setState({ profiles: [{ token: 't2', user: fam(2, 'Ben', 2).user, permissions: [] }, { token: 't3', user: fam(3, 'Cy', 1).user, permissions: [] }] });
+    useHub.getState().switchProfile(2);
+    expect(useHub.getState().user?.id).toBe(1);
+    useHub.getState().switchProfile(3);
+    expect(useHub.getState().user?.id).toBe(3);
+    expect(sameFamily({ familyId: null }, {})).toBe(true);
+    expect(sameFamily({ familyId: 1 }, {})).toBe(false);
   });
 
   test('a PIN hash is tied to the person', async () => {

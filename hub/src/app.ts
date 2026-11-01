@@ -13,6 +13,7 @@ import { deviceForToken } from './devices.ts';
 import { HttpError, RateLimiter } from './http.ts';
 import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
+import { familyRoutes } from './routes/families.ts';
 import { artworkRoutes } from './routes/artwork.ts';
 import { playlistCoverRoutes } from './routes/playlistCovers.ts';
 import { authRoutes } from './routes/auth.ts';
@@ -207,6 +208,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   authRoutes(app, ctx);
   meRoutes(app, ctx);
   adminRoutes(app, ctx);
+  familyRoutes(app, ctx);
   inviteRoutes(app, ctx);
   serviceRoutes(app, ctx);
   proxyRoutes(app, ctx);

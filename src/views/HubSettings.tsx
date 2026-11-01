@@ -9,8 +9,10 @@ import { today } from '../lib/kidTime';
 import { notifyAllowed, notifySupported } from '../lib/notify';
 import { isAndroid } from '../lib/platform';
 import { ProfileSwitcher } from '../components/ProfileSwitcher';
+import { FamiliesAdmin, ServiceFamilies } from './Families';
+import { SwitchPinSetting } from '../components/WhosListening';
 import { HubClient, HubError, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
-import { hubClient, thisDevice, useHub } from '../store/hub';
+import { hubClient, sameFamily, thisDevice, useHub } from '../store/hub';
 import { useFeature } from '../lib/features';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
@@ -91,10 +93,20 @@ function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; 
 /** Signing in; with `adding`, a second person on this device (ProfileSwitcher) and `onCancel` to go back. */
 export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: () => void } = {}) {
   const { url, setUrl, signedIn: first, addProfile } = useHub();
-  const signedIn = adding ? (s: HubSession) => { addProfile(s); onCancel?.(); } : first;
+  const [err, setErr] = useState('');
+  const me = useHub((s) => s.user);
+  // someone added to this device has to be in the same family: switching never crosses families
+  const signedIn = adding ? (s: HubSession) => {
+    if (!sameFamily(me, s.user)) {
+      void new HubClient(url, s.token).logout().catch(() => undefined);
+      setErr(`${s.user.displayName} is in another family, so they can't be added to this device's profiles.`);
+      return;
+    }
+    addProfile(s);
+    onCancel?.();
+  } : first;
   const [draft, setDraft] = useState(url);
   const [health, setHealth] = useState<HubHealth>();
-  const [err, setErr] = useState('');
   const [mode, setMode] = useState<'code' | 'password' | 'invite' | null>(null);
   const [form, setForm] = useState({ username: '', password: '', displayName: '' });
   const [invite, setInvite] = useState('');
@@ -562,6 +574,7 @@ function SignedIn() {
         <button className="btn small ghost" onClick={() => confirm('Sign out of the Hub on this device?') && signOut()}>Sign out</button>
       </div>
 
+      <SwitchPinSetting />
       <ProfileSwitcher onAdd={() => setAdding(true)} />
 
       <div className="editor">
@@ -780,6 +793,8 @@ export function UsersTab() {
         </form>
       </section>
 
+      <FamiliesAdmin users={users} onChange={load} />
+
       <Invites onUsed={load} />
 
       <section>
@@ -900,9 +915,13 @@ function Invites({ onUsed }: { onUsed(): void }) {
   );
 }
 
-/** Kid profiles: the grown-up PIN, and each kid's bedtime and daily listening limit. */
-function KidRulesSection() {
-  const can = useHub((s) => s.permissions.includes('users.manage'));
+/**
+ * Kid profiles: the grown-up PIN, and each kid's bedtime and daily listening limit. `family`: a family manager's
+ * view (Settings → My family), which the Hub keeps to their family's kids and their family's own PIN.
+ */
+export function KidRulesSection({ family }: { family?: string } = {}) {
+  const admin = useHub((s) => s.permissions.includes('users.manage'));
+  const can = admin || !!family;
   const [data, setData] = useState<{ pinSet: boolean; kids: { userId: number; displayName: string; rules: KidRules; usedSeconds: number }[] }>();
   const [err, setErr] = useState('');
   const [msg, setMsg] = useState('');
@@ -927,7 +946,7 @@ function KidRulesSection() {
 
   return (
     <section>
-      <h2>Kid profiles</h2>
+      <h2>{family ? `${family}'s kids` : 'Kid profiles'}</h2>
       <p className="muted small">
         Kids get a simpler menu and only kid-safe music. Music stops at bedtime and when today's time is up, on all their
         devices. The <b>grown-up PIN</b> unlocks 30 more minutes, and is needed to sign out of a kid profile.
@@ -935,7 +954,7 @@ function KidRulesSection() {
       {err && <div className="errors">{err}</div>}
       <div className="source-row">
         <div className="track-main">
-          <div className="track-title">Grown-up PIN</div>
+          <div className="track-title">Grown-up PIN{family ? ` for ${family}` : ''}</div>
           <div className="track-sub">{data?.pinSet ? 'Set' : 'Not set: kids can’t be unlocked or signed out until you set one'}</div>
         </div>
         <button className="btn small" onClick={async () => {
@@ -950,7 +969,7 @@ function KidRulesSection() {
         }}>{data?.pinSet ? 'Change' : 'Set PIN'}</button>
         {data?.pinSet && <button className="btn small ghost" onClick={() => confirm('Remove the grown-up PIN?') && c.setKidPin(null).then(load).catch((e) => setErr(errText(e)))}>Remove</button>}
       </div>
-      {data && !data.kids.length && <p className="muted">No kid profiles yet. Add someone with the <b>Kid</b> role below.</p>}
+      {data && !data.kids.length && <p className="muted">No kid profiles yet. Add someone with the <b>Kid</b> role{family ? ' above' : ' below'}.</p>}
       {data?.kids.map((k) => (
         <form key={k.userId} className="source-row kid-rules" onSubmit={(e) => {
           e.preventDefault();
@@ -1131,6 +1150,7 @@ export function HubAccess({ serviceId, kind }: { serviceId: number; kind: string
           </div>
         );
       })}
+      <ServiceFamilies serviceId={svc.id} chosen={svc.families ?? []} onSaved={(families) => setSvc({ ...svc, families })} />
       <p className="muted small">Admins can always use every server. With an own login, that person gets it instead of the shared one{svc.access === 'chosen' ? ', and setting one also lets them use the server' : ''}.</p>
     </div>
   );

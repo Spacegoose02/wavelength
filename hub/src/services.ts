@@ -72,6 +72,8 @@ export interface AdminService {
   /** The secret key changed since these were saved, so they can't be read. Re-enter them. */
   unreadable: boolean;
   users: { userId: number; secretsSet: string[]; unreadable: boolean }[];
+  /** Only these families get it (families.ts); empty = every family. Admins always do. */
+  families: number[];
 }
 
 /** What a device gets for its user. */
@@ -108,6 +110,30 @@ const close = (key: Buffer, fields: Fields, aad: string) => (Object.keys(fields)
 
 const rows = (db: Db) => db.prepare('SELECT * FROM services ORDER BY position, id').all() as unknown as Row[];
 const getRow = (db: Db, id: number) => db.prepare('SELECT * FROM services WHERE id = ?').get(id) as unknown as Row | undefined;
+const familyIds = (db: Db, id: number) =>
+  (db.prepare('SELECT family_id FROM service_families WHERE service_id = ? ORDER BY family_id').all(id) as { family_id: number }[]).map((r) => r.family_id);
+
+/** A server limited to some families is only for people in them (and admins). */
+const familyAllows = (db: Db, id: number, user: { role: string; familyId: number | null }) => {
+  if (user.role === 'admin') return true;
+  const ids = familyIds(db, id);
+  return !ids.length || (user.familyId !== null && ids.includes(user.familyId));
+};
+
+/** Which families get this server; an empty list means every family. */
+export function setServiceFamilies(db: Db, key: Buffer, id: number, ids: unknown): AdminService {
+  if (!getRow(db, id)) throw new HttpError(404, 'No such server');
+  if (!Array.isArray(ids) || ids.length > 50) throw new HttpError(400, 'Send ids: the families’ ids, or none for every family');
+  const list = [...new Set(ids.map(Number))];
+  tx(db, () => {
+    for (const f of list) if (!db.prepare('SELECT 1 FROM families WHERE id = ?').get(f)) throw new HttpError(400, 'No such family');
+    db.prepare('DELETE FROM service_families WHERE service_id = ?').run(id);
+    const add = db.prepare('INSERT INTO service_families (service_id, family_id) VALUES (?, ?)');
+    for (const f of list) add.run(id, f);
+  });
+  return getService(db, key, id)!;
+}
+
 const userRows = (db: Db, id: number) => db.prepare('SELECT user_id, secrets FROM service_users WHERE service_id = ? ORDER BY user_id').all(id) as { user_id: number; secrets: string | null }[];
 
 export function listServices(db: Db, key: Buffer): AdminService[] {
@@ -126,6 +152,7 @@ export function listServices(db: Db, key: Buffer): AdminService[] {
         const own = open(key, u.secrets, aadUser(r.id, u.user_id));
         return { userId: u.user_id, secretsSet: Object.keys(own.fields), unreadable: own.unreadable };
       }),
+      families: familyIds(db, r.id),
     };
   });
 }
@@ -261,7 +288,7 @@ export function servicesFor(db: Db, key: Buffer, { user, device, permissions }: 
     const allowed = s.download
       ? permissions.includes('downloads.run')
       : r.access === 'everyone' || user.role === 'admin' || (r.access === 'chosen' && !!mine);
-    if (!allowed) continue;
+    if (!allowed || !familyAllows(db, r.id, user)) continue;
     const own = open(key, mine?.secrets ?? null, aadUser(r.id, user.id)).fields;
     // Navidrome is per person: no own login yet, nothing to hand over
     if (r.kind === 'navidrome' && !(own.username && own.password)) continue;
@@ -302,6 +329,8 @@ export function relayTarget(db: Db, key: Buffer, id: number, userId: number, rol
   if (!r || r.kind !== 'navidrome' || !relayed(role, JSON.parse(r.config) as Config)) return undefined;
   const mine = db.prepare('SELECT secrets FROM service_users WHERE service_id = ? AND user_id = ?').get(id, userId) as { secrets: string | null } | undefined;
   if (!(r.access === 'everyone' || role === 'admin' || (r.access === 'chosen' && mine))) return undefined;
+  const familyId = (db.prepare('SELECT family_id FROM users WHERE id = ?').get(userId) as { family_id: number | null } | undefined)?.family_id ?? null;
+  if (!familyAllows(db, id, { role, familyId })) return undefined;
   const own = open(key, mine?.secrets ?? null, aadUser(id, userId)).fields;
   return own.username && own.password ? { url: r.url, username: own.username, password: own.password } : undefined;
 }

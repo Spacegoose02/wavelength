@@ -3,20 +3,20 @@ import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { featureOn, requireFeature } from '../features.ts';
 import { clientIp, need, signedIn } from '../http.ts';
-import { saveTourSettings, tourSettings } from '../tours.ts';
+import { saveTourSettings, tourKey, tourSettings } from '../tours.ts';
 
 /** Tour dates (tours.ts): listeners ask for an artist's dates; admins save the provider and key. */
 export function tourRoutes(app: FastifyInstance, { db, config, tours }: Ctx) {
   app.get<{ Querystring: { artist?: string } }>('/api/tours', async (req) => {
     const { user } = signedIn(req);
     requireFeature(db, 'tourDates', user);
-    return { events: await tours.upcoming(req.query.artist ?? '') };
+    return { events: await tours.upcoming(req.query.artist ?? '', user.id) };
   });
 
   /** Whether the app should show tour dates at all (on, and a key saved). */
   app.get('/api/tours/status', async (req) => {
     const { user } = signedIn(req);
-    return { available: featureOn(db, 'tourDates', user) && tourSettings(db, config.secretKey).keySet };
+    return { available: featureOn(db, 'tourDates', user) && !!tourKey(db, config.secretKey, user.id) };
   });
 
   app.get('/api/admin/tours', async (req) => {

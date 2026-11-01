@@ -6,6 +6,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
+import { useHub } from '../store/hub';
 import { featureOn } from './features';
 import { isTauri } from './http';
 import { activityFor } from './discordActivity';
@@ -27,8 +28,12 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let last = '';
 let shown = false;
 
+/** The Discord app ID to use: the Hub's (the family's or the whole Hub's) wins over one typed on this device. */
+export const discordAppId = (device: string, hub = useHub.getState().shared?.discordAppId) => (hub || device).trim();
+
 function update() {
-  const { on, appId } = useSettings.getState().discord;
+  const { on } = useSettings.getState().discord;
+  const appId = discordAppId(useSettings.getState().discord.appId);
   const p = usePlayer.getState();
   const t = p.queue[p.index];
   const want = canDiscord && on && !!appId && featureOn('discordStatus') && p.playing && !!t && t.kind !== 'book';
@@ -61,5 +66,6 @@ export function startDiscord() {
     if (s.index !== prev.index || s.playing !== prev.playing || s.queue !== prev.queue || Math.abs(s.position - prev.position) > 3) soon();
   });
   useSettings.subscribe((s, prev) => s.discord !== prev.discord && soon());
+  useHub.subscribe((s, prev) => s.shared?.discordAppId !== prev.shared?.discordAppId && soon());
   soon();
 }

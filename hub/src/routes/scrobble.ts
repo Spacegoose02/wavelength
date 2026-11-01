@@ -7,7 +7,7 @@ import { SERVICES, type Service } from '../scrobble.ts';
 export function scrobbleRoutes(app: FastifyInstance, { scrobbler }: Ctx) {
   app.get('/api/me/scrobble', async (req) => {
     const { user } = signedIn(req);
-    return { accounts: scrobbler.accounts(user.id), lastfmAvailable: scrobbler.lastfmAvailable };
+    return { accounts: scrobbler.accounts(user.id), lastfmAvailable: scrobbler.lastfmAvailable(user.id) };
   });
 
   /** `{ token }` for ListenBrainz; `{ username, password }` for Last.fm (the password isn't kept). */

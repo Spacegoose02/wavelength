@@ -1,6 +1,7 @@
 import { seal, unseal } from './crypto.ts';
 import type { Db } from './db.ts';
 import { HttpError } from './http.ts';
+import { familyKeyFor } from './families.ts';
 
 /**
  * Tour dates (the tourDates feature): upcoming concerts for an artist from Ticketmaster's Discovery API or
@@ -41,7 +42,10 @@ export function tourSettings(db: Db, secretKey: Buffer) {
   return { provider: s.provider, keySet: !!key, hint: key ? `…${key.slice(-4)}` : null };
 }
 
-export function tourKey(db: Db, secretKey: Buffer): string | null {
+/** The Hub's key; with `userId`, their family's own key (families.ts) wins. */
+export function tourKey(db: Db, secretKey: Buffer, userId?: number | null): string | null {
+  const own = familyKeyFor(db, secretKey, userId, 'tours');
+  if (own) return own;
   const s = read(db);
   if (!s.key) return null;
   try {
@@ -116,10 +120,10 @@ export class Tours {
     this.fetch = fetcher;
   }
 
-  async upcoming(artist: string): Promise<TourEvent[]> {
+  async upcoming(artist: string, userId?: number): Promise<TourEvent[]> {
     const name = artist.trim().slice(0, 200);
     if (!name) throw new HttpError(400, 'Which artist?');
-    const key = tourKey(this.db, this.secretKey);
+    const key = tourKey(this.db, this.secretKey, userId);
     if (!key) throw new HttpError(409, 'Tour dates aren’t set up yet: an admin needs to add a key in Settings → Features');
     const { provider } = read(this.db);
     const ck = `${provider}:${norm(name)}`;

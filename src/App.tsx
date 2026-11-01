@@ -19,6 +19,7 @@ import { startTogether } from './lib/together';
 import { WebSignIn } from './components/WebSignIn';
 import { startKidTime } from './lib/kidTime';
 import { KidLockScreen, KidSettings, KidSignedOutScreen } from './components/KidLock';
+import { ProfileButton } from './components/WhosListening';
 import { useHub } from './store/hub';
 import { useDjAvailable } from './lib/djStatus';
 import { skinGroup, useSettings } from './store/settings';
@@ -251,6 +252,7 @@ export default function App() {
       {!phone && (
         <nav className="sidebar">
           <div className="brand"><span className="brand-mark" />Wavelength</div>
+          <ProfileButton />
           {NAV.filter((n) => (n.view !== 'inbox' || hubOn) && (n.view !== 'dj' || dj) && (!kid || KID_VIEWS[n.view])).map((n) => (
             <button key={n.view} className={`nav ${route.view === n.view ? 'on' : ''}`} onClick={() => go({ view: n.view } as Route)}>
               {n.icon}<span>{kid ? KID_VIEWS[n.view] : n.label}</span>

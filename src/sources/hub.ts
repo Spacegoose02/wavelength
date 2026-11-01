@@ -22,6 +22,55 @@ export interface HubUser {
   autodownload: boolean;
   disabled: boolean;
   createdAt: number;
+  /** The family they're in (docs/HUB.md "Families"); older Hubs leave these out. */
+  familyId?: number | null;
+  familyManager?: boolean;
+  /** Has a PIN their family switches to them with. */
+  hasSwitchPin?: boolean;
+}
+
+/** A family on the Hub, as the Hub admin sees it (and a family's manager sees their own). */
+export interface HubFamily {
+  id: number;
+  name: string;
+  /** Its managers may add people and make invite links into it. */
+  canRegister: boolean;
+  /** Its managers may set the family's own shared keys. */
+  ownKeys: boolean;
+  /** Its managers set bedtimes, limits and a grown-up PIN for its kids. */
+  kidControls: boolean;
+  maxPeople: number | null;
+  people: number;
+}
+
+export type HubSharedKeyName = 'anthropic' | 'openai' | 'ollama' | 'tours' | 'lastfmKey' | 'lastfmSecret' | 'fanart' | 'discordAppId';
+/** A shared key's state: whether it's set and its last characters, never the value of a secret. */
+export interface HubSharedKey {
+  name: HubSharedKeyName;
+  label: string;
+  secret: boolean;
+  /** Where the whole Hub's value lives: here, or the AI DJ's or tour dates' own settings. */
+  hubWide: 'here' | 'dj' | 'tours';
+  set: boolean;
+  hint: string | null;
+}
+
+/** Someone in your family, for the profile picker. */
+export interface HubFamilyPerson {
+  id: number;
+  displayName: string;
+  role: HubRole;
+  hasSwitchPin: boolean;
+}
+
+/** A person in the family a manager manages. */
+export interface HubFamilyMember extends HubFamilyPerson {
+  username: string;
+  familyManager: boolean;
+  disabled: boolean;
+  devices: number;
+  /** A kid's parents (grown-ups in the family), whose Inbox gets their requests and weekly report. */
+  guardians?: number[];
 }
 
 export interface HubDevice {
@@ -436,6 +485,8 @@ export interface HubAdminService {
   secretsSet: string[];
   unreadable: boolean;
   users: { userId: number; secretsSet: string[]; unreadable: boolean }[];
+  /** Only these families get it; empty = every family (older Hubs leave it out). */
+  families?: number[];
 }
 
 /** Secrets to save: a value sets it, '' or null clears it, a missing key keeps it. */
@@ -732,7 +783,7 @@ export class HubClient {
     return r.status === 202 ? null : r.data;
   }
 
-  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean> }>('GET', '/api/me');
+  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean>; shared?: { discordAppId?: string | null } }>('GET', '/api/me');
   mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes${fresh ? '?fresh=1' : ''}`);
   blendPeople = () => this.call<{ optedIn: boolean; people: { id: number; displayName: string; optedIn: boolean }[] }>('GET', '/api/blend/people');
   setBlendOptIn = (on: boolean) => this.call<{ optedIn: boolean }>('PUT', '/api/blend/optin', { on });
@@ -895,7 +946,7 @@ export class HubClient {
     this.call<{ user: HubAdminUser }>('PATCH', `/api/admin/users/${id}`, b);
   deleteUser = (id: number) => this.call('DELETE', `/api/admin/users/${id}`);
   invites = () => this.call<{ invites: HubInvite[] }>('GET', '/api/admin/invites');
-  createInvite = (b: { role: HubRole; displayName?: string; autodownload?: boolean; days?: number }) =>
+  createInvite = (b: { role: HubRole; displayName?: string; autodownload?: boolean; days?: number; familyId?: number | null }) =>
     this.call<{ id: number; url: string; code: string; expiresAt: number }>('POST', '/api/admin/invites', b);
   cancelInvite = (id: number) => this.call('DELETE', `/api/admin/invites/${id}`);
   /** Make an account from an invite link (or its code) and sign this device in. */
@@ -978,7 +1029,28 @@ export class HubClient {
   deleteFlag = (id: number) => this.call('DELETE', `/api/admin/flags/${id}`);
   adminKids = (day: string) => this.call<{ pinSet: boolean; kids: { userId: number; displayName: string; rules: KidRules; usedSeconds: number }[] }>('GET', `/api/admin/kids?day=${day}`);
   setKidRules = (userId: number, rules: Partial<KidRules>) => this.call<{ rules: KidRules }>('PUT', `/api/admin/kids/${userId}`, rules);
-  setKidPin = (pin: string | null) => this.call<{ pinSet: boolean }>('PUT', '/api/admin/kid-pin', { pin });
+  setKidPin = (pin: string | null, familyId?: number) => this.call<{ pinSet: boolean }>('PUT', '/api/admin/kid-pin', { pin, ...(familyId && { familyId }) });
+  // families (docs/HUB.md "Families"): the Hub admin
+  families = () => this.call<{ families: HubFamily[] }>('GET', '/api/admin/families');
+  createFamily = (b: Partial<Omit<HubFamily, 'id' | 'people'>> & { name: string }) => this.call<{ family: HubFamily }>('POST', '/api/admin/families', b);
+  updateFamily = (id: number, b: Partial<Omit<HubFamily, 'id' | 'people'>>) => this.call<{ family: HubFamily }>('PATCH', `/api/admin/families/${id}`, b);
+  deleteFamily = (id: number) => this.call('DELETE', `/api/admin/families/${id}`);
+  setUserFamily = (userId: number, familyId: number | null, manager = false) => this.call<{ user: HubUser }>('PUT', `/api/admin/users/${userId}/family`, { familyId, manager });
+  clearSwitchPin = (userId: number) => this.call<{ user: HubUser }>('DELETE', `/api/admin/users/${userId}/switch-pin`);
+  /** familyId 0 = the whole Hub. */
+  sharedKeys = (familyId = 0) => this.call<{ keys: HubSharedKey[]; env: { lastfmKey: boolean; lastfmSecret: boolean; fanart: boolean } }>('GET', `/api/admin/keys?familyId=${familyId}`);
+  saveSharedKeys = (familyId: number, values: Partial<Record<HubSharedKeyName, string | null>>) => this.call<{ keys: HubSharedKey[] }>('PUT', '/api/admin/keys', { familyId, values });
+  setServiceFamilies = (id: number, ids: number[]) => this.call<{ service: HubAdminService }>('PUT', `/api/admin/services/${id}/families`, { ids });
+  // a family's managers
+  myFamilyAdmin = () => this.call<{ family: HubFamily; people: HubFamilyMember[]; keys?: HubSharedKey[] }>('GET', '/api/family');
+  addFamilyMember = (b: { username: string; displayName?: string; role: 'member' | 'kid'; password: string }) => this.call<{ user: HubFamilyMember }>('POST', '/api/family/users', b);
+  updateFamilyMember = (id: number, b: Partial<{ displayName: string; role: 'member' | 'kid'; password: string; disabled: boolean }>) => this.call<{ user: HubFamilyMember }>('PATCH', `/api/family/users/${id}`, b);
+  setFamilyGuardians = (kidId: number, ids: number[]) => this.call<{ ok: true }>('PUT', `/api/family/users/${kidId}/guardians`, { ids });
+  saveFamilyKeys = (values: Partial<Record<HubSharedKeyName, string | null>>) => this.call<{ keys: HubSharedKey[] }>('PUT', '/api/family/keys', { values });
+  // everyone: switching profiles on a shared device
+  myFamily = () => this.call<{ name?: string | null; people: HubFamilyPerson[] }>('GET', '/api/me/family');
+  setSwitchPin = (pin: string | null) => this.call<{ user: HubUser }>('PUT', '/api/me/switch-pin', { pin });
+  switchTo = (userId: number, pin: string | undefined, device: { deviceName: string; platform: string }) => this.call<HubSession>('POST', '/api/me/switch', { userId, pin, ...device });
   // AI DJ
   djStatus = () => this.call<HubDjStatus>('GET', '/api/dj');
   djChats = () => this.call<{ chats: HubDjChat[]; spent: number; limit: number | null }>('GET', '/api/dj/chats');
