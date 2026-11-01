@@ -524,6 +524,23 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   );
   CREATE INDEX sonic_songs_name ON sonic_songs(artist COLLATE NOCASE, title COLLATE NOCASE);
   `,
+  `
+  -- Public share links (publicLinks.ts): a song list anyone with the link can see, without signing in.
+  CREATE TABLE public_links (
+    token      TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    subtitle   TEXT,
+    cover      TEXT,
+    note       TEXT,
+    payload    TEXT NOT NULL,      -- JSON { tracks: [{ title, artist, album?, duration? }] } or { artist }
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER,
+    views      INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX public_links_user ON public_links(user_id);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

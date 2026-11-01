@@ -634,6 +634,10 @@ with a 4xx status.
 | `POST /api/admin/requests/:id/reject`, `/have`, `DELETE …/:id` | `requests.approve` | reject `{ reason? }` / "already in the library" / remove |
 | `GET /api/people` | signed in | who you can share with: `{ people: [{ id, username, displayName, kid }] }` |
 | `POST /api/shares` | signed in | `{ to: userId \| null (everyone), kind, title, subtitle?, cover?, note?, payload }`; `kind` is playlist, album, track, artist, station or favorites; `payload` is `{ tracks: [{ title, artist, album?, duration?, coverUrl? }] }`, `{ station: { name, streamUrl, … } }` or `{ artist }` (512 KB at most) |
+| `POST /api/public-links` | signed in, `publicShares` on, not kids | `{ kind: playlist\|album\|track\|artist, title, subtitle?, cover?, note?, payload, days? }` → `{ link, url }`; only names are kept (500 songs at most), a cover with a login in it is dropped |
+| `GET /api/public-links` | signed in | your links with `views`, `songs` and `url` |
+| `DELETE /api/public-links/:token` | the owner, or `users.manage` | takes it down |
+| `GET /s/:token` | anyone | the public page; `404` when expired, taken down, its owner disabled or the feature off |
 | `GET /api/shares?sent=1` | signed in | shared with you (or `sent=1`: what you shared), newest first |
 | `GET /api/shares/counts`, `POST /api/shares/seen` | signed in | `{ unseen }` / mark `{ ids? }` (or all) as seen |
 | `POST /api/shares/:id/hide`, `DELETE /api/shares/:id` | signed in | take one off your list / unshare (the sender, or an admin) |

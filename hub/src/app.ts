@@ -2,6 +2,7 @@ import { SonicWorker } from './sonic/worker.ts';
 import { sonicRoutes } from './routes/sonic.ts';
 import { tourRoutes, videoRoutes } from './routes/tours.ts';
 import { Videos } from './videos.ts';
+import { publicLinkRoutes } from './routes/publicLinks.ts';
 import { Tours } from './tours.ts';
 import { deezerLookups, Mixes, type MixLookups } from './mixes.ts';
 import { mixRoutes } from './routes/mixes.ts';
@@ -222,6 +223,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   sonicRoutes(app, ctx);
   tourRoutes(app, ctx);
   videoRoutes(app, ctx);
+  publicLinkRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

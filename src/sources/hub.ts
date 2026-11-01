@@ -589,6 +589,18 @@ export class HubError extends Error {
   }
 }
 
+export interface HubPublicLink {
+  token: string;
+  kind: string;
+  title: string;
+  subtitle: string | null;
+  createdAt: number;
+  expiresAt: number | null;
+  views: number;
+  songs?: number;
+  url?: string;
+}
+
 export interface HubTourEvent {
   date: string;
   time?: string;
@@ -726,6 +738,10 @@ export class HubClient {
   requestsSeen = () => this.call('POST', '/api/requests/seen', {});
   cancelRequest = (id: number) => this.call('DELETE', `/api/requests/${id}`);
   people = () => this.call<{ people: HubPerson[] }>('GET', '/api/people');
+  /** Public share links (hub/src/publicLinks.ts): a page anyone with the link can open. */
+  makePublicLink = (b: Omit<HubShareInput, 'to' | 'note'> & { note?: string; days?: number }) => this.call<{ link: HubPublicLink; url: string }>('POST', '/api/public-links', b);
+  publicLinks = () => this.call<{ links: HubPublicLink[] }>('GET', '/api/public-links');
+  deletePublicLink = (token: string) => this.call('DELETE', `/api/public-links/${encodeURIComponent(token)}`);
   share = (b: HubShareInput) => this.call<{ share: HubShare }>('POST', '/api/shares', b);
   shares = (sent = false) => this.call<{ shares: HubShare[] }>('GET', `/api/shares${sent ? '?sent=1' : ''}`);
   shareCounts = () => this.call<{ unseen: number }>('GET', '/api/shares/counts');

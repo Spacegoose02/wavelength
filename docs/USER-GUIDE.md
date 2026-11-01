@@ -1403,6 +1403,16 @@ keeps them as a Wavelength playlist, and it tells you how many it couldn't find.
 away, and an artist opens a search. **✕** takes it off your list. **You shared** lists what you've sent, with
 **Unshare**.
 
+### Public links
+
+With **Public share links** on (**Settings → Features**, never for kid profiles), **Share** on a playlist, album,
+song or artist also has **Anyone with the link**: **Copy a link for a week** or **Copy a link that lasts**. The
+link opens a page in any browser with the cover, the song list, your note, and buttons to find each song on
+YouTube Music, Spotify, Apple Music or Deezer. No music, files or logins go out, only names. It works for people
+who can reach your Hub's address (`WAVELENGTH_PUBLIC_URL`), so the Hub has to be reachable from the internet for
+friends outside the house. **Settings → Account → Your public links** shows how often each was opened, and
+**Take down** removes one. Turning the feature off hides them all.
+
 ### Household playlists
 
 **Playlists → Household** holds playlists the whole house adds to ("Saturday cleaning", "Road trip"). **Start

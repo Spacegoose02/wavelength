@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Public share links.** Share a playlist, album, song or artist with anyone as a web page (song names and
+  "play it on…" links, never the music), for a week or for good; see and take them down in Settings → Account.
 - **Music videos.** Now Playing offers the song's official video when the Hub's yt-dlp finds one, in a
   no-cookie YouTube player; the music pauses and picks up again afterwards. Off for kids by default.
 - **Sing mode.** A **Sing** button in Now Playing turns the lead vocal down (adjustable) and opens the lyrics,
