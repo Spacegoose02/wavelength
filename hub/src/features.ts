@@ -18,6 +18,7 @@ export const FEATURES = {
   automix: { on: true, kids: true },
   cast: { on: true, kids: true },
   djVoice: { on: false, kids: false },
+  djWeb: { on: false, kids: false },
   artistInfo: { on: true, kids: true },
   tourDates: { on: false, kids: false },
   singMode: { on: true, kids: true },

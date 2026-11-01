@@ -18,6 +18,8 @@ export interface DjRequest {
   messages: DjMessage[];
   /** true on the last allowed step: answer without calling more tools. */
   noTools?: boolean;
+  /** Let the model search the web and read pages, at most this many searches in this call. */
+  web?: { maxSearches: number };
   /** Overrides for short one-off calls (the talking DJ's links). */
   effort?: DjSettings['effort'];
   maxTokens?: number;
@@ -40,6 +42,27 @@ export interface DjProvider {
 
 export type ProviderFactory = (settings: DjSettings, apiKey: string) => DjProvider;
 
+/** Models with the newer web search / web fetch tools (dynamic filtering); others get the basic ones. */
+const WEB_2026_MODELS = new Set([
+  'claude-opus-5-5', 'claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-opus-4-6',
+  'claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-6',
+]);
+
+/** Anthropic's own web tools: they run on Anthropic's side, so the Hub only declares them. */
+export function webTools(model: string, maxSearches: number): Anthropic.Beta.BetaToolUnion[] {
+  // pages only: a fetch is limited to links already in the chat (the listener's, or from a search)
+  const fetchMax = Math.max(2, maxSearches);
+  return WEB_2026_MODELS.has(model)
+    ? [
+      { type: 'web_search_20260209', name: 'web_search', max_uses: maxSearches },
+      { type: 'web_fetch_20260209', name: 'web_fetch', max_uses: fetchMax, max_content_tokens: 20_000 },
+    ]
+    : [
+      { type: 'web_search_20250305', name: 'web_search', max_uses: maxSearches },
+      { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: fetchMax, max_content_tokens: 20_000 },
+    ];
+}
+
 /** Models that take `fallbacks: "default"` (server-side refusal fallback). */
 const FALLBACK_MODELS = new Set(['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-opus-5', 'claude-fable-5-1']);
 
@@ -61,12 +84,13 @@ export const anthropicProvider: ProviderFactory = (settings, apiKey) => {
   return {
     async create(req) {
       let m: Anthropic.Beta.BetaMessage;
+      const tools = req.web ? [...req.tools, ...webTools(settings.model, req.web.maxSearches)] : req.tools;
       try {
         m = await client.beta.messages.create({
           model: settings.model,
           max_tokens: req.maxTokens ?? 16000,
           system: req.system,
-          ...(req.tools.length && { tools: req.tools, tool_choice: req.noTools ? { type: 'none' as const } : { type: 'auto' as const } }),
+          ...(tools.length && { tools, tool_choice: req.noTools ? { type: 'none' as const } : { type: 'auto' as const } }),
           messages: req.messages,
           // thinking is on by default on the current models; effort sets how much
           output_config: { effort: req.effort ?? settings.effort },
@@ -86,6 +110,7 @@ export const anthropicProvider: ProviderFactory = (settings, apiKey) => {
           output: m.usage.output_tokens ?? 0,
           cacheRead: m.usage.cache_read_input_tokens ?? 0,
           cacheWrite: m.usage.cache_creation_input_tokens ?? 0,
+          webSearches: m.usage.server_tool_use?.web_search_requests ?? 0,
         },
       };
     },

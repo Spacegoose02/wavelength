@@ -5,6 +5,7 @@ import { hubClient } from '../store/hub';
 import { useUi } from '../store/ui';
 import { useIsKid } from '../lib/kids';
 import { Empty, Spinner } from '../components/common';
+import { DJ_NAME, TrashPanda } from '../components/TrashPanda';
 
 /**
  * The AI DJ (docs/AI-DJ.md): chat to find music, build playlists, queue songs and find missing albums.
@@ -16,6 +17,11 @@ const IDEAS = [
   'Play something like what I listened to this week',
   'Which Radiohead albums am I missing?',
   'Queue up some chill music for dinner',
+];
+/** With web search on (Settings → AI DJ). */
+const WEB_IDEAS = [
+  'What are the top EDM hits right now? Play the ones I have',
+  'Build me a new EDM mix from this setlist: (paste the link)',
 ];
 const KID_IDEAS = ['Play some fun songs to dance to', 'Make me a playlist for the car', 'Play songs like my favorite one'];
 
@@ -117,7 +123,7 @@ export function DJ() {
   return (
     <div className="page dj">
       <header className="page-head">
-        <h1>AI DJ <small>{status.model}</small></h1>
+        <h1>{DJ_NAME} <small>AI DJ · {status.model}</small></h1>
         <div className="dj-chats">
           <select value={chatId ?? ''} onChange={(e) => open(e.target.value ? Number(e.target.value) : null)} aria-label="Chats">
             <option value="">New chat</option>
@@ -130,17 +136,35 @@ export function DJ() {
       <div className="dj-log">
         {!entries.length && (
           <div className="dj-ideas">
-            <p className="muted">Ask for a playlist, a mood, something like an artist you love, or the albums you’re missing.</p>
-            {(kid ? KID_IDEAS : IDEAS).map((i) => <button key={i} className="btn small" onClick={() => send(i)}>{i}</button>)}
+            <p className="muted">Hey, I’m {DJ_NAME}. Ask for a playlist, a mood, something like an artist you love, or the albums you’re missing.</p>
+            {[...(kid ? KID_IDEAS : IDEAS), ...(status.web && !kid ? WEB_IDEAS : [])].map((i) => (
+              <button key={i} className="btn small" onClick={() => (i.includes('(paste') ? setDraft(i.replace('(paste the link)', '')) : send(i))}>{i}</button>
+            ))}
           </div>
         )}
-        {entries.map((e, i) => (
-          <div key={i} className={`dj-msg ${e.role}`}>
-            {e.text && <div className="dj-bubble">{e.text}</div>}
-            {e.tools?.length ? <div className="dj-tools muted small">{[...new Set(e.tools.map(toolLabel))].join(' · ')}</div> : null}
+        {entries.map((e, i) => {
+          const body = (
+            <>
+              {e.role === 'assistant' && <div className="dj-name">{DJ_NAME}</div>}
+              {e.text && <div className="dj-bubble">{e.text}</div>}
+              {e.tools?.length ? <div className="dj-tools muted small">{[...new Set(e.tools.map(toolLabel))].join(' · ')}</div> : null}
+            </>
+          );
+          if (e.role === 'user') return <div key={i} className="dj-msg user">{body}</div>;
+          if (!e.text && !e.tools?.length) return null;
+          return (
+            <div key={i} className="dj-row">
+              <TrashPanda />
+              <div className="dj-msg assistant">{body}</div>
+            </div>
+          );
+        })}
+        {busy && (
+          <div className="dj-row">
+            <TrashPanda busy />
+            <div className="dj-msg assistant"><div className="dj-busy muted small">{busy}</div></div>
           </div>
-        ))}
-        {busy && <div className="dj-msg assistant"><div className="dj-busy muted small"><Spinner /> {busy}</div></div>}
+        )}
         {playlistId && !busy && <button className="btn small" onClick={() => useUi.getState().go({ view: 'playlist', id: playlistId })}>Open the playlist</button>}
         {error && <p className="card-err">{error}</p>}
         <div ref={bottom} />

@@ -1,6 +1,7 @@
 import { seal, unseal } from '../crypto.ts';
 import type { Db } from '../db.ts';
 import { HttpError } from '../http.ts';
+import { featureOn } from '../features.ts';
 import type { User } from '../users.ts';
 
 /**
@@ -60,6 +61,10 @@ export interface DjSettings {
   householdLimit: number | null;
   /** New accounts' own monthly limit when they're switched on, USD. null = none. */
   defaultUserLimit: number | null;
+  /** Most web searches in one model call. */
+  webMaxSearches: number;
+  /** USD per 1,000 web searches (Anthropic: $10). */
+  webSearchPrice: number;
 }
 
 interface Stored extends DjSettings {
@@ -76,6 +81,8 @@ export const DEFAULTS: DjSettings = {
   prices: {},
   householdLimit: null,
   defaultUserLimit: 5,
+  webMaxSearches: 3,
+  webSearchPrice: 10,
 };
 
 function readStored(db: Db): Stored {
@@ -162,6 +169,16 @@ export function saveSettings(db: Db, secretKey: Buffer, body: unknown): { settin
   if (b.fallback !== undefined) next.fallback = b.fallback === true;
   if (b.householdLimit !== undefined) next.householdLimit = money(b.householdLimit, 'The household limit');
   if (b.defaultUserLimit !== undefined) next.defaultUserLimit = money(b.defaultUserLimit, 'The limit for new people');
+  if (b.webMaxSearches !== undefined) {
+    const n = Number(b.webMaxSearches);
+    if (!Number.isInteger(n) || n < 1 || n > 10) throw new HttpError(400, 'Web searches per step must be 1 to 10');
+    next.webMaxSearches = n;
+  }
+  if (b.webSearchPrice !== undefined) {
+    const n = Number(b.webSearchPrice);
+    if (!Number.isFinite(n) || n < 0 || n > 1000) throw new HttpError(400, 'The web search price is dollars per 1,000 searches');
+    next.webSearchPrice = n;
+  }
   if (b.prices !== undefined) {
     if (!b.prices || typeof b.prices !== 'object') throw new HttpError(400, 'Prices must be an object');
     const prices: Record<string, Price> = {};
@@ -189,13 +206,25 @@ export interface TokenUsage {
   output: number;
   cacheRead: number;
   cacheWrite: number;
+  /** Web searches the provider ran in this call (billed per search, on top of tokens). */
+  webSearches?: number;
 }
 
-/** Estimated USD for one call. Unknown models (no price set) count as free, and the admin page says so. */
-export function costOf(p: Price | null, u: TokenUsage): number {
-  if (!p) return 0;
-  return (u.input * p.input + u.output * p.output + u.cacheRead * p.cacheRead + u.cacheWrite * p.cacheWrite) / 1e6;
+/**
+ * Estimated USD for one call. Unknown models (no price set) count their tokens as free, and the admin page says
+ * so; web searches are always counted. Pages read with web fetch cost only their tokens.
+ */
+export function costOf(p: Price | null, u: TokenUsage, searchPrice = DEFAULTS.webSearchPrice): number {
+  const searches = ((u.webSearches ?? 0) * searchPrice) / 1000;
+  if (!p) return searches;
+  return (u.input * p.input + u.output * p.output + u.cacheRead * p.cacheRead + u.cacheWrite * p.cacheWrite) / 1e6 + searches;
 }
+
+/**
+ * Whether this person's DJ may search the web and read pages (the provider's own web search and web fetch tools).
+ * Switched in Settings → Features (`djWeb`, with its own kids switch); the cap and price are DJ settings.
+ */
+export const webFor = (db: Db, user: Pick<User, 'role'>) => featureOn(db, 'djWeb', user);
 
 // ---- who may use it ----
 
@@ -235,8 +264,8 @@ export function spentSince(db: Db, since: number, userId?: number): number {
 }
 
 export function recordUsage(db: Db, userId: number, conversationId: number | null, model: string, u: TokenUsage, cost: number) {
-  db.prepare(`INSERT INTO dj_usage (user_id, at, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost, conversation_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(userId, Date.now(), model, u.input, u.output, u.cacheRead, u.cacheWrite, cost, conversationId);
+  db.prepare(`INSERT INTO dj_usage (user_id, at, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, web_searches, cost, conversation_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(userId, Date.now(), model, u.input, u.output, u.cacheRead, u.cacheWrite, u.webSearches ?? 0, cost, conversationId);
 }
 
 /** Why this person can't use the DJ right now, or null when they can. */

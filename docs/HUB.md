@@ -509,11 +509,11 @@ no re-login. The Hub refuses to demote, disable or delete the last admin.
 
 **Settings → Features** (admins) turns each newer feature on or off for the whole household, and separately for
 kid profiles: Home and Made for you mixes, Blend, smart offline, sound-alike analysis, AutoMix, casting, the
-talking AI DJ, artist bios and credits, tour dates, Sing mode, music videos, share links for anyone, Discord
+talking AI DJ, AI DJ web search, artist bios and credits, tour dates, Sing mode, music videos, share links for anyone, Discord
 status, the critter mouth tuner and bit-perfect output. The switches are kept in `hub_settings` (`features`,
 see `hub/src/features.ts`); each device gets what's on for its person with `GET /api/me` and hides the rest, and
 Hub routes that serve a feature refuse with `403 { feature }` while it's off. Features that cost money or need
-an outside service (talking DJ, tour dates, sound-alike analysis, share links, bit-perfect output) start off.
+an outside service (talking DJ, DJ web search, tour dates, sound-alike analysis, share links, bit-perfect output) start off.
 
 ## Made for you mixes
 

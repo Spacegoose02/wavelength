@@ -4,7 +4,7 @@ import { audit } from '../audit.ts';
 import { requireFeature } from '../features.ts';
 import { usageSummary } from '../dj/agent.ts';
 import {
-  blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, priceOf, saveSettings, setAccess, spentSince,
+  blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, priceOf, saveSettings, setAccess, spentSince, webFor,
 } from '../dj/settings.ts';
 import { clientIp, HttpError, need, signedIn } from '../http.ts';
 import { getUser, listUsers } from '../users.ts';
@@ -34,7 +34,7 @@ export function djRoutes(app: FastifyInstance, { db, config, dj }: Ctx) {
     const { user } = signedIn(req);
     const why = blockedReason(db, key, user);
     const s = getSettings(db);
-    return { available: !why, reason: why, model: MODELS.find((m) => m.id === s.model)?.label ?? s.model, ...allowance(user.id) };
+    return { available: !why, reason: why, model: MODELS.find((m) => m.id === s.model)?.label ?? s.model, web: webFor(db, user), ...allowance(user.id) };
   });
 
   app.get('/api/dj/chats', async (req) => {

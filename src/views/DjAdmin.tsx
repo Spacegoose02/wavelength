@@ -167,6 +167,29 @@ export function DjAdminTab() {
       </section>
 
       <section>
+        <h2>Web</h2>
+        <p className="muted small">
+          Let the DJ search the web and read pages: today’s top hits and charts, a festival or DJ setlist, a playlist
+          page someone pasted. It then plays or saves the songs you have. Searches cost {money((s.webSearchPrice ?? 10) / 1000)} each
+          on top of tokens, and count toward everyone’s limits.
+        </p>
+        <p className="muted small">
+          Turn it on, for grown-ups and for kids separately, under <b>Settings → Features → AI DJ web search</b>. It’s
+          off until you do.
+        </p>
+        <div className="editor-grid">
+          <label>Searches per step, at most
+            <select value={s.webMaxSearches ?? 3} onChange={(e) => save({ webMaxSearches: Number(e.target.value) })}>
+              {[1, 2, 3, 5, 10].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <label>Price per 1,000 searches (US$)
+            <input type="number" min={0} step="1" defaultValue={s.webSearchPrice ?? 10} onBlur={(e) => Number(e.target.value) !== s.webSearchPrice && save({ webSearchPrice: Number(e.target.value) || 0 })} />
+          </label>
+        </div>
+      </section>
+
+      <section>
         <h2>Spending</h2>
         <p>This month: <b>{money(data.month.spent)}</b>{s.householdLimit !== null && <> of the household’s {money(s.householdLimit)}</>} <span className="muted small">· all time {money(data.allTime)}</span></p>
         {data.month.byModel.length > 0 && (

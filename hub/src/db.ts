@@ -541,6 +541,10 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   );
   CREATE INDEX public_links_user ON public_links(user_id);
   `,
+  `
+  -- AI DJ web search (dj/settings.ts): searches are billed per search, on top of tokens.
+  ALTER TABLE dj_usage ADD COLUMN web_searches INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

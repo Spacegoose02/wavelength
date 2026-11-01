@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **The AI DJ can search the web.** Ask for today's top hits, or paste a festival or DJ setlist and say "build me
+  an EDM mix from this": the DJ reads the songs off the page, plays or saves the ones you have and can request the
+  rest. Off until an admin turns on **AI DJ web search** under **Settings → Features** (kids have their own
+  switch, off); the cap on searches per step is under **Settings → AI DJ → Web**. Searches ($10 per 1,000 at Anthropic) count toward everyone's limits.
+- **Meet DJ Trash Panda.** The AI DJ is now a rave raccoon in headphones and shades, next to each reply and bopping
+  while he works.
 
 ## 0.19.0
 - **iPhone and iPad app (TestFlight).** The app builds for iOS, with background audio, the iOS keychain and

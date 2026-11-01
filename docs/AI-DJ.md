@@ -6,6 +6,7 @@ API key; the app never sees the key.
 
 - [Setting it up (admins)](#setting-it-up-admins)
 - [Using it](#using-it)
+- [Web search](#web-search)
 - [Costs and limits](#costs-and-limits)
 - [Kids](#kids)
 - [How it works](#how-it-works)
@@ -50,7 +51,8 @@ in NPM → the Hub's proxy host → **Advanced**: `proxy_read_timeout 300s;`
 
 ## Using it
 
-Open **AI DJ** and type, or tap one of the ideas. Things it's good at:
+The DJ is **DJ Trash Panda**, a rave raccoon in headphones and shades (`src/components/TrashPanda.tsx`) whose
+face sits next to each reply and bops while he works. Open **AI DJ** and type, or tap one of the ideas. Things it's good at:
 
 - "Make me a 25-song road trip playlist" (it picks songs, checks which you have, and saves a playlist that follows
   you to every device: **Open the playlist** jumps to it).
@@ -60,8 +62,34 @@ Open **AI DJ** and type, or tap one of the ideas. Things it's good at:
   and asks the Hub for the albums you choose. With Autodownload they download straight away; otherwise they wait in
   the requests queue for an admin, as always.
 
+With [web search](#web-search) on:
+
+- "What are the top EDM hits right now? Play the ones I have."
+- "Build me a new EDM mix from this setlist: https://…" (paste a festival, DJ set or tracklist page; it reads the
+  songs off the page, finds the ones you have and plays or saves them, and can request the rest).
+
 Chats are kept on the Hub per person: pick an earlier one from the list at the top, or **New chat**. A chat holds 40
 messages; then start a new one. **This month** under the box shows what you've used of your allowance.
+
+## Web search
+
+Off until an admin turns on **AI DJ web search** under **Settings → Features** (feature `djWeb`; kids have their
+own switch there, off by default). Then the DJ can use Anthropic's own **web search**
+and **web fetch** tools: they run on Anthropic's side, so nothing extra runs on the Hub, and the Hub only adds them
+to its request. Use it for what Deezer and the library don't know: today's charts and top hits, a festival or DJ
+setlist, a playlist page someone pasted, news about an artist. Web fetch only opens links already in the chat (the
+listener's own, or from a search).
+
+- **Searches per step, at most** (default 3, under **Settings → AI DJ → Web**): `max_uses` on the search tool for each model call; web fetch gets the
+  same number (at least 2). Each page read is capped at 20,000 tokens.
+- **Price per 1,000 searches** (also under **Settings → AI DJ → Web**): $10 at Anthropic. Searches are counted from each call's usage
+  (`server_tool_use.web_search_requests`) and added to the cost, so they count toward every limit. Pages read cost
+  only their tokens.
+- Models: Opus 5.5 / 5 / 4.8 / 4.7 / 4.6 and Sonnet 5.5 / 5 / 4.6 get the newer tools (`web_search_20260209`,
+  `web_fetch_20260209`); other models (Haiku 5.5, custom ids) get the basic ones (`web_search_20250305`,
+  `web_fetch_20250910`).
+- Your Anthropic organisation must allow web search and web fetch (Console → Settings → Privacy / Feature
+  settings); if it doesn't, turn the switch off here.
 
 ## Costs and limits
 
@@ -136,7 +164,7 @@ All need a device token. Listener routes answer 403 with the reason when the DJ 
 
 | Method | Path | |
 |---|---|---|
-| GET | `/api/dj` | `{ available, reason, model, spent, limit }`, for anyone signed in |
+| GET | `/api/dj` | `{ available, reason, model, web, spent, limit }`, for anyone signed in |
 | GET | `/api/dj/chats` | your chats, newest first |
 | GET | `/api/dj/chats/:id` | `{ chat, messages: [{ role, text, tools? }], calls, full }`; `calls` = tool calls waiting for the app |
 | DELETE | `/api/dj/chats/:id` | delete a chat |
@@ -144,7 +172,7 @@ All need a device token. Listener routes answer 403 with the reason when the DJ 
 | POST | `/api/dj/patter` | Talking DJ: `{ previous?, next, name?, style? }` → `{ text, spent, limit }`, one or two sentences to read between songs. Needs the **Talking AI DJ** feature switch; low effort, counted against the allowance |
 | POST | `/api/dj/chats/:id/tools` | `{ results: [{ id, content, isError? }] }` → same as above |
 | GET | `/api/admin/dj` | settings (never the key, only `key: { set, hint }`), models and prices, people with their switch, limit and spend, this month's spend by model and day |
-| PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, apiKey? }`; `apiKey: ''` removes it |
+| PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, webMaxSearches?, webSearchPrice?, apiKey? }`; `apiKey: ''` removes it |
 | PUT | `/api/admin/dj/users/:userId` | `{ enabled?, monthlyLimit? }` (`null` = no limit) |
 | POST | `/api/admin/dj/test` | checks the key and model, no tokens used |
 
