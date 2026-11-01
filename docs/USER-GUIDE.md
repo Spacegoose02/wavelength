@@ -375,6 +375,31 @@ are no synced lyrics. It can't shape individual words, and a centred instrument 
 voice (a synth lead, say) can still open it in songs without synced lyrics. Mono songs without synced
 lyrics move the mouth with the music rather than the voice.
 
+**Tuning the mouths.** If a mouth opens on the drums, misses quiet singing, or moves a moment before or after
+the words, tap **Tune mouth** (under Switch act) to open the tuner beside the critter, or go to **Settings →
+Playback → Critter mouths**, which has a live critter next to it. Play a song with clear singing and watch the
+graph: the filled shape is the mouth, the line is what the voice detector hears, the band along the bottom marks
+sung lyric lines, and the ticks at the top are drum hits. The line under it says what the mouth is following
+right now (the voice, the lyrics' syllables, or nothing) and whether the song is mono.
+
+| Setting | What it does | Move it when |
+|---|---|---|
+| **This song → Lyrics timing** | Moves the synced lyrics for the song that's playing, and is remembered for that song. **Mouth is late / Mouth is early** nudge it by a tenth of a second | The mouth starts before or after the words in one song |
+| **Sensitivity** | How far below the song's loudest singing the mouth still opens | Raise it if the mouth stays shut on quiet verses |
+| **Centre** | How much of the sound must sit in the middle of the mix, where lead vocals usually are | Raise it if guitars or keys open the mouth; lower it for busy mixes |
+| **Noise rejection** | How noisy (drums, hi-hats, hiss) a sound can be and still count as voice | Lower it if hi-hats flap the mouth; raise it for shouted or breathy vocals |
+| **Voice range** | The pitches that count as voice | Raise *from* for bass-heavy songs; lower *to* to ignore cymbals |
+| **Ignore after a drum hit** | How long the mouth can't open after a kick or snare | Raise it if the mouth snaps on every beat |
+| **Keep the mouth shut between sung lines** | Uses synced lyrics to keep it shut in intros, solos and gaps | Turn off if a song's lyrics are badly timed |
+| **On mono songs, mouth the lyrics** | Follows the words of each line on mono songs, where the voice can't be picked out | Turn off to follow the music instead |
+| **All songs' lyrics timing** | Moves every song's lyrics | Mouths are early or late on most songs |
+| **Syllable length** | How long each syllable lasts when mouthing the lyrics | Lower for fast rap, higher for ballads |
+| **Opens / Closes / Widest** | How fast the mouth opens and closes, and how wide | To taste: snappier or smoother |
+
+**Reset to defaults** puts everything back (song timings stay). Your tuning follows you to your other devices
+with a Hub. A Hub admin can turn the tuner off in **Settings → Features**, which puts everyone back on the
+defaults.
+
 **Switching.** On the critter visualizer, tap **Switch critter** in its top-right corner for the next critter
 (keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
 Playback → Now Playing visualizer**: the **Critters** cards show each critter in your current act, and the

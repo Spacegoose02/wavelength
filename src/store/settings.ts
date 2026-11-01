@@ -6,6 +6,7 @@ import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 import type { SmartPlaylist } from '../lib/smartPlaylists';
+import { cleanTune, DEFAULT_TUNE, type MouthTune } from '../player/voice';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
@@ -135,6 +136,12 @@ interface SettingsState {
   setAct(a: Act): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
+  /** The critter mouth tuner (components/MouthTuner.tsx, player/voice.ts). Synced. */
+  mouthTune: MouthTune;
+  setMouthTune(t: Partial<MouthTune> | null): void;
+  /** Lyrics offsets for single songs, seconds, by `sourceId:trackId` (player/singing.ts `offsetKey`). Synced. */
+  mouthOffsets: Record<string, number>;
+  setMouthOffset(key: string, seconds: number): void;
   /** Settings → Playback: ReplayGain (player/replayGain.ts) and crossfade between songs (seconds, 0 = off). */
   playback: { replayGain: ReplayGainMode; replayGainPreamp: number; crossfade: number };
   setPlayback(p: Partial<SettingsState['playback']>): void;
@@ -191,6 +198,19 @@ export const useSettings = create<SettingsState>()(
       setAct: (act) => set({ act }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
+      mouthTune: DEFAULT_TUNE,
+      setMouthTune: (t) => set((st) => ({ mouthTune: t === null ? DEFAULT_TUNE : cleanTune({ ...st.mouthTune, ...t }) })),
+      mouthOffsets: {},
+      setMouthOffset: (key, seconds) =>
+        set((st) => {
+          const next = { ...st.mouthOffsets };
+          delete next[key];
+          if (Math.abs(seconds) >= 0.01) next[key] = Math.round(seconds * 100) / 100;
+          // newest last; keep the 300 newest so the synced value stays small
+          const keys = Object.keys(next);
+          for (const k of keys.slice(0, Math.max(0, keys.length - 300))) delete next[k];
+          return { mouthOffsets: next };
+        }),
       playback: { replayGain: 'off', replayGainPreamp: 0, crossfade: 0 },
       setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',
@@ -299,7 +319,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates } };
+        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, mouthTune: cleanTune(s.mouthTune) };
       },
     },
   ),

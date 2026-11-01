@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Tune the critters' mouths.** A **Tune mouth** button beside the critter (and **Settings → Playback → Critter
+  mouths**, with a live critter) opens a tuner with a live graph of what the voice detector hears against what
+  the mouth does. Sliders for sensitivity, how centred the voice must be, noise rejection, the voice range, drum
+  hits, lyrics timing (for every song, or nudged for the song playing and remembered), syllable length, and how
+  fast and wide the mouth moves. Synced with a Hub. See the [user guide](docs/USER-GUIDE.md#critters).
+- **Feature switches (Hub admins).** **Settings → Features** turns each newer feature on or off for the
+  household and separately for kid profiles. **Hub:** `GET/PUT /api/admin/features`, and `GET /api/me` now
+  says which features are on (see [docs/HUB.md](docs/HUB.md#feature-switches)).
 
 ## 0.18.1
 - **The newest release banner no longer shows another artist's release.** Deezer often has several artists with

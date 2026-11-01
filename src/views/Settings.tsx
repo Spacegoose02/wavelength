@@ -15,6 +15,9 @@ import { deemixClient, hubKeeps, loadHubServices, saveDownloaderToHub, saveSourc
 import { AccountTab, HubAccess, UsersTab } from './HubSettings';
 import { ServerTab } from './ServerTab';
 import { DjAdminTab } from './DjAdmin';
+import { FeaturesAdminTab } from './FeaturesAdmin';
+import { MouthTuner } from '../components/MouthTuner';
+import { useFeature } from '../lib/features';
 import { UpdatesTab } from '../components/Updates';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
@@ -576,11 +579,28 @@ function NowPlayingPicker() {
   );
 }
 
+/** Settings → Playback → Tune mouths, with a live critter beside it to watch while a song plays. */
+function MouthTunerSection() {
+  const on = useFeature('mouthTuner');
+  const { critter, act } = useSettings();
+  if (!on) return null;
+  return (
+    <section id="mouth-tuner">
+      <h2>Critter mouths</h2>
+      <div className="mouth-tuner-inline">
+        <div className="critter-preview"><Critter species={critter} act={act} /></div>
+        <MouthTuner />
+      </div>
+    </section>
+  );
+}
+
 const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
   { id: 'account', label: 'Account' },
   { id: 'users', label: 'Users', admin: true },
   { id: 'server', label: 'Server', admin: true },
   { id: 'dj', label: 'AI DJ', admin: true },
+  { id: 'features', label: 'Features', admin: true },
   { id: 'sources', label: 'Sources' },
   { id: 'playback', label: 'Playback' },
   { id: 'downloads', label: 'Downloads' },
@@ -665,10 +685,12 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'users' && isAdmin && <UsersTab />}
       {tab === 'server' && isAdmin && <ServerTab />}
       {tab === 'dj' && isAdmin && <DjAdminTab />}
+      {tab === 'features' && isAdmin && <FeaturesAdminTab />}
       {tab === 'sources' && <SourcesTab />}
       {tab === 'playback' && (
         <>
           <NowPlayingPicker />
+          <MouthTunerSection />
           <PlaybackOptions />
           <VersionsPicker />
           <section id="equalizer">

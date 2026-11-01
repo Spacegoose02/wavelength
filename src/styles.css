@@ -1896,3 +1896,30 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 @media (max-width: 640px) { .artist-news { flex-wrap: wrap; } .artist-news-actions { width: 100%; justify-content: flex-end; } }
 /* Browse releases: clear of the app's own back arrow, like the hero */
 .artist-releases-crumbs { margin-left: 44px; min-height: 36px; }
+
+/* Settings → Features (views/FeaturesAdmin.tsx) */
+.feature-list { display: flex; flex-direction: column; gap: 4px; }
+.feature-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--line, rgba(255,255,255,0.08)); }
+.feature-row .check { align-items: flex-start; }
+.feature-row .switch { margin-top: 2px; }
+.feature-kids { flex: none; white-space: nowrap; }
+
+/* Critter mouth tuner (components/MouthTuner.tsx) */
+.mouth-tuner { display: flex; flex-direction: column; gap: 10px; }
+.mouth-tuner .tuner-head { display: flex; align-items: center; justify-content: space-between; }
+.mouth-tuner h3 { margin: 0; }
+.tuner-graph canvas { width: 100%; height: 110px; display: block; border-radius: var(--radius); background: var(--bg-2); }
+.tuner-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; color: var(--muted); }
+.tuner-legend .sw { display: inline-block; width: 12px; height: 8px; margin-right: 4px; border-radius: 2px; vertical-align: middle; }
+.tuner-legend .sw.mouth { background: var(--accent); opacity: 0.6; }
+.tuner-legend .sw.det { height: 2px; background: var(--muted); }
+.tuner-legend .sw.line { height: 4px; background: var(--accent); opacity: 0.35; }
+.tuner-now { margin: 4px 0 0; min-height: 1.4em; }
+.tuner-group { border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 12px 4px; margin: 0; }
+.tuner-group legend { padding: 0 6px; font-weight: 600; font-size: 13px; }
+.tuner-field { margin: 6px 0 10px; max-width: none; }
+.tuner-field small { font-size: 11.5px; }
+.mouth-tuner-pop { position: fixed; top: 12px; right: 12px; bottom: 12px; z-index: 250; width: min(420px, calc(100vw - 24px)); padding: 16px; overflow: auto; border-radius: var(--radius); background: var(--panel); box-shadow: 0 10px 40px rgb(0 0 0 / 0.5); }
+.mouth-tuner-inline { display: grid; grid-template-columns: minmax(160px, 260px) 1fr; gap: 16px; align-items: start; }
+.mouth-tuner-inline .critter-preview { position: sticky; top: 8px; aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; background: var(--bg-2); }
+@media (max-width: 720px) { .mouth-tuner-inline { grid-template-columns: 1fr; } .mouth-tuner-inline .critter-preview { position: static; max-width: 260px; } }

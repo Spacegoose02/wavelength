@@ -28,13 +28,13 @@ export function syllables(text: string): number {
  * take to sing (≈ 0.32 s a syllable plus a breath), so a long instrumental gap after a line counts as quiet.
  * Empty lines (often used to mark a break) aren't sung.
  */
-export function sungLines(lines: LyricLine[]): SungLine[] {
+export function sungLines(lines: LyricLine[], perSyllable = 0.32): SungLine[] {
   const out: SungLine[] = [];
   lines.forEach((l, i) => {
     if (l.time === undefined || !l.text.trim()) return;
     const next = lines[i + 1]?.time ?? l.time + 8;
     const syl = syllables(l.text);
-    out.push({ start: l.time, end: Math.min(next, l.time + syl * 0.32 + 0.8), syllables: syl });
+    out.push({ start: l.time, end: Math.min(next, l.time + syl * perSyllable + 0.8), syllables: syl });
   });
   return out;
 }
@@ -43,30 +43,42 @@ export function sungLines(lines: LyricLine[]): SungLine[] {
  * The sung line at `t` (with a little slack for lyrics timed a beat early or late), null in a gap, or undefined
  * when the song has no synced lyrics (unknown: let the audio decide).
  */
-export function lineAt(sung: SungLine[] | undefined, t: number): SungLine | null | undefined {
+export function lineAt(sung: SungLine[] | undefined, t: number, offset = 0): SungLine | null | undefined {
   if (!sung) return undefined;
+  t -= offset;
   for (const l of sung) if (t >= l.start - 0.25 && t <= l.end + 0.3) return l;
   return null;
 }
 
 let key = '';
 let sung: SungLine[] | undefined;
+let raw: LyricLine[] | undefined;
+let rawSyllable = 0.32;
 
 /**
  * The current song's sung spans: `undefined` until (and unless) synced lyrics arrive, `[]` for an instrumental.
  * Starts the lookup the first time it's asked about a song (`source` is only called then).
  */
-export function sungLinesFor(track: Track | undefined, source?: () => Parameters<typeof lyricsFor>[1]): SungLine[] | undefined {
+export function sungLinesFor(track: Track | undefined, source?: () => Parameters<typeof lyricsFor>[1], perSyllable = 0.32): SungLine[] | undefined {
   const k = track ? `${track.sourceId}:${track.id}` : '';
+  if (k === key && raw && perSyllable !== rawSyllable) {
+    rawSyllable = perSyllable;
+    sung = sungLines(raw, perSyllable);
+  }
   if (k !== key) {
     key = k;
     sung = undefined;
+    raw = undefined;
+    rawSyllable = perSyllable;
     if (track && track.kind === 'track') {
       lyricsFor(track, source?.())
         .then((ly) => {
           if (key !== k || !ly) return;
           if (ly.instrumental) sung = [];
-          else if (ly.synced) sung = sungLines(ly.lines);
+          else if (ly.synced) {
+            raw = ly.lines;
+            sung = sungLines(ly.lines, rawSyllable);
+          }
         })
         .catch(() => undefined);
     }

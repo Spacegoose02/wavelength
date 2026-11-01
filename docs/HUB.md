@@ -505,6 +505,16 @@ The Hub checks the permission on **every** request (`need(req, …)` in `hub/src
 the list from `GET /api/me` only to decide what to show. A role change applies on the user's next request,
 no re-login. The Hub refuses to demote, disable or delete the last admin.
 
+## Feature switches
+
+**Settings → Features** (admins) turns each newer feature on or off for the whole household, and separately for
+kid profiles: Home and Made for you mixes, Blend, smart offline, sound-alike analysis, AutoMix, casting, the
+talking AI DJ, artist bios and credits, tour dates, Sing mode, music videos, share links for anyone, Discord
+status, the critter mouth tuner and bit-perfect output. The switches are kept in `hub_settings` (`features`,
+see `hub/src/features.ts`); each device gets what's on for its person with `GET /api/me` and hides the rest, and
+Hub routes that serve a feature refuse with `403 { feature }` while it's off. Features that cost money or need
+an outside service (talking DJ, tour dates, sound-alike analysis, share links, bit-perfect output) start off.
+
 ## AI DJ
 
 The Hub runs the AI DJ chat and keeps its API key, model choice, prices, per-account switch and spending limits.
@@ -525,7 +535,9 @@ with a 4xx status.
 | `POST /auth/device` | anyone | `{ deviceName?, platform? }` → `{ deviceCode, userCode, verificationUrl, verificationUrlComplete, expiresIn, interval }` |
 | `POST /auth/device/token` | the pairing device | `{ deviceCode }` → `202 {status:'pending'}`, `403 denied`, `410 expired`, or `200` session |
 | `POST /auth/logout` | signed in | signs this device out |
-| `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids }` (`kids`: the kids this person is a parent of) |
+| `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids, features }` (`kids`: the kids this person is a parent of; `features`: `{ homeMixes: true, … }`, which feature switches are on for this person) |
+| `GET /api/admin/features` | `users.manage` | `{ features: { homeMixes: { on, kids }, … } }` (see "Feature switches") |
+| `PUT /api/admin/features` | `users.manage` | `{ features: { blend: { on: false }, musicVideos: { kids: true } } }`: only what's sent changes; audited |
 | `GET /api/me/2fa` | signed in | `{ enabled, recoveryLeft }` |
 | `POST /api/me/2fa/setup` | signed in, Hub-password users | `{ password }` → `{ secret, uri }` (`otpauth://`, for a QR code) |
 | `POST /api/me/2fa/enable` | signed in | `{ code }` → `{ recovery: [10 codes] }`, shown once |

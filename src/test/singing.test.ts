@@ -96,3 +96,28 @@ describe('sing-along lyrics', () => {
     expect(lineAt([], 5)).toBeNull(); // instrumental
   });
 });
+
+describe('mouth tuner', async () => {
+  const { cleanTune, DEFAULT_TUNE } = await import('../player/voice');
+  it('fills missing or broken values with the defaults', () => {
+    expect(cleanTune(undefined)).toEqual(DEFAULT_TUNE);
+    const t = cleanTune({ sensitivity: 30, centre: Number.NaN, useLyrics: 'yes' as unknown as boolean, lowHz: 500, highHz: 450 });
+    expect(t.sensitivity).toBe(30);
+    expect(t.centre).toBe(DEFAULT_TUNE.centre);
+    expect(t.useLyrics).toBe(true);
+    expect(t.highHz).toBeGreaterThan(t.lowHz);
+  });
+  it('shifts lyric lines by the offset', () => {
+    const sung = sungLines([{ time: 10, text: 'hello there' }, { time: 30, text: 'again' }]);
+    expect(lineAt(sung, 9)).toBeNull();
+    // lyrics 1.5 s early (+): the line timed at 10 s is really sung from 11.5 s
+    expect(lineAt(sung, 10.5, 1.5)).toBeNull();
+    expect(lineAt(sung, 11.6, 1.5)?.start).toBe(10);
+    // lyrics late (−): sung a second before their time
+    expect(lineAt(sung, 9.1, -1)?.start).toBe(10);
+  });
+  it('longer syllables keep a line open longer', () => {
+    const lines = [{ time: 0, text: 'one two three four' }, { time: 20, text: 'x' }];
+    expect(sungLines(lines, 0.6)[0].end).toBeGreaterThan(sungLines(lines, 0.2)[0].end);
+  });
+});

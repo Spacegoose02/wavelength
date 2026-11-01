@@ -629,7 +629,9 @@ export class HubClient {
     return r.status === 202 ? null : r.data;
   }
 
-  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[] }>('GET', '/api/me');
+  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean> }>('GET', '/api/me');
+  adminFeatures = () => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('GET', '/api/admin/features');
+  saveAdminFeatures = (features: Record<string, { on?: boolean; kids?: boolean }>) => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('PUT', '/api/admin/features', { features });
   setDisplayName = (displayName: string) => this.call<{ user: HubUser }>('PATCH', '/api/me', { displayName });
   changePassword = (currentPassword: string, newPassword: string) => this.call('PUT', '/api/me/password', { currentPassword, newPassword });
   myDevices = () => this.call<{ devices: (HubDevice & { current: boolean })[] }>('GET', '/api/me/devices');

@@ -10,6 +10,7 @@ import { countActiveAdmins, createUser, deleteUser, getUser, getUserBySso, getUs
 import { disableTotp, totpEnabled } from '../totp.ts';
 import { guardiansOf, setGuardians } from '../family.ts';
 import { MIN_PASSWORD } from './auth.ts';
+import { getFeatures, putFeatures } from '../features.ts';
 
 /**
  * Admin-only routes. Every handler starts with `need(req, …)`, which answers 401/403 before anything
@@ -20,6 +21,19 @@ export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
     const devices = listDevices(db, u.id);
     return { ...u, permissions: permissionsFor(u), devices: devices.length, lastSeenAt: devices[0]?.lastSeenAt ?? null, twoFactor: totpEnabled(db, u.id), ...(u.role === 'kid' && { guardians: guardiansOf(db, u.id) }) };
   };
+
+  /** Feature switches (features.ts): what the household and kid profiles get. */
+  app.get('/api/admin/features', async (req) => {
+    need(req, 'users.manage');
+    return { features: getFeatures(db) };
+  });
+
+  app.put('/api/admin/features', async (req) => {
+    const { user } = need(req, 'users.manage');
+    const features = putFeatures(db, (req.body as { features?: unknown } | null)?.features);
+    audit(db, { actorId: user.id, action: 'features.changed', target: Object.keys((req.body as { features: object }).features).join(', ').slice(0, 200), ip: clientIp(req) });
+    return { features };
+  });
 
   /** Refuse a change that would leave the Hub with no active admin. */
   function keepAnAdmin(target: User, after: { role?: string; disabled?: boolean; deleted?: boolean }) {
