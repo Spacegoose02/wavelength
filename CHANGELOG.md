@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.23.1
+- **More songs find lyrics.** Titles tagged like YouTube uploads ("Adele - Hello (Official Music Video)" by
+  "AdeleVEVO") are read as Hello by Adele, and when LRCLIB has nothing, plain lyrics come from lyrics.ovh.
+- **Clearer lyrics misses.** "No lyrics found" now says what was searched for, and when the lyrics services can't be
+  reached it says so with **Try again**. Lookups give up after 10 seconds instead of spinning.
+- **Settings tabs fit.** The Settings tab row no longer overflows with stray scrollbars. On narrow windows and phones,
+  every tab row scrolls sideways with faded edges, works with the mouse wheel, and keeps the selected tab in view.
+
 ## 0.23.0
 - **Discover shows chart movement.** Each song has **▲3**, **▼2**, **NEW** or **=** under its rank (compared with
   about a week ago) and **5 wks** for weeks in a row on the chart. With a Hub the whole house shares one history
