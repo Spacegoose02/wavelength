@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.23.0
 - **Discover shows chart movement.** Each song has **▲3**, **▼2**, **NEW** or **=** under its rank (compared with
   about a week ago) and **5 wks** for weeks in a row on the chart. With a Hub the whole house shares one history
   (`POST /api/discover/positions`); without one each device keeps its own.
@@ -21,8 +23,6 @@
   indie songs.
 - **Hub:** update the Hub too for chart movement, the faster library check and For you; the app falls back to the
   old behaviour with an older Hub.
-- **DJ mode shows what you're missing.** Each segment lists the songs it wanted that aren't in your library (Top hits
-  checks the chart's top 50), with **Get** / **Request** for each and **Get all**.
 
 ## 0.22.0
 - **DJ mode shows what you're missing.** Each segment lists the songs it wanted that aren't in your library (Top hits
