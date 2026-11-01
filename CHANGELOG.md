@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.21.0
 - **The AI DJ can run on your own Ollama server.** Under **Settings → AI DJ → Ollama**, point the Hub at Ollama and
   pick a model from its list. Run the whole DJ on it for free, or keep the chat on Claude and let Ollama write the
   talking DJ's lines and DJ mode's intros. With a free ollama.com key the Hub searches the web for it too.
