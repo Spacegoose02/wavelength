@@ -304,5 +304,5 @@ are kept in the same format as with Claude, so switching provider carries on the
 **Web search.** Ollama can't search by itself. With **AI DJ web search** on (Settings → Features) and a key from a
 free ollama.com account (ollama.com/settings/keys) saved under **Ollama → Web search key**, the Hub gives the model
 `web_search` and `web_fetch` tools and runs them with ollama.com's web search API (`/api/web_search`,
-`/api/web_fetch`). Only the Hub needs internet for that, not the Ollama server. At most three times **Searches per
+`/api/web_fetch`). The key box is always in the Ollama section; the key is used while the whole DJ runs on Ollama. Only the Hub needs internet for that, not the Ollama server. At most three times **Searches per
 step** per message. The key is sealed on the Hub like the others.

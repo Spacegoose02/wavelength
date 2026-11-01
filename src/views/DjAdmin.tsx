@@ -438,13 +438,13 @@ function OllamaSection({ c, data, save, setErr, setNote }: {
         <div className="row gap">
           {s.ollamaUrl && <button className="btn small" onClick={() => void test(on ? 'chat' : 'quick')}>Test</button>}
         </div>
-        {on && (
-          <>
+        <>
             <h3>Web search key <small className="muted">(optional)</small></h3>
             <p className="muted small">
               Ollama can’t search the web by itself. With a key from a free ollama.com account (ollama.com/settings/keys), the
               Hub searches for it, so the DJ can look up top hits and read setlists. Then turn on AI DJ web search in Settings →
               Features. The key never leaves the Hub.
+              {!on && ' It’s used when the whole DJ runs on Ollama; while the chat is on Claude, Claude searches for itself.'}
             </p>
             <div className="editor-grid">
               <label>Ollama API key {data.ollamaKey?.set && <small className="muted">saved{data.ollamaKey.hint ? ` (${data.ollamaKey.hint})` : ''}</small>}
@@ -455,8 +455,7 @@ function OllamaSection({ c, data, save, setErr, setNote }: {
               <button className="btn" disabled={!key.trim()} onClick={async () => { await save({ ollamaKey: key.trim() }, 'Ollama key saved on the Hub.'); setKey(''); }}>Save key</button>
               {data.ollamaKey?.set && <button className="btn ghost" onClick={() => confirm('Remove the Ollama web search key?') && save({ ollamaKey: '' }, 'Ollama key removed.')}>Remove key</button>}
             </div>
-          </>
-        )}
+        </>
       </div>
     </section>
   );
