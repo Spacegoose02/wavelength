@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { HubStationKind, HubStationSegment } from '../sources/hub';
+import type { HubMixSong, HubStationKind, HubStationSegment } from '../sources/hub';
 import type { Track } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { usePlayer } from '../store/player';
@@ -42,10 +42,12 @@ interface StationState {
   talk: boolean;
   /** The panel is open to choose what to play; nothing plays until a choice. */
   picking: boolean;
+  /** Songs this segment wanted that aren't in your library, to get or request. */
+  missing: HubMixSong[];
 }
 
 export const useStation = create<StationState>()(
-  persist(() => ({ on: false, kind: null, title: '', intro: '', busy: false, error: '', open: true, talk: true, picking: false }) as StationState, {
+  persist(() => ({ on: false, kind: null, title: '', intro: '', busy: false, error: '', open: true, talk: true, picking: false, missing: [] }) as StationState, {
     name: 'tonearm.djStation',
     partialize: (s) => ({ talk: s.talk }),
   }),
@@ -55,7 +57,7 @@ const keyOf = (t: Track) => `${t.sourceId}:${t.id}`;
 /** Tracks the station queued: playing anything else turns it off. */
 const ours = new Set<string>();
 /** Segment changes waiting for their first song: its key → the segment. */
-const upcoming = new Map<string, HubStationSegment>();
+const upcoming = new Map<string, { seg: HubStationSegment; missing: HubMixSong[] }>();
 /** Recently played (title + artist), so segments don't repeat songs. */
 let recent: { title: string; artist: string }[] = [];
 /** The playlist the station is built on, when started from one: every segment builds on it until you pick another. */
@@ -63,7 +65,7 @@ let anchor: { name: string; songs: { title: string; artist: string }[] } | null 
 let topping = false;
 let lastTry = 0;
 
-async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?: HubStationKind | null }): Promise<{ seg: HubStationSegment; tracks: Track[] }> {
+async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?: HubStationKind | null }): Promise<{ seg: HubStationSegment; tracks: Track[]; missing: HubMixSong[] }> {
   const hub = hubClient();
   if (!hub) throw new Error('DJ mode needs your Wavelength Hub');
   const v = useSettings.getState().djVoice;
@@ -79,6 +81,8 @@ async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?:
   });
   const find = findInLibrary();
   const found = await pool(seg.songs, 4, (s) => findSong(s, find).catch(() => undefined));
+  // what the list has that you don't: shown in the panel to get or request
+  const missing = seg.songs.filter((_, i) => !found[i]).slice(0, 60);
   const seen = new Set<string>();
   const tracks = kidSafe(found.filter((t): t is Track => !!t && t.kind === 'track')).filter((t) => {
     const k = keyOf(t);
@@ -86,7 +90,7 @@ async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?:
     seen.add(k);
     return true;
   }).slice(0, SIZE);
-  return { seg, tracks };
+  return { seg, tracks, missing };
 }
 
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
@@ -107,16 +111,16 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
       if (!songs.length) throw new Error('That playlist is empty');
       anchor = { name: o.playlist.name, songs: songs.slice(0, 300) };
     } else if (o.kind || o.ask || !st.on) anchor = null;
-    let { seg, tracks } = await fetchSegment({ ...o, previous: st.on ? st.kind : null });
+    let { seg, tracks, missing } = await fetchSegment({ ...o, previous: st.on ? st.kind : null });
     // a segment none of whose songs are here: try the next one (not for requests, which say so)
-    for (let i = 0; !tracks.length && !o.ask && !o.kind && !o.playlist && i < 3; i++) ({ seg, tracks } = await fetchSegment({ previous: seg.kind }));
+    for (let i = 0; !tracks.length && !o.ask && !o.kind && !o.playlist && i < 3; i++) ({ seg, tracks, missing } = await fetchSegment({ previous: seg.kind }));
     if (!tracks.length) throw new Error(o.kind ? `None of the ${SEGMENT_LABELS[o.kind as keyof typeof SEGMENT_LABELS] ?? ''} songs the DJ picked are in your library. Try another segment` : 'None of those songs are in your library. Try asking for something else');
     ours.clear();
     upcoming.clear();
     lastTry = 0;
     tracks.forEach((t) => ours.add(keyOf(t)));
     stationTalks.add(keyOf(tracks[0]));
-    useStation.setState({ on: true, picking: false, kind: seg.kind, title: seg.title, intro: seg.intro ?? '', busy: false });
+    useStation.setState({ on: true, picking: false, kind: seg.kind, title: seg.title, intro: seg.intro ?? '', missing, busy: false });
     usePlayer.getState().playTracks(tracks);
     if (seg.intro && useStation.getState().talk) void say(seg.intro);
   } catch (e) {
@@ -128,7 +132,7 @@ export function stopStation() {
   anchor = null;
   ours.clear();
   upcoming.clear();
-  useStation.setState({ on: false, picking: false, busy: false, kind: null, title: '', intro: '', error: '' });
+  useStation.setState({ on: false, picking: false, busy: false, kind: null, title: '', intro: '', error: '', missing: [] });
 }
 
 /** Queue the next segment when the last songs of this one are playing. */
@@ -139,12 +143,12 @@ async function topUp() {
   useStation.setState({ busy: true });
   try {
     const queued = [...upcoming.values()];
-    const last = queued.length ? queued[queued.length - 1].kind : useStation.getState().kind;
-    const { seg, tracks } = await fetchSegment({ previous: last });
+    const last = queued.length ? queued[queued.length - 1].seg.kind : useStation.getState().kind;
+    const { seg, tracks, missing } = await fetchSegment({ previous: last });
     if (!useStation.getState().on || !tracks.length) return;
     useStation.setState({ error: '' });
     tracks.forEach((t) => ours.add(keyOf(t)));
-    upcoming.set(keyOf(tracks[0]), seg);
+    upcoming.set(keyOf(tracks[0]), { seg, missing });
     stationTalks.add(keyOf(tracks[0]));
     usePlayer.getState().enqueue(tracks);
   } catch (e) {
@@ -168,10 +172,11 @@ export function startDjStation() {
       // you played something else: the DJ steps aside
       if (!ours.has(k)) return stopStation();
       recent = [...recent.filter((r) => !(r.title === t.title && r.artist === t.artist)), { title: t.title, artist: t.artist }].slice(-300);
-      const seg = upcoming.get(k);
-      if (seg) {
+      const next = upcoming.get(k);
+      if (next) {
+        const { seg } = next;
         upcoming.delete(k);
-        useStation.setState({ kind: seg.kind, title: seg.title, intro: seg.intro ?? '' });
+        useStation.setState({ kind: seg.kind, title: seg.title, intro: seg.intro ?? '', missing: next.missing });
         if (seg.intro && st.talk) void say(seg.intro);
       }
     }
