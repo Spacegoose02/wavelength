@@ -1,3 +1,4 @@
+import { BlendView, MixView } from './views/Mix';
 import { startSmartOffline } from './lib/smartOffline';
 import { startArtworkChecks } from './lib/artwork';
 import { startPlaylistCoverChecks } from './lib/playlistCovers';
@@ -97,6 +98,8 @@ function View({ route }: { route: Route }) {
     case 'playlists': return <Playlists />;
     case 'playlist': return <PlaylistView key={route.id} id={route.id} />;
     case 'household': return <HouseholdPlaylistView key={route.id} id={route.id} />;
+    case 'mix': return <MixView key={route.id} id={route.id} />;
+    case 'blend': return <BlendView />;
     case 'serverPlaylist': return <ServerPlaylistView key={`${route.playlist.sourceId}:${route.playlist.id}`} playlist={route.playlist} />;
     case 'subwave': return <SubWave key={route.sourceId ?? ''} sourceId={route.sourceId} />;
     case 'discover': return <Discover key={route.genre ?? ''} initialGenre={route.genre} />;

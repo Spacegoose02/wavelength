@@ -1923,3 +1923,11 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .mouth-tuner-inline { display: grid; grid-template-columns: minmax(160px, 260px) 1fr; gap: 16px; align-items: start; }
 .mouth-tuner-inline .critter-preview { position: sticky; top: 8px; aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; background: var(--bg-2); }
 @media (max-width: 720px) { .mouth-tuner-inline { grid-template-columns: 1fr; } .mouth-tuner-inline .critter-preview { position: static; max-width: 260px; } }
+
+/* Made for you mixes (views/Mix.tsx) */
+.mix-art, .mix-art-wrap { position: relative; }
+.mix-art .mix-label, .mix-art-wrap .mix-label { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 10px 8px; font-weight: 800; font-size: 15px; line-height: 1.1; color: #fff; text-shadow: 0 1px 4px rgb(0 0 0 / 0.6); background: linear-gradient(transparent, rgb(0 0 0 / 0.65)); border-radius: 0 0 var(--radius) var(--radius); pointer-events: none; }
+.mix-art[data-kind="daily"] { box-shadow: inset 0 -4px 0 var(--accent); }
+.blend-art { aspect-ratio: 1; border-radius: var(--radius); background: conic-gradient(from 200deg, var(--accent), #6c5ce7, #00cec9, var(--accent)); }
+.hero-art .mix-label { font-size: 22px; padding: 30px 14px 12px; }
+.page-top-actions { padding: 12px 24px 0; }

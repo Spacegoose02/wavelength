@@ -229,6 +229,25 @@ export interface HubPush {
   subscribeUrl: string | null;
   webUrl: string | null;
 }
+/** A Made for you mix or a Blend (hub/src/mixes.ts). Songs are found in each person's own library. */
+export interface HubMixSong {
+  title: string;
+  artist: string;
+  album?: string;
+  duration?: number;
+  coverUrl?: string;
+  /** the track as a device played it, when this person played it */
+  track?: Track;
+  because?: string;
+}
+export interface HubMix {
+  id: string;
+  name: string;
+  description: string;
+  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend';
+  songs: HubMixSong[];
+}
+
 /** A playlist the household adds to together (hub/src/routes/household.ts). */
 export interface HouseholdPlaylist {
   id: number;
@@ -630,6 +649,10 @@ export class HubClient {
   }
 
   me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean> }>('GET', '/api/me');
+  mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes${fresh ? '?fresh=1' : ''}`);
+  blendPeople = () => this.call<{ optedIn: boolean; people: { id: number; displayName: string; optedIn: boolean }[] }>('GET', '/api/blend/people');
+  setBlendOptIn = (on: boolean) => this.call<{ optedIn: boolean }>('PUT', '/api/blend/optin', { on });
+  blend = (ids: number[]) => this.call<{ mix: HubMix }>('GET', `/api/blend?with=${ids.join(',')}`);
   adminFeatures = () => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('GET', '/api/admin/features');
   saveAdminFeatures = (features: Record<string, { on?: boolean; kids?: boolean }>) => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('PUT', '/api/admin/features', { features });
   setDisplayName = (displayName: string) => this.call<{ user: HubUser }>('PATCH', '/api/me', { displayName });

@@ -15,7 +15,7 @@ import { KID_VIEWS, useIsKid } from '../lib/kids';
 import { useHub } from '../store/hub';
 
 const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route['view'][] }[] = [
-  { view: 'home', label: 'Home', icon: <IconHome /> },
+  { view: 'home', label: 'Home', icon: <IconHome />, also: ['mix', 'blend'] },
   { view: 'discover', label: 'Discover', icon: <IconCompass /> },
   { view: 'search', label: 'Search', icon: <IconSearch /> },
   { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave /> },

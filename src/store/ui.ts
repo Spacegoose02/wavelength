@@ -37,6 +37,9 @@ export type Route =
   | { view: 'downloads'; soulseek?: { q: string; requestId?: number } }
   | { view: 'inbox'; tab?: 'clean' }
   | { view: 'dj' }
+  /** A Made for you mix (views/Mix.tsx), by its id in lib/mixes.ts. */
+  | { view: 'mix'; id: string }
+  | { view: 'blend' }
   | { view: 'settings'; tab?: SettingsTab };
 
 /** The tabs of the Settings page (views/Settings.tsx). */

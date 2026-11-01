@@ -1,3 +1,5 @@
+import { deezerLookups, Mixes, type MixLookups } from './mixes.ts';
+import { mixRoutes } from './routes/mixes.ts';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Config } from './config.ts';
 import type { Db } from './db.ts';
@@ -81,9 +83,11 @@ export interface Ctx {
   restart: () => void;
   /** The AI DJ's chats and agent loop (dj/agent.ts). */
   dj: DjAgent;
+  /** Made for you mixes and Blends (mixes.ts). */
+  mixes: Mixes;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -97,6 +101,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     charts: new ChartCache(),
     restart: opts.restart ?? (() => undefined),
     dj: new DjAgent(db, config, opts.djProvider ?? anthropicProvider),
+    mixes: new Mixes(db, opts.mixLookups ?? deezerLookups()),
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
@@ -195,6 +200,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   pushRoutes(app, ctx);
   householdRoutes(app, ctx);
   djRoutes(app, ctx);
+  mixRoutes(app, ctx);
   webRoutes(app, config.webDir);
   return app;
 }

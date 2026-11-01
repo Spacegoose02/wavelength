@@ -828,6 +828,35 @@ busiest day and longest streak, and when you listen most. **Play your top songs*
 from every device you're signed in on, not radio, audiobooks or podcasts, and starts from the history your
 Hub already has.
 
+## Home and Made for you mixes
+
+With a [Wavelength Hub](HUB.md), **Home** opens on what's made for you:
+
+- **Jump back in**: the albums you played last (on any device, since your history syncs).
+- **Made for you**: mixes the Hub makes fresh every day from what you play.
+
+| Mix | What's in it |
+|---|---|
+| **On Repeat** | What you've played most in the last 30 days |
+| **Daily Mix 1–4** | Your favourite artists of the last few months, grouped by who sounds alike, with your most played songs by them and one song in four from similar artists |
+| **Discover Weekly** | Best-known songs by artists like your favourites that you haven't played yet. Changes every Monday |
+| **Forgotten favourites** | Songs you played a lot but not for three months |
+| **Time Capsule** | Your most played songs from one to three years ago |
+
+A mix only shows songs your library has: the Hub suggests, and Wavelength finds each one on your Navidrome or Plex
+server. So Discover Weekly gets better as you add music, and a mix that finds nothing tells you so. Open a mix to
+**Play**, **Shuffle** or **Save as playlist** (today's songs, as an ordinary playlist). Mixes need a few days of
+listening before they appear. Kid profiles get no explicit suggestions, and the kid filter applies as everywhere.
+[Smart offline](#smart-offline) can keep every mix downloaded.
+
+### Blend
+
+**Home → Blend** makes one mix from what you and other people in the house listen to: songs by artists you
+share come first, then each person's favourites in turn. Everyone in a Blend has to turn on **Let people in the
+house make Blends with me** first, since a Blend shows a little of what they play. Grown-ups can blend with each
+other and with their own kids; kids only with their parents. A Hub admin can turn mixes and Blend off in
+**Settings → Features**.
+
 ## Smart offline
 
 **Settings → Downloads → Smart offline** keeps music on the device by itself, so the phone plays in the car or on

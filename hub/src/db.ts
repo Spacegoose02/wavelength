@@ -494,6 +494,20 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  `
+  -- Made for you mixes (mixes.ts), made once a day per person and kept until the next day's.
+  CREATE TABLE mixes (
+    user_id  INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    day      TEXT NOT NULL,                 -- YYYY-MM-DD (UTC) they were made for
+    mixes    TEXT NOT NULL,                 -- JSON: Mix[]
+    built_at INTEGER NOT NULL
+  );
+  -- People who let others in the house make a Blend with them (mixes.ts).
+  CREATE TABLE blend_optin (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    at      INTEGER NOT NULL
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

@@ -6,6 +6,10 @@
   the mouth does. Sliders for sensitivity, how centred the voice must be, noise rejection, the voice range, drum
   hits, lyrics timing (for every song, or nudged for the song playing and remembered), syllable length, and how
   fast and wide the mouth moves. Synced with a Hub. See the [user guide](docs/USER-GUIDE.md#critters).
+- **Home and Made for you mixes.** With a Hub, Home has **Jump back in** and fresh mixes every day: On Repeat,
+  Daily Mix 1–4, Discover Weekly, Forgotten favourites and Time Capsule, each with the songs your library has.
+  **Blend** mixes your taste with someone in the house (both have to say yes). See the
+  [user guide](docs/USER-GUIDE.md#home-and-made-for-you-mixes). **Hub:** `/api/mixes`, `/api/blend…`.
 - **Mac and Linux apps.** Each release now has a universal Mac `.dmg` (Apple silicon and Intel) and a Linux
   AppImage and `.deb`. Passwords go in the macOS Keychain or the Secret Service (GNOME Keyring, KWallet).
   They don't update themselves yet.

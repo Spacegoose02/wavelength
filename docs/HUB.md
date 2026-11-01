@@ -515,6 +515,14 @@ see `hub/src/features.ts`); each device gets what's on for its person with `GET 
 Hub routes that serve a feature refuse with `403 { feature }` while it's off. Features that cost money or need
 an outside service (talking DJ, tour dates, sound-alike analysis, share links, bit-perfect output) start off.
 
+## Made for you mixes
+
+The Hub makes each person's mixes once a day (`hub/src/mixes.ts`), the first time their app asks for them that
+day, from their plays (the same table Rewind uses) and Deezer's related artists and top songs (cached for a day):
+On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favourites and Time Capsule. Songs are sent by title and
+artist (plus the track that played, for songs the person played), and each app finds them in its own library.
+Blends mix two to six people who have all said yes (`blend_optin`).
+
 ## AI DJ
 
 The Hub runs the AI DJ chat and keeps its API key, model choice, prices, per-account switch and spending limits.
@@ -536,6 +544,10 @@ with a 4xx status.
 | `POST /auth/device/token` | the pairing device | `{ deviceCode }` → `202 {status:'pending'}`, `403 denied`, `410 expired`, or `200` session |
 | `POST /auth/logout` | signed in | signs this device out |
 | `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids, features }` (`kids`: the kids this person is a parent of; `features`: `{ homeMixes: true, … }`, which feature switches are on for this person) |
+| `GET /api/mixes[?fresh=1]` | signed in, `homeMixes` on | `{ mixes: [{ id, name, description, kind, songs: [{ title, artist, album?, duration?, coverUrl?, track?, because? }] }], builtAt }`; made once a day (or now with `fresh=1`) |
+| `GET /api/blend/people` | signed in, `blend` on | `{ optedIn, people: [{ id, displayName, optedIn }] }`: who you may blend with (grown-ups with grown-ups and their own kids; kids with their parents) |
+| `PUT /api/blend/optin` | signed in, `blend` on | `{ on }`: let others make Blends with you |
+| `GET /api/blend?with=<id,id>` | signed in, `blend` on | `{ mix }`; `409` until you and each of them opted in |
 | `GET /api/admin/features` | `users.manage` | `{ features: { homeMixes: { on, kids }, … } }` (see "Feature switches") |
 | `PUT /api/admin/features` | `users.manage` | `{ features: { blend: { on: false }, musicVideos: { kids: true } } }`: only what's sent changes; audited |
 | `GET /api/me/2fa` | signed in | `{ enabled, recoveryLeft }` |

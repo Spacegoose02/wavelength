@@ -27,6 +27,8 @@ import { loadParts } from '../lib/albumParts';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
 import { ArtistNews, notOneArtist, useCanGet } from '../components/ArtistNews';
+import { MadeForYou } from './Mix';
+import { JumpBackIn } from '../components/JumpBackIn';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -57,6 +59,9 @@ export function Home() {
         {loading && <Spinner />}
       </header>
       <ErrorList errors={errors} />
+
+      <JumpBackIn />
+      <MadeForYou />
 
       {(subwave.length > 0 || stations.length > 0) && (
         <section>
