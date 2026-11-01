@@ -566,7 +566,7 @@ export class HubError extends Error {
 }
 
 /** AI DJ (hub/src/dj/, docs/AI-DJ.md): the chat runs on the Hub, which keeps the API key. */
-export interface HubDjStatus { available: boolean; reason: string | null; model: string; spent: number; limit: number | null }
+export interface HubDjStatus { available: boolean; reason: string | null; model: string; spent: number; limit: number | null; web?: boolean }
 export interface HubDjChat { id: number; title: string; createdAt: number; updatedAt: number; turns: number }
 export interface HubDjCall { id: string; name: string; input: unknown }
 export interface HubDjTurn { chat: HubDjChat; status: 'done' | 'tools'; reply: string; calls?: HubDjCall[]; full?: boolean; spent: number; limit: number | null }
@@ -582,6 +582,10 @@ export interface HubDjSettings {
   prices: Record<string, HubDjPrice>;
   householdLimit: number | null;
   defaultUserLimit: number | null;
+  web?: boolean;
+  webMaxSearches?: number;
+  webKids?: boolean;
+  webSearchPrice?: number;
 }
 export interface HubDjAdmin {
   settings: HubDjSettings;

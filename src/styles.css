@@ -1896,3 +1896,15 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 @media (max-width: 640px) { .artist-news { flex-wrap: wrap; } .artist-news-actions { width: 100%; justify-content: flex-end; } }
 /* Browse releases: clear of the app's own back arrow, like the hero */
 .artist-releases-crumbs { margin-left: 44px; min-height: 36px; }
+/* DJ Trash Panda (components/TrashPanda.tsx) on the AI DJ's chat bubbles */
+.dj-row { display: flex; align-items: flex-end; gap: 8px; }
+.dj-name { font-size: 12px; font-weight: 700; color: var(--accent); padding: 0 4px; }
+.trash-panda { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--panel); box-shadow: var(--bevel); }
+.trash-panda .tp-band { stroke: var(--accent); }
+.trash-panda .tp-cup { fill: var(--accent); }
+.trash-panda .tp-shades { fill: rgb(10 10 16 / 0.85); stroke: var(--accent-2, var(--accent)); stroke-width: 3; }
+.trash-panda .tp-shine { stroke: var(--accent-2, var(--accent)); opacity: 0.8; }
+.trash-panda .tp-glow { fill: var(--accent-2, var(--accent)); filter: drop-shadow(0 0 4px var(--accent-2, var(--accent))); }
+.trash-panda.busy { animation: tp-bop 0.5s ease-in-out infinite alternate; }
+@keyframes tp-bop { from { transform: translateY(0) rotate(-4deg); } to { transform: translateY(-3px) rotate(4deg); } }
+@media (prefers-reduced-motion: reduce) { .trash-panda.busy { animation: none; } }

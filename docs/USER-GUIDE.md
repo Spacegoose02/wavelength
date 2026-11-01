@@ -830,10 +830,15 @@ With a Hub where an admin turned it on for you, **AI DJ** is in the menu (under 
 it: ask for a playlist ("25 songs for a road trip"), a mood ("chill music for dinner"), more like an artist or what
 you played this week, or "which Radiohead albums am I missing?". It searches your library, plays or queues what it
 finds, saves playlists (**Open the playlist** jumps to one) and, when you say yes, requests missing albums like the
-Request button does. **This month** under the box shows how much of your allowance you've used.
+Request button does. **This month** under the box shows how much of your allowance you've used. Your DJ is
+**DJ Trash Panda**, the rave raccoon next to each reply.
+
+If an admin turned on web search, the DJ can also look things up online: "what are the top EDM hits right now?", or
+paste a setlist link and say "build me a new EDM mix from this". It plays or saves the songs you have and can
+request the rest.
 
 Admins set it up under **Settings → AI DJ**: the API key (kept on the Hub only), the model, prices, monthly limits
-and who can use it. The full setup guide is [AI-DJ.md](AI-DJ.md).
+who can use it, and whether it may search the web. The full setup guide is [AI-DJ.md](AI-DJ.md).
 
 > **Developer notes.** `src/views/DJ.tsx` (chat), `src/lib/dj.ts` (the tools that run in the app),
 > `src/views/DjAdmin.tsx` (admin tab), `hub/src/dj/` and `hub/src/routes/dj.ts` on the Hub. See

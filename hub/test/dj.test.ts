@@ -199,3 +199,53 @@ test('AI DJ: a provider error leaves the chat usable', async () => {
   const again = await json(app, 'POST', '/api/dj/chat', { token: tokens.member, body: { chatId: chats[0].id, message: 'hello?' } });
   assert.equal(again.body.reply, 'Back now.');
 });
+
+test('AI DJ: web search is off until turned on, kids only with their own switch, searches are counted', async () => {
+  const script = scripted([
+    (req) => {
+      assert.equal(req.web, undefined, 'off by default');
+      assert.match(req.system, /can’t browse the web/);
+      return text('Paste the list.');
+    },
+    (req) => {
+      assert.deepEqual(req.web, { maxSearches: 2 });
+      assert.match(req.system, /web_search/);
+      return {
+        content: [
+          { type: 'server_tool_use', id: 'srv_1', name: 'web_search', input: { query: 'top EDM hits' } },
+          { type: 'web_search_tool_result', tool_use_id: 'srv_1', content: [] },
+          { type: 'text', text: 'Here are this week’s top EDM hits.', citations: null },
+        ] as unknown as DjResponse['content'],
+        usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, webSearches: 2 },
+      };
+    },
+    (req) => {
+      assert.equal(req.web, undefined, 'kids stay off');
+      return text('ok');
+    },
+    (req) => {
+      assert.deepEqual(req.web, { maxSearches: 2 });
+      return text('ok');
+    },
+  ]);
+  const { app, tokens, ids } = await seeded({}, {}, { djProvider: script.factory });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { enabled: true, apiKey: 'k' } });
+  for (const who of ['member', 'kid'] as const) await json(app, 'PUT', `/api/admin/dj/users/${ids[who]}`, { token: tokens.admin, body: { enabled: true, monthlyLimit: null } });
+
+  await json(app, 'POST', '/api/dj/chat', { token: tokens.member, body: { message: 'top EDM hits?' } });
+  assert.equal((await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { webMaxSearches: 50 } })).status, 400);
+  const on = await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { web: true, webMaxSearches: 2 } });
+  assert.equal(on.body.settings.web, true);
+  assert.equal(on.body.settings.webKids, false);
+
+  const r = await json(app, 'POST', '/api/dj/chat', { token: tokens.member, body: { message: 'top EDM hits?' } });
+  assert.equal(r.body.reply, 'Here are this week’s top EDM hits.');
+  const chat = await json(app, 'GET', `/api/dj/chats/${r.body.chat.id}`, { token: tokens.member });
+  assert.deepEqual(chat.body.messages[1].tools, ['web_search'], 'web searches show in the chat');
+  // first call: 1000 in, 500 out on Opus 5.5; second: 2 searches at $10 per 1,000
+  assert.ok(Math.abs(r.body.spent - ((1000 * 4 + 500 * 20) / 1e6 + 0.02)) < 1e-9, `spent ${r.body.spent}`);
+
+  await json(app, 'POST', '/api/dj/chat', { token: tokens.kid, body: { message: 'hi' } });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { webKids: true } });
+  await json(app, 'POST', '/api/dj/chat', { token: tokens.kid, body: { message: 'hi' } });
+});

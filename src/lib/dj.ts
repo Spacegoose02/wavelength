@@ -186,6 +186,8 @@ const LABELS: Record<string, string> = {
   similar_artists: 'Finding similar artists',
   artist_top_songs: 'Finding their best-known songs',
   request_download: 'Requesting a download',
+  web_search: 'Searching the web',
+  web_fetch: 'Reading a web page',
 };
 export const toolLabel = (name: string) => LABELS[name] ?? name;
 export const describe = (calls: HubDjCall[]) => [...new Set(calls.map((c) => LABELS[c.name] ?? c.name))].join(' · ');

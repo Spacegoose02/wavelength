@@ -3,7 +3,7 @@ import type { Db } from '../db.ts';
 import { HttpError } from '../http.ts';
 import type { User } from '../users.ts';
 import type { DjContentBlock, DjContentParam, DjMessage, DjProvider, ProviderFactory } from './provider.ts';
-import { checkBudget, costOf, getApiKey, getSettings, priceOf, recordUsage } from './settings.ts';
+import { checkBudget, costOf, getApiKey, getSettings, priceOf, recordUsage, webFor } from './settings.ts';
 import { ALL_TOOLS, isAppTool, isHubTool, runHubTool } from './tools.ts';
 
 /**
@@ -87,7 +87,7 @@ interface Row {
 
 const toChat = (r: Row): Chat => ({ id: r.id, title: r.title, createdAt: r.created_at, updatedAt: r.updated_at, turns: r.turns });
 
-function systemPrompt(user: User): string {
+function systemPrompt(user: User, web: boolean): string {
   const today = new Date().toISOString().slice(0, 10);
   const kid = user.role === 'kid';
   return [
@@ -101,6 +101,9 @@ function systemPrompt(user: User): string {
     '- Missing albums: compare artist_discography with library_albums, list what is missing (studio albums first), and ask before requesting.',
     '- Keep replies short and friendly: a sentence or two, then a list when listing music. No long explanations of what you are about to do.',
     '- If a tool fails, say so plainly and suggest what to try.',
+    web
+      ? '- You can search the web (web_search) and read pages (web_fetch) for what Deezer and the library don’t know: current charts and top hits, a festival or DJ setlist, a playlist or tracklist page the listener pasted, news about an artist. Read the songs off the page, then check them with find_songs in one batch and play or save the ones found. Say where the list came from in a few words. Don’t search for things the library tools answer.'
+      : '- You can’t browse the web. For charts or a setlist, ask the listener to paste the song list into the chat.',
     kid
       ? '- This listener is a child. Keep everything family-friendly: never pick explicit songs or albums, and skip anything marked explicit. Their download requests go to a parent to approve.'
       : '',
@@ -122,7 +125,8 @@ export function transcript(messages: DjMessage[]): TranscriptEntry[] {
       if (text) out.push({ role: 'user', text });
       continue;
     }
-    const tools = !m.content || typeof m.content === 'string' ? [] : m.content.filter((b) => b.type === 'tool_use').map((b) => (b as { name: string }).name);
+    // the DJ's own tools, and the provider's web search / fetch (server_tool_use)
+    const tools = !m.content || typeof m.content === 'string' ? [] : m.content.filter((b) => b.type === 'tool_use' || b.type === 'server_tool_use').map((b) => (b as { name: string }).name);
     const text = textOf(m);
     const last = out[out.length - 1];
     if (last?.role === 'assistant') {
@@ -244,7 +248,8 @@ export class DjAgent {
     try {
       const provider = this.provider();
       const settings = getSettings(this.db);
-      const system = systemPrompt(user);
+      const web = webFor(settings, user);
+      const system = systemPrompt(user, web);
       let { steps, requests } = state;
       for (;;) {
         checkBudget(this.db, user.id);
@@ -252,13 +257,13 @@ export class DjAgent {
         const last = steps >= MAX_STEPS;
         let res;
         try {
-          res = await provider.create({ system, tools: ALL_TOOLS, messages, noTools: last });
+          res = await provider.create({ system, tools: ALL_TOOLS, messages, noTools: last, ...(web && { web: { maxSearches: settings.webMaxSearches } }) });
         } catch (e) {
           // keep what we have: the chat stays valid (a later message just follows on) and can be tried again
           this.save(id, messages, null);
           throw e;
         }
-        recordUsage(this.db, user.id, id, res.model, res.usage, costOf(priceOf(settings, res.model) ?? priceOf(settings, settings.model), res.usage));
+        recordUsage(this.db, user.id, id, res.model, res.usage, costOf(priceOf(settings, res.model) ?? priceOf(settings, settings.model), res.usage, settings.webSearchPrice));
         messages.push({ role: 'assistant', content: res.content as unknown as DjContentParam[] });
 
         const uses = res.content.filter((b): b is Extract<DjContentBlock, { type: 'tool_use' }> => b.type === 'tool_use');
