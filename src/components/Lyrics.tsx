@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { currentLine, lyricsFor, maskForKids, type Lyrics } from '../lib/lyrics';
+import { currentLine, lyricQueries, lyricsFor, maskForKids, type Lyrics } from '../lib/lyrics';
 import { useIsKid } from '../lib/kids';
 import { sourceFor } from '../sources/registry';
 import type { Track } from '../sources/types';
@@ -12,7 +12,8 @@ import { Spinner } from './common';
  * kept in view, and tapping a line jumps there. Plain lyrics just scroll.
  */
 export function LyricsPanel({ track }: { track: Track }) {
-  const [state, setState] = useState<{ key: string; lyrics?: Lyrics; loading: boolean }>({ key: '', loading: true });
+  const [state, setState] = useState<{ key: string; lyrics?: Lyrics; loading: boolean; failed?: boolean }>({ key: '', loading: true });
+  const [attempt, setAttempt] = useState(0);
   const key = `${track.sourceId}:${track.id}`;
   const kid = useIsKid();
   const position = usePlayer((s) => s.position);
@@ -23,14 +24,15 @@ export function LyricsPanel({ track }: { track: Track }) {
     let live = true;
     setState({ key, loading: true });
     const cfg = useSettings.getState().sources.find((s) => s.id === track.sourceId);
-    lyricsFor(track, cfg ? sourceFor(cfg) : undefined)
-      .catch(() => undefined)
-      .then((lyrics) => live && setState({ key, lyrics, loading: false }));
+    lyricsFor(track, cfg ? sourceFor(cfg) : undefined).then(
+      (lyrics) => live && setState({ key, lyrics, loading: false }),
+      () => live && setState({ key, loading: false, failed: true }),
+    );
     return () => {
       live = false;
     };
-    // one fetch per song (track objects change when a source refreshes them)
-  }, [key]);
+    // one fetch per song (track objects change when a source refreshes them), again on Try again
+  }, [key, attempt]);
 
   const lines = useMemo(
     () => state.lyrics?.lines.map((l) => ({ ...l, text: kid ? maskForKids(l.text) : l.text })) ?? [],
@@ -49,7 +51,17 @@ export function LyricsPanel({ track }: { track: Track }) {
 
   if (state.loading || state.key !== key) return <div className="lyrics"><Spinner /></div>;
   if (state.lyrics?.instrumental) return <div className="lyrics empty">♪ Instrumental ♪</div>;
-  if (!lines.length) return <div className="lyrics empty">No lyrics found for this song.</div>;
+  if (state.failed)
+    return (
+      <div className="lyrics empty">
+        Couldn't reach the lyrics services. <button className="link" onClick={() => setAttempt((n) => n + 1)}>Try again</button>
+      </div>
+    );
+  if (!lines.length) {
+    // what was looked up, so a miss can be told apart from a song tagged in a way the lookup didn't expect
+    const q = lyricQueries(track)[0];
+    return <div className="lyrics empty">No lyrics found{q ? ` for “${q.title}” by ${q.artist}` : ' for this song'}.</div>;
+  }
   return (
     <div className={`lyrics ${synced ? 'synced' : ''}`} ref={list}>
       {lines.map((l, i) => (
