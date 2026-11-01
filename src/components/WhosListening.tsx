@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { checkPin, useKidTime } from '../lib/kidTime';
 import type { HubFamilyPerson } from '../sources/hub';
-import { hubClient, profilePinHash, thisDevice, useHub, type SavedProfile } from '../store/hub';
+import { hubClient, profilePinHash, sameFamily, thisDevice, useHub, type SavedProfile } from '../store/hub';
 import { PinDialog } from './KidLock';
 
 /**
@@ -39,7 +39,8 @@ export function useSwitchablePeople(): Person[] {
   const family = useFamily();
   if (!user) return [];
   const byId = new Map<number, Person>();
-  for (const p of profiles) byId.set(p.user.id, { id: p.user.id, displayName: p.user.displayName, role: p.user.role, saved: p });
+  // only people in your own family: never another family's profile, even one signed in on this device
+  for (const p of profiles) if (sameFamily(user, p.user)) byId.set(p.user.id, { id: p.user.id, displayName: p.user.displayName, role: p.user.role, saved: p });
   for (const f of family) {
     if (f.id === user.id) continue;
     const had = byId.get(f.id);

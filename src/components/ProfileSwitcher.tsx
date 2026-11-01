@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { checkPin, useKidTime } from '../lib/kidTime';
-import { profilePinHash, useHub, type SavedProfile } from '../store/hub';
+import { profilePinHash, sameFamily, useHub, type SavedProfile } from '../store/hub';
 import { PinDialog } from './KidLock';
 
 /**
@@ -31,7 +31,7 @@ export function ProfileSwitcher({ onAdd }: { onAdd?: () => void }) {
       </p>
       <div className="row gap wrap">
         <span className="chip">{user.displayName} · now</span>
-        {profiles.map((p) => (
+        {profiles.filter((p) => sameFamily(user, p.user)).map((p) => (
           <span key={p.user.id} className="row gap">
             <button className="btn small" disabled={kid && !pinSet} onClick={() => go(p)}>{p.user.displayName}{p.pin ? ' 🔒' : ''}</button>
             {!kid && <button className="btn small ghost" title={`Sign ${p.user.displayName} out of this device`}

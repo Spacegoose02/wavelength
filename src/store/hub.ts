@@ -67,6 +67,12 @@ export interface SavedProfile {
   pin?: string;
 }
 
+/**
+ * Whether two people may switch to each other on a device: never across families (hub/src/families.ts). People
+ * with no family on both sides (a Hub without families, or an older Hub) switch as before.
+ */
+export const sameFamily = (a?: Pick<HubUser, 'familyId'>, b?: Pick<HubUser, 'familyId'>) => (a?.familyId ?? null) === (b?.familyId ?? null);
+
 /** A PIN only keeps the household from switching into each other's profiles by accident; the Hub isn't involved. */
 export async function profilePinHash(userId: number, pin: string): Promise<string> {
   const data = new TextEncoder().encode(`wavelength-profile:${userId}:${pin}`);
@@ -99,7 +105,8 @@ export const useHub = create<HubState>()(
       switchProfile: (userId) =>
         set((st) => {
           const next = st.profiles.find((p) => p.user.id === userId);
-          if (!next) return st;
+          // never into another family's profile, even one still signed in here from before
+          if (!next || !sameFamily(st.user, next.user)) return st;
           const cur = asProfile(st, st.pin);
           // each person's settings sync from scratch (hubSync.ts); their playlists follow the owner (librarySync.ts)
           localStorage.removeItem(STAMPS_KEY);
@@ -139,7 +146,10 @@ export const useHub = create<HubState>()(
         await c?.logout().catch(() => undefined);
         localStorage.removeItem(STAMPS_KEY);
         // someone else signed in on this device carries on
-        const [next, ...rest] = useHub.getState().profiles;
+        // someone else in the same family signed in on this device carries on; other families' profiles stay put
+        const { profiles, user: was } = useHub.getState();
+        const next = profiles.find((p) => sameFamily(was, p.user));
+        const rest = profiles.filter((p) => p !== next);
         if (next) set({ token: next.token, user: next.user, permissions: next.permissions, device: next.device, pin: next.pin, profiles: rest, kids: [], features: undefined, shared: undefined, offline: false, services: [] });
         else set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false, services: [], kids: [], features: undefined, shared: undefined });
       },

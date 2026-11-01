@@ -553,7 +553,9 @@ everyone in your family, plus anyone else signed in on this device. Tap someone:
 Everyone sets their switching PIN under **Settings → Account → Switching PIN** (4 to 8 digits, kept as a scrypt
 hash). Without one, nobody can switch to them. A grown-up can switch to a kid in their family without a PIN; a kid
 always needs the other person's PIN, so a kid can't step into a grown-up's profile. Switching never crosses
-families. Wrong PINs are rate limited and audited; the admin can **Clear PIN** for someone who forgot theirs.
+families: the Hub refuses it, the picker only shows your own family, a profile from another family that's still
+signed in on the device can't be switched to (`sameFamily` in `src/store/hub.ts`), and **Add someone to this device**
+refuses a person from another family. Wrong PINs are rate limited and audited; the admin can **Clear PIN** for someone who forgot theirs.
 
 ## Feature switches
 

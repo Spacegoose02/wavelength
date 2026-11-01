@@ -12,7 +12,7 @@ import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { FamiliesAdmin, ServiceFamilies } from './Families';
 import { SwitchPinSetting } from '../components/WhosListening';
 import { HubClient, HubError, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
-import { hubClient, thisDevice, useHub } from '../store/hub';
+import { hubClient, sameFamily, thisDevice, useHub } from '../store/hub';
 import { useFeature } from '../lib/features';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
@@ -93,10 +93,20 @@ function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; 
 /** Signing in; with `adding`, a second person on this device (ProfileSwitcher) and `onCancel` to go back. */
 export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: () => void } = {}) {
   const { url, setUrl, signedIn: first, addProfile } = useHub();
-  const signedIn = adding ? (s: HubSession) => { addProfile(s); onCancel?.(); } : first;
+  const [err, setErr] = useState('');
+  const me = useHub((s) => s.user);
+  // someone added to this device has to be in the same family: switching never crosses families
+  const signedIn = adding ? (s: HubSession) => {
+    if (!sameFamily(me, s.user)) {
+      void new HubClient(url, s.token).logout().catch(() => undefined);
+      setErr(`${s.user.displayName} is in another family, so they can't be added to this device's profiles.`);
+      return;
+    }
+    addProfile(s);
+    onCancel?.();
+  } : first;
   const [draft, setDraft] = useState(url);
   const [health, setHealth] = useState<HubHealth>();
-  const [err, setErr] = useState('');
   const [mode, setMode] = useState<'code' | 'password' | 'invite' | null>(null);
   const [form, setForm] = useState({ username: '', password: '', displayName: '' });
   const [invite, setInvite] = useState('');
