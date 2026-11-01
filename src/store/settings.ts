@@ -6,6 +6,7 @@ import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 import type { SmartPlaylist } from '../lib/smartPlaylists';
+import { cleanTune, DEFAULT_TUNE, type MouthTune } from '../player/voice';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
@@ -135,8 +136,20 @@ interface SettingsState {
   setAct(a: Act): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
+  /** The critter mouth tuner (components/MouthTuner.tsx, player/voice.ts). Synced. */
+  mouthTune: MouthTune;
+  setMouthTune(t: Partial<MouthTune> | null): void;
+  /** Lyrics offsets for single songs, seconds, by `sourceId:trackId` (player/singing.ts `offsetKey`). Synced. */
+  mouthOffsets: Record<string, number>;
+  setMouthOffset(key: string, seconds: number): void;
+  /** Discord status on this computer (lib/discord.ts). Not synced: the app ID is, the switch isn't. */
+  discord: { on: boolean; appId: string };
+  setDiscord(p: Partial<SettingsState['discord']>): void;
+  /** The talking DJ (lib/djVoice.ts): a spoken link between songs. Synced, except the voice is per device. */
+  djVoice: DjVoiceSettings;
+  setDjVoice(p: Partial<DjVoiceSettings>): void;
   /** Settings → Playback: ReplayGain (player/replayGain.ts) and crossfade between songs (seconds, 0 = off). */
-  playback: { replayGain: ReplayGainMode; replayGainPreamp: number; crossfade: number };
+  playback: { replayGain: ReplayGainMode; replayGainPreamp: number; crossfade: number; /** player/automix.ts */ automix?: boolean };
   setPlayback(p: Partial<SettingsState['playback']>): void;
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';
@@ -151,6 +164,9 @@ interface SettingsState {
   /** Show Inbox news from the Hub as system notifications (lib/notify.ts). Per device, not synced. */
   notifications: boolean;
   setNotifications(v: boolean): void;
+  /** Settings → Downloads → Smart offline (lib/smartOffline.ts). Per device, not synced. */
+  smartOffline: SmartOfflineSettings;
+  setSmartOffline(p: Partial<SmartOfflineSettings>): void;
   /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
   updates: { auto: boolean; prerelease: boolean };
   setUpdates(u: Partial<SettingsState['updates']>): void;
@@ -169,6 +185,37 @@ interface SettingsState {
   setThemeMode(m: Partial<Pick<SettingsState, 'seasonal' | 'randomDaily'>>): void;
   setDeemix(d: Partial<SettingsState['deemix']>): void;
 }
+
+/** Smart offline's settings (lib/smartOffline.ts), kept here so the store doesn't import that module. */
+export interface SmartOfflineSettings {
+  enabled: boolean;
+  favorites: boolean;
+  /** songs played in the last N days; 0 = off */
+  recentDays: number;
+  /** Made for you mixes and Blend (lib/homeMixes.ts registers them) */
+  mixes: boolean;
+  /** largest total for smart offline's songs, MB */
+  capMb: number;
+  /** only on Wi-Fi (where the device can tell; Windows always counts as Wi-Fi) */
+  wifiOnly: boolean;
+  /** last finished run, ms */
+  lastRun?: number;
+}
+
+export interface DjVoiceSettings {
+  on: boolean;
+  /** Talk before every Nth song. */
+  every: number;
+  style: 'chill' | 'hype' | 'trivia';
+  /** What the DJ calls you; empty = no name. */
+  name: string;
+  /** speechSynthesis voice name on this device; empty = the system's default. */
+  voice: string;
+  rate: number;
+}
+export const DEFAULT_DJ_VOICE: DjVoiceSettings = { on: false, every: 3, style: 'chill', name: '', voice: '', rate: 1 };
+
+export const DEFAULT_SMART_OFFLINE: SmartOfflineSettings = { enabled: false, favorites: true, recentDays: 30, mixes: true, capMb: 4000, wifiOnly: true };
 
 export const useSettings = create<SettingsState>()(
   persist(
@@ -191,6 +238,25 @@ export const useSettings = create<SettingsState>()(
       setAct: (act) => set({ act }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
+      smartOffline: DEFAULT_SMART_OFFLINE,
+      setSmartOffline: (p) => set((st) => ({ smartOffline: { ...st.smartOffline, ...p } })),
+      mouthTune: DEFAULT_TUNE,
+      setMouthTune: (t) => set((st) => ({ mouthTune: t === null ? DEFAULT_TUNE : cleanTune({ ...st.mouthTune, ...t }) })),
+      mouthOffsets: {},
+      setMouthOffset: (key, seconds) =>
+        set((st) => {
+          const next = { ...st.mouthOffsets };
+          delete next[key];
+          if (Math.abs(seconds) >= 0.01) next[key] = Math.round(seconds * 100) / 100;
+          // newest last; keep the 300 newest so the synced value stays small
+          const keys = Object.keys(next);
+          for (const k of keys.slice(0, Math.max(0, keys.length - 300))) delete next[k];
+          return { mouthOffsets: next };
+        }),
+      discord: { on: false, appId: '' },
+      setDiscord: (p) => set((st) => ({ discord: { ...st.discord, ...p } })),
+      djVoice: DEFAULT_DJ_VOICE,
+      setDjVoice: (p) => set((st) => ({ djVoice: { ...st.djVoice, ...p } })),
       playback: { replayGain: 'off', replayGainPreamp: 0, crossfade: 0 },
       setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',
@@ -299,7 +365,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates } };
+        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, mouthTune: cleanTune(s.mouthTune) };
       },
     },
   ),

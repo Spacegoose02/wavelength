@@ -18,6 +18,8 @@ on GitHub, so creating the release in the web UI is enough:
 | --- | --- | --- |
 | `windows` | `windows-latest` | `Wavelength_X.Y.Z_x64-setup.exe`, `Wavelength.exe` |
 | `android` | `ubuntu-latest` | `Wavelength-X.Y.Z-android.apk` (arm64 + armv7, signed) |
+| `linux` | `ubuntu-22.04` | `Wavelength_X.Y.Z_amd64.AppImage`, `Wavelength_X.Y.Z_amd64.deb` |
+| `macos` | `macos-latest` | `Wavelength_X.Y.Z_universal.dmg` (Apple silicon + Intel; signed and notarised when the Apple secrets are set) |
 
 - The version is taken from the **tag** (`v0.7.0` → `0.7.0`) and written into `package.json` and
   `tauri.conf.json` before building, so the file names and Android `versionCode` always match the tag.
@@ -124,6 +126,23 @@ Encode the keystore on Windows (copies it to the clipboard):
 ```
 (macOS/Linux: `base64 -w0 wavelength-release.jks`.) The Windows job needs no secrets, apart from the optional
 update-signing ones ([Update signing](#update-signing)).
+
+### Mac
+
+Without the Apple secrets the Mac build still works, but it's **unsigned**: the first time, people right-click
+Wavelength in Applications and choose **Open** (or allow it in System Settings → Privacy & Security). To sign
+and notarise, join the Apple Developer Program ($99 a year) and add:
+
+| Secret | Value |
+| --- | --- |
+| `APPLE_CERTIFICATE` | a *Developer ID Application* certificate exported from Keychain Access as .p12, base64-encoded |
+| `APPLE_CERTIFICATE_PASSWORD` | the .p12's password |
+| `APPLE_SIGNING_IDENTITY` | the certificate's name, e.g. `Developer ID Application: Your Name (TEAMID)` |
+| `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | your Apple ID, an app-specific password from appleid.apple.com, and your team ID |
+
+Tauri signs and notarises by itself when they're set. The Mac and Linux apps keep passwords in the macOS Keychain
+and the Secret Service (GNOME Keyring or KWallet). They don't update themselves yet: Settings → Updates points to
+the releases page.
 
 ## Dependencies
 

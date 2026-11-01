@@ -21,10 +21,23 @@ keyring-core = "1"
 sha2 = "0.11"
 base64 = "0.23"
 minisign-verify = "0.3"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+mdns-sd = "0.17"
+symphonia = { version = "0.5", default-features = false, features = ["flac", "mp3", "aac", "isomp4", "alac", "wav", "pcm", "ogg", "vorbis", "aiff"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_NetworkManagement_WNet", "Win32_Foundation"] }
 windows-native-keyring-store = "1"
+wasapi = "0.19"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android-native-keyring-store = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { version = "1", features = ["keychain"] }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+apple-native-keyring-store = { version = "1", features = ["protected"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus-secret-service-keyring-store = { version = "1", features = ["rt-tokio-crypto-rust"] }

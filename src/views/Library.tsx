@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArtistAbout } from '../components/ArtistAbout';
 import { useCatalog } from '../store/catalog';
 import { useCan } from '../store/hub';
 import { useSettings } from '../store/settings';
@@ -27,6 +28,8 @@ import { loadParts } from '../lib/albumParts';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
 import { ArtistNews, notOneArtist, useCanGet } from '../components/ArtistNews';
+import { MadeForYou } from './Mix';
+import { JumpBackIn } from '../components/JumpBackIn';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -57,6 +60,9 @@ export function Home() {
         {loading && <Spinner />}
       </header>
       <ErrorList errors={errors} />
+
+      <JumpBackIn />
+      <MadeForYou />
 
       {(subwave.length > 0 || stations.length > 0) && (
         <section>
@@ -461,6 +467,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
           <Grid>{featured.map((a) => <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={openAlbum} />)}</Grid>
         </section>
       )}
+      {!notOneArtist(artist.name) && <ArtistAbout name={artist.name} />}
     </div>
   );
 }

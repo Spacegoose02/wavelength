@@ -5,7 +5,7 @@ import { useSettings } from '../store/settings';
 import { deemixClient, hubRuns } from './hubServices';
 import { mustRequest, requestMusic } from './inbox';
 import { primaryArtist } from './match';
-import { isAndroid } from './platform';
+import { isMobileApp } from './platform';
 
 /**
  * Get a song the library doesn't have (Discover, playlist import): ask the Hub admin for it without
@@ -26,7 +26,7 @@ export class NotOnDeezer extends Error {
   }
 }
 
-export const ytdlpAvailable = () => hubRuns('ytdlp') || (!isAndroid && !!useSettings.getState().ytdlp.outDir);
+export const ytdlpAvailable = () => hubRuns('ytdlp') || (!isMobileApp && !!useSettings.getState().ytdlp.outDir);
 
 const deezerLinkFor = async (e: Wanted) => e.deezerLink ?? (await deezerLookup(e)).link;
 

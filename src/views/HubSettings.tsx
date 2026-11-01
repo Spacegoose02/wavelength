@@ -9,8 +9,9 @@ import { today } from '../lib/kidTime';
 import { notifyAllowed, notifySupported } from '../lib/notify';
 import { isAndroid } from '../lib/platform';
 import { ProfileSwitcher } from '../components/ProfileSwitcher';
-import { HubClient, HubError, type HubPush, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
+import { HubClient, HubError, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
 import { hubClient, thisDevice, useHub } from '../store/hub';
+import { useFeature } from '../lib/features';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 
@@ -584,6 +585,8 @@ function SignedIn() {
       <NotifySetting />
       <ScrobbleSetting />
 
+      <PublicLinks />
+
       <SsoLink />
       {user.hasPassword && <TwoFactorSetting admin={user.role === 'admin'} />}
 
@@ -622,6 +625,37 @@ function SignedIn() {
       ))}
       {permissions.includes('users.manage') && <p className="muted small">You're an admin: manage people in the Users tab.</p>}
     </section>
+  );
+}
+
+/** Your public share links (ShareButton → Anyone with the link): who's opened them, and take them down. */
+function PublicLinks() {
+  const on = useFeature('publicShares');
+  const [links, setLinks] = useState<HubPublicLink[]>();
+  const c = hubClient();
+  const load = () => c?.publicLinks().then((r) => setLinks(r.links)).catch(() => setLinks([]));
+  useEffect(() => {
+    if (on) load();
+  }, [on]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!on || !links?.length) return null;
+  return (
+    <div className="editor">
+      <h3>Your public links</h3>
+      <p className="muted small">Pages anyone with the link can open (song names only, never the music itself). They work for people who can reach this Hub's address.</p>
+      {links.map((l) => {
+        const gone = l.expiresAt !== null && l.expiresAt < Date.now();
+        return (
+          <div key={l.token} className="source-row">
+            <div className="track-main">
+              <div className="track-title">{l.title}</div>
+              <div className="track-sub">{l.kind}{l.songs ? ` · ${l.songs} songs` : ''} · opened {l.views} time{l.views === 1 ? '' : 's'} · {gone ? 'expired' : l.expiresAt ? `until ${new Date(l.expiresAt).toLocaleDateString()}` : 'no end date'}</div>
+            </div>
+            {l.url && !gone && <button className="btn small" onClick={() => navigator.clipboard?.writeText(l.url!).catch(() => undefined)}>Copy</button>}
+            <button className="btn small ghost" onClick={async () => { await c?.deletePublicLink(l.token); load(); }}>Take down</button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

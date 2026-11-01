@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
-import { isAndroid } from '../lib/platform';
+import { isAndroid, isMobileApp } from '../lib/platform';
 import { Equalizer } from '../components/Equalizer';
 import { SCENES } from '../components/Scenes';
 import { ACTS, Critter, SPECIES } from '../components/critters/Critter';
@@ -15,6 +15,13 @@ import { deemixClient, hubKeeps, loadHubServices, saveDownloaderToHub, saveSourc
 import { AccountTab, HubAccess, UsersTab } from './HubSettings';
 import { ServerTab } from './ServerTab';
 import { DjAdminTab } from './DjAdmin';
+import { FeaturesAdminTab } from './FeaturesAdmin';
+import { SmartOfflineSettings } from '../components/SmartOfflineSettings';
+import { MouthTuner } from '../components/MouthTuner';
+import { useFeature } from '../lib/features';
+import { DjVoiceSettings } from '../components/DjVoiceSettings';
+import { DiscordSettings } from '../components/DiscordSettings';
+import { HifiSettings } from '../components/HifiSettings';
 import { UpdatesTab } from '../components/Updates';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
@@ -321,7 +328,7 @@ function DownloadsTab() {
         </div>
       </section>
 
-      {(hubYt || !isAndroid) && <section>
+      {(hubYt || !isMobileApp) && <section>
         <h2>yt-dlp <small className="muted">backup downloader</small></h2>
         <div className="editor">
           {hubYt ? (
@@ -576,11 +583,28 @@ function NowPlayingPicker() {
   );
 }
 
+/** Settings → Playback → Tune mouths, with a live critter beside it to watch while a song plays. */
+function MouthTunerSection() {
+  const on = useFeature('mouthTuner');
+  const { critter, act } = useSettings();
+  if (!on) return null;
+  return (
+    <section id="mouth-tuner">
+      <h2>Critter mouths</h2>
+      <div className="mouth-tuner-inline">
+        <div className="critter-preview"><Critter species={critter} act={act} /></div>
+        <MouthTuner />
+      </div>
+    </section>
+  );
+}
+
 const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
   { id: 'account', label: 'Account' },
   { id: 'users', label: 'Users', admin: true },
   { id: 'server', label: 'Server', admin: true },
   { id: 'dj', label: 'AI DJ', admin: true },
+  { id: 'features', label: 'Features', admin: true },
   { id: 'sources', label: 'Sources' },
   { id: 'playback', label: 'Playback' },
   { id: 'downloads', label: 'Downloads' },
@@ -592,6 +616,7 @@ const TABS: { id: SettingsTab; label: string; admin?: boolean }[] = [
 /** Explicit / clean versions (lib/versions.ts). Kid profiles always get the clean one. */
 function PlaybackOptions() {
   const pb = useSettings((s) => s.playback);
+  const automix = useFeature('automix');
   const setPlayback = useSettings((s) => s.setPlayback);
   return (
     <section id="between-songs">
@@ -619,6 +644,19 @@ function PlaybackOptions() {
         <span>{pb.crossfade ? `Crossfade ${pb.crossfade} s` : 'Crossfade off (gapless)'}</span>
         <input type="range" min={0} max={12} step={1} value={pb.crossfade} onChange={(e) => setPlayback({ crossfade: Number(e.target.value) })} style={{ ['--pct' as string]: `${(pb.crossfade / 12) * 100}%` }} />
       </label>
+      {automix && (
+        <>
+          <label className="check">
+            <span className="switch"><input type="checkbox" checked={!!pb.automix} onChange={(e) => setPlayback({ automix: e.target.checked })} /><span /></span>
+            <span><b>AutoMix</b>: blend songs like a DJ instead of one fixed fade</span>
+          </label>
+          <p className="muted small">
+            The next song on the same album follows without a fade. With sound-alike analysis on the Hub, songs at close tempos blend
+            over 8 beats starting on the beat, the next one nudged to the same tempo for the blend; others fade for longer between calm
+            songs and shorter between energetic ones. Without the analysis it fades for {pb.crossfade || 6} seconds.
+          </p>
+        </>
+      )}
     </section>
   );
 }
@@ -665,11 +703,16 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'users' && isAdmin && <UsersTab />}
       {tab === 'server' && isAdmin && <ServerTab />}
       {tab === 'dj' && isAdmin && <DjAdminTab />}
+      {tab === 'features' && isAdmin && <FeaturesAdminTab />}
       {tab === 'sources' && <SourcesTab />}
       {tab === 'playback' && (
         <>
           <NowPlayingPicker />
+          <MouthTunerSection />
           <PlaybackOptions />
+          <DjVoiceSettings />
+          <DiscordSettings />
+          <HifiSettings />
           <VersionsPicker />
           <section id="equalizer">
             <h2>Equalizer</h2>
@@ -677,7 +720,12 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           </section>
         </>
       )}
-      {tab === 'downloads' && <DownloadsTab />}
+      {tab === 'downloads' && (
+        <>
+          <SmartOfflineSettings />
+          <DownloadsTab />
+        </>
+      )}
       {tab === 'themes' && <ThemesTab />}
       {tab === 'discover' && <DiscoverCharts />}
       {tab === 'updates' && <UpdatesTab />}

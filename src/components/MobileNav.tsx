@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { usePlayer } from '../store/player';
 import { useUi, type Route } from '../store/ui';
 import { useLibrary } from '../store/library';
-import { isAndroid } from '../lib/platform';
+import { isMobileApp } from '../lib/platform';
 import { Cover } from './common';
 import {
   IconAlbum, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
@@ -15,7 +15,7 @@ import { KID_VIEWS, useIsKid } from '../lib/kids';
 import { useHub } from '../store/hub';
 
 const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route['view'][] }[] = [
-  { view: 'home', label: 'Home', icon: <IconHome /> },
+  { view: 'home', label: 'Home', icon: <IconHome />, also: ['mix', 'blend'] },
   { view: 'discover', label: 'Discover', icon: <IconCompass /> },
   { view: 'search', label: 'Search', icon: <IconSearch /> },
   { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave /> },
@@ -83,7 +83,7 @@ export function LibraryHub() {
     { view: 'radio', label: 'Radio', icon: <IconRadio /> },
     { view: 'books', label: 'Audiobooks', icon: <IconBook /> },
     { view: 'podcasts', label: 'Podcasts', icon: <IconPodcast /> },
-    { view: 'downloads', label: isAndroid ? 'Downloads (deemix)' : 'Downloads', icon: <IconDownload /> },
+    { view: 'downloads', label: isMobileApp ? 'Downloads (deemix)' : 'Downloads', icon: <IconDownload /> },
     ...(dj ? [{ view: 'dj' as const, label: 'AI DJ', icon: <IconDj /> }] : []),
     ...(hubOn ? [{ view: 'inbox' as const, label: badge ? `Inbox (${badge})` : 'Inbox', icon: <IconInbox /> }] : []),
     { view: 'settings', label: 'Settings', icon: <IconSettings /> },

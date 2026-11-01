@@ -229,6 +229,30 @@ export interface HubPush {
   subscribeUrl: string | null;
   webUrl: string | null;
 }
+/** A song the Hub analysed (hub/src/sonic/). `id` is the Navidrome song id. */
+export interface HubSonicHit { id: string; title: string; artist: string; album: string; duration: number; bpm: number; key: string; energy: number; mood: string; match?: number }
+export interface HubSonicFeatures extends HubSonicHit { beatStrength: number; beatPhase: number; offset: number; loudness: number }
+export interface HubSonicStatus { on: boolean; blocked: string | null; total: number; analysed: number; failed: number; running: boolean; current: string | null; lastListAt: number | null; lastError: string | null }
+
+/** A Made for you mix (hub/src/mixes.ts). Songs are found in each person's own library. */
+export interface HubMixSong {
+  title: string;
+  artist: string;
+  album?: string;
+  duration?: number;
+  coverUrl?: string;
+  /** the track as a device played it, when this person played it */
+  track?: Track;
+  because?: string;
+}
+export interface HubMix {
+  id: string;
+  name: string;
+  description: string;
+  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend';
+  songs: HubMixSong[];
+}
+
 /** A playlist the household adds to together (hub/src/routes/household.ts). */
 export interface HouseholdPlaylist {
   id: number;
@@ -565,6 +589,32 @@ export class HubError extends Error {
   }
 }
 
+export interface HubPublicLink {
+  token: string;
+  kind: string;
+  title: string;
+  subtitle: string | null;
+  createdAt: number;
+  expiresAt: number | null;
+  views: number;
+  songs?: number;
+  url?: string;
+}
+
+export interface HubTourEvent {
+  date: string;
+  time?: string;
+  venue: string;
+  city: string;
+  country?: string;
+  url?: string;
+}
+export interface HubTourSettings {
+  provider: 'ticketmaster' | 'bandsintown';
+  keySet: boolean;
+  hint: string | null;
+}
+
 /** AI DJ (hub/src/dj/, docs/AI-DJ.md): the chat runs on the Hub, which keeps the API key. */
 export interface HubDjStatus { available: boolean; reason: string | null; model: string; spent: number; limit: number | null }
 export interface HubDjChat { id: number; title: string; createdAt: number; updatedAt: number; turns: number }
@@ -629,7 +679,27 @@ export class HubClient {
     return r.status === 202 ? null : r.data;
   }
 
-  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[] }>('GET', '/api/me');
+  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean> }>('GET', '/api/me');
+  mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes${fresh ? '?fresh=1' : ''}`);
+  blendPeople = () => this.call<{ optedIn: boolean; people: { id: number; displayName: string; optedIn: boolean }[] }>('GET', '/api/blend/people');
+  setBlendOptIn = (on: boolean) => this.call<{ optedIn: boolean }>('PUT', '/api/blend/optin', { on });
+  blend = (ids: number[]) => this.call<{ mix: HubMix }>('GET', `/api/blend?with=${ids.join(',')}`);
+  sonicSimilar = (q: { id?: string; artist?: string; title?: string }, limit = 50) => this.call<{ song: HubSonicHit; songs: HubSonicHit[] }>('GET', `/api/sonic/similar?${new URLSearchParams({ ...(q.id && { id: q.id }), ...(q.artist && { artist: q.artist }), ...(q.title && { title: q.title }), limit: String(limit) })}`);
+  sonicJourney = (from: { artist: string; title: string }, to: { id: string }, steps = 20) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/journey?${new URLSearchParams({ fromArtist: from.artist, fromTitle: from.title, to: to.id, steps: String(steps) })}`);
+  sonicSearch = (q: string) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/search?q=${encodeURIComponent(q)}`);
+  sonicLookup = (songs: { id?: string; artist?: string; title?: string }[]) => this.call<{ features: (HubSonicFeatures | null)[] }>('POST', '/api/sonic/lookup', { songs });
+  sonicStatus = () => this.call<HubSonicStatus>('GET', '/api/admin/sonic');
+  sonicRescan = () => this.call<HubSonicStatus>('POST', '/api/admin/sonic/rescan', {});
+  /** Music videos (hub/src/videos.ts): the official video's YouTube id, or null. */
+  video = (artist: string, title: string, duration?: number) =>
+    this.call<{ video: { id: string; title: string; channel: string; duration?: number } | null }>('GET', `/api/videos?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}${duration ? `&duration=${Math.round(duration)}` : ''}`);
+  /** Tour dates (hub/src/tours.ts). */
+  tours = (artist: string) => this.call<{ events: HubTourEvent[] }>('GET', `/api/tours?artist=${encodeURIComponent(artist)}`);
+  toursStatus = () => this.call<{ available: boolean }>('GET', '/api/tours/status');
+  adminTours = () => this.call<HubTourSettings>('GET', '/api/admin/tours');
+  saveAdminTours = (b: { provider?: string; key?: string }) => this.call<HubTourSettings>('PUT', '/api/admin/tours', b);
+  adminFeatures = () => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('GET', '/api/admin/features');
+  saveAdminFeatures = (features: Record<string, { on?: boolean; kids?: boolean }>) => this.call<{ features: Record<string, { on: boolean; kids: boolean }> }>('PUT', '/api/admin/features', { features });
   setDisplayName = (displayName: string) => this.call<{ user: HubUser }>('PATCH', '/api/me', { displayName });
   changePassword = (currentPassword: string, newPassword: string) => this.call('PUT', '/api/me/password', { currentPassword, newPassword });
   myDevices = () => this.call<{ devices: (HubDevice & { current: boolean })[] }>('GET', '/api/me/devices');
@@ -668,6 +738,10 @@ export class HubClient {
   requestsSeen = () => this.call('POST', '/api/requests/seen', {});
   cancelRequest = (id: number) => this.call('DELETE', `/api/requests/${id}`);
   people = () => this.call<{ people: HubPerson[] }>('GET', '/api/people');
+  /** Public share links (hub/src/publicLinks.ts): a page anyone with the link can open. */
+  makePublicLink = (b: Omit<HubShareInput, 'to' | 'note'> & { note?: string; days?: number }) => this.call<{ link: HubPublicLink; url: string }>('POST', '/api/public-links', b);
+  publicLinks = () => this.call<{ links: HubPublicLink[] }>('GET', '/api/public-links');
+  deletePublicLink = (token: string) => this.call('DELETE', `/api/public-links/${encodeURIComponent(token)}`);
   share = (b: HubShareInput) => this.call<{ share: HubShare }>('POST', '/api/shares', b);
   shares = (sent = false) => this.call<{ shares: HubShare[] }>('GET', `/api/shares${sent ? '?sent=1' : ''}`);
   shareCounts = () => this.call<{ unseen: number }>('GET', '/api/shares/counts');
@@ -852,6 +926,9 @@ export class HubClient {
   djDeleteChat = (id: number) => this.call('DELETE', `/api/dj/chats/${id}`);
   djSend = (chatId: number | null, message: string) => this.call<HubDjTurn>('POST', '/api/dj/chat', { chatId: chatId ?? undefined, message });
   djToolResults = (chatId: number, results: { id: string; content: string; isError?: boolean }[]) => this.call<HubDjTurn>('POST', `/api/dj/chats/${chatId}/tools`, { results });
+  /** The talking DJ's spoken link before `next` (needs the djVoice feature). */
+  djPatter = (b: { previous?: { title: string; artist?: string; album?: string; year?: number }; next: { title: string; artist?: string; album?: string; year?: number }; name?: string; style?: string }) =>
+    this.call<{ text: string; spent: number; limit: number | null }>('POST', '/api/dj/patter', b);
   djAdmin = () => this.call<HubDjAdmin>('GET', '/api/admin/dj');
   /** `apiKey`: a new key, '' to remove it, left out to keep it. */
   saveDjAdmin = (b: Partial<HubDjSettings> & { apiKey?: string }) => this.call<HubDjAdmin>('PUT', '/api/admin/dj', b);

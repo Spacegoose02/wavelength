@@ -1,6 +1,54 @@
 # Changelog
 
 ## Unreleased
+- **iPhone and iPad app (TestFlight).** The app builds for iOS, with background audio, the iOS keychain and
+  local-network access. Releases build it and send it to TestFlight once the Apple secrets are added
+  (docs/IOS.md).
+- **Bit-perfect output on Windows.** Settings → Playback can send songs straight to the sound card in WASAPI
+  exclusive mode at their own sample rate and bit depth, decoded by the app itself (FLAC, ALAC, WAV, AIFF, MP3,
+  AAC, Vorbis), with the format shown as it plays.
+- **Discord status.** The desktop app can show "Listening to" the current song on your Discord profile
+  (Settings → Playback), cleared on pause. Talks to the Discord app on the same computer; no extra services.
+- **Public share links.** Share a playlist, album, song or artist with anyone as a web page (song names and
+  "play it on…" links, never the music), for a week or for good; see and take them down in Settings → Account.
+- **Music videos.** Now Playing offers the song's official video when the Hub's yt-dlp finds one, in a
+  no-cookie YouTube player; the music pauses and picks up again afterwards. Off for kids by default.
+- **Sing mode.** A **Sing** button in Now Playing turns the lead vocal down (adjustable) and opens the lyrics,
+  for karaoke at home.
+- **Artist bios, song credits and tour dates.** Artist pages get an About section (Wikipedia story, members,
+  where and when they started, links) and Now Playing gets **Credits** (writers, producers, players, from
+  MusicBrainz). With a Ticketmaster key or Bandsintown app ID saved on the Hub, artist pages list upcoming shows.
+- **Talking DJ.** The AI DJ can now speak between songs, with the music ducked under it: every Nth song, in a
+  laid back, hype or trivia style, read by the device's own voice (Settings → Playback). Admins switch it on in
+  Settings → Features; each line counts against the AI DJ allowance.
+- **Cast to speakers.** A new speaker button finds Chromecasts, Google/Nest speakers and DLNA/UPnP renderers on
+  your Wi-Fi and moves playback there, with the queue, seeking, volume and scrobbling still run from Wavelength.
+  Desktop and Android.
+- **Tune the critters' mouths.** A **Tune mouth** button beside the critter (and **Settings → Playback → Critter
+  mouths**, with a live critter) opens a tuner with a live graph of what the voice detector hears against what
+  the mouth does. Sliders for sensitivity, how centred the voice must be, noise rejection, the voice range, drum
+  hits, lyrics timing (for every song, or nudged for the song playing and remembered), syllable length, and how
+  fast and wide the mouth moves. Synced with a Hub. See the [user guide](docs/USER-GUIDE.md#critters).
+- **AutoMix.** **Settings → Playback → AutoMix** blends songs like a DJ: no fade inside an album, 8-beat
+  beat-matched blends between songs at close tempos (with sound-alike analysis on the Hub), and longer fades
+  for calm songs. Crossfades now use equal-power curves. See the [user guide](docs/USER-GUIDE.md#automix).
+- **Sounds like this.** With **Sound-alike analysis** on (Hub admins, Settings → Features), the Hub measures
+  how every song sounds (tempo, key, energy, timbre) with ffmpeg, no AI model needed. Now Playing gets
+  **Sounds like this** and **Journey to…**, and smart playlists get mood and tempo rules. See the
+  [user guide](docs/USER-GUIDE.md#sounds-like-this-and-sonic-journeys). **Hub:** `/api/sonic/…`.
+- **Home and Made for you mixes.** With a Hub, Home has **Jump back in** and fresh mixes every day: On Repeat,
+  Daily Mix 1–4, Discover Weekly, Forgotten favourites and Time Capsule, each with the songs your library has.
+  **Blend** mixes your taste with someone in the house (both have to say yes). See the
+  [user guide](docs/USER-GUIDE.md#home-and-made-for-you-mixes). **Hub:** `/api/mixes`, `/api/blend…`.
+- **Mac and Linux apps.** Each release now has a universal Mac `.dmg` (Apple silicon and Intel) and a Linux
+  AppImage and `.deb`. Passwords go in the macOS Keychain or the Secret Service (GNOME Keyring, KWallet).
+  They don't update themselves yet.
+- **Smart offline.** **Settings → Downloads → Smart offline** keeps your ♥ songs, your mixes and what you've
+  played lately on the device by itself, on Wi-Fi, under a size cap, and deletes what drops off. See the
+  [user guide](docs/USER-GUIDE.md#smart-offline).
+- **Feature switches (Hub admins).** **Settings → Features** turns each newer feature on or off for the
+  household and separately for kid profiles. **Hub:** `GET/PUT /api/admin/features`, and `GET /api/me` now
+  says which features are on (see [docs/HUB.md](docs/HUB.md#feature-switches)).
 
 ## 0.18.1
 - **The newest release banner no longer shows another artist's release.** Deezer often has several artists with

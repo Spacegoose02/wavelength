@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from 'react';
 import { createAudioReader, type AudioSample } from '../../player/analysis';
-import { createSingingReader } from '../../player/singing';
+import { createSingingReader, currentTune } from '../../player/singing';
 
 /** What each critter's own animation gets every frame. */
 export interface RigFrame {
@@ -95,8 +95,9 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       }
       const adj = idle && t > nextAdjust ? Math.sin(((t - nextAdjust) / 1.2) * Math.PI) : 0;
       // sing along: open quickly on a syllable, close a little slower
-      const sing = talk ? singAlong(t, a) * 0.9 : 0;
-      singing += (sing - singing) * (sing > singing ? 0.55 : 0.3);
+      const tune = currentTune();
+      const sing = talk ? singAlong(t, a) * tune.gain : 0;
+      singing += (sing - singing) * (sing > singing ? tune.attack : tune.release);
       const mouth = Math.max(yawn, singing);
       set('eyes', `translate(0 166) scale(1 ${lids.toFixed(2)}) translate(0 -166)`);
       set('yawn', `translate(0 212) scale(1 ${mouth.toFixed(2)}) translate(0 -212)`);

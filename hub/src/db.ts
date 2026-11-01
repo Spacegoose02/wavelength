@@ -494,6 +494,53 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  `
+  -- Made for you mixes (mixes.ts), made once a day per person and kept until the next day's.
+  CREATE TABLE mixes (
+    user_id  INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    day      TEXT NOT NULL,                 -- YYYY-MM-DD (UTC) they were made for
+    mixes    TEXT NOT NULL,                 -- JSON: Mix[]
+    built_at INTEGER NOT NULL
+  );
+  -- People who let others in the house make a Blend with them (mixes.ts).
+  CREATE TABLE blend_optin (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    at      INTEGER NOT NULL
+  );
+  `,
+  `
+  -- What each library song sounds like (sonic/worker.ts): tempo, key, energy and the numbers "sounds like"
+  -- compares. Keyed by Navidrome's song id; path notices a file that changed under the same id.
+  CREATE TABLE sonic_songs (
+    id          TEXT PRIMARY KEY,
+    path        TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    artist      TEXT NOT NULL,
+    album       TEXT NOT NULL,
+    duration    INTEGER NOT NULL,
+    features    TEXT,               -- JSON SonicFeatures + offset, null until analysed (or when it failed)
+    error       TEXT,
+    analysed_at INTEGER
+  );
+  CREATE INDEX sonic_songs_name ON sonic_songs(artist COLLATE NOCASE, title COLLATE NOCASE);
+  `,
+  `
+  -- Public share links (publicLinks.ts): a song list anyone with the link can see, without signing in.
+  CREATE TABLE public_links (
+    token      TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    subtitle   TEXT,
+    cover      TEXT,
+    note       TEXT,
+    payload    TEXT NOT NULL,      -- JSON { tracks: [{ title, artist, album?, duration? }] } or { artist }
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER,
+    views      INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX public_links_user ON public_links(user_id);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

@@ -29,6 +29,9 @@ let analyser: AnalyserNode | null = null;
 let midTap: AnalyserNode | null = null;
 let sideTap: AnalyserNode | null = null;
 let preamp: GainNode | null = null;
+/** Sing mode: the centre of the vocal range, taken back off both channels (−amount); 0 = off. */
+let vocalCut: GainNode | null = null;
+let vocalCutValue = 0;
 let bands: BiquadFilterNode[] = [];
 /** per deck: ReplayGain for its song, and the crossfade */
 const deckGain = new Map<HTMLAudioElement, GainNode>();
@@ -45,6 +48,30 @@ let preloaded: { url: string; el: HTMLAudioElement } | undefined;
 let fading: HTMLAudioElement | undefined;
 let pendingPreload: string | undefined;
 const listeners = new Map<string, Listener[]>();
+
+/**
+ * Casting (lib/cast.ts): while a speaker plays, songs, play/pause, seek and volume go to it instead of the
+ * decks, and its status comes back through `remoteUpdate` as the same events the decks send, on a stand-in
+ * element. No EQ, visualizer analysis, ReplayGain or crossfade there: the speaker plays the stream as is.
+ */
+export interface RemoteOutput {
+  load(url: string, startAt: number, meta: RemoteMeta): Promise<void>;
+  play(): Promise<void>;
+  pause(): Promise<void>;
+  seek(t: number): Promise<void>;
+  setVolume(v: number): Promise<void>;
+}
+export interface RemoteMeta {
+  title: string;
+  artist?: string;
+  album?: string;
+  cover?: string;
+  duration?: number;
+}
+let remote: RemoteOutput | null = null;
+let remoteMeta: RemoteMeta = { title: '' };
+const remoteEl = { currentTime: 0, duration: NaN, paused: true, error: null as MediaError | null, readyState: 4, volume: 1 };
+const emit = (type: string) => listeners.get(type)?.forEach((fn) => fn(new Event(type), remoteEl as unknown as HTMLAudioElement));
 
 function host(url: string) {
   try {
@@ -106,10 +133,36 @@ function ensureGraph() {
   mix(0, 0.5, sideTap);
   mix(1, -0.5, sideTap);
   analyser.connect(stereo);
+  // Sing mode (vocal reduction): the lead vocal usually sits in the centre (equal in both channels). Take the
+  // centre (L+R)/2, keep only the voice's range so bass and kick stay, and subtract it from both channels. Side
+  // sound (L−R: guitars, reverb, backing panned wide) is untouched. A mono song loses its whole mid range.
+  const deckBus = c.createGain();
+  deckBus.channelCount = 2;
+  deckBus.channelCountMode = 'explicit';
+  deckBus.channelInterpretation = 'speakers';
+  deckBus.connect(preamp);
+  const centre = c.createGain();
+  centre.channelCount = 1;
+  centre.channelCountMode = 'explicit';
+  centre.channelInterpretation = 'speakers'; // stereo → mono is (L+R)/2
+  const hp = c.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 180;
+  const lp = c.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 6500;
+  vocalCut = c.createGain();
+  vocalCut.gain.value = -vocalCutValue;
+  const back = c.createGain(); // mono → both channels
+  back.channelCount = 2;
+  back.channelCountMode = 'explicit';
+  back.channelInterpretation = 'speakers';
+  deckBus.connect(centre);
+  [centre, hp, lp, vocalCut, back, preamp].reduce((a: AudioNode, b) => (a.connect(b), b));
   for (const d of decks) {
     const g = c.createGain();
     g.gain.value = d === current ? levelValue : 0;
-    c.createMediaElementSource(d).connect(g).connect(preamp);
+    c.createMediaElementSource(d).connect(g).connect(deckBus);
     deckGain.set(d, g);
   }
   applyEq();
@@ -134,6 +187,7 @@ function setGain(el: HTMLAudioElement, value: number) {
 
 function reset(el: HTMLAudioElement) {
   el.pause();
+  el.playbackRate = 1;
   el.removeAttribute('src');
   el.load();
   if (preloaded?.el === el) preloaded = undefined;
@@ -153,7 +207,10 @@ for (const el of all) {
   });
 }
 
-const effectiveVolume = (el: HTMLAudioElement) => (el === plain ? volume * Math.min(1, levelValue) : volume);
+/** Turned down under the talking DJ (lib/djVoice.ts); 1 = not ducked. */
+let duckValue = 1;
+let duckTimer: ReturnType<typeof setInterval> | undefined;
+const effectiveVolume = (el: HTMLAudioElement) => (el === plain ? volume * Math.min(1, levelValue) : volume) * duckValue;
 function applyVolume() {
   for (const el of all) el.volume = effectiveVolume(el);
 }
@@ -202,15 +259,61 @@ function endFade() {
 }
 
 export const engine = {
-  get el() {
-    return current;
+  get el(): HTMLAudioElement {
+    return remote ? (remoteEl as unknown as HTMLAudioElement) : current;
   },
   analyser() {
-    return isDeck(current) ? analyser : null;
+    return isDeck(current) && !remote ? analyser : null;
   },
   /** Mid and side spectra for vocal detection (player/voice.ts), or null when the song can't be read. */
   voiceTaps() {
-    return isDeck(current) && midTap && sideTap ? { mid: midTap, side: sideTap, sampleRate: ctx!.sampleRate } : null;
+    return isDeck(current) && !remote && midTap && sideTap ? { mid: midTap, side: sideTap, sampleRate: ctx!.sampleRate } : null;
+  },
+  /** Send playback to a speaker (lib/cast.ts), or back to this device with null. */
+  setRemote(r: RemoteOutput | null) {
+    remote = r;
+    endFade();
+    for (const el of all) el.pause();
+    preloaded = undefined;
+    Object.assign(remoteEl, { currentTime: 0, duration: NaN, paused: true, error: null });
+  },
+  isRemote() {
+    return !!remote;
+  },
+  /** Whether `r` is the output in use right now. */
+  remoteIs(r: RemoteOutput) {
+    return remote === r;
+  },
+  /** The song about to load, for the speaker's display. */
+  setMeta(m: RemoteMeta) {
+    remoteMeta = m;
+  },
+  /** The speaker's state, from lib/cast.ts's polling: sends the usual events. */
+  remoteUpdate(st: { state: string; position: number; duration: number }) {
+    if (!remote) return;
+    const wasPaused = remoteEl.paused;
+    remoteEl.currentTime = st.position;
+    if (st.duration > 0 && st.duration !== remoteEl.duration) {
+      remoteEl.duration = st.duration;
+      emit('durationchange');
+    }
+    if (st.state === 'playing') {
+      remoteEl.paused = false;
+      if (wasPaused) emit('play');
+      emit('playing');
+      emit('timeupdate');
+    } else if (st.state === 'paused' || st.state === 'idle') {
+      remoteEl.paused = true;
+      if (!wasPaused) emit('pause');
+    } else if (st.state === 'buffering') emit('waiting');
+    else if (st.state === 'ended' && !wasPaused) {
+      remoteEl.paused = true;
+      emit('ended');
+    } else if (st.state === 'error' && !wasPaused) {
+      remoteEl.paused = true;
+      remoteEl.error = { code: 4 } as MediaError;
+      emit('error');
+    }
   },
   on(type: string, fn: Listener) {
     listeners.set(type, [...(listeners.get(type) ?? []), fn]);
@@ -218,6 +321,13 @@ export const engine = {
   async load(url: string, startAt = 0, autoplay = true): Promise<void> {
     const token = ++loadToken;
     current.pause();
+    if (remote) {
+      Object.assign(remoteEl, { currentTime: startAt, duration: remoteMeta.duration ?? NaN, paused: true, error: null });
+      emit('waiting');
+      await remote.load(url, startAt, remoteMeta);
+      if (token === loadToken && !autoplay) await remote.pause();
+      return;
+    }
     fading = undefined;
     pendingPreload = undefined;
     // the next song is already loaded on the idle deck: switch to it straight away
@@ -239,6 +349,7 @@ export const engine = {
     if (preloaded?.el === el) preloaded = undefined;
     current = el;
     applyVolume();
+    el.playbackRate = 1;
     el.src = url;
     if (startAt > 0) el.currentTime = startAt;
 
@@ -256,6 +367,7 @@ export const engine = {
   },
   /** Load the next song on the idle deck so it can start without a gap. Hosts without CORS are skipped. */
   preload(url: string) {
+    if (remote) return;
     if (preloaded?.url === url || noCorsHosts.has(host(url)) || !isDeck(current)) return;
     ensureGraph();
     const el = idleDeck();
@@ -271,13 +383,13 @@ export const engine = {
   },
   /** True when `url` is preloaded and buffered enough to fade in now. */
   canCrossfade(url: string) {
-    return !!ctx && preloaded?.url === url && isDeck(current) && preloaded.el.readyState >= 3;
+    return !remote && !!ctx && preloaded?.url === url && isDeck(current) && preloaded.el.readyState >= 3;
   },
   /**
    * Fade the preloaded `url` in over `seconds` while the current song fades out, then make it the current song.
    * `level` is the new song's ReplayGain. Returns false (and does nothing) when it isn't ready.
    */
-  crossfade(url: string, seconds: number, level: number): boolean {
+  crossfade(url: string, seconds: number, level: number, rate = 1): boolean {
     if (!engine.canCrossfade(url) || !ctx) return false;
     const next = preloaded!.el;
     const old = current;
@@ -286,12 +398,32 @@ export const engine = {
     const now = ctx.currentTime;
     const fadeIn = deckGain.get(next)!.gain;
     const fadeOut = deckGain.get(old)!.gain;
+    // equal-power curves: the overall loudness stays even through the blend
+    const steps = 64;
+    const from = Math.max(0.0001, fadeOut.value);
+    const inCurve = Float32Array.from({ length: steps }, (_, i) => Math.max(0.0001, level * Math.sin(((i / (steps - 1)) * Math.PI) / 2)));
+    const outCurve = Float32Array.from({ length: steps }, (_, i) => from * Math.cos(((i / (steps - 1)) * Math.PI) / 2));
     fadeIn.cancelScheduledValues(now);
-    fadeIn.setValueAtTime(0.0001, now);
-    fadeIn.linearRampToValueAtTime(level, now + seconds);
+    fadeIn.setValueCurveAtTime(inCurve, now, seconds);
     fadeOut.cancelScheduledValues(now);
-    fadeOut.setValueAtTime(fadeOut.value, now);
-    fadeOut.linearRampToValueAtTime(0, now + seconds);
+    fadeOut.setValueCurveAtTime(outCurve, now, seconds);
+    // AutoMix: the new song at the old one's tempo during the blend, then eased back to its own
+    next.preservesPitch = true;
+    next.playbackRate = rate;
+    if (rate !== 1) {
+      const started = Date.now();
+      const ease = window.setInterval(() => {
+        const t = (Date.now() - started) / 1000 - seconds;
+        if (current !== next) return window.clearInterval(ease);
+        if (t < 0) return;
+        const r = rate + (1 - rate) * Math.min(1, t / 8);
+        next.playbackRate = r;
+        if (r === 1 || t >= 8) {
+          next.playbackRate = 1;
+          window.clearInterval(ease);
+        }
+      }, 250);
+    }
     levelValue = level;
     current = next;
     fading = old;
@@ -303,6 +435,7 @@ export const engine = {
     return true;
   },
   async play() {
+    if (remote) return remote.play();
     if (ctx?.state === 'suspended') await ctx.resume();
     try {
       await current.play();
@@ -311,12 +444,17 @@ export const engine = {
     }
   },
   pause() {
+    if (remote) return void remote.pause().catch(() => undefined);
     // a crossfade under way: the old song stops too, not just the new one
     endFade();
     current.pause();
   },
   seek(t: number) {
     if (!Number.isFinite(t)) return;
+    if (remote) {
+      remoteEl.currentTime = t;
+      return void remote.seek(t).catch(() => undefined);
+    }
     endFade();
     current.currentTime = t;
   },
@@ -331,7 +469,29 @@ export const engine = {
   },
   setVolume(v: number) {
     volume = v;
+    if (remote) void remote.setVolume(v).catch(() => undefined);
     applyVolume();
+  },
+  /** Sing mode: turn the lead vocal down by `amount` (0 = off, 1 = as far as it goes). Not on the plain element. */
+  setVocalCut(amount: number) {
+    vocalCutValue = Math.max(0, Math.min(1, amount));
+    if (ctx && vocalCut) vocalCut.gain.setTargetAtTime(-vocalCutValue, ctx.currentTime, 0.05);
+  },
+  /** False while playing through the plain (no-CORS) element or a speaker, which sing mode can't reach. */
+  vocalCutAvailable() {
+    return !remote && isDeck(current);
+  },
+  /** Glide the music to `level` (0..1 of the set volume) over `seconds`: the talking DJ speaks over it. */
+  duck(level: number, seconds = 0.6) {
+    clearInterval(duckTimer);
+    const from = duckValue, to = Math.max(0, Math.min(1, level)), steps = Math.max(1, Math.round(seconds * 20));
+    let i = 0;
+    duckTimer = setInterval(() => {
+      i++;
+      duckValue = from + (to - from) * (i / steps);
+      if (i >= steps) clearInterval(duckTimer);
+      if (!remote) applyVolume();
+    }, 50);
   },
   /** ReplayGain for the song about to play or playing (linear; 1 = unchanged). */
   setLevel(g: number) {
@@ -344,6 +504,7 @@ export const engine = {
    * paused; a new load or play in the meantime cancels the fade.
    */
   async fadeOut(seconds: number) {
+    if (remote) return remote.pause();
     endFade();
     const token = loadToken;
     const el = current;

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCanShare, type ShareWhat } from '../lib/inbox';
 import type { HubPerson } from '../sources/hub';
+import { useFeature } from '../lib/features';
+import { useIsKid } from '../lib/kids';
 import { hubClient } from '../store/hub';
 import { IconShare } from './Icons';
 
@@ -24,7 +26,30 @@ export function ShareButton({ what, label = 'Share', className = 'btn' }: { what
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
 
+  const publicOn = useFeature('publicShares') && !useIsKid();
   if (!can) return null;
+
+  /** A link anyone can open in a browser (hub/src/publicLinks.ts), copied to the clipboard. */
+  const makePublic = async (days?: number) => {
+    setOpen(false);
+    setFlash('Making a link…');
+    try {
+      const w = typeof what === 'function' ? what() : what;
+      const { url } = await hubClient()!.makePublicLink({ ...w, note: note.trim() || undefined, days });
+      setNote('');
+      try {
+        await navigator.clipboard.writeText(url);
+        setFlash('Link copied');
+      } catch {
+        window.prompt('Your link', url);
+        setFlash(undefined);
+      }
+    } catch (e) {
+      setFlash(`Failed: ${(e as Error).message ?? e}`);
+    }
+    window.setTimeout(() => setFlash(undefined), 2800);
+  };
+  const kindOf = () => (typeof what === 'function' ? what() : what).kind;
 
   const send = async (to: HubPerson | null) => {
     setOpen(false);
@@ -56,6 +81,11 @@ export function ShareButton({ what, label = 'Share', className = 'btn' }: { what
             </button>
           ))}
           {!people && <div className="menu-hint">Loading…</div>}
+          {publicOn && ['playlist', 'album', 'track', 'artist'].includes(kindOf()) && <>
+            <div className="menu-group">Anyone with the link</div>
+            <button className="menu-item" onClick={() => makePublic(7)}>Copy a link for a week</button>
+            <button className="menu-item" onClick={() => makePublic()}>Copy a link that lasts</button>
+          </>}
         </div>
       )}
     </div>

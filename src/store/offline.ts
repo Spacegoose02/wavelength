@@ -18,7 +18,8 @@ export interface OfflineTrack {
 
 export interface OfflineCollection {
   id: string;
-  kind: 'album' | 'playlist';
+  /** `auto`: kept by smart offline (lib/smartOffline.ts), which adds and drops its songs by itself */
+  kind: 'album' | 'playlist' | 'auto';
   name: string;
   subtitle?: string;
   cover?: string;
@@ -41,6 +42,8 @@ interface OfflineState {
   jobs: Record<string, Job>;
   download(c: { id: string; kind: OfflineCollection['kind']; name: string; subtitle?: string; cover?: string; tracks: Track[] }): Promise<void>;
   remove(id: string): Promise<void>;
+  /** Keep only these songs in a collection, deleting files nothing else uses (smart offline's trimming). */
+  trim(id: string, keys: string[]): Promise<void>;
 }
 
 export const trackKey = (t: Pick<Track, 'sourceId' | 'id'>) => `${t.sourceId}:${t.id}`;
@@ -122,6 +125,21 @@ export const useOffline = create<OfflineState>()(
           }),
         );
         setJob({ done, failed, error: lastError });
+      },
+
+      async trim(id, keep) {
+        const { collections, tracks } = get();
+        const target = collections.find((c) => c.id === id);
+        if (!target) return;
+        const keepSet = new Set(keep);
+        const others = new Set(collections.filter((c) => c.id !== id).flatMap((c) => c.keys));
+        const drop = target.keys.filter((k) => !keepSet.has(k) && !others.has(k) && tracks[k]);
+        for (const k of drop) await invoke('offline_delete_file', { path: tracks[k].path }).catch(() => {});
+        set((s) => {
+          const next = { ...s.tracks };
+          drop.forEach((k) => delete next[k]);
+          return { tracks: next, collections: s.collections.map((c) => (c.id === id ? { ...c, keys: c.keys.filter((k) => keepSet.has(k)) } : c)) };
+        });
       },
 
       async remove(id) {

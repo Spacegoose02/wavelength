@@ -13,6 +13,8 @@ interface NativeMedia {
   browseResult?(request: string, json: string): void;
   /** Open an `ntfy://` subscribe link in the ntfy app; false when it isn't installed. */
   openNtfy?(url: string): boolean;
+  /** Hold Wi-Fi multicast open while looking for speakers to cast to (missing on older app builds). */
+  multicast?(on: boolean): void;
 }
 
 declare global {

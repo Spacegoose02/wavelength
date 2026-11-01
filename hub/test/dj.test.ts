@@ -199,3 +199,29 @@ test('AI DJ: a provider error leaves the chat usable', async () => {
   const again = await json(app, 'POST', '/api/dj/chat', { token: tokens.member, body: { chatId: chats[0].id, message: 'hello?' } });
   assert.equal(again.body.reply, 'Back now.');
 });
+
+test('AI DJ: the talking DJ writes a short link between songs, only with the switch on', async () => {
+  const script = scripted([(req) => {
+    assert.equal(req.tools.length, 0);
+    assert.equal(req.effort, 'low');
+    assert.match(String(req.messages[0].content), /That was "Dreams" by Fleetwood Mac.*Coming up: "Hey Jude" by The Beatles/);
+    return text('That was **Dreams**. Here is Hey Jude, Sam.');
+  }]);
+  const { app, tokens, ids, db } = await seeded({}, {}, { djProvider: script.factory });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { enabled: true, apiKey: 'sk-ant-x-1234' } });
+  await json(app, 'PUT', `/api/admin/dj/users/${ids.member}`, { token: tokens.admin, body: { enabled: true } });
+  const body = { previous: { title: 'Dreams', artist: 'Fleetwood Mac' }, next: { title: 'Hey Jude', artist: 'The Beatles' }, name: 'Sam' };
+
+  const off = await json(app, 'POST', '/api/dj/patter', { token: tokens.member, body });
+  assert.equal(off.status, 403, 'the talking DJ is off until an admin turns it on');
+  assert.equal(off.body.feature, 'djVoice');
+
+  const features = (await json(app, 'GET', '/api/admin/features', { token: tokens.admin })).body.features;
+  await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { ...features, djVoice: { on: true, kids: false } } } });
+  assert.equal((await json(app, 'POST', '/api/dj/patter', { token: tokens.member, body: { next: {} } })).status, 400);
+  const r = await json(app, 'POST', '/api/dj/patter', { token: tokens.member, body });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.text, 'That was Dreams. Here is Hey Jude, Sam.');
+  assert.ok(r.body.spent > 0, 'counted against the allowance');
+  assert.equal((db.prepare('SELECT COUNT(*) AS n FROM dj_usage WHERE conversation_id IS NULL').get() as { n: number }).n, 1);
+});

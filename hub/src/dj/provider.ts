@@ -18,6 +18,9 @@ export interface DjRequest {
   messages: DjMessage[];
   /** true on the last allowed step: answer without calling more tools. */
   noTools?: boolean;
+  /** Overrides for short one-off calls (the talking DJ's links). */
+  effort?: DjSettings['effort'];
+  maxTokens?: number;
 }
 
 export interface DjResponse {
@@ -61,13 +64,12 @@ export const anthropicProvider: ProviderFactory = (settings, apiKey) => {
       try {
         m = await client.beta.messages.create({
           model: settings.model,
-          max_tokens: 16000,
+          max_tokens: req.maxTokens ?? 16000,
           system: req.system,
-          tools: req.tools,
-          tool_choice: req.noTools ? { type: 'none' } : { type: 'auto' },
+          ...(req.tools.length && { tools: req.tools, tool_choice: req.noTools ? { type: 'none' as const } : { type: 'auto' as const } }),
           messages: req.messages,
           // thinking is on by default on the current models; effort sets how much
-          output_config: { effort: settings.effort },
+          output_config: { effort: req.effort ?? settings.effort },
           // the system prompt, tools and earlier turns are re-read at the cache price on each step
           cache_control: { type: 'ephemeral' },
           ...(fallback && { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const }),

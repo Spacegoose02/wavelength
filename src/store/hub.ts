@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secretStorage } from '../lib/secrets';
-import { isAndroid } from '../lib/platform';
+import { isAndroid, isIOS, isLinux, isMac } from '../lib/platform';
 import { isTauri, setHubFetch } from '../lib/http';
 import { HubClient, HubError, type HubDevice, type HubPermission, type HubService, type HubSession, type HubUser } from '../sources/hub';
 
@@ -24,6 +24,8 @@ interface HubState {
   services: HubService[];
   /** A parent's kids (hub/src/family.ts): their requests come to this person to approve. */
   kids: { id: number; displayName: string }[];
+  /** Feature switches that are on for this person (lib/features.ts); unset until the Hub first answers. */
+  features?: Partial<Record<string, boolean>>;
   /**
    * Other people signed in on this device (a TV the household shares), to switch to without signing in again.
    * The active one is the fields above; each of these keeps its own device token, in the keychain.
@@ -79,14 +81,14 @@ export const useHub = create<HubState>()(
       kids: [],
       profiles: [],
       setUrl: (url) => set({ url }),
-      signedIn: (s) => set({ token: s.token, user: s.user, permissions: s.permissions, device: s.device, kids: [], lastSeen: Date.now(), offline: false, kidSignedOut: undefined }),
+      signedIn: (s) => set({ token: s.token, user: s.user, permissions: s.permissions, device: s.device, kids: [], features: undefined, lastSeen: Date.now(), offline: false, kidSignedOut: undefined }),
       addProfile: (n) =>
         set((st) => {
           const cur = asProfile(st, st.pin);
           localStorage.removeItem(STAMPS_KEY);
           return {
             profiles: [...st.profiles.filter((p) => p.user.id !== n.user.id && p.user.id !== cur?.user.id), ...(cur ? [cur] : [])],
-            token: n.token, user: n.user, permissions: n.permissions, device: n.device, pin: undefined, kids: [], services: [], lastSeen: Date.now(), offline: false, kidSignedOut: undefined,
+            token: n.token, user: n.user, permissions: n.permissions, device: n.device, pin: undefined, kids: [], features: undefined, services: [], lastSeen: Date.now(), offline: false, kidSignedOut: undefined,
           };
         }),
       switchProfile: (userId) =>
@@ -98,7 +100,7 @@ export const useHub = create<HubState>()(
           localStorage.removeItem(STAMPS_KEY);
           return {
             profiles: [...st.profiles.filter((p) => p.user.id !== userId), ...(cur ? [cur] : [])],
-            token: next.token, user: next.user, permissions: next.permissions, device: next.device, pin: next.pin, kids: [], services: [], offline: false,
+            token: next.token, user: next.user, permissions: next.permissions, device: next.device, pin: next.pin, kids: [], features: undefined, services: [], offline: false,
           };
         }),
       removeProfile: async (userId) => {
@@ -116,7 +118,7 @@ export const useHub = create<HubState>()(
         if (!c) return;
         try {
           const me = await c.me();
-          set({ user: me.user, permissions: me.permissions, device: me.device, kids: me.kids ?? [], lastSeen: Date.now(), offline: false });
+          set({ user: me.user, permissions: me.permissions, device: me.device, kids: me.kids ?? [], features: me.features, lastSeen: Date.now(), offline: false });
         } catch (e) {
           if (e instanceof HubError && e.status === 401) {
             // a kid's device the Hub signed out stays locked rather than opening with no kid filters
@@ -133,15 +135,15 @@ export const useHub = create<HubState>()(
         localStorage.removeItem(STAMPS_KEY);
         // someone else signed in on this device carries on
         const [next, ...rest] = useHub.getState().profiles;
-        if (next) set({ token: next.token, user: next.user, permissions: next.permissions, device: next.device, pin: next.pin, profiles: rest, kids: [], offline: false, services: [] });
-        else set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false, services: [], kids: [] });
+        if (next) set({ token: next.token, user: next.user, permissions: next.permissions, device: next.device, pin: next.pin, profiles: rest, kids: [], features: undefined, offline: false, services: [] });
+        else set({ token: undefined, user: undefined, permissions: [], device: undefined, offline: false, services: [], kids: [], features: undefined });
       },
     }),
     {
       name: 'tonearm.hub',
       partialize: (st) => {
-        const { url, token, user, permissions, device, lastSeen, services, kids, profiles } = st;
-        return { url, token, user, permissions, device, lastSeen, services, kids, profiles, pin: st.pin, kidSignedOut: st.kidSignedOut };
+        const { url, token, user, permissions, device, lastSeen, services, kids, profiles, features } = st;
+        return { url, token, user, permissions, device, lastSeen, services, kids, profiles, features, pin: st.pin, kidSignedOut: st.kidSignedOut };
       },
       // the device token, and the server logins the Hub hands out, live in the OS keychain (lib/secrets.ts)
       storage: createJSONStorage(() =>
@@ -195,6 +197,9 @@ export function useCan(perm: HubPermission): boolean {
 export function thisDevice(): { deviceName: string; platform: string } {
   const tv = typeof document !== 'undefined' && document.documentElement.classList.contains('tv');
   if (isAndroid) return tv ? { deviceName: 'Android TV', platform: 'android-tv' } : { deviceName: 'Android', platform: 'android' };
+  if (isIOS && isTauri) return /iPad/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent) ? { deviceName: 'iPad', platform: 'ios' } : { deviceName: 'iPhone', platform: 'ios' };
+  if (isTauri && isMac) return { deviceName: 'Mac', platform: 'macos' };
+  if (isTauri && isLinux) return { deviceName: 'Linux PC', platform: 'linux' };
   if (isTauri) return { deviceName: 'Windows PC', platform: 'windows' };
   return { deviceName: 'Browser', platform: 'web' };
 }
