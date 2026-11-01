@@ -142,6 +142,9 @@ const clip = (v: unknown) => {
   return t.length > MAX_RESULT ? `${t.slice(0, MAX_RESULT)}… (cut)` : t;
 };
 
+/** Text the voice reads: no markdown, one line, at most 400 characters. */
+export const spoken = (t: string) => t.replace(/[*_#`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 400);
+
 export class DjAgent {
   private db: Db;
   private config: Config;
@@ -198,18 +201,20 @@ export class DjAgent {
       name ? `The listener's name is ${name}; use it now and then, not every time.` : '',
       `It is ${hour < 5 ? 'late at night' : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}.`,
     ].filter(Boolean).join(' ');
-    const settings = getSettings(this.db);
-    const res = await this.provider().create({ system, tools: [], messages: [{ role: 'user', content: ask }], effort: 'low', maxTokens: 2000 });
-    recordUsage(this.db, user.id, null, res.model, res.usage, costOf(priceOf(settings, res.model) ?? priceOf(settings, settings.model), res.usage));
-    const text = res.content
-      .flatMap((c) => (c.type === 'text' ? [c.text] : []))
-      .join(' ')
-      .replace(/[*_#`]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 400);
+    const text = spoken(await this.oneShot(user, system, ask));
     if (!text) throw new HttpError(502, 'The DJ had nothing to say');
     return { text };
+  }
+
+  /**
+   * One short call without tools (the talking DJ, DJ mode's segments): low effort, counted against this person's
+   * allowance. Returns the text of the answer. Check the budget before calling.
+   */
+  async oneShot(user: User, system: string, ask: string, maxTokens = 2000): Promise<string> {
+    const settings = getSettings(this.db);
+    const res = await this.provider().create({ system, tools: [], messages: [{ role: 'user', content: ask }], effort: 'low', maxTokens });
+    recordUsage(this.db, user.id, null, res.model, res.usage, costOf(priceOf(settings, res.model) ?? priceOf(settings, settings.model), res.usage));
+    return res.content.flatMap((c) => (c.type === 'text' ? [c.text] : [])).join(' ');
   }
 
   list(userId: number): Chat[] {

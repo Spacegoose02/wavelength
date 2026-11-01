@@ -4,6 +4,7 @@ import { useUi } from '../store/ui';
 import { Cover, fmtTime } from './common';
 import { DevicesButton } from './Devices';
 import { CastButton } from './CastButton';
+import { DjModeButton, DjStationPanel } from './DjStation';
 import { TogetherButton } from './Together';
 import { EqButton } from './Equalizer';
 import { IconNext, IconPause, IconPlay, IconPrev, IconQueue, IconRepeat, IconShuffle, IconVolume } from './Icons';
@@ -64,6 +65,7 @@ export function PlayerBar() {
       </div>
 
       <div className="deck-right">
+        <DjModeButton />
         <TogetherButton />
         <DevicesButton />
         <CastButton />
@@ -73,6 +75,7 @@ export function PlayerBar() {
         <input className="vol" type="range" min={0} max={1} step={0.01} value={p.volume} onChange={(e) => p.setVolume(Number(e.target.value))}
           style={{ ['--pct' as string]: `${p.volume * 100}%` }} />
       </div>
+      <DjStationPanel />
     </footer>
   );
 }

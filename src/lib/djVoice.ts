@@ -22,6 +22,9 @@ export const canSpeak = typeof window !== 'undefined' && 'speechSynthesis' in wi
 /** The last problem, for Settings (allowance used up, DJ not on for you…). */
 export let djVoiceProblem = '';
 
+/** Songs DJ mode introduces itself (lib/djStation.ts): no extra line before them. */
+export const stationTalks = new Set<string>();
+
 /** Songs played since the DJ last talked. */
 let since = 0;
 interface Line { text: string; audio: Promise<Blob | null> | null }
@@ -159,6 +162,11 @@ export function startDjVoice() {
     if (k !== current) {
       current = k;
       prefetched = undefined;
+      if (stationTalks.has(k)) {
+        stationTalks.delete(k);
+        since = 0;
+        return;
+      }
       const line = lines.get(k);
       if (line && ready() && t.kind === 'track') {
         since = 0;
@@ -176,7 +184,7 @@ export function startDjVoice() {
     // near the end of this song: write the link for the next one now, so it's ready the moment it starts
     const next = st.queue[st.index + 1];
     const left = (st.duration || t.duration || 0) - st.position;
-    if (next && next.kind === 'track' && t.kind === 'track' && prefetched !== key(next) && st.playing && left > 0 && left < 45 && due() && ready()) {
+    if (next && next.kind === 'track' && t.kind === 'track' && !stationTalks.has(key(next)) && prefetched !== key(next) && st.playing && left > 0 && left < 45 && due() && ready()) {
       prefetched = key(next);
       void fetchLine(t, next);
     }

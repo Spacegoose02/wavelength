@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **DJ mode.** Press the raccoon in the player and DJ Trash Panda runs a station for you: your favourites, new
+  finds, throwbacks and top hits in segments, each introduced in the DJ's voice. Tap a segment to jump to it, or
+  type what you want ("90s house", "chill for cooking") to change course. Songs come from your Made for you mixes
+  and the charts, so the AI only writes the intros (and picks songs for requests). Turn it on under **Settings →
+  Features → DJ mode**.
 - **Fixed: lyrics showing "Instrumental" for songs with words, or not found at all.** LRCLIB often files
   instrumental and karaoke uploads under the song's own name, and the first one found used to win. Now every
   lookup is pooled and an entry with words wins. Lookups also leave off version notes ("- 2011 Remaster",

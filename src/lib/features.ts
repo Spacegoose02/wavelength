@@ -7,7 +7,7 @@ import { useHub } from '../store/hub';
  */
 
 export type FeatureKey =
-  | 'homeMixes' | 'blend' | 'smartOffline' | 'sonic' | 'automix' | 'cast' | 'djVoice' | 'djWeb' | 'artistInfo' | 'tourDates'
+  | 'homeMixes' | 'blend' | 'smartOffline' | 'sonic' | 'automix' | 'cast' | 'djVoice' | 'djWeb' | 'djMode' | 'artistInfo' | 'tourDates'
   | 'singMode' | 'musicVideos' | 'publicShares' | 'discordStatus' | 'mouthTuner' | 'exclusiveAudio';
 
 export interface FeatureInfo {
@@ -27,6 +27,7 @@ export const FEATURE_INFO: FeatureInfo[] = [
   { key: 'automix', label: 'AutoMix', help: 'Blends songs on the beat instead of a plain crossfade.', standalone: true },
   { key: 'cast', label: 'Cast to speakers', help: 'Play on Chromecast, Google/Nest and DLNA/UPnP speakers and TVs.', standalone: true },
   { key: 'djVoice', label: 'Talking AI DJ', help: 'The AI DJ introduces songs out loud between tracks. Uses the AI DJ’s key and limits; each device reads it with its own voice. People turn it on in Settings → Playback.', standalone: false },
+  { key: 'djMode', label: 'DJ mode', help: 'A station that runs itself: the AI DJ plays your favourites, new finds, throwbacks and top hits in segments, introduces each one, and changes course when you ask. Songs come from your mixes and the charts; the AI writes the intros (one short call per segment, counted toward the AI DJ limits).', standalone: false },
   { key: 'djWeb', label: 'AI DJ web search', help: 'The AI DJ can search the web and read pages: today’s top hits, a festival or DJ setlist, a playlist page someone pasted. Searches cost about 1 cent each and count toward the AI DJ limits; the cap per step is under Settings → AI DJ.', standalone: false },
   { key: 'artistInfo', label: 'Artist bios and credits', help: 'Artist stories and facts from Wikipedia and MusicBrainz, and who wrote and produced each song.', standalone: true },
   { key: 'tourDates', label: 'Tour dates', help: 'Upcoming concerts for artists people follow. Needs a Ticketmaster or Bandsintown key.', standalone: false },

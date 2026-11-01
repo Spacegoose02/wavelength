@@ -5,6 +5,7 @@ import { useUi, type Route } from '../store/ui';
 import { useLibrary } from '../store/library';
 import { isMobileApp } from '../lib/platform';
 import { Cover } from './common';
+import { DjModeButton, DjStationPanel } from './DjStation';
 import {
   IconAlbum, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
   IconNext, IconPause, IconPlay, IconPlaylist, IconPodcast, IconRadio, IconSearch, IconSettings, IconSparkle, IconWave, IconInbox, IconDj,
@@ -33,6 +34,7 @@ export function MobileNav() {
   const live = t?.kind === 'radio';
   return (
     <div className="mobile-dock">
+      <DjStationPanel inline />
       {t && (
         <div className="mini-player" onClick={() => setNowPlaying(true)}>
           <div className="mini-progress"><i style={{ width: live ? '100%' : `${(p.position / (p.duration || 1)) * 100}%` }} /></div>
@@ -43,6 +45,7 @@ export function MobileNav() {
               ? <div className="track-sub err" title={p.error}>{p.error}</div>
               : <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>}
           </div>
+          <DjModeButton className="tbtn" />
           <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.toggle(); }}>{p.playing ? <IconPause /> : <IconPlay />}</button>
           {!live && <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.next(); }}><IconNext /></button>}
         </div>
