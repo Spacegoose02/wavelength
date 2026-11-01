@@ -545,6 +545,17 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   -- AI DJ web search (dj/settings.ts): searches are billed per search, on top of tokens.
   ALTER TABLE dj_usage ADD COLUMN web_searches INTEGER NOT NULL DEFAULT 0;
   `,
+  `
+  -- Discover's chart movement (chartHistory.ts): what each chart said each day someone opened it, as song keys
+  -- in rank order. Shared by the whole house; kept 180 days.
+  CREATE TABLE chart_history (
+    chart TEXT NOT NULL,
+    day   TEXT NOT NULL,              -- YYYY-MM-DD (UTC)
+    keys  TEXT NOT NULL,              -- JSON string[]
+    PRIMARY KEY (chart, day)
+  );
+  CREATE INDEX chart_history_day ON chart_history(day);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

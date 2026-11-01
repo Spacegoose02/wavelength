@@ -532,6 +532,26 @@ export interface HubRadar {
   failed: number;
 }
 
+/** A Navidrome song the Hub matched to a chart song (hub/src/libraryIndex.ts): Subsonic's own fields. */
+export interface HubLibrarySong {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  albumId?: string;
+  duration?: number;
+  track?: number;
+  discNumber?: number;
+  coverArt?: string;
+  explicitStatus?: string;
+}
+
+/** How a chart song moved (hub/src/chartHistory.ts): rank in the snapshot from about a week ago, weeks in a row. */
+export interface HubChartMove {
+  prev: number | null;
+  weeks: number;
+}
+
 /** A song in this week's Weekly Mix (hub/src/radar.ts weeklyMix): Deezer's, with a 30-second preview. */
 export interface HubMixTrack {
   id: number;
@@ -721,6 +741,13 @@ export class HubClient {
   sonicJourney = (from: { artist: string; title: string }, to: { id: string }, steps = 20) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/journey?${new URLSearchParams({ fromArtist: from.artist, fromTitle: from.title, to: to.id, steps: String(steps) })}`);
   sonicSearch = (q: string) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/search?q=${encodeURIComponent(q)}`);
   sonicLookup = (songs: { id?: string; artist?: string; title?: string }[]) => this.call<{ features: (HubSonicFeatures | null)[] }>('POST', '/api/sonic/lookup', { songs });
+  /** Discover (hub/src/routes/discover.ts): chart songs the Hub's Navidrome has, movement, and For you. */
+  discoverMatch = (songs: { title: string; artist: string }[]) =>
+    this.call<{ ready: boolean; server: string | null; total: number; songs: (HubLibrarySong | null)[] }>('POST', '/api/discover/match', { songs });
+  discoverPositions = (chart: string, songs: { title: string; artist: string }[]) =>
+    this.call<{ since: string | null; moves: HubChartMove[] }>('POST', '/api/discover/positions', { chart, songs });
+  discoverForYou = (songs: { title: string; artist: string }[]) =>
+    this.call<{ basis: number; scores: { score: number; because?: string }[] }>('POST', '/api/discover/foryou', { songs });
   sonicStatus = () => this.call<HubSonicStatus>('GET', '/api/admin/sonic');
   sonicRescan = () => this.call<HubSonicStatus>('POST', '/api/admin/sonic/rescan', {});
   /** Music videos (hub/src/videos.ts): the official video's YouTube id, or null. */

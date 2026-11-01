@@ -163,6 +163,39 @@ use **Reset to defaults** to get the new default list.
   and **Fresh R&B** under R&B. Country uses iHeart's Breaking Country and Country Top 40.
 - Click a list's tab to see just that list, or **Mix** to combine them.
 
+- **Alternative** combines RadioWave's Alternative Rock 100 and Apple Music's most played alternative and indie
+  songs. Add more under **Edit charts**.
+
+### Using a chart
+
+Each song on a chart has:
+
+- **Its movement** under the rank: **▲3** (up three since last week), **▼2**, **NEW** (wasn't on it last
+  week) or **=**. The line above the list says which day it's compared with. Next to the artist, **5 wks** means
+  five weeks in a row on this chart. Movement starts the day after you first open a chart. With a Hub, everyone
+  in the house shares one history, so it's there sooner; without one, each device keeps its own.
+- **The artist's name** opens their page in your library, or their Deezer releases when you don't have them.
+- On hover (desktop): **Song radio** (or **Artist radio**) and **Follow**, which adds the artist to Release Radar.
+- **×** (Not interested) hides the song from Discover on every chart. **Undo** brings it straight back, and
+  **Show N you're not interested in** lists the hidden ones with **Show again**. With a Hub, the list follows you
+  to your other devices.
+
+Above the list, **All / Don't have / Have** shows every song, only the ones your library is missing (a shopping
+list for **Get all missing**), or only the ones you can play now. Discover remembers your pick.
+
+**Get all missing** asks once, in the bar ("Send 12 songs to deemix? Yes / Cancel"), then works in the
+background: a progress bar shows how far it got, and it keeps going if you open another page. **Stop** stops
+it after the song in progress. A song that couldn't be sent shows why on its row, with **Retry** and **Use
+yt-dlp**. Songs you already sent stay marked **Queued** or **Requested** when you come back, under any genre.
+
+### For you
+
+Signed in to a Hub, each genre has a **For you** tab: the genre's combined chart, only the songs close to what
+you play, best match first. Each says why: **You play Drake**, **You follow SZA** or **Like Drake** (Deezer
+lists the artist as related to one you play a lot). It uses your plays from the last six months, so it gets
+better the more you listen. With no plays yet it says so.
+
+### Release Radar: follow artists
 ### Release Radar: follow artists
 
 Signed in to a Hub, Release Radar (top of **New releases**) has a **Following** list: new albums, EPs and
@@ -189,11 +222,25 @@ from Billboard, Deezer, Spotify and the rest each time. The Hub fetches the ones
 30 minutes. If a chart service is down or busy, you see the last copy that worked, with a note such as
 "couldn't refresh, showing the Hub's copy from Fri 3:10 PM", instead of an error. **Refresh** asks again.
 
+The Hub also checks which chart songs your library has, all at once, so "Checking your library…" finishes in a
+moment instead of counting up song by song. That needs the Navidrome scan login under **Settings → Server →
+Library updates**; without it, or for songs on a Plex server, each device checks itself as before.
+
+Above the charts under every genre except New releases, **New from artists you follow** shows the newest
+releases from the artists you follow (with a Hub and at least one follow). **See all in Release Radar** opens
+New releases.
+
 > **Developer notes.** Choices are stored as `discoverCharts` (genre → chart ids) in the settings
 > store (`tonearm.settings`). A genre with no entry uses the built-in `BY_GENRE` list.
 > `sourcesFor(genre, custom)` in `src/sources/charts.ts` resolves what a genre uses, `chartsFor(genre)`
 > says which charts are allowed for it, and `getMix(genre, sources)` mixes whatever list it's given.
 > A new chart added to `CHART_LABELS` and `FETCHERS` shows up in the picker automatically.
+>
+> Movement is `lib/chartMoves.ts` (the Hub's `hub/src/chartHistory.ts`, or `tonearm.chartHistory` in
+> localStorage without one), keyed by `chartKey()`. The Hub's library check is `lib/discoverMatch.ts` →
+> `POST /api/discover/match` (`hub/src/libraryIndex.ts`), For you is `POST /api/discover/foryou`
+> (`hub/src/forYou.ts`), Get all missing is `lib/chartGets.ts`, and Not interested is `discoverHidden` in the
+> settings store (synced like `discoverCharts`). Songs are matched across charts with `songKey()`.
 
 ---
 

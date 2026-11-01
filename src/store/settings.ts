@@ -127,6 +127,9 @@ interface SettingsState {
   ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string; /** Folder inside the Hub's music folder, when the Hub runs yt-dlp. */ hubFolder: string };
   /** Discover: which charts each genre uses. A genre that isn't listed uses the built-in defaults. */
   discoverCharts: Partial<Record<Genre, ChartSource[]>>;
+  /** Discover: songs marked "Not interested" (sources/charts.ts songKey), newest last, at most 500. */
+  discoverHidden: string[];
+  setDiscoverHidden(key: string, hidden: boolean): void;
   npScene: NpScene;
   setNpScene(s: NpScene): void;
   /** the critter scene's pick: who plays (`critter`) and what (`act`) */
@@ -236,6 +239,12 @@ export const useSettings = create<SettingsState>()(
       deemix: { url: 'http://localhost:6595', arl: '', bitrate: 9 },
       ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '', hubFolder: 'yt-dlp' },
       discoverCharts: {},
+      discoverHidden: [],
+      setDiscoverHidden: (key, hidden) =>
+        set((st) => {
+          const rest = st.discoverHidden.filter((k) => k !== key);
+          return { discoverHidden: hidden ? [...rest, key].slice(-500) : rest };
+        }),
       npScene: 'art',
       setNpScene: (npScene) => set({ npScene }),
       critter: 'raccoon',

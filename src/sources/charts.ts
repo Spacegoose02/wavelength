@@ -3,7 +3,7 @@ import { readSpotifyEmbed } from '../lib/spotifyEmbed';
 import { primaryArtist } from '../lib/match';
 import { norm } from './registry';
 
-export type Genre = 'all' | 'new' | 'hiphop' | 'pop' | 'country' | 'rock' | 'edm' | 'rnb';
+export type Genre = 'all' | 'new' | 'hiphop' | 'pop' | 'country' | 'rock' | 'edm' | 'rnb' | 'alt';
 export type ChartSource =
   | 'billboard' | 'apple' | 'deezer'
   | 'spNewMusicFriday'
@@ -22,6 +22,7 @@ export const GENRES: { id: Genre; label: string }[] = [
   { id: 'country', label: 'Country' },
   { id: 'pop', label: 'Pop' },
   { id: 'rnb', label: 'R&B' },
+  { id: 'alt', label: 'Alternative' },
 ];
 
 export const CHART_LABELS: Record<ChartSource, string> = {
@@ -154,6 +155,7 @@ const APPLE: Partial<Record<Genre, RegExp | null>> = {
   country: /country/i,
   rock: /rock|alternative|metal/i,
   rnb: /r&b|soul/i,
+  alt: /alternative|indie/i,
 };
 
 const BY_GENRE: Record<Genre, ChartSource[]> = {
@@ -165,6 +167,8 @@ const BY_GENRE: Record<Genre, ChartSource[]> = {
   rock: ['billboard', 'apple', 'rwAltRock', 'rwBigRock', 'ihRockTop40', 'dzMetalRadar'],
   edm: ['dzNewDance', 'ihDanceTop40', 'dzElectronic', 'dzDanceHits'],
   rnb: ['ihRnbHits', 'dzFreshRnb', 'apple', 'ihHipHopRnbTop40', 'rwRhythmic'],
+  // Apple's most played filtered to alternative and indie, plus RadioWave's Alternative Rock 100 (added Nov 2026)
+  alt: ['rwAltRock', 'apple'],
 };
 
 /** The charts each genre uses out of the box (Settings → Discover charts can override them). */
@@ -433,6 +437,18 @@ const FETCHERS: Record<ChartSource, (g: Genre, got: Got) => Promise<Chart>> = {
   ihRnbHits: iheart('ihRnbHits'),
 };
 
+/** The same song on any chart: main artist plus title without "(feat. …)" or "[Remix]" (like getMix merges them). */
+export const songKey = (e: { title: string; artist: string }) => `${norm(primaryArtist(e.artist))}|${norm(e.title.replace(/\(.*?\)|\[.*?\]/g, ''))}`;
+
+/**
+ * A name for one chart's history (chart movement, lib/chartMoves.ts). Billboard and Apple differ by genre; the playlist
+ * charts are the same list under every genre. A Mix is named by its genre and the charts in it.
+ */
+export function chartKey(view: ChartSource | 'mix', g: Genre, sources: ChartSource[] = []): string {
+  if (view === 'mix') return `mix:${g}:${[...sources].sort().join(',')}`;
+  return view === 'billboard' || view === 'apple' ? `${view}:${g}` : view;
+}
+
 /** Look a song up on Deezer: link for deemix, 30s preview clip and explicit flag (strict match, then loose). */
 export async function deezerLookup(e: { title: string; artist: string }): Promise<{ link?: string; preview?: string; explicit?: boolean }> {
   const artist = primaryArtist(e.artist);
@@ -491,7 +507,7 @@ export async function getMix(g: Genre, sources: ChartSource[] = sourcesFor(g), f
     used.push(sources[i]);
     const n = Math.min(r.value.entries.length, 100);
     for (const e of r.value.entries.slice(0, 100)) {
-      const key = `${norm(primaryArtist(e.artist))}|${norm(e.title.replace(/\(.*?\)|\[.*?\]/g, ''))}`;
+      const key = songKey(e);
       const pts = 1 + (n - e.rank + 1) / n;
       const cur = map.get(key);
       if (cur) {

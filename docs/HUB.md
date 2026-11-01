@@ -523,6 +523,26 @@ On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favourites and Time Capsu
 artist (plus the track that played, for songs the person played), and each app finds them in its own library.
 Blends mix two to six people who have all said yes (`blend_optin`).
 
+## Discover
+
+Besides keeping a copy of the charts (`hub/src/discover.ts`, `GET /api/discover/fetch`), the Hub helps Discover
+three ways:
+
+- **Library check** (`hub/src/libraryIndex.ts`): the Hub keeps the list of every song in its Navidrome in memory
+  (listed with the Navidrome admin login under Library updates, 500 songs a call; listed again when the copy is an
+  hour old or Navidrome finished a scan since) and matches a whole chart against it in one request. The match is
+  the app's: the same title without "(feat. …)"/"(Remastered)" extras (or one that starts with it), then the same
+  main artist, or one name containing the other. Songs come back in Navidrome's own fields; an app turns them
+  into tracks when it plays from that same Navidrome (same URL, or the only Navidrome login the Hub gave it), and
+  checks the rest itself (no scan login, other servers, Plex). Nothing is written to the database.
+- **Chart movement** (`hub/src/chartHistory.ts`, table `chart_history`): an app that opens a chart sends what it
+  says (titles and artists in rank order); the Hub keeps one snapshot per chart per day for the whole house
+  (180 days), and answers with each song's rank on the newest snapshot at least a week old (in the first week,
+  the oldest one) and how many weeks in a row it's been on. A week no one opened the chart isn't a gap.
+- **For you** (`hub/src/forYou.ts`): scores a chart's songs for the caller from their plays in the last 180 days
+  (artists they play), their Release Radar follows, and Deezer's related artists of their 10 most played artists
+  (the Made for you lookups, cached a day), with a reason for each.
+
 ## Sound-alike analysis
 
 Off until an admin turns on **Sound-alike analysis** in Settings → Features. Then the Hub lists the Navidrome
@@ -678,6 +698,9 @@ with a 4xx status.
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
+| `POST /api/discover/match` | signed in | `{ songs: [{ title, artist }] }` (up to 300) → `{ ready, server, total, songs }`: the Hub's Navidrome song for each (Subsonic fields `id, title, artist, album, albumId, duration, track, discNumber, coverArt, explicitStatus`) or null. `ready: false` without a Navidrome scan login (every song null) |
+| `POST /api/discover/positions` | signed in | `{ chart, songs }` (songs in rank order, up to 300; `chart` names it, e.g. `billboard:all`, `ihHitsNow`, `mix:pop:<charts>`) → keeps today's snapshot and answers `{ since, moves: [{ prev, weeks }] }`: rank on the snapshot from `since` (null = wasn't on it) and weeks in a row. `since` is null on a chart's first day |
+| `POST /api/discover/foryou` | signed in | `{ songs }` (up to 300) → `{ basis, scores: [{ score, because? }] }`: how close each song is to what you play (0 = not at all) and why ("You play Drake", "You follow SZA", "Like Drake"); `basis` is how many plays it went on |
 | `GET /api/radar` | signed in | Release Radar: who you follow and their releases from the last 42 days, `{ follows, releases, windowDays, checkedAt, pending, failed }`. See [RELEASE-RADAR.md](RELEASE-RADAR.md) |
 | `POST /api/radar/follows`, `DELETE /api/radar/follows/:id` | signed in | follow a Deezer artist (`{ id, name, picture? }`, or `{ name }` and the Hub finds them; 404 if Deezer has nobody by that name) / stop following |
 | `POST /api/radar/check` | signed in | look your followed artists up now (ones looked at in the last 10 minutes are skipped) |

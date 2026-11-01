@@ -43,6 +43,8 @@ import { webFetchRoutes } from './routes/webfetch.ts';
 import { radioRoutes } from './routes/radio.ts';
 import { discoverRoutes } from './routes/discover.ts';
 import { ChartCache } from './discover.ts';
+import { ChartHistory } from './chartHistory.ts';
+import { LibraryIndex } from './libraryIndex.ts';
 import { ReleaseRadar } from './radar.ts';
 import { radarRoutes } from './routes/radar.ts';
 import { scrobbleRoutes } from './routes/scrobble.ts';
@@ -82,6 +84,12 @@ export interface Ctx {
   clean: CleanDownloads;
   /** Discover's charts, fetched and kept by the Hub so the apps don't each pull them (discover.ts). */
   charts: ChartCache;
+  /** Discover's chart movement: a snapshot of each chart per day (chartHistory.ts). */
+  chartHistory: ChartHistory;
+  /** Every Navidrome song, kept to match Discover's charts against in one go (libraryIndex.ts). */
+  libraryIndex: LibraryIndex;
+  /** Deezer related artists and top songs (mixes.ts), for Made for you and Discover's For you. */
+  mixLookups: MixLookups;
   /** Release Radar: followed artists and their new releases, looked up in the background (radar.ts). */
   radar: ReleaseRadar;
   /** Plays sent on to ListenBrainz / Last.fm (scrobble.ts). */
@@ -121,14 +129,17 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     restart: opts.restart ?? (() => undefined),
     dj: new DjAgent(db, config, opts.djProvider ?? anthropicProvider, ollamaProvider(opts.ollamaFetch), opts.ollamaFetch),
     voice: new DjVoice(db, config.secretKey, opts.ttsFetch),
-    mixes: new Mixes(db, opts.mixLookups ?? deezerLookups()),
+    mixLookups: opts.mixLookups ?? deezerLookups(),
+    chartHistory: new ChartHistory(db),
     sonic: new SonicWorker(db, config.secretKey, config.musicDir, config.navidromeMusicDir),
     tours: new Tours(db, config.secretKey, opts.tourFetch),
     videos: undefined as unknown as Videos,
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
+  ctx.mixes = new Mixes(db, ctx.mixLookups);
   ctx.station = new Station(db, ctx.dj, ctx.mixes, opts.stationChart);
   ctx.videos = new Videos(opts.videoSearch ?? ((q, n) => ctx.ytdlp.search(q, n)));
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
+  ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => ctx.library.status().lastScanAt);
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
   if (opts.watchLibrary ?? true) ctx.library.start();
   app.addHook('onClose', async () => ctx.library.stop());
