@@ -47,7 +47,7 @@ function apply(prefs: HubPrefs, stamps: Stamps) {
     if (r.value !== null && r.value !== undefined) {
       patch[k] = k === 'mouthTune' ? cleanTune(r.value as Partial<MouthTune>)
         // the DJ's voice is whatever this device has, so it stays put
-        : k === 'djVoice' ? { ...DEFAULT_DJ_VOICE, ...(r.value as object), voice: useSettings.getState().djVoice.voice }
+        : k === 'djVoice' ? { ...DEFAULT_DJ_VOICE, ...(r.value as object), voice: useSettings.getState().djVoice.voice, useDevice: useSettings.getState().djVoice.useDevice }
         : r.value;
     }
     stamps.at[k] = r.updatedAt;

@@ -145,7 +145,7 @@ interface SettingsState {
   /** Discord status on this computer (lib/discord.ts). Not synced: the app ID is, the switch isn't. */
   discord: { on: boolean; appId: string };
   setDiscord(p: Partial<SettingsState['discord']>): void;
-  /** The talking DJ (lib/djVoice.ts): a spoken link between songs. Synced, except the voice is per device. */
+  /** The talking DJ (lib/djVoice.ts): a spoken link between songs. Synced, except the device voice (and whether to use it) is per device. */
   djVoice: DjVoiceSettings;
   setDjVoice(p: Partial<DjVoiceSettings>): void;
   /** Settings → Playback: ReplayGain (player/replayGain.ts) and crossfade between songs (seconds, 0 = off). */
@@ -212,8 +212,12 @@ export interface DjVoiceSettings {
   /** speechSynthesis voice name on this device; empty = the system's default. */
   voice: string;
   rate: number;
+  /** The Hub's voice to use (Kokoro or OpenAI, hub/src/dj/voice.ts); empty = the admin's pick. */
+  hubVoice: string;
+  /** Use this device's voice even when the Hub has one. */
+  useDevice: boolean;
 }
-export const DEFAULT_DJ_VOICE: DjVoiceSettings = { on: false, every: 3, style: 'chill', name: '', voice: '', rate: 1 };
+export const DEFAULT_DJ_VOICE: DjVoiceSettings = { on: false, every: 3, style: 'chill', name: '', voice: '', rate: 1, hubVoice: '', useDevice: false };
 
 export const DEFAULT_SMART_OFFLINE: SmartOfflineSettings = { enabled: false, favorites: true, recentDays: 30, mixes: true, capMb: 4000, wifiOnly: true };
 

@@ -634,10 +634,23 @@ export interface HubDjSettings {
   defaultUserLimit: number | null;
   webMaxSearches?: number;
   webSearchPrice?: number;
+  voice?: HubDjVoiceSettings;
+}
+export type HubVoiceEngine = 'device' | 'kokoro' | 'openai';
+export interface HubDjVoiceInfo { engine: HubVoiceEngine; voices: string[]; default: string; error?: string }
+export interface HubDjVoiceSettings {
+  engine: HubVoiceEngine;
+  kokoroUrl: string;
+  kokoroVoice: string;
+  openaiModel: string;
+  openaiVoice: string;
+  openaiPrice: number;
 }
 export interface HubDjAdmin {
   settings: HubDjSettings;
   key: { set: boolean; hint: string | null; unreadable: boolean };
+  openaiKey?: { set: boolean; hint: string | null; unreadable: boolean };
+  openaiVoiceModels?: string[];
   providers: string[];
   efforts: HubDjSettings['effort'][];
   models: { id: string; label: string; blurb: string; price: HubDjPrice }[];
@@ -667,6 +680,17 @@ export class HubClient {
   }
   private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
     return (await this.req<T>(method, path, body)).data;
+  }
+  /** POST JSON, get bytes back (the talking DJ's audio). */
+  private async blob(path: string, body: unknown): Promise<Blob> {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (this.token) headers.authorization = `Bearer ${this.token}`;
+    const res = await http(this.url + path, { method: 'POST', headers, body: JSON.stringify(body) });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new HubError(res.status, data.error || `${res.status} ${res.statusText || 'error'}`, false);
+    }
+    return res.blob();
   }
 
   health = () => this.call<HubHealth>('GET', '/api/health');
@@ -931,9 +955,15 @@ export class HubClient {
   /** The talking DJ's spoken link before `next` (needs the djVoice feature). */
   djPatter = (b: { previous?: { title: string; artist?: string; album?: string; year?: number }; next: { title: string; artist?: string; album?: string; year?: number }; name?: string; style?: string }) =>
     this.call<{ text: string; spent: number; limit: number | null }>('POST', '/api/dj/patter', b);
+  /** The talking DJ's Hub voices (Kokoro or OpenAI); `engine: 'device'` = read it with this device's voice. */
+  djVoice = () => this.call<HubDjVoiceInfo>('GET', '/api/dj/voice');
+  /** An MP3 of `text` in the Hub's voice. */
+  djSpeak = (b: { text: string; voice?: string; speed?: number; style?: string }) => this.blob('/api/dj/speak', b);
+  djAdminVoice = () => this.call<HubDjVoiceInfo>('GET', '/api/admin/dj/voice');
+  testDjVoice = (b: { voice?: string; text?: string }) => this.blob('/api/admin/dj/voice/test', b);
   djAdmin = () => this.call<HubDjAdmin>('GET', '/api/admin/dj');
   /** `apiKey`: a new key, '' to remove it, left out to keep it. */
-  saveDjAdmin = (b: Partial<HubDjSettings> & { apiKey?: string }) => this.call<HubDjAdmin>('PUT', '/api/admin/dj', b);
+  saveDjAdmin = (b: Omit<Partial<HubDjSettings>, 'voice'> & { voice?: Partial<HubDjVoiceSettings>; apiKey?: string; openaiKey?: string }) => this.call<HubDjAdmin>('PUT', '/api/admin/dj', b);
   setDjAccess = (userId: number, b: { enabled?: boolean; monthlyLimit?: number | null }) => this.call('PUT', `/api/admin/dj/users/${userId}`, b);
   testDj = () => this.call<{ message: string }>('POST', '/api/admin/dj/test', {});
   audit = (limit = 50) => this.call<{ entries: HubAuditEntry[] }>('GET', `/api/admin/audit?limit=${limit}`);

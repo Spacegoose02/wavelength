@@ -12,6 +12,36 @@ import type { User } from '../users.ts';
 
 const KEY = 'dj.settings';
 const AAD = 'hub-setting:dj.apiKey';
+const OPENAI_AAD = 'hub-setting:dj.openaiKey';
+
+/**
+ * Who reads the talking DJ's lines aloud (dj/voice.ts). `device`: each device's own text-to-speech voices, as
+ * before. `kokoro`: Kokoro, a free voice model in its own container next to the Hub (Kokoro-FastAPI). `openai`:
+ * OpenAI's voices, with a key kept here like the Anthropic one, billed per character.
+ */
+export const VOICE_ENGINES = ['device', 'kokoro', 'openai'] as const;
+export type VoiceEngine = (typeof VOICE_ENGINES)[number];
+export const OPENAI_VOICE_MODELS = ['gpt-4o-mini-tts', 'tts-1', 'tts-1-hd'] as const;
+export const OPENAI_VOICES = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer', 'verse', 'marin', 'cedar'] as const;
+export interface VoiceSettings {
+  engine: VoiceEngine;
+  /** Kokoro-FastAPI's address, as the Hub reaches it. */
+  kokoroUrl: string;
+  /** The voice people get unless they pick another (Settings → Playback). */
+  kokoroVoice: string;
+  openaiModel: (typeof OPENAI_VOICE_MODELS)[number];
+  openaiVoice: string;
+  /** USD per million characters read (OpenAI: about $15 for gpt-4o-mini-tts and tts-1). */
+  openaiPrice: number;
+}
+export const VOICE_DEFAULTS: VoiceSettings = {
+  engine: 'device',
+  kokoroUrl: 'http://kokoro:8880',
+  kokoroVoice: 'am_michael',
+  openaiModel: 'gpt-4o-mini-tts',
+  openaiVoice: 'ash',
+  openaiPrice: 15,
+};
 
 export const PROVIDERS = ['anthropic'] as const;
 export type Provider = (typeof PROVIDERS)[number];
@@ -65,10 +95,13 @@ export interface DjSettings {
   webMaxSearches: number;
   /** USD per 1,000 web searches (Anthropic: $10). */
   webSearchPrice: number;
+  /** The talking DJ's voice. */
+  voice: VoiceSettings;
 }
 
 interface Stored extends DjSettings {
   apiKey?: string; // sealed
+  openaiKey?: string; // sealed
 }
 
 export const DEFAULTS: DjSettings = {
@@ -83,13 +116,15 @@ export const DEFAULTS: DjSettings = {
   defaultUserLimit: 5,
   webMaxSearches: 3,
   webSearchPrice: 10,
+  voice: VOICE_DEFAULTS,
 };
 
 function readStored(db: Db): Stored {
   const row = db.prepare('SELECT value FROM hub_settings WHERE key = ?').get(KEY) as { value: string } | undefined;
   if (!row) return { ...DEFAULTS };
   try {
-    return { ...DEFAULTS, ...(JSON.parse(row.value) as Partial<Stored>) };
+    const saved = JSON.parse(row.value) as Partial<Stored>;
+    return { ...DEFAULTS, ...saved, voice: { ...VOICE_DEFAULTS, ...saved.voice } };
   } catch {
     return { ...DEFAULTS };
   }
@@ -100,26 +135,29 @@ function writeStored(db: Db, s: Stored) {
 }
 
 export function getSettings(db: Db): DjSettings {
-  const { apiKey: _k, ...s } = readStored(db);
+  const { apiKey: _k, openaiKey: _o, ...s } = readStored(db);
   return s;
 }
 
-/** The API key, or null when there is none or it was sealed with a different secret key. */
-export function getApiKey(db: Db, secretKey: Buffer): string | null {
-  const sealed = readStored(db).apiKey;
+type KeyName = 'apiKey' | 'openaiKey';
+const aadOf = (which: KeyName) => (which === 'apiKey' ? AAD : OPENAI_AAD);
+
+/** The API key (or the OpenAI voice key), or null when there is none or it was sealed with a different secret key. */
+export function getApiKey(db: Db, secretKey: Buffer, which: KeyName = 'apiKey'): string | null {
+  const sealed = readStored(db)[which];
   if (!sealed) return null;
   try {
-    return unseal(secretKey, sealed, AAD);
+    return unseal(secretKey, sealed, aadOf(which));
   } catch {
     return null;
   }
 }
 
-/** What admins see about the key: whether there is one and its last four characters. Never the key. */
-export function keyInfo(db: Db, secretKey: Buffer): { set: boolean; hint: string | null; unreadable: boolean } {
-  const sealed = readStored(db).apiKey;
+/** What admins see about a key: whether there is one and its last four characters. Never the key. */
+export function keyInfo(db: Db, secretKey: Buffer, which: KeyName = 'apiKey'): { set: boolean; hint: string | null; unreadable: boolean } {
+  const sealed = readStored(db)[which];
   if (!sealed) return { set: false, hint: null, unreadable: false };
-  const key = getApiKey(db, secretKey);
+  const key = getApiKey(db, secretKey, which);
   return { set: true, hint: key ? `…${key.slice(-4)}` : null, unreadable: !key };
 }
 
@@ -185,17 +223,52 @@ export function saveSettings(db: Db, secretKey: Buffer, body: unknown): { settin
     for (const [id, p] of Object.entries(b.prices as Record<string, unknown>).slice(0, 50)) if (/^[a-zA-Z0-9._:@/-]{1,100}$/.test(id)) prices[id] = readPrice(p);
     next.prices = prices;
   }
-  if (b.apiKey !== undefined) {
-    const k = typeof b.apiKey === 'string' ? b.apiKey.trim() : '';
+  for (const which of ['apiKey', 'openaiKey'] as const) {
+    if (b[which] === undefined) continue;
+    const k = typeof b[which] === 'string' ? (b[which] as string).trim() : '';
     if (k.length > 500) throw new HttpError(400, 'That API key is too long');
-    if (k) next.apiKey = seal(secretKey, k, AAD);
-    else delete next.apiKey;
-    changed.push('apiKey');
+    if (k) next[which] = seal(secretKey, k, aadOf(which));
+    else delete next[which];
+    changed.push(which);
   }
+  if (b.voice !== undefined) next.voice = readVoice(b.voice, cur.voice);
   for (const k of Object.keys(DEFAULTS) as (keyof DjSettings)[]) if (JSON.stringify(cur[k]) !== JSON.stringify(next[k])) changed.push(k);
   writeStored(db, next);
   return { settings: getSettings(db), changed };
 }
+
+function readVoice(v: unknown, cur: VoiceSettings): VoiceSettings {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new HttpError(400, 'voice must be an object');
+  const b = v as Record<string, unknown>;
+  const out = { ...cur };
+  if (b.engine !== undefined) {
+    if (!(VOICE_ENGINES as readonly unknown[]).includes(b.engine)) throw new HttpError(400, `The voice must be one of: ${VOICE_ENGINES.join(', ')}`);
+    out.engine = b.engine as VoiceEngine;
+  }
+  if (b.kokoroUrl !== undefined) {
+    const u = typeof b.kokoroUrl === 'string' ? b.kokoroUrl.trim().replace(/\/+$/, '') : '';
+    if (!/^https?:\/\/\S+$/i.test(u)) throw new HttpError(400, 'Kokoro’s address must start with http:// or https://');
+    out.kokoroUrl = u;
+  }
+  for (const k of ['kokoroVoice', 'openaiVoice'] as const) {
+    if (b[k] === undefined) continue;
+    if (!isVoiceName(b[k])) throw new HttpError(400, 'Pick a voice');
+    out[k] = b[k] as string;
+  }
+  if (b.openaiModel !== undefined) {
+    if (!(OPENAI_VOICE_MODELS as readonly unknown[]).includes(b.openaiModel)) throw new HttpError(400, `The OpenAI voice model must be one of: ${OPENAI_VOICE_MODELS.join(', ')}`);
+    out.openaiModel = b.openaiModel as VoiceSettings['openaiModel'];
+  }
+  if (b.openaiPrice !== undefined) {
+    const n = Number(b.openaiPrice);
+    if (!Number.isFinite(n) || n < 0 || n > 1000) throw new HttpError(400, 'The voice price is dollars per million characters');
+    out.openaiPrice = n;
+  }
+  return out;
+}
+
+/** Kokoro names voices like af_heart (and mixes like af_heart+am_adam); OpenAI like coral. */
+export const isVoiceName = (v: unknown): v is string => typeof v === 'string' && /^[a-zA-Z0-9_+.()-]{1,80}$/.test(v);
 
 export function priceOf(s: DjSettings, model: string): Price | null {
   return s.prices[model] ?? MODELS.find((m) => m.id === model)?.price ?? null;

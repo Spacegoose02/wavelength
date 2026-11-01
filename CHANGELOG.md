@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Better voices for the talking DJ.** Admins can pick who reads the DJ's lines under **Settings → AI DJ →
+  Talking DJ voice**: each device's own voice as before, **Kokoro** (free natural voices in a container next to the
+  Hub), or **OpenAI** (the most expressive, acting out the hype, laid back or trivia style; about $15 per million
+  characters, counted toward the AI DJ limits). Everyone can pick their voice in **Settings → Playback → Talking DJ**.
+  If the Hub's voice fails, the device reads the line instead.
 
 ## 0.19.1
 - **Fixed: the page crashed ("l is not a function") while chatting with the AI DJ.** Scrolling the chat to

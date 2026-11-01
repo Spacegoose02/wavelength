@@ -13,6 +13,7 @@ API key; the app never sees the key.
 - [API](#api)
 - [Adding a provider](#adding-a-provider)
 - [Not yet](#not-yet)
+- [The talking DJ](#the-talking-dj) and its [voices](#voices)
 
 ## Setting it up (admins)
 
@@ -170,11 +171,15 @@ All need a device token. Listener routes answer 403 with the reason when the DJ 
 | DELETE | `/api/dj/chats/:id` | delete a chat |
 | POST | `/api/dj/chat` | `{ chatId?, message }` → `{ chat, status: 'done' \| 'tools', reply, calls?, full?, spent, limit }`; 402 when a limit is used up |
 | POST | `/api/dj/patter` | Talking DJ: `{ previous?, next, name?, style? }` → `{ text, spent, limit }`, one or two sentences to read between songs. Needs the **Talking AI DJ** feature switch; low effort, counted against the allowance |
+| GET | `/api/dj/voice` | Talking DJ: `{ engine: 'device' \| 'kokoro' \| 'openai', voices, default, error? }` |
+| POST | `/api/dj/speak` | Talking DJ: `{ text, voice?, speed?, style? }` → `audio/mpeg`; 409 while the voice is each device's own. OpenAI is counted against the allowance |
 | POST | `/api/dj/chats/:id/tools` | `{ results: [{ id, content, isError? }] }` → same as above |
 | GET | `/api/admin/dj` | settings (never the key, only `key: { set, hint }`), models and prices, people with their switch, limit and spend, this month's spend by model and day |
-| PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, webMaxSearches?, webSearchPrice?, apiKey? }`; `apiKey: ''` removes it |
+| PUT | `/api/admin/dj` | `{ enabled?, provider?, model?, effort?, baseUrl?, fallback?, prices?, householdLimit?, defaultUserLimit?, webMaxSearches?, webSearchPrice?, voice?: { engine?, kokoroUrl?, kokoroVoice?, openaiModel?, openaiVoice?, openaiPrice? }, apiKey?, openaiKey? }`; `apiKey: ''` / `openaiKey: ''` removes a key |
 | PUT | `/api/admin/dj/users/:userId` | `{ enabled?, monthlyLimit? }` (`null` = no limit) |
 | POST | `/api/admin/dj/test` | checks the key and model, no tokens used |
+| GET | `/api/admin/dj/voice` | the voice list, as `/api/dj/voice` |
+| POST | `/api/admin/dj/voice/test` | `{ voice?, text? }` → `audio/mpeg` in the saved voice; not counted against anyone |
 
 Admin routes need `keys.manage` (admins). Changes are in the audit log (`dj.settings`, `dj.access`).
 
@@ -202,7 +207,37 @@ Ideas for later, roughly in order:
 
 With **Talking AI DJ** on in **Settings → Features**, people can turn on **Settings → Playback → Talking DJ**.
 Every few songs (they choose how often, and a laid back, hype or trivia style) the app asks the Hub for a line
-about the song that just played and the one coming up, a few seconds before it starts, then reads it with the
-device's own text-to-speech voice while the music dips. Each line is one small, low-effort call (a fraction of a
-cent on the default model) counted against the same monthly allowance as the chat. Nothing else to set up: no
-separate speech service.
+about the song that just played and the one coming up, a few seconds before it starts, then reads it while the
+music dips. Each line is one small, low-effort call (a fraction of a cent on the default model) counted against the
+same monthly allowance as the chat.
+
+### Voices
+
+**Settings → AI DJ → Talking DJ voice** picks who reads the lines:
+
+| Voice | Cost | Setup |
+|---|---|---|
+| **Each device's own voice** (default) | free | none. Windows, Android and the rest read it with their built-in text-to-speech voices |
+| **Kokoro on your Hub** | free | run the Kokoro container next to the Hub (below). Natural-sounding voices; nothing leaves your server |
+| **OpenAI** | about $15 per million characters, so a fraction of a cent a line | paste an OpenAI API key (platform.openai.com → API keys). The most expressive; with `gpt-4o-mini-tts` it acts out the laid back, hype or trivia style |
+
+With Kokoro or OpenAI, the app sends each line to the Hub (`POST /api/dj/speak`) along with the next song's words,
+and gets back an MP3 to play over the ducked music. The OpenAI key is sealed on the Hub like the Anthropic one and
+never sent to a device. OpenAI audio is recorded with the DJ's other costs (model `openai:<model>`) and counts toward
+every limit. Pick a **Default voice** and press **Hear it**; each person can choose another voice under **Settings →
+Playback → Talking DJ → Voice**, or keep their device's own. If the Hub's voice fails (Kokoro stopped, OpenAI said
+no), the device's voice reads that line instead, when the device has one.
+
+**Running Kokoro.** [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) serves the open Kokoro-82M voice
+model with an OpenAI-style API on port 8880. The CPU image is fine: a line takes a second or two.
+
+- Docker Compose: uncomment the `kokoro` service in `hub/docker-compose.example.yml`. On the same network, the
+  Hub's default address `http://kokoro:8880` just works.
+- Unraid: **Docker → Add Container** with repository
+  `ghcr.io/remsky/kokoro-fastapi-cpu:latest` and port 8880. Then set **Kokoro's address** to
+  `http://<your server's IP>:8880`.
+- Have an NVIDIA card? `ghcr.io/remsky/kokoro-fastapi-gpu:latest` with the GPU passed through is faster.
+- Add `kokoro` to `WAVELENGTH_DOCKER_CONTAINERS` to start and stop it from **Settings → Server → Containers**.
+
+Voices are named like `am_michael`: the first letter is the accent (a = American, b = British, …), the second
+f or m, then the name. The pickers show them as "Michael (American, male)".
