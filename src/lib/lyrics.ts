@@ -1,7 +1,7 @@
 /**
  * Lyrics for Now Playing. Navidrome's own (OpenSubsonic `getLyricsBySongId`, from the files' tags or .lrc files
  * next to them) when the song is from Navidrome and has some, else LRCLIB (lrclib.net: free, no key, sends CORS
- * headers so it works in a browser too). Synced lyrics come as timed lines for the karaoke highlight; plain ones
+ * headers so it works in a browser too), else plain lyrics from lyrics.ovh. Synced lyrics come as timed lines for the karaoke highlight; plain ones
  * as lines without times.
  *
  * Kid profiles get lyrics with strong language masked (`maskForKids`): a clean version of a song plays the
@@ -78,8 +78,14 @@ interface LrcLibHit {
 }
 
 const LRCLIB = 'https://lrclib.net/api';
-/** Words that mark a version of a song rather than a different song: "(2011 Remaster)", "- Radio Edit", "(feat. X)". */
-const VERSIONY = /\b(feat|ft|featuring|with|clean|explicit|edit|edited|censored|remaster|remastered|radio|single|album version|version|mono|stereo|deluxe|bonus|anniversary|expanded|edition|live|acoustic|unplugged|demo|from)\b|\b(19|20)\d\d\b/i;
+const LYRICS_OVH = 'https://api.lyrics.ovh/v1';
+/** Each request gives up after this long, so a slow service can't leave the lyrics spinning. */
+const TIMEOUT_MS = 10_000;
+/**
+ * Words that mark a version or an upload of a song rather than a different song: "(2011 Remaster)",
+ * "- Radio Edit", "(feat. X)", and YouTube's "(Official Music Video)", "[Lyrics]", "(HD)".
+ */
+const VERSIONY = /\b(feat|ft|featuring|with|clean|explicit|edit|edited|censored|remaster|remastered|radio|single|album version|version|mono|stereo|deluxe|bonus|anniversary|expanded|edition|live|acoustic|unplugged|demo|from|official|video|audio|lyrics?|visuali[sz]er|hd|hq|4k|mv|m\/v)\b|\b(19|20)\d\d\b/i;
 /** Recordings without the words (LRCLIB marks them `instrumental`, often filed under the plain song name). */
 const NO_VOCALS = /\b(instrumental|karaoke|backing track|minus one)\b/i;
 
@@ -87,7 +93,17 @@ const NO_VOCALS = /\b(instrumental|karaoke|backing track|minus one)\b/i;
 export function cleanTitle(s = ''): string {
   return s
     .replace(/\s*[([]([^)\]]*)[)\]]/g, (m, inner: string) => (VERSIONY.test(inner) ? '' : m))
-    .replace(/\s+[-–—]\s+(.*)$/, (m, tail: string) => (VERSIONY.test(tail) ? '' : m))
+    .replace(/\s+[-–—|]\s+(.*)$/, (m, tail: string) => (VERSIONY.test(tail) ? '' : m))
+    .replace(/\s+(?:feat\.?|ft\.?|featuring)\s.*$/i, '')
+    .trim();
+}
+
+/** An artist without what YouTube channels add: "Adele - Topic", "AdeleVEVO", "Adele Official". */
+export function cleanArtist(s = ''): string {
+  return s
+    .replace(/\s*-\s*topic$/i, '')
+    .replace(/\s*vevo$/i, '')
+    .replace(/\s+official$/i, '')
     .trim();
 }
 
@@ -95,7 +111,7 @@ export function cleanTitle(s = ''): string {
 const norm = (s = '') =>
   cleanTitle(s)
     .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/&/g, 'and')
     .replace(/[^\p{L}\p{N}]+/gu, '');
@@ -104,6 +120,34 @@ const norm = (s = '') =>
 export function artistVariants(artist = ''): string[] {
   const first = artist.split(/\s*(?:,|;|\/|&| x | feat\.? | ft\.? | featuring | with )\s*/i)[0].trim();
   return [...new Set([artist.trim(), first].filter(Boolean))];
+}
+
+export interface LyricsQuery {
+  artist: string;
+  title: string;
+}
+
+const UNKNOWN = /^(unknown( artist)?|various artists|n\/a|-)?$/i;
+
+/**
+ * The artist + title pairs to look a song up by, best first. Besides the tags as they are (cleaned), a title like
+ * "Adele - Hello" from a YouTube download is also read as artist "Adele", title "Hello", first when the
+ * artist tag is missing or names the same artist (or its channel).
+ */
+export function lyricQueries(t: Pick<Track, 'title' | 'artist'>): LyricsQuery[] {
+  const title = cleanTitle(t.title);
+  const artist = cleanArtist(t.artist);
+  const out: LyricsQuery[] = UNKNOWN.test(artist) ? [] : artistVariants(artist).map((a) => ({ artist: a, title }));
+  const split = /^(.+?)\s+[-–—|]\s+(.+)$/.exec(title);
+  if (split) {
+    const q = { artist: cleanArtist(split[1]), title: cleanTitle(split[2]) };
+    const [a, b] = [norm(artist), norm(q.artist)];
+    const same = !a || (!!b && (a.includes(b) || b.includes(a)));
+    if (same) out.unshift(q);
+    else out.push(q);
+  }
+  const seen = new Set<string>();
+  return out.filter((q) => q.title && !seen.has(`${q.artist}\n${q.title}`) && !!seen.add(`${q.artist}\n${q.title}`));
 }
 
 function fromLrcLib(hit: LrcLibHit, timed = true): Lyrics | undefined {
@@ -115,22 +159,22 @@ function fromLrcLib(hit: LrcLibHit, timed = true): Lyrics | undefined {
 }
 
 const INSTRUMENTAL = (source: string): Lyrics => ({ lines: [], synced: false, instrumental: true, source });
+const is404 = (e: unknown) => /^404\b/.test((e as Error)?.message ?? '');
+const timed = (): RequestInit => (typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(TIMEOUT_MS) } : {});
 
 /**
  * LRCLIB has several entries for most songs, some marked instrumental (an instrumental or karaoke upload filed
  * under the song's name, or a wrong flag), so one instrumental entry doesn't settle it: every lookup is pooled
  * and an entry with words wins. "Instrumental" is the answer only when the song's own name says so, or when
- * nothing matching has words but an entry for it is marked instrumental.
+ * nothing matching has words but an entry for it is marked instrumental. Throws when LRCLIB couldn't be reached.
  */
-async function lrclib(t: Pick<Track, 'title' | 'artist' | 'album' | 'duration'>): Promise<Lyrics | undefined> {
-  if (NO_VOCALS.test(t.title)) return INSTRUMENTAL('LRCLIB');
-  const title = cleanTitle(t.title);
-  const want = norm(t.title);
-  const artists = artistVariants(t.artist);
+async function lrclib(t: Pick<Track, 'title' | 'artist' | 'album' | 'duration'>, queries: LyricsQuery[]): Promise<Lyrics | undefined> {
+  if (!queries.length) return undefined;
+  const wants = queries.map((q) => norm(q.title)).filter(Boolean);
   const near = (h: LrcLibHit) => (t.duration && h.duration ? Math.abs(h.duration - t.duration) : 0);
   const nameOk = (h: LrcLibHit) => {
     const got = norm(h.trackName);
-    return !!got && !!want && (got === want || (Math.min(got.length, want.length) >= 3 && (got.includes(want) || want.includes(got))));
+    return !!got && wants.some((want) => got === want || (Math.min(got.length, want.length) >= 3 && (got.includes(want) || want.includes(got))));
   };
   const lengthOk = (h: LrcLibHit) => near(h) <= 10;
   const words = (h: LrcLibHit) => !h.instrumental && !NO_VOCALS.test(`${h.trackName ?? ''} ${h.albumName ?? ''}`) && !!(h.syncedLyrics || h.plainLyrics);
@@ -140,11 +184,11 @@ async function lrclib(t: Pick<Track, 'title' | 'artist' | 'album' | 'duration'>)
   let failed: unknown;
   const ask = async (path: string, params: Record<string, string>) => {
     try {
-      const res = await getJson<LrcLibHit | LrcLibHit[]>(`${LRCLIB}/${path}?${qs(params)}`);
+      const res = await getJson<LrcLibHit | LrcLibHit[]>(`${LRCLIB}/${path}?${qs(params)}`, timed());
       answered++;
       pool.push(...(Array.isArray(res) ? res : [res]));
     } catch (e) {
-      if (/^404\b/.test((e as Error).message)) answered++; // no exact match
+      if (is404(e)) answered++; // no exact match
       else failed = e;
     }
   };
@@ -158,19 +202,45 @@ async function lrclib(t: Pick<Track, 'title' | 'artist' | 'album' | 'duration'>)
   };
 
   // exact lookup (title + artist + album + length within 2 s), then searches by fields, then a free-text search
+  const [first] = queries;
   if (t.duration) {
-    const params: Record<string, string> = { track_name: title, artist_name: artists[0], duration: String(Math.round(t.duration)) };
+    const params: Record<string, string> = { track_name: first.title, artist_name: first.artist, duration: String(Math.round(t.duration)) };
     if (t.album) params.album_name = cleanTitle(t.album);
     await ask('get', params);
   }
-  for (const artist of artists) if (!settled()) await ask('search', { track_name: title, artist_name: artist });
-  if (!settled()) await ask('search', { q: `${artists[0]} ${title}` });
+  for (const q of queries) if (!settled()) await ask('search', { track_name: q.title, artist_name: q.artist });
+  if (!settled()) await ask('search', { q: `${first.artist} ${first.title}` });
 
   const hit = best();
   if (hit) return fromLrcLib(hit, lengthOk(hit));
   if (pool.some((h) => h.instrumental && nameOk(h) && lengthOk(h))) return INSTRUMENTAL('LRCLIB');
-  // LRCLIB couldn't be reached at all: throw so the miss isn't cached for the session
   if (!answered && failed) throw failed;
+  return undefined;
+}
+
+/**
+ * lyrics.ovh (free, no key, CORS open): plain lyrics only, from other lyric sites, for songs LRCLIB doesn't have.
+ * Its replies can start with a French "Paroles de la chanson … par …" heading; section labels like "[Chorus]"
+ * are dropped too.
+ */
+async function lyricsOvh(queries: LyricsQuery[]): Promise<Lyrics | undefined> {
+  let failed: unknown;
+  for (const q of queries.slice(0, 2)) {
+    try {
+      const res = await getJson<{ lyrics?: string }>(`${LYRICS_OVH}/${encodeURIComponent(q.artist)}/${encodeURIComponent(q.title)}`, timed());
+      const text = (res.lyrics ?? '')
+        .replace(/^Paroles de la chanson .* par .*\r?\n/i, '')
+        .split(/\r?\n/)
+        .filter((l) => !/^\s*\[[^\]]*\]\s*$/.test(l))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      if (text) return { lines: plainLines(text), synced: false, source: 'lyrics.ovh' };
+    } catch (e) {
+      if (!is404(e)) failed = e;
+    }
+  }
+  if (failed) throw failed;
   return undefined;
 }
 
@@ -181,12 +251,33 @@ export interface LyricsSource {
 
 const cache = new Map<string, Promise<Lyrics | undefined>>();
 
+/**
+ * The server's own lyrics, else LRCLIB, else lyrics.ovh. Throws when LRCLIB couldn't be reached and nothing else
+ * had them, so the caller can say so and the miss isn't cached.
+ */
+async function lookup(t: Track, source?: LyricsSource): Promise<Lyrics | undefined> {
+  const own = await source?.getLyrics?.(t).catch(() => undefined);
+  if (own?.lines.length || own?.instrumental) return own;
+  if (NO_VOCALS.test(t.title)) return INSTRUMENTAL('LRCLIB');
+  const queries = lyricQueries(t);
+  let failed: unknown;
+  const found = await lrclib(t, queries).catch((e) => {
+    failed = e;
+    return undefined;
+  });
+  if (found) return found;
+  const plain = await lyricsOvh(queries).catch(() => undefined);
+  if (plain) return plain;
+  if (failed) throw failed;
+  return undefined;
+}
+
 /** Lyrics for a song, or undefined when nobody has them. Cached per song for the session. */
 export function lyricsFor(t: Track, source?: LyricsSource): Promise<Lyrics | undefined> {
   const key = `${t.sourceId}:${t.id}`;
   let p = cache.get(key);
   if (!p) {
-    p = (async () => (await source?.getLyrics?.(t).catch(() => undefined)) ?? (await lrclib(t)))();
+    p = lookup(t, source);
     p.catch(() => cache.delete(key));
     cache.set(key, p);
   }

@@ -14,7 +14,7 @@ vi.mock('../lib/http', () => ({
   }),
 }));
 
-const { artistVariants, cleanTitle, lyricsFor } = await import('../lib/lyrics');
+const { artistVariants, cleanArtist, cleanTitle, lyricQueries, lyricsFor } = await import('../lib/lyrics');
 
 let n = 0;
 const track = (title: string, artist: string, duration = 200, album = 'Album') =>
@@ -35,6 +35,21 @@ describe('LRCLIB names', () => {
     expect(cleanTitle('Song (Live at Wembley)')).toBe('Song');
     expect(cleanTitle('Part 1 - The Beginning')).toBe('Part 1 - The Beginning');
     expect(cleanTitle('(Sittin\' On) The Dock of the Bay')).toBe("(Sittin' On) The Dock of the Bay");
+  });
+
+  test('YouTube upload notes come off too', () => {
+    expect(cleanTitle('Hello (Official Music Video)')).toBe('Hello');
+    expect(cleanTitle('Hello [Lyrics] (HD)')).toBe('Hello');
+    expect(cleanTitle('Hello ft. Someone')).toBe('Hello');
+    expect(cleanArtist('Adele - Topic')).toBe('Adele');
+    expect(cleanArtist('AdeleVEVO')).toBe('Adele');
+  });
+
+  test('"Artist - Title" titles are read both ways', () => {
+    expect(lyricQueries({ title: 'Adele - Hello (Official Video)', artist: 'AdeleVEVO' })[0]).toEqual({ artist: 'Adele', title: 'Hello' });
+    expect(lyricQueries({ title: 'Adele - Hello', artist: 'Unknown Artist' })).toEqual([{ artist: 'Adele', title: 'Hello' }]);
+    // a real title with a dash stays first when the artist is someone else
+    expect(lyricQueries({ title: 'Part 1 - The Beginning', artist: 'Band' })[0]).toEqual({ artist: 'Band', title: 'Part 1 - The Beginning' });
   });
 
   test('bands with & in the name are asked for whole first', () => {
@@ -102,6 +117,35 @@ describe('LRCLIB lookup', () => {
   test('other songs from a free-text search are ignored', async () => {
     replies.set('q=', [{ trackName: 'Something Else', duration: 200, syncedLyrics: synced }]);
     expect(await lyricsFor(track('Song', 'Band'))).toBeUndefined();
+  });
+
+  test('a YouTube-style title finds the song', async () => {
+    replies.set('artist_name=Adele', [{ trackName: 'Hello', duration: 200, syncedLyrics: synced }]);
+    replies.set('/search?', []);
+    const ly = await lyricsFor(track('Adele - Hello (Official Music Video)', 'AdeleVEVO'));
+    expect(ly?.synced).toBe(true);
+  });
+
+  test('lyrics.ovh fills in plain lyrics when LRCLIB has none', async () => {
+    replies.set('/search?', []);
+    replies.set('lyrics.ovh/v1/Band/Song', { lyrics: 'Paroles de la chanson Song par Band\r\n[Verse 1]\nFirst line\nSecond line' });
+    const ly = await lyricsFor(track('Song', 'Band'));
+    expect(ly).toEqual({ synced: false, source: 'lyrics.ovh', lines: [{ text: 'First line' }, { text: 'Second line' }] });
+  });
+
+  test('lyrics.ovh is only asked when LRCLIB has nothing', async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, plainLyrics: 'From LRCLIB' }]);
+    replies.set('lyrics.ovh', { lyrics: 'nope' });
+    expect((await lyricsFor(track('Song', 'Band')))?.source).toBe('LRCLIB');
+    expect(asked.some((u) => u.includes('lyrics.ovh'))).toBe(false);
+  });
+
+  test("the server's own lyrics win, but empty ones don't count", async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, plainLyrics: 'From LRCLIB' }]);
+    const own = { lines: [{ text: 'Mine' }], synced: false, source: 'Navidrome' };
+    expect((await lyricsFor(track('Song', 'Band'), { getLyrics: async () => own }))?.source).toBe('Navidrome');
+    const empty = { lines: [], synced: false, source: 'Navidrome' };
+    expect((await lyricsFor(track('Song', 'Band'), { getLyrics: async () => empty }))?.source).toBe('LRCLIB');
   });
 
   test("LRCLIB being down isn't remembered as no lyrics", async () => {
