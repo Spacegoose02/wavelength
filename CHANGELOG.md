@@ -1,6 +1,26 @@
 # Changelog
 
 ## Unreleased
+- **Discover shows chart movement.** Each song has **▲3**, **▼2**, **NEW** or **=** under its rank (compared with
+  about a week ago) and **5 wks** for weeks in a row on the chart. With a Hub the whole house shares one history
+  (`POST /api/discover/positions`); without one each device keeps its own.
+- **Faster "Checking your library…".** Signed in to a Hub with the Navidrome scan login, the Hub matches the whole
+  chart against the library in one go instead of each device searching song by song (`POST /api/discover/match`).
+  Plex and other servers are still checked on the device.
+- **For you** tab in every Discover genre (with a Hub): the genre's chart, only songs close to what you play, with
+  why ("You play Drake", "You follow SZA", "Like Drake").
+- **Don't have / Have filters** in Discover, so a chart becomes a shopping list.
+- **More on each chart song:** the artist's name opens their page (or their Deezer releases), and on hover
+  **Song radio** and **Follow**. **×** marks a song Not interested and hides it from Discover everywhere, with Undo;
+  the list syncs between your devices.
+- **Get all missing runs in the background**, with a progress bar and Stop, and keeps going if you leave Discover.
+  It asks in the bar instead of a pop-up, and rows remember Queued or Requested when you come back.
+- **New from artists you follow** at the top of every Discover genre (with a Hub and follows), with a link to the
+  full Release Radar.
+- **Alternative genre** in Discover: RadioWave's Alternative Rock 100 and Apple Music's most played alternative and
+  indie songs.
+- **Hub:** update the Hub too for chart movement, the faster library check and For you; the app falls back to the
+  old behaviour with an older Hub.
 - **DJ Trash Panda knows your playlists.** In DJ mode, pick one of your playlists and the DJ builds the station on
   it: some of its songs plus more like them. In the DJ chat, ask for "something like my Gym playlist".
 - **DJ mode asks first.** The raccoon button opens a picker (Mix it up, a segment, a playlist, or type a request)

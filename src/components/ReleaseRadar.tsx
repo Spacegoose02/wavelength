@@ -70,6 +70,30 @@ export function ReleaseRadar() {
   );
 }
 
+/**
+ * The top of Discover under every genre but New releases: the newest releases from the artists you follow, with
+ * "See all" opening the full Release Radar. Shown only with a Hub, follows, and something new.
+ */
+export function RadarStrip({ onSeeAll }: { onSeeAll: () => void }) {
+  const signedIn = useHub((s) => !!s.token);
+  const supported = useFollows((s) => s.supported);
+  const radar = useFollows((s) => s.radar);
+  useEffect(() => {
+    if (signedIn && !radar) void loadRadar();
+  }, [signedIn]);
+  const releases = useMemo(() => (radar?.releases ?? []).map(fromHub).sort((a, b) => (a.released < b.released ? 1 : -1)).slice(0, 12), [radar]);
+  if (!signedIn || !supported || !releases.length) return null;
+  return (
+    <section className="radar radar-strip">
+      <h2>
+        New from artists you follow
+        <button className="link small" onClick={onSeeAll}>See all in Release Radar</button>
+      </h2>
+      <ReleaseCards releases={releases} />
+    </section>
+  );
+}
+
 /** New releases from the artists you follow, from the Hub, plus who to follow next. */
 function FollowingRadar({ nonce }: { nonce: number }) {
   const radar = useFollows((s) => s.radar);
@@ -128,7 +152,7 @@ function FollowingRadar({ nonce }: { nonce: number }) {
   );
 }
 
-const fromHub = (r: HubRadarRelease): Release => ({ id: r.id, title: r.title, artist: r.artist, type: r.type, released: r.released, cover: r.cover ?? undefined, deezerLink: r.link, explicit: r.explicit });
+export const fromHub = (r: HubRadarRelease): Release => ({ id: r.id, title: r.title, artist: r.artist, type: r.type, released: r.released, cover: r.cover ?? undefined, deezerLink: r.link, explicit: r.explicit });
 
 /** The artists you follow, to unfollow, and a box to follow one by name. */
 function ManageFollows() {
