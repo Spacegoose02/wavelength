@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.24.1
+- **The DJ's first line uses the Hub's voice.** Starting DJ mode no longer reads the first intro in the device's
+  voice (Windows' default) before switching to Kokoro or OpenAI: lines wait for the Hub to say which voice it has.
+- **DJ mode on phones.** The DJ panel opens as a sheet over the bottom of the screen, above Now Playing (it used to
+  open behind it), and with nothing playing a **DJ mode** bar above the tabs starts it.
+- **Kokoro on Android.** The Hub's voice plays on phones: the DJ's audio is unlocked by your tap and plays through the
+  player's own audio, instead of staying silent because the WebView blocks sound that doesn't start from a tap.
+
 ## 0.24.0
 - **Families.** One Hub for several households: under **Settings → Users → Families** the Hub admin makes families,
   puts people in them, picks **managers**, and decides per family whether its managers may register people, look

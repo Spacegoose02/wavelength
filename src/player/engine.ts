@@ -265,6 +265,10 @@ export const engine = {
   analyser() {
     return isDeck(current) && !remote ? analyser : null;
   },
+  /** The player's Web Audio context while it's running (the talking DJ plays through it: lib/djVoice.ts). */
+  audioContext(): AudioContext | null {
+    return ctx && ctx.state === 'running' ? ctx : null;
+  },
   /** Mid and side spectra for vocal detection (player/voice.ts), or null when the song can't be read. */
   voiceTaps() {
     return isDeck(current) && !remote && midTap && sideTap ? { mid: midTap, side: sideTap, sampleRate: ctx!.sampleRate } : null;
