@@ -15,6 +15,8 @@ import { RadioGetButton } from './RadioGetButton';
 import { SongRadioButton } from './SongRadioButton';
 import { SleepButton } from './SleepButton';
 import { DjModeButton } from './DjStation';
+import { useStation } from '../lib/djStation';
+import { TrashPanda, DJ_NAME } from './TrashPanda';
 import { LyricsPanel } from './Lyrics';
 import { SingButton, SingControls } from './SingButton';
 import { VideoButton } from './VideoButton';
@@ -36,7 +38,6 @@ export function NowPlaying() {
   if (!t) return null;
   const live = t.kind === 'radio';
   const art = p.liveCover ?? trackArt(t);
-  const upNext = p.queue.slice(p.index + 1, p.index + 8);
   const album = albumOfTrack(t, albums);
   const artist = artistOfTrack(t, artists, album);
   const go = useUi.getState().go; // closes Now Playing
@@ -94,14 +95,66 @@ export function NowPlaying() {
             <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat}><IconRepeat /></button>
           </div>
           {showLyrics && t.kind === 'track' && <><SingControls /><LyricsPanel track={t} /></>}
-          {!(showLyrics && t.kind === 'track') && upNext.length > 0 && (
-            <div className="np-next">
-              <div className="np-kicker">Up next</div>
-              {upNext.map((q, i) => <UpNextRow key={i} track={q} onPlay={() => p.jump(p.index + 1 + i)} />)}
-            </div>
-          )}
+          {!(showLyrics && t.kind === 'track') && <UpNext />}
         </div>
       </div>
+    </div>
+  );
+}
+
+const UP_NEXT_KEY = 'tonearm.npUpNext';
+function savedOpen(): boolean {
+  try {
+    const v = localStorage.getItem(UP_NEXT_KEY);
+    if (v) return v === '1';
+  } catch {
+    /* no storage */
+  }
+  // open on a computer, folded on a phone (where the screen is mostly the art and the controls)
+  return typeof window === 'undefined' || window.innerWidth > 760;
+}
+
+/**
+ * Up next (and Played, what came before) under the controls: folds away with the arrow, scrolls through the
+ * whole queue, and a tap plays a song. In DJ mode the last row says the DJ adds more when these run out.
+ */
+function UpNext() {
+  const p = usePlayer();
+  const station = { on: useStation((s) => s.on), busy: useStation((s) => s.busy) };
+  const [open, setOpen] = useState(savedOpen);
+  const [tab, setTab] = useState<'next' | 'back'>('next');
+  const toggle = () => {
+    setOpen(!open);
+    try {
+      localStorage.setItem(UP_NEXT_KEY, open ? '0' : '1');
+    } catch {
+      /* no storage */
+    }
+  };
+  const next = p.queue.slice(p.index + 1, p.index + 101);
+  const back = p.queue.slice(Math.max(0, p.index - 100), p.index).reverse();
+  const rows = tab === 'next' ? next : back;
+  if (!next.length && !back.length && !station.on) return null;
+  return (
+    <div className={`np-next ${open ? 'open' : ''}`}>
+      <div className="np-next-head">
+        <button className={`np-next-tab ${tab === 'next' ? 'on' : ''}`} onClick={() => { setTab('next'); if (!open) toggle(); }}>
+          Up next{next.length ? ` · ${p.queue.length - p.index - 1}` : ''}
+        </button>
+        {back.length > 0 && <button className={`np-next-tab ${tab === 'back' ? 'on' : ''}`} onClick={() => { setTab('back'); if (!open) toggle(); }}>Played</button>}
+        <button className="np-next-fold" onClick={toggle} title={open ? 'Hide the queue' : 'Show the queue'} aria-expanded={open}><IconChevronDown /></button>
+      </div>
+      {open && (
+        <div className="np-next-list">
+          {rows.map((q, i) => (
+            <UpNextRow key={`${tab}${i}:${q.id}`} track={q} onPlay={() => p.jump(tab === 'next' ? p.index + 1 + i : p.index - 1 - i)} />
+          ))}
+          {tab === 'next' && station.on && (
+            <div className="np-next-dj"><TrashPanda busy={station.busy} /> <small>{station.busy ? `${DJ_NAME} is picking what's next…` : `${DJ_NAME} adds more before these run out`}</small></div>
+          )}
+          {tab === 'next' && !next.length && !station.on && <small className="np-next-empty">Nothing after this song</small>}
+        </div>
+      )}
     </div>
   );
 }

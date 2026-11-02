@@ -253,6 +253,10 @@ In **Now Playing**, the album name above the song, the song title and the artist
 - **Artist** opens the artist's page.
 - In **Up next**, a song's artist opens that artist's page too; the rest of the row still plays the song.
 
+**Up next** under the controls lists the whole rest of the queue (it scrolls), and **Played** the songs before this
+one; tap a song to play it. The arrow folds the list away (it starts folded on phones) and the app remembers your
+choice. In DJ mode the last row says DJ Trash Panda adds more before the songs run out.
+
 Now Playing closes as the page opens, and **Back** goes to the page you were on before Now Playing.
 For "Artist A feat. Artist B", the link goes to the first artist that's in your library. Live radio,
 audiobooks, podcasts and Deezer previews have no library page, so they show plain text.

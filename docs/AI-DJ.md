@@ -289,7 +289,11 @@ allowance is used up), the station keeps going with **More like <artist>**: song
 playing (song radio, `src/lib/songRadio.ts`), so it never just stops when the queue runs out.
 Songs a segment wanted that aren't in your library are listed under **N songs on <segment> you don't have** in
 the panel (Top hits checks the chart's top 50), each with **Get** (deemix, or yt-dlp as a backup) or **Request**
-for people without Autodownload, plus **Get all**. Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing anything else stops DJ mode; **×** stops it
+for people without Autodownload, plus **Get all**. Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing something else (an album, a playlist) stops DJ mode, but a song you
+put in front of the station's with **Play next** just plays and the station carries on after it. Songs are matched by
+title and artist as well as their id, so a source handing back a copy of a song doesn't stop it. If nothing at all can
+be found, not even songs like the one playing, the station replays its own earlier songs (**Encore**) rather than
+let the music stop. **×** stops it
 too, and **–** folds the panel into a small pill.
 
 **Cost.** Picking songs costs nothing: they come from the Made for you mixes (made once a day) and the chart.

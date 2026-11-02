@@ -55,6 +55,13 @@ export const useStation = create<StationState>()(
 );
 
 const keyOf = (t: Track) => `${t.sourceId}:${t.id}`;
+const nameOf = (t: { title: string; artist: string }) => `${t.title}\u0000${t.artist}`.toLowerCase();
+/** Songs the station played this time, for the last-resort refill. */
+let playedTracks: Track[] = [];
+/** Whether `t` is one of the station's songs (by key, or by title and artist when a source handed back a copy). */
+const isOurs = (t: Track) => ours.has(keyOf(t)) || oursNames.has(nameOf(t));
+const oursNames = new Set<string>();
+const claim = (tracks: Track[]) => tracks.forEach((t) => { ours.add(keyOf(t)); oursNames.add(nameOf(t)); });
 /** Tracks the station queued: playing anything else turns it off. */
 const ours = new Set<string>();
 /** Segment changes waiting for their first song: its key → the segment. */
@@ -124,9 +131,11 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
     for (let i = 0; !tracks.length && !o.ask && !o.kind && !o.playlist && i < 3; i++) ({ seg, tracks, missing } = await fetchSegment({ previous: seg.kind }));
     if (!tracks.length) throw new Error(o.kind ? `None of the ${SEGMENT_LABELS[o.kind as keyof typeof SEGMENT_LABELS] ?? ''} songs the DJ picked are in your library. Try another segment` : 'None of those songs are in your library. Try asking for something else');
     ours.clear();
+    oursNames.clear();
+    playedTracks = [];
     upcoming.clear();
     lastTry = 0;
-    tracks.forEach((t) => ours.add(keyOf(t)));
+    claim(tracks);
     stationTalks.add(keyOf(tracks[0]));
     useStation.setState({ on: true, picking: false, kind: seg.kind, title: seg.title, intro: seg.intro ?? '', missing, busy: false });
     usePlayer.getState().playTracks(tracks);
@@ -139,6 +148,7 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
 export function stopStation() {
   anchor = null;
   ours.clear();
+  oursNames.clear();
   upcoming.clear();
   useStation.setState({ on: false, picking: false, busy: false, kind: null, title: '', intro: '', error: '', missing: [] });
 }
@@ -191,6 +201,11 @@ async function topUp() {
       const like = await moreLikeThis();
       if (like) next = { ...like, missing: [] };
     }
+    // last resort, so the music never just stops: the station's own songs again, shuffled, not the last few
+    if (!next && playedTracks.length > 8) {
+      const again = [...playedTracks.slice(0, -6)].sort(() => Math.random() - 0.5).slice(0, SIZE);
+      next = { seg: { kind: 'ask', title: 'Encore', songs: [], intro: null, spent: 0, limit: null }, tracks: again, missing: [] };
+    }
     if (!useStation.getState().on) return;
     if (!next) {
       if (problem) useStation.setState({ error: problem });
@@ -198,7 +213,7 @@ async function topUp() {
     }
     useStation.setState({ error: '' });
     const { seg, tracks, missing } = next;
-    tracks.forEach((t) => ours.add(keyOf(t)));
+    claim(tracks);
     upcoming.set(keyOf(tracks[0]), { seg, missing });
     // a fallback without an intro: the talking DJ may introduce its first song like any other
     if (seg.intro) stationTalks.add(keyOf(tracks[0]));
@@ -224,8 +239,13 @@ export function startDjStation() {
     const k = keyOf(t);
     if (k !== current) {
       current = k;
-      // you played something else: the DJ steps aside
-      if (!ours.has(k)) return stopStation();
+      if (!isOurs(t)) {
+        // you played something else (an album, a playlist): the DJ steps aside. A song you put in front of the
+        // station's (Play next) just plays, and the station carries on after it.
+        if (!p.queue.slice(p.index).some(isOurs)) return stopStation();
+        return;
+      }
+      playedTracks = [...playedTracks.filter((x) => keyOf(x) !== k), t].slice(-200);
       recent = [...recent.filter((r) => !(r.title === t.title && r.artist === t.artist)), { title: t.title, artist: t.artist }].slice(-300);
       const next = upcoming.get(k);
       if (next) {

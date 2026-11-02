@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **DJ mode really keeps going.** The station no longer switches itself off when the song playing isn't one it
+  queued (a song you added with Play next, or a copy of a song a source handed back): it only steps aside when you
+  play something else entirely. As a last resort, when nothing new can be found, it replays its earlier songs
+  (**Encore**) instead of stopping.
+- **Up next in Now Playing.** The queue under the controls now scrolls through every song left, has a **Played** tab,
+  folds away with an arrow (folded at first on phones, where it used to be hidden), and in DJ mode says the DJ adds
+  more before the songs run out.
 
 ## 0.24.2
 - **DJ mode keeps going.** When the next segment has none of its songs in your library (often Top hits), the
