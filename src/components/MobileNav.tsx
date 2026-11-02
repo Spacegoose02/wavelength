@@ -5,7 +5,7 @@ import { useUi, type Route } from '../store/ui';
 import { useLibrary } from '../store/library';
 import { isMobileApp } from '../lib/platform';
 import { Cover } from './common';
-import { DjModeButton, DjStationPanel } from './DjStation';
+import { DjModeBar, DjModeButton, DjStationPanel } from './DjStation';
 import {
   IconAlbum, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
   IconNext, IconPause, IconPlay, IconPlaylist, IconPodcast, IconRadio, IconSearch, IconSettings, IconSparkle, IconWave, IconInbox, IconDj,
@@ -35,7 +35,8 @@ export function MobileNav() {
   const live = t?.kind === 'radio';
   return (
     <div className="mobile-dock">
-      <DjStationPanel inline />
+      <DjStationPanel sheet />
+      {!t && <DjModeBar />}
       {t && (
         <div className="mini-player" onClick={() => setNowPlaying(true)}>
           <div className="mini-progress"><i style={{ width: live ? '100%' : `${(p.position / (p.duration || 1)) * 100}%` }} /></div>

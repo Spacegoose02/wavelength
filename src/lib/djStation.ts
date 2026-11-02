@@ -5,7 +5,7 @@ import type { Track } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
-import { say, stationTalks } from './djVoice';
+import { say, stationTalks, unlockDjAudio } from './djVoice';
 import { kidSafe } from './kids';
 import { findInLibrary, pool } from './match';
 import { findSong } from './mixes';
@@ -97,6 +97,7 @@ const errText = (e: unknown) => String((e as Error)?.message ?? e);
 
 /** Open the panel to pick what DJ mode plays first (the raccoon button). Nothing plays yet. */
 export function pickStation() {
+  unlockDjAudio();
   useStation.setState({ picking: true, open: true, error: '' });
 }
 
@@ -104,6 +105,8 @@ export function pickStation() {
 export async function startStation(o: { kind?: HubStationKind; ask?: string; playlist?: { key: string; name: string } } = {}) {
   const st = useStation.getState();
   if (st.busy) return;
+  // still inside the tap: let the intro that arrives in a few seconds play (phones), and look up the Hub's voice
+  unlockDjAudio();
   useStation.setState({ busy: true, error: '', open: true });
   try {
     if (o.playlist) {
