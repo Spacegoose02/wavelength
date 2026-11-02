@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.24.3
 - **DJ mode really keeps going.** The station no longer switches itself off when the song playing isn't one it
   queued (a song you added with Play next, or a copy of a song a source handed back): it only steps aside when you
   play something else entirely. As a last resort, when nothing new can be found, it replays its earlier songs
