@@ -93,8 +93,9 @@ export function DjStationPanel({ sheet = false }: { sheet?: boolean }) {
       {s.on && s.intro && <p className="dj-station-intro">“{s.intro}”</p>}
       {!s.on && <p className="muted small">Pick a segment or one of your playlists, tell me what you’re in the mood for, or let me mix it up. I’ll keep it going from there.</p>}
       {s.error && <p className="errors small">{s.error}</p>}
+      {s.busy && !s.on && <p className="dj-station-busy small"><span className="spinner" /> Picking songs and writing the intro. This can take a little while…</p>}
       <div className="chips">
-        {!s.on && <button className="chip on" disabled={s.busy} onClick={() => void startStation()}>Mix it up</button>}
+        {!s.on && <button className="chip dj-mix" disabled={s.busy} onClick={() => void startStation({ mix: true })}>🎲 Mix it up</button>}
         {(Object.keys(SEGMENT_LABELS) as Exclude<HubStationKind, 'ask' | 'playlist'>[]).map((k) => (
           <button key={k} className={`chip ${s.kind === k ? 'on' : ''}`} disabled={s.busy} onClick={() => void startStation({ kind: k })}>{SEGMENT_LABELS[k]}</button>
         ))}

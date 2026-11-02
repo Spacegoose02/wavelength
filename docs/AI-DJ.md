@@ -266,7 +266,9 @@ DJ Trash Panda button in the player (next to the other player buttons on a compu
 and in Now Playing). On a phone with nothing playing yet, a **DJ mode** bar above the tabs starts it. On a computer
 the panel floats above the player bar; on a phone it's a sheet over the bottom of the screen, on top of Now Playing
 too, and **–** folds it into a pill above the mini player. Press it and the panel asks what to play first: **Mix it up**, a segment, one of your
-playlists, or anything you type. Nothing plays until you choose. From there DJ Trash Panda runs a station that keeps
+playlists, or anything you type. Nothing plays until you choose. **Mix it up** starts the rotation at a random
+segment. While the DJ picks songs and writes its intro (a few seconds, longer with a slow local model) the panel
+says so and the buttons wait. From there DJ Trash Panda runs a station that keeps
 going: a segment of about 12 songs, then the next, each introduced in the [DJ's voice](#voices) over the start of its
 first song. **DJ loudness** in the panel (also in **Settings → Playback → Talking DJ**) sets how loud the DJ is next
 to the music, up to 250%; the music dips under the voice more the louder it is.

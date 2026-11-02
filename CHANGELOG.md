@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Mix it up does something you can see.** DJ mode's **Mix it up** starts at a random segment instead of always
+  Your favourites (so it no longer looks the same as that button), is styled as a button rather than a selected
+  chip, and the panel says it's picking songs and writing the intro while it works, with the buttons dimmed.
 
 ## 0.24.1
 - **The DJ's first line uses the Hub's voice.** Starting DJ mode no longer reads the first intro in the device's
