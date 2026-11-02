@@ -102,7 +102,7 @@ export function pickStation() {
 }
 
 /** Start DJ mode, or jump to a segment / your request / one of your playlists (`playlist`: lib/myPlaylists.ts key). */
-export async function startStation(o: { kind?: HubStationKind; ask?: string; playlist?: { key: string; name: string } } = {}) {
+export async function startStation(o: { kind?: HubStationKind; ask?: string; playlist?: { key: string; name: string }; mix?: boolean } = {}) {
   const st = useStation.getState();
   if (st.busy) return;
   // still inside the tap: let the intro that arrives in a few seconds play (phones), and look up the Hub's voice
@@ -114,7 +114,11 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
       if (!songs.length) throw new Error('That playlist is empty');
       anchor = { name: o.playlist.name, songs: songs.slice(0, 300) };
     } else if (o.kind || o.ask || !st.on) anchor = null;
-    let { seg, tracks, missing } = await fetchSegment({ ...o, previous: st.on ? st.kind : null });
+    // Mix it up: the rotation starts at a random segment (the Hub plays the one after `previous`), not always
+    // at Your favourites, so it doesn't look the same as pressing that
+    const rotation = Object.keys(SEGMENT_LABELS) as HubStationKind[];
+    const previous = st.on ? st.kind : o.mix ? rotation[Math.floor(Math.random() * rotation.length)] : null;
+    let { seg, tracks, missing } = await fetchSegment({ kind: o.kind, ask: o.ask, previous });
     // a segment none of whose songs are here: try the next one (not for requests, which say so)
     for (let i = 0; !tracks.length && !o.ask && !o.kind && !o.playlist && i < 3; i++) ({ seg, tracks, missing } = await fetchSegment({ previous: seg.kind }));
     if (!tracks.length) throw new Error(o.kind ? `None of the ${SEGMENT_LABELS[o.kind as keyof typeof SEGMENT_LABELS] ?? ''} songs the DJ picked are in your library. Try another segment` : 'None of those songs are in your library. Try asking for something else');
