@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **DJ mode keeps going.** When the next segment has none of its songs in your library (often Top hits), the
+  station moves on to the one after instead of asking for the same one again and going quiet when the queue ran out.
+  When none has anything, it carries on with **More like <artist>**, songs from your library like the one playing.
+  The next segment is asked for with three songs to go, not two.
+- **DJ Trash Panda talks between songs in DJ mode.** With **The DJ talks between songs** on in the panel, he says a
+  line every few songs (Settings → Playback → Talking DJ → Every), not only at segment changes, without having to
+  turn on the Talking DJ setting too. Lines are written earlier (75 s before the song ends) and wait up to 30 s into
+  the song, so a slow local model isn't skipped. **Hub:** update it for this if **Talking AI DJ** is off in Features.
 - **Mix it up does something you can see.** DJ mode's **Mix it up** starts at a random segment instead of always
   Your favourites (so it no longer looks the same as that button), is styled as a button rather than a selected
   chip, and the panel says it's picking songs and writing the intro while it works, with the buttons dimmed.
