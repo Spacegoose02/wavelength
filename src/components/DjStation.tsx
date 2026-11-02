@@ -124,7 +124,7 @@ export function DjStationPanel({ sheet = false }: { sheet?: boolean }) {
       </form>
       <label className="check small">
         <span className="switch"><input type="checkbox" checked={s.talk} onChange={(e) => useStation.setState({ talk: e.target.checked })} /><span /></span>
-        <span>The DJ talks between segments</span>
+        <span>The DJ talks between songs</span>
       </label>
       {s.talk && (
         <label className="range-field small">

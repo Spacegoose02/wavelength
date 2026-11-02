@@ -59,10 +59,10 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
     return { ...out, ...allowance(user.id) };
   });
 
-  /** The talking DJ: `{ previous?, next, name?, style? }` → `{ text }` to read aloud between songs. */
+  /** The talking DJ: `{ previous?, next, name?, style? }` → `{ text }` to read aloud between songs (also DJ mode's links between its songs). */
   app.post('/api/dj/patter', async (req) => {
     const user = listener(req);
-    requireFeature(db, 'djVoice', user);
+    if (!featureOn(db, 'djMode', user)) requireFeature(db, 'djVoice', user);
     return { ...(await dj.patter(user, req.body)), ...allowance(user.id) };
   });
 

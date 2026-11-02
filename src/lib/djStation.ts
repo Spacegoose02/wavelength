@@ -5,9 +5,10 @@ import type { Track } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
-import { say, stationTalks, unlockDjAudio } from './djVoice';
+import { say, setStationTalking, stationTalks, unlockDjAudio } from './djVoice';
 import { kidSafe } from './kids';
-import { findInLibrary, pool } from './match';
+import { findInLibrary, pool, primaryArtist } from './match';
+import { songRadio } from './songRadio';
 import { findSong } from './mixes';
 import { playlistTracks } from './myPlaylists';
 
@@ -142,7 +143,28 @@ export function stopStation() {
   useStation.setState({ on: false, picking: false, busy: false, kind: null, title: '', intro: '', error: '', missing: [] });
 }
 
-/** Queue the next segment when the last songs of this one are playing. */
+/**
+ * Songs like the one playing, from your library (lib/songRadio.ts): what the station falls back on when no segment
+ * has anything you have (Top hits you don't own, Throwbacks without the history, the AI DJ's allowance used up),
+ * so it keeps going with similar music instead of stopping when the queue runs out.
+ */
+async function moreLikeThis(): Promise<{ seg: HubStationSegment; tracks: Track[] } | null> {
+  const p = usePlayer.getState();
+  const now = p.queue[p.index];
+  if (!now || now.kind !== 'track' || !now.artist) return null;
+  const played = new Set(recent.map((r) => `${r.title}\u0000${r.artist}`.toLowerCase()));
+  const tracks = kidSafe(await songRadio({ artist: now.artist, title: now.title, track: now }).catch(() => [] as Track[]))
+    .filter((t) => t.kind === 'track' && !ours.has(keyOf(t)) && !played.has(`${t.title}\u0000${t.artist}`.toLowerCase()))
+    .slice(0, SIZE);
+  if (!tracks.length) return null;
+  return { seg: { kind: 'ask', title: `More like ${primaryArtist(now.artist)}`.slice(0, 60), songs: [], intro: null, spent: 0, limit: null }, tracks };
+}
+
+/**
+ * Queue the next segment when the last songs of this one are playing. A segment with none of its songs in your
+ * library moves on to the next one in the rotation (it used to ask for the same one again, so the station went
+ * quiet when the queue ran out, often after Top hits); when none has anything, songs like the one playing.
+ */
 async function topUp() {
   if (topping || Date.now() - lastTry < 30_000) return;
   topping = true;
@@ -150,16 +172,37 @@ async function topUp() {
   useStation.setState({ busy: true });
   try {
     const queued = [...upcoming.values()];
-    const last = queued.length ? queued[queued.length - 1].seg.kind : useStation.getState().kind;
-    const { seg, tracks, missing } = await fetchSegment({ previous: last });
-    if (!useStation.getState().on || !tracks.length) return;
+    let last = queued.length ? queued[queued.length - 1].seg.kind : useStation.getState().kind;
+    let next: { seg: HubStationSegment; tracks: Track[]; missing: HubMixSong[] } | null = null;
+    let problem = '';
+    for (let i = 0; i < 4 && !next; i++) {
+      try {
+        const r = await fetchSegment({ previous: last });
+        if (r.tracks.length) next = r;
+        else last = r.seg.kind;
+      } catch (e) {
+        // nothing to play, or a limit used up: no point asking for more segments
+        problem = errText(e);
+        break;
+      }
+      if (!useStation.getState().on) return;
+    }
+    if (!next) {
+      const like = await moreLikeThis();
+      if (like) next = { ...like, missing: [] };
+    }
+    if (!useStation.getState().on) return;
+    if (!next) {
+      if (problem) useStation.setState({ error: problem });
+      return;
+    }
     useStation.setState({ error: '' });
+    const { seg, tracks, missing } = next;
     tracks.forEach((t) => ours.add(keyOf(t)));
     upcoming.set(keyOf(tracks[0]), { seg, missing });
-    stationTalks.add(keyOf(tracks[0]));
+    // a fallback without an intro: the talking DJ may introduce its first song like any other
+    if (seg.intro) stationTalks.add(keyOf(tracks[0]));
     usePlayer.getState().enqueue(tracks);
-  } catch (e) {
-    useStation.setState({ error: errText(e) });
   } finally {
     topping = false;
     useStation.setState({ busy: false });
@@ -167,6 +210,11 @@ async function topUp() {
 }
 
 export function startDjStation() {
+  // DJ mode talks between its songs too (lib/djVoice.ts), when "The DJ talks" is on
+  setStationTalking(() => {
+    const s = useStation.getState();
+    return s.on && s.talk;
+  });
   let current: string | undefined;
   usePlayer.subscribe((p) => {
     const st = useStation.getState();
@@ -187,6 +235,7 @@ export function startDjStation() {
         if (seg.intro && st.talk) void say(seg.intro);
       }
     }
-    if (!st.busy && p.queue.length - p.index <= 2) void topUp();
+    // ask for the next segment with three songs to go: picking songs and writing an intro can take a minute
+    if (!st.busy && p.queue.length - p.index <= 3) void topUp();
   });
 }

@@ -173,7 +173,7 @@ All need a device token. Listener routes answer 403 with the reason when the DJ 
 | GET | `/api/dj/chats/:id` | `{ chat, messages: [{ role, text, tools? }], calls, full }`; `calls` = tool calls waiting for the app |
 | DELETE | `/api/dj/chats/:id` | delete a chat |
 | POST | `/api/dj/chat` | `{ chatId?, message }` → `{ chat, status: 'done' \| 'tools', reply, calls?, full?, spent, limit }`; 402 when a limit is used up |
-| POST | `/api/dj/patter` | Talking DJ: `{ previous?, next, name?, style? }` → `{ text, spent, limit }`, one or two sentences to read between songs. Needs the **Talking AI DJ** feature switch; low effort, counted against the allowance |
+| POST | `/api/dj/patter` | Talking DJ: `{ previous?, next, name?, style? }` → `{ text, spent, limit }`, one or two sentences to read between songs. Needs the **Talking AI DJ** or **DJ mode** feature switch; low effort, counted against the allowance |
 | POST | `/api/dj/station` | DJ mode: `{ kind?, ask?, previous?, recent?, name?, style?, talk? }` → `{ kind, title, songs, intro, spent, limit }`, the next segment. Needs the **DJ mode** feature switch |
 | GET | `/api/dj/voice` | Talking DJ: `{ engine: 'device' \| 'kokoro' \| 'openai', voices, default, error? }` |
 | POST | `/api/dj/speak` | Talking DJ: `{ text, voice?, speed?, style? }` → `audio/mpeg`; 409 while the voice is each device's own. OpenAI is counted against the allowance |
@@ -283,7 +283,10 @@ to the music, up to 250%; the music dips under the voice more the louder it is.
 | **Your request** | type anything ("90s house", "something chill for cooking", "build me an EDM set"): the AI picks songs from the 250 you play most, plus up to 10 it knows that fit |
 
 The station goes round favourites → new for you → throwbacks → top hits; tap a segment to jump straight to it (it plays that segment, or says why it can't), or type
-in the box to change course. In the rotation, a segment whose songs aren't in your library (or that has nothing new) is skipped.
+in the box to change course. In the rotation, a segment whose songs aren't in your library (or that has nothing new) is skipped,
+and the next one is asked for with three songs to go. When no segment has anything you have (or the AI DJ's
+allowance is used up), the station keeps going with **More like <artist>**: songs from your library like the one
+playing (song radio, `src/lib/songRadio.ts`), so it never just stops when the queue runs out.
 Songs a segment wanted that aren't in your library are listed under **N songs on <segment> you don't have** in
 the panel (Top hits checks the chart's top 50), each with **Get** (deemix, or yt-dlp as a backup) or **Request**
 for people without Autodownload, plus **Get all**. Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing anything else stops DJ mode; **×** stops it
@@ -291,9 +294,11 @@ too, and **–** folds the panel into a small pill.
 
 **Cost.** Picking songs costs nothing: they come from the Made for you mixes (made once a day) and the chart.
 Each segment's intro is one short, low-effort AI call (a fraction of a cent), and a request is one call that
-also picks the songs. Turn off **The DJ talks between segments** for no AI calls at all except requests. With
-the talking DJ on as well, its usual lines play between songs, but not at a segment change, where the intro takes
-their place.
+also picks the songs. With **The DJ talks between songs** on (the default), DJ Trash Panda also
+says a short line before every few songs inside a segment (**Every** in **Settings → Playback → Talking DJ**, 3 by
+default), even with the Talking DJ setting itself off: one more short call per line. The line is written 75 seconds
+before the song ends, so a slow local model has time; one still not ready 30 seconds into the song is dropped. At a
+segment change the segment's intro takes its place. Turn the switch off for no AI calls at all except requests.
 
 Code: `hub/src/dj/station.ts` (segments), `src/lib/djStation.ts` (finding the songs, queueing the next segment,
 the intros), `src/components/DjStation.tsx` (button and panel).

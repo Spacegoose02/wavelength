@@ -94,9 +94,20 @@ function hubAudio(text: string): Promise<Blob | null> {
     .catch((e: unknown) => { djVoiceProblem = `The Hub’s voice didn’t work: ${String((e as Error)?.message ?? e)}`; return null; });
 }
 
+/** Whether DJ mode is on air with talking on (lib/djStation.ts sets this, so the two files don't import each other). */
+let stationTalking = () => false;
+export function setStationTalking(fn: () => boolean) {
+  stationTalking = fn;
+}
+
+/**
+ * Whether the DJ talks between songs now: the Talking DJ (Settings → Playback) is on, or DJ mode is on air with
+ * "The DJ talks" on, which talks between its songs too without the Talking DJ setting.
+ */
 function ready() {
   const s = useSettings.getState().djVoice;
-  return s.on && (canSpeak || hubVoiceOn()) && !!hubClient() && featureOn('djVoice');
+  const station = stationTalking() && featureOn('djMode');
+  return (station || (s.on && featureOn('djVoice'))) && (canSpeak || hubVoiceOn()) && !!hubClient();
 }
 
 /** Whether the song after `t` gets a link. */
@@ -281,15 +292,17 @@ export function startDjVoice() {
           if (l.audio) await l.audio;
           // still on that song, near its start
           const p = usePlayer.getState();
-          if (p.queue[p.index] && key(p.queue[p.index]) === k && p.position < 20) void say(l.text, l.audio);
+          if (p.queue[p.index] && key(p.queue[p.index]) === k && p.position < 30) void say(l.text, l.audio);
         });
       } else since++;
       return;
     }
     // near the end of this song: write the link for the next one now, so it's ready the moment it starts
+    // (75 s ahead, as a local model plus Kokoro can take most of a minute; a line still not ready 30 s into the
+    // song is dropped)
     const next = st.queue[st.index + 1];
     const left = (st.duration || t.duration || 0) - st.position;
-    if (next && next.kind === 'track' && t.kind === 'track' && !stationTalks.has(key(next)) && prefetched !== key(next) && st.playing && left > 0 && left < 45 && due() && ready()) {
+    if (next && next.kind === 'track' && t.kind === 'track' && !stationTalks.has(key(next)) && prefetched !== key(next) && st.playing && left > 0 && left < 75 && due() && ready()) {
       prefetched = key(next);
       void fetchLine(t, next);
     }
