@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.24.2
 - **DJ mode keeps going.** When the next segment has none of its songs in your library (often Top hits), the
   station moves on to the one after instead of asking for the same one again and going quiet when the queue ran out.
   When none has anything, it carries on with **More like <artist>**, songs from your library like the one playing.
