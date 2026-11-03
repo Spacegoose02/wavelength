@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.24.4
 - **US spelling.** Labels and messages use US English: **Your favorites**, **Forgotten favorites**, **Favorites (kept
   offline)**, **Gray alien**, the mouth tuner's **Center**, "analyzed", "canceled", "customized".
 - **Easier to change what the DJ calls you.** **What the DJ calls you** (Settings → Playback → Talking DJ) now shows
