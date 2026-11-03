@@ -193,7 +193,7 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'raccoon', noun: 'raccoon', label: 'Raccoon', Face: RaccoonFace, Tail: RaccoonTail },
   { id: 'shark', noun: 'shark', label: 'Shark', Face: SharkFace, Tail: SharkTail, Lower: SharkLower },
   { id: 'alien', noun: 'alien', label: 'Alien', Face: AlienFace, build: 0.82, fit: { w: 0.88, eyes: [0.94, 1.4] }, shadow: { rx: 58, ry: 60, cy: 190 } },
-  { id: 'grey', noun: 'grey alien', label: 'Grey alien', Face: GreyFace, build: 0.78, fit: { w: 0.94, lift: -12, eyes: [1.14, 1.5] }, shadow: { rx: 42, ry: 70, cy: 194 } },
+  { id: 'grey', noun: 'gray alien', label: 'Gray alien', Face: GreyFace, build: 0.78, fit: { w: 0.94, lift: -12, eyes: [1.14, 1.5] }, shadow: { rx: 42, ry: 70, cy: 194 } },
   { id: 'bear-black', noun: 'black bear', label: 'Black bear', Face: BearFace },
   { id: 'bear-brown', noun: 'brown bear', label: 'Brown bear', Face: BearFace },
 ];

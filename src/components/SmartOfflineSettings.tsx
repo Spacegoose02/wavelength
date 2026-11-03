@@ -39,7 +39,7 @@ export function SmartOfflineSettings() {
       </label>
       {c.enabled && (
         <>
-          <label className="check"><input type="checkbox" checked={c.favorites} onChange={(e) => set({ favorites: e.target.checked })} /> ♥ Favourites</label>
+          <label className="check"><input type="checkbox" checked={c.favorites} onChange={(e) => set({ favorites: e.target.checked })} /> ♥ Favorites</label>
           <label className="check"><input type="checkbox" checked={c.mixes} onChange={(e) => set({ mixes: e.target.checked })} /> Made for you mixes</label>
           <label className="check">
             <input type="checkbox" checked={c.recentDays > 0} onChange={(e) => set({ recentDays: e.target.checked ? 30 : 0 })} /> Songs played in the last
@@ -53,7 +53,7 @@ export function SmartOfflineSettings() {
             <select value={c.capMb} onChange={(e) => set({ capMb: Number(e.target.value) })}>
               {CAPS.map((v) => <option key={v} value={v}>{v >= 1000 ? `${v / 1000} GB` : `${v} MB`}</option>)}
             </select>
-            <small className="muted">(now {mb(used)}; favourites fill first, then mixes, then recent plays)</small>
+            <small className="muted">(now {mb(used)}; favorites fill first, then mixes, then recent plays)</small>
           </label>
           <div className="chips">
             <button className="chip" disabled={busy} onClick={run}>Update now</button>

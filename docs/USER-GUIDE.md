@@ -412,7 +412,7 @@ alien are all possible.
 | **Raccoon** | Grey fur, a black mask and a striped tail |
 | **Shark** | Blue-grey with a dorsal fin, gills, a white jaw and a toothy grin; no legs, but a tail end with two fins and a tail fin on the ground (the fin tucks under hats) |
 | **Alien** | Slim and green, with big black eyes and glowing antennae that pulse with the bass |
-| **Grey alien** | The classic grey: a big bulb head tapering to a pointed chin, huge black eyes and a slim body |
+| **Gray alien** | The classic grey: a big bulb head tapering to a pointed chin, huge black eyes and a slim body |
 | **Black bear** / **Brown bear** | Round ears and a pale muzzle, in black or brown fur |
 
 | Act | Scene and outfit | While the music plays |
@@ -449,7 +449,7 @@ right now (the voice, the lyrics' syllables, or nothing) and whether the song is
 |---|---|---|
 | **This song → Lyrics timing** | Moves the synced lyrics for the song that's playing, and is remembered for that song. **Mouth is late / Mouth is early** nudge it by a tenth of a second | The mouth starts before or after the words in one song |
 | **Sensitivity** | How far below the song's loudest singing the mouth still opens | Raise it if the mouth stays shut on quiet verses |
-| **Centre** | How much of the sound must sit in the middle of the mix, where lead vocals usually are | Raise it if guitars or keys open the mouth; lower it for busy mixes |
+| **Center** | How much of the sound must sit in the middle of the mix, where lead vocals usually are | Raise it if guitars or keys open the mouth; lower it for busy mixes |
 | **Noise rejection** | How noisy (drums, hi-hats, hiss) a sound can be and still count as voice | Lower it if hi-hats flap the mouth; raise it for shouted or breathy vocals |
 | **Voice range** | The pitches that count as voice | Raise *from* for bass-heavy songs; lower *to* to ignore cymbals |
 | **Ignore after a drum hit** | How long the mouth can't open after a kick or snare | Raise it if the mouth snaps on every beat |
@@ -987,7 +987,7 @@ With a [Wavelength Hub](HUB.md), **Home** opens on what's made for you:
 | **On Repeat** | What you've played most in the last 30 days |
 | **Daily Mix 1–4** | Your favourite artists of the last few months, grouped by who sounds alike, with your most played songs by them and one song in four from similar artists |
 | **Discover Weekly** | Best-known songs by artists like your favourites that you haven't played yet. Changes every Monday |
-| **Forgotten favourites** | Songs you played a lot but not for three months |
+| **Forgotten favorites** | Songs you played a lot but not for three months |
 | **Time Capsule** | Your most played songs from one to three years ago |
 
 A mix only shows songs your library has: the Hub suggests, and Wavelength finds each one on your Navidrome or Plex

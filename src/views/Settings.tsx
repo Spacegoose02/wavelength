@@ -58,7 +58,7 @@ function DiscoverCharts() {
       </div>
       <div className="editor">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span className="muted small">{using.length} chart{using.length === 1 ? '' : 's'} in {GENRES.find((g) => g.id === genre)!.label} · {isCustom ? 'customised' : 'defaults'}</span>
+          <span className="muted small">{using.length} chart{using.length === 1 ? '' : 's'} in {GENRES.find((g) => g.id === genre)!.label} · {isCustom ? 'customized' : 'defaults'}</span>
           <button className="btn small ghost" disabled={!isCustom} onClick={() => setCharts(genre, undefined)}>Reset to defaults</button>
         </div>
         <div className="chart-picker">

@@ -37,6 +37,10 @@ export function DjVoiceSettings() {
           <span className="switch"><input type="checkbox" checked={v.on} onChange={(e) => set({ on: e.target.checked })} /><span /></span>
           <span><b>Talk between songs</b></span>
         </label>
+        {/* shown whether or not the Talking DJ is on: DJ mode's intros use it too */}
+        <label className="dj-name">What the DJ calls you
+          <input value={v.name} maxLength={40} placeholder="(no name)" onChange={(e) => set({ name: e.target.value })} />
+        </label>
         {v.on && <>
           <label className="range-field">
             <span>{v.every === 1 ? 'Before every song' : `Before every ${v.every} songs`}</span>
@@ -48,9 +52,6 @@ export function DjVoiceSettings() {
             ))}
           </div>
           <div className="editor-grid">
-          <label>What the DJ calls you
-            <input value={v.name} maxLength={40} placeholder="(no name)" onChange={(e) => set({ name: e.target.value })} />
-          </label>
           <label>Voice
             <select value={useHub ? `hub:${v.hubVoice}` : `device:${v.voice}`} onChange={(e) => {
               const [kind, ...rest] = e.target.value.split(':');

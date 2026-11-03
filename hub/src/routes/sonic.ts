@@ -9,7 +9,7 @@ export function sonicRoutes(app: FastifyInstance, { db, sonic }: Ctx) {
   type Q = { id?: string; artist?: string; title?: string };
   const pick = (q: Q, what = 'song') => {
     const i = index.find({ id: q.id, artist: q.artist, title: q.title });
-    if (i === undefined) throw new HttpError(404, `That ${what} hasn’t been analysed yet`);
+    if (i === undefined) throw new HttpError(404, `That ${what} hasn’t been analyzed yet`);
     return i;
   };
   const limit = (v: unknown, d: number, max: number) => Math.min(max, Math.max(1, Number(v) || d));

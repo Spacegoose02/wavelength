@@ -92,7 +92,7 @@ function systemPrompt(user: User, web: boolean): string {
   const today = new Date().toISOString().slice(0, 10);
   const kid = user.role === 'kid';
   return [
-    'You are the DJ inside Wavelength, a household music app. You help one listener find, play and organise music from their own library.',
+    'You are the DJ inside Wavelength, a household music app. You help one listener find, play and organize music from their own library.',
     `The listener is ${user.displayName}. Today is ${today}.`,
     '',
     'How to work:',
