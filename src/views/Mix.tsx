@@ -120,7 +120,7 @@ export function BlendView() {
   return (
     <div className="page narrow">
       <header className="page-head"><h1>Blend</h1></header>
-      <p className="muted">A mix of what you and the people you pick listen to: songs by artists you share first, then each person’s favourites in turn. Everyone in a Blend has to turn Blends on, since it shows a little of what they play.</p>
+      <p className="muted">A mix of what you and the people you pick listen to: songs by artists you share first, then each person’s favorites in turn. Everyone in a Blend has to turn Blends on, since it shows a little of what they play.</p>
       {err && <div className="errors">{err}</div>}
       {!data ? <Spinner /> : (
         <>

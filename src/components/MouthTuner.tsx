@@ -117,7 +117,7 @@ function Graph() {
       </div>
       <p className="small muted tuner-now">
         {!usePlayer.getState().playing ? 'Play a song to see the mouth at work' : <>{mode[now.mode]} · {line[now.line]} · {!now.live ? 'can’t read this stream’s audio' : now.mono ? 'mono song' : 'stereo'}</>}
-        {now.live && <> · centre {Math.round(now.centred * 100)}% · tonal {Math.round(now.tonal * 100)}% · level {Math.round(now.level - now.loud)} dB</>}
+        {now.live && <> · center {Math.round(now.centred * 100)}% · tonal {Math.round(now.tonal * 100)}% · level {Math.round(now.level - now.loud)} dB</>}
       </p>
     </div>
   );
@@ -143,7 +143,7 @@ export function MouthTuner({ onClose }: { onClose?: () => void }) {
       </div>
       <p className="muted small">
         Play a song with clear singing and watch the graph: the filled shape is the mouth, the line is what the voice detector hears.
-        If the mouth opens on drums or guitar, raise <b>Centre</b> or <b>Noise rejection</b>. If it stays shut while someone sings,
+        If the mouth opens on drums or guitar, raise <b>Center</b> or <b>Noise rejection</b>. If it stays shut while someone sings,
         raise <b>Sensitivity</b>. If it moves before or after the words, nudge the lyrics.
       </p>
       <Graph />
@@ -165,7 +165,7 @@ export function MouthTuner({ onClose }: { onClose?: () => void }) {
 
       <Group title="When the mouth opens">
         <Slider label="Sensitivity" hint="How quiet singing can be and still open the mouth." value={tune.sensitivity} min={8} max={48} step={1} fmt={(v) => `${v} dB`} onChange={(v) => set({ sensitivity: v })} />
-        <Slider label="Centre" hint="How much of the sound must come from the middle of the mix, where lead vocals usually are. Higher ignores more instruments." value={tune.centre} min={0.05} max={0.9} step={0.05} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => set({ centre: v })} />
+        <Slider label="Center" hint="How much of the sound must come from the middle of the mix, where lead vocals usually are. Higher ignores more instruments." value={tune.centre} min={0.05} max={0.9} step={0.05} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => set({ centre: v })} />
         <Slider label="Noise rejection" hint="Lower ignores more drums, hi-hats and hiss, but may miss breathy or shouted vocals." value={tune.noise} min={0.2} max={0.9} step={0.05} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => set({ noise: v })} />
         <Slider label="Voice range from" hint="Lowest pitch that counts as voice. Raise for bass-heavy songs." value={tune.lowHz} min={60} max={600} step={10} fmt={(v) => `${v} Hz`} onChange={(v) => set({ lowHz: v })} />
         <Slider label="Voice range to" hint="Highest pitch that counts. Lower to ignore cymbals and bright guitars." value={tune.highHz} min={1500} max={8000} step={100} fmt={(v) => `${(v / 1000).toFixed(1)} kHz`} onChange={(v) => set({ highHz: v })} />

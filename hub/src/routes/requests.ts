@@ -206,7 +206,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     const { user } = signedIn(req);
     const r = getRequest(db, Number(req.params.id));
     if (!r || r.userId !== user.id) throw new HttpError(404, 'No such request');
-    if (r.status !== 'pending') throw new HttpError(409, 'Only a waiting request can be cancelled');
+    if (r.status !== 'pending') throw new HttpError(409, 'Only a waiting request can be canceled');
     db.prepare('DELETE FROM requests WHERE id = ?').run(r.id);
     return { ok: true };
   });

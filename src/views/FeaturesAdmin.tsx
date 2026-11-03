@@ -27,7 +27,7 @@ function SonicProgress() {
     <div className="sonic-progress small">
       {st.blocked ? <span className="errors">{st.blocked}</span> : (
         <span className="muted">
-          {st.total ? `${st.analysed} of ${st.total} songs analysed (${pct}%)` : 'Listing the library…'}
+          {st.total ? `${st.analysed} of ${st.total} songs analyzed (${pct}%)` : 'Listing the library…'}
           {st.failed ? `, ${st.failed} couldn’t be read` : ''}{st.current ? ` · now: ${st.current}` : ''}
         </span>
       )}

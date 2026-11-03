@@ -166,7 +166,7 @@ export function Rewind() {
             {r.busiestDay && <div><span className="muted">Busiest day</span><b>{new Date(`${r.busiestDay.day}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</b><span className="small">{n(r.busiestDay.plays)} plays</span></div>}
             <div><span className="muted">Longest streak</span><b>{r.streak} day{r.streak === 1 ? '' : 's'} in a row</b></div>
             <div><span className="muted">New artists</span><b>{n(r.newArtists.count)}</b>{r.newArtists.top.length > 0 && <span className="small">{r.newArtists.top.map((a) => a.artist).join(', ')}</span>}</div>
-            <div><span className="muted">Favourite time</span><b>{hourLabel(r.byHour.indexOf(Math.max(...r.byHour)))}</b><span className="small">on {DAYS[r.byWeekday.indexOf(Math.max(...r.byWeekday))]}s most</span></div>
+            <div><span className="muted">Favorite time</span><b>{hourLabel(r.byHour.indexOf(Math.max(...r.byHour)))}</b><span className="small">on {DAYS[r.byWeekday.indexOf(Math.max(...r.byWeekday))]}s most</span></div>
           </section>
 
           {r.byMonth && (

@@ -216,8 +216,8 @@ function UpNext({ sw, tracks, onChange }: { sw: SubWaveSource; tracks: SwTrack[]
                 onClick={() => confirm(`Cancel the rest of "${b.label}"? Songs already sent to air will still play.`) &&
                   run(`b${b.id}`, async () => {
                     const r = await sw.cancelBlock(b.id);
-                    if (r?.kept) setMsg({ ok: true, text: `Cancelled ${r.removed ?? 0}; ${r.kept} already on their way to air` });
-                  }, `Cancelled the rest of ${b.label}`)}>
+                    if (r?.kept) setMsg({ ok: true, text: `Canceled ${r.removed ?? 0}; ${r.kept} already on their way to air` });
+                  }, `Canceled the rest of ${b.label}`)}>
                 Cancel block
               </button>
             )}

@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **US spelling.** Labels and messages use US English: **Your favorites**, **Forgotten favorites**, **Favorites (kept
+  offline)**, **Gray alien**, the mouth tuner's **Center**, "analyzed", "canceled", "customized".
+- **Easier to change what the DJ calls you.** **What the DJ calls you** (Settings → Playback → Talking DJ) now shows
+  even with Talk between songs off, since DJ mode's intros use it too, and the DJ mode panel has the same box.
 - **DJ mode turns off when you play something else.** Since 0.24.3, clicking a song in your library didn't stop DJ
   mode when that list happened to include songs the station had played, so DJ Trash Panda kept talking over your own
   music. Starting a new queue (a song, album or playlist) now always ends DJ mode; Play next and Add to queue don't.

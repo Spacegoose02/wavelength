@@ -64,7 +64,7 @@ export function SoundsLikeButton({ track, className = 'chip' }: { track: Track; 
                 <b>{h.title}</b> <small className="muted">{h.artist} · {Math.round(h.bpm)} BPM · {h.mood}</small>
               </button>
             ))}
-            {q.length >= 2 && !hits.length && <small className="muted">No analysed songs match.</small>}
+            {q.length >= 2 && !hits.length && <small className="muted">No analyzed songs match.</small>}
           </div>
         </div>
       )}

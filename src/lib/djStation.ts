@@ -20,7 +20,7 @@ import { playlistTracks } from './myPlaylists';
  */
 
 export const SEGMENT_LABELS: Record<Exclude<HubStationKind, 'ask' | 'playlist'>, string> = {
-  favourites: 'Your favourites',
+  favourites: 'Your favorites',
   discover: 'New for you',
   throwbacks: 'Throwbacks',
   tophits: 'Top hits',

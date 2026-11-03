@@ -59,6 +59,7 @@ export function DjStationPanel({ sheet = false }: { sheet?: boolean }) {
   const s = useStation();
   const [ask, setAsk] = useState('');
   const loud = useSettings((x) => x.djVoice.loudness ?? 1.6);
+  const callMe = useSettings((x) => x.djVoice.name);
   const setVoice = useSettings((x) => x.setDjVoice);
   const [lists, setLists] = useState<MyPlaylist[]>([]);
   const shown = s.open && (s.on || s.picking);
@@ -126,6 +127,12 @@ export function DjStationPanel({ sheet = false }: { sheet?: boolean }) {
         <span className="switch"><input type="checkbox" checked={s.talk} onChange={(e) => useStation.setState({ talk: e.target.checked })} /><span /></span>
         <span>The DJ talks between songs</span>
       </label>
+      {s.talk && (
+        <label className="dj-station-name small">
+          <span>The DJ calls you</span>
+          <input value={callMe} maxLength={40} placeholder="(no name)" onChange={(e) => setVoice({ name: e.target.value })} />
+        </label>
+      )}
       {s.talk && (
         <label className="range-field small">
           <span>DJ loudness {Math.round(loud * 100)}%</span>

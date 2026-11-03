@@ -571,7 +571,7 @@ an outside service (talking DJ, DJ web search, DJ mode, tour dates, sound-alike 
 
 The Hub makes each person's mixes once a day (`hub/src/mixes.ts`), the first time their app asks for them that
 day, from their plays (the same table Rewind uses) and Deezer's related artists and top songs (cached for a day):
-On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favourites and Time Capsule. Songs are sent by title and
+On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favorites and Time Capsule. Songs are sent by title and
 artist (plus the track that played, for songs the person played), and each app finds them in its own library.
 Blends mix two to six people who have all said yes (`blend_optin`).
 

@@ -20,7 +20,7 @@ export const SEGMENTS = ['favourites', 'discover', 'throwbacks', 'tophits'] as c
 export type Segment = (typeof SEGMENTS)[number] | 'ask' | 'playlist';
 
 const TITLES: Record<Segment, string> = {
-  favourites: 'Your favourites',
+  favourites: 'Your favorites',
   discover: 'New for you',
   throwbacks: 'Throwbacks',
   tophits: 'Top hits',
@@ -30,7 +30,7 @@ const TITLES: Record<Segment, string> = {
 
 const ABOUT: Record<Segment, string> = {
   favourites: 'songs the listener has been playing a lot lately',
-  discover: 'songs by artists related to the listener’s favourites that they haven’t played yet',
+  discover: 'songs by artists related to the listener’s favorites that they haven’t played yet',
   throwbacks: 'songs the listener loved a while ago and hasn’t played for months',
   tophits: 'songs from the current worldwide charts',
   ask: '',

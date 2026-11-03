@@ -36,7 +36,7 @@ export function registerShelf(s: Shelf) {
 
 registerShelf({
   id: 'auto:favorites',
-  name: 'Favourites (kept offline)',
+  name: 'Favorites (kept offline)',
   priority: 0,
   setting: 'favorites',
   async tracks() {

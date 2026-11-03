@@ -133,7 +133,7 @@ export function forgotten(rows: PlayRow[], now: number): Mix | null {
     .filter((t) => t.plays >= 4 && (last.get(songKey(t.song)) ?? 0) < now - 90 * DAY)
     .map((t) => t.song);
   if (songs.length < 5) return null;
-  return { id: 'forgotten', name: 'Forgotten favourites', description: 'Songs you loved and haven’t played for a while.', kind: 'forgotten', songs: dedupe(songs) };
+  return { id: 'forgotten', name: 'Forgotten favorites', description: 'Songs you loved and haven’t played for a while.', kind: 'forgotten', songs: dedupe(songs) };
 }
 
 export function timeCapsule(rows: PlayRow[], now: number): Mix | null {
@@ -344,7 +344,7 @@ export class Mixes {
       if (s) out.push(s);
     }
     const label = people.map((p) => p.displayName).join(' + ');
-    return { id: `blend-${people.map((p) => p.id).sort((a, b) => a - b).join('-')}`, name: `Blend: ${label}`, description: 'Songs you share first, then each person’s favourites in turn.', kind: 'blend', songs: dedupe(dayShuffle(out.slice(0, 20), 'b').concat(out.slice(20))) };
+    return { id: `blend-${people.map((p) => p.id).sort((a, b) => a - b).join('-')}`, name: `Blend: ${label}`, description: 'Songs you share first, then each person’s favorites in turn.', kind: 'blend', songs: dedupe(dayShuffle(out.slice(0, 20), 'b').concat(out.slice(20))) };
   }
 }
 

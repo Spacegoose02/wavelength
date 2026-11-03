@@ -49,7 +49,7 @@ test('DJ mode: segments from mixes and the charts, an intro each, requests picke
   // no plays yet: a segment you pick says so instead of playing another one
   let r = await station({ kind: 'favourites', talk: false });
   assert.equal(r.status, 404);
-  assert.match(r.body.error, /Nothing new for Your favourites/);
+  assert.match(r.body.error, /Nothing new for Your favorites/);
   // the rotation: favourites, new for you and throwbacks are empty, so it moves on to the charts
   r = await station({ talk: false });
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -67,11 +67,11 @@ test('DJ mode: segments from mixes and the charts, an intro each, requests picke
   db.prepare('DELETE FROM mixes').run(); // the next day's mixes
   r = await station({ kind: 'favourites', name: 'Sam', recent: [{ title: 'One', artist: 'Drake' }] });
   assert.equal(r.body.kind, 'favourites');
-  assert.equal(r.body.title, 'Your favourites');
+  assert.equal(r.body.title, 'Your favorites');
   assert.equal(r.body.intro, 'Here come your favourites, Sam.');
   const titles = r.body.songs.map((s: any) => s.title);
   assert.ok(titles.includes('Two') && !titles.includes('One'), `recent songs are left out: ${titles}`);
-  assert.match(String(ai.seen.at(-1)!.messages[0].content), /Your favourites/);
+  assert.match(String(ai.seen.at(-1)!.messages[0].content), /Your favorites/);
   assert.match(ai.seen.at(-1)!.system, /Sam/);
   assert.equal(ai.seen.at(-1)!.tools.length, 0);
 
