@@ -54,6 +54,8 @@ export const useStation = create<StationState>()(
   }),
 );
 
+/** True while the station itself starts a new queue, so that isn't taken for you playing something else. */
+let selfPlay = false;
 const keyOf = (t: Track) => `${t.sourceId}:${t.id}`;
 const nameOf = (t: { title: string; artist: string }) => `${t.title}\u0000${t.artist}`.toLowerCase();
 /** Songs the station played this time, for the last-resort refill. */
@@ -138,7 +140,12 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
     claim(tracks);
     stationTalks.add(keyOf(tracks[0]));
     useStation.setState({ on: true, picking: false, kind: seg.kind, title: seg.title, intro: seg.intro ?? '', missing, busy: false });
-    usePlayer.getState().playTracks(tracks);
+    selfPlay = true;
+    try {
+      usePlayer.getState().playTracks(tracks);
+    } finally {
+      selfPlay = false;
+    }
     if (seg.intro && useStation.getState().talk) void say(seg.intro);
   } catch (e) {
     useStation.setState({ busy: false, error: errText(e) });
@@ -231,17 +238,31 @@ export function startDjStation() {
     return s.on && s.talk;
   });
   let current: string | undefined;
+  let lastQueue = usePlayer.getState().queue;
+  let lastIndex = usePlayer.getState().index;
   usePlayer.subscribe((p) => {
+    // A new queue (you clicked a song, an album, a playlist) shares none of the old queue's upcoming items, while
+    // Play next, Add to queue, the station's own top-ups and a source refreshing one song keep them: the DJ steps
+    // aside for a new queue even when it holds songs the station played (a library list usually does).
+    let replaced = false;
+    if (p.queue !== lastQueue && !selfPlay) {
+      const before = lastQueue.slice(lastIndex);
+      // (a source refreshing the playing song swaps that one item: same length, same place)
+      const refreshed = p.queue.length === lastQueue.length && p.index === lastIndex;
+      replaced = before.length > 0 && !refreshed && !before.some((x) => p.queue.includes(x));
+    }
+    lastQueue = p.queue;
+    lastIndex = p.index;
     const st = useStation.getState();
     if (!st.on) return;
+    if (replaced) return stopStation();
     const t = p.queue[p.index];
     if (!t) return;
     const k = keyOf(t);
     if (k !== current) {
       current = k;
       if (!isOurs(t)) {
-        // you played something else (an album, a playlist): the DJ steps aside. A song you put in front of the
-        // station's (Play next) just plays, and the station carries on after it.
+        // a song put in front of the station's (Play next) just plays, and the station carries on after it
         if (!p.queue.slice(p.index).some(isOurs)) return stopStation();
         return;
       }

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **DJ mode turns off when you play something else.** Since 0.24.3, clicking a song in your library didn't stop DJ
+  mode when that list happened to include songs the station had played, so DJ Trash Panda kept talking over your own
+  music. Starting a new queue (a song, album or playlist) now always ends DJ mode; Play next and Add to queue don't.
 
 ## 0.24.3
 - **DJ mode really keeps going.** The station no longer switches itself off when the song playing isn't one it
