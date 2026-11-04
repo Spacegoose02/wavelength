@@ -17,6 +17,13 @@ import { featureOn } from '../lib/features';
 
 export type Repeat = 'off' | 'all' | 'one';
 
+/**
+ * Who started the queue that's playing: you (a song, album or playlist you picked, anywhere in the app), the AI DJ
+ * chat (`dj`, lib/dj.ts) or DJ mode (`station`, lib/djStation.ts). DJ Trash Panda only talks over, and only keeps
+ * going on, music it started: a queue you start yourself ends any DJ session (docs/AI-DJ.md "Who's in charge").
+ */
+export type QueueBy = 'you' | 'dj' | 'station';
+
 interface PlayerState {
   queue: Track[];
   index: number;
@@ -31,8 +38,12 @@ interface PlayerState {
   /** Radio stations that publish artwork (e.g. SubWave) — overrides the station logo. */
   liveCover?: string;
   error?: string;
+  /** Counts new queues (each playTracks), so the DJ can tell a queue you started from songs added to its own. */
+  queueId: number;
+  /** Who started the queue that's playing (`QueueBy`). */
+  queueBy: QueueBy;
   current(): Track | undefined;
-  playTracks(tracks: Track[], start?: number, startAt?: number): void;
+  playTracks(tracks: Track[], start?: number, startAt?: number, by?: QueueBy): void;
   enqueue(tracks: Track[]): void;
   playNext(tracks: Track[]): void;
   jump(i: number): void;
@@ -91,6 +102,8 @@ export const setPlayerIntercept = (fn?: PlayerIntercept) => {
 export const usePlayer = create<PlayerState>()((set, get) => ({
   queue: [],
   index: -1,
+  queueId: 0,
+  queueBy: 'you',
   playing: false,
   buffering: false,
   position: 0,
@@ -100,7 +113,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   repeat: 'off',
   current: () => get().queue[get().index],
 
-  playTracks(all, start = 0, startAt = 0) {
+  playTracks(all, start = 0, startAt = 0, by = 'you') {
     // a listening-party guest playing something: it goes to the host rather than out of step with the party
     if (intercept?.('play', all.slice(start))) return;
     // kid profiles: drop what they may not play, keeping the chosen song's place when it stays
@@ -124,7 +137,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       queue = [first, ...shuffled(queue)];
       index = 0;
     }
-    set({ queue, index });
+    set((s) => ({ queue, index, queueId: s.queueId + 1, queueBy: by }));
     failStreak = 0;
     loadCurrent(startAt);
   },

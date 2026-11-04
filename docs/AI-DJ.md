@@ -213,7 +213,8 @@ Ideas for later, roughly in order:
 With **Talking AI DJ** on in **Settings → Features**, people can turn on **Settings → Playback → Talking DJ**.
 Every few songs (they choose how often, and a laid back, hype or trivia style) the app asks the Hub for a line
 about the song that just played and the one coming up, a few seconds before it starts, then reads it while the
-music dips. Each line is one small, low-effort call (a fraction of a cent on the default model) counted against the
+music dips. It only talks before songs the DJ itself queued (the AI DJ chat's **play**, and DJ mode's own
+station, see below), never over music you picked yourself: see [Who's in charge](#whos-in-charge). Each line is one small, low-effort call (a fraction of a cent on the default model) counted against the
 same monthly allowance as the chat.
 
 **What the DJ calls you** (in the same section, shown even with talking off, and in the DJ mode panel) is the name
@@ -294,12 +295,32 @@ playing (song radio, `src/lib/songRadio.ts`), so it never just stops when the qu
 Songs a segment wanted that aren't in your library are listed under **N songs on <segment> you don't have** in
 the panel (Top hits checks the chart's top 50), each with **Get** (deemix, or yt-dlp as a backup) or **Request**
 for people without Autodownload, plus **Get all**. Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing something else (a song in your library, an album, a playlist) stops DJ mode, even when that list
-holds songs the station played: a new queue shares none of the station's upcoming songs. A song you put in front
+holds songs the station played (see [Who's in charge](#whos-in-charge)). A song you put in front
 of the station's with **Play next** or **Add to queue** just plays and the station carries on after it. Songs are matched by
 title and artist as well as their id, so a source handing back a copy of a song doesn't stop it. If nothing at all can
 be found, not even songs like the one playing, the station replays its own earlier songs (**Encore**) rather than
 let the music stop. **×** stops it
 too, and **–** folds the panel into a small pill.
+
+### Who's in charge
+
+DJ Trash Panda only plays, and only talks, when you ask it to:
+
+- **DJ mode** starts only from the raccoon button (the DJ Trash Panda station panel) once you pick a segment,
+  **Mix it up**, a playlist or type a request. Nothing else starts it.
+- **The AI DJ chat** plays music when you ask it for some; the Talking DJ may then talk between those songs.
+- **Your own music wins.** Starting a queue yourself, anywhere (a song, album or playlist in your Library, Search,
+  a mix, Radio, a remote or party), ends DJ mode, stops the DJ mid-sentence and brings the music back up, even when
+  that list holds songs the station or the chat played. The Talking DJ never talks over a queue you started.
+  **Play next** and **Add to queue** add to the DJ's queue instead, so the DJ carries on after them.
+
+How: the player counts new queues (`queueId`, bumped by every `playTracks`) and records who started each one
+(`queueBy`: `you`, `dj` for the chat, `station` for DJ mode; `src/store/player.ts`). DJ mode stops on any new queue
+it didn't start (`startDjStation` in `src/lib/djStation.ts`); the Talking DJ only writes a line for a song DJ mode
+queued or one in `djQueued`, the chat's songs, which a queue of yours empties (`src/lib/djVoice.ts`), and `hush()`
+cancels a line being read. Until this change the station matched the new queue against its own upcoming songs, so an
+album from your library holding songs it had queued kept it going, and the Talking DJ talked over any music.
+Tested in `src/test/djTakeover.test.ts`.
 
 **Cost.** Picking songs costs nothing: they come from the Made for you mixes (made once a day) and the chart.
 Each segment's intro is one short, low-effort AI call (a fraction of a cent), and a request is one call that

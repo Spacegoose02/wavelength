@@ -8,6 +8,7 @@ import { enabledSources } from '../store/settings';
 import { albumNotForKids, isKid, trackNotForKids } from './kids';
 import { findInLibrary, pool, primaryArtist } from './match';
 import { myPlaylists, playlistTracks } from './myPlaylists';
+import { markDjQueued } from './djVoice';
 
 /**
  * The AI DJ in the app (docs/AI-DJ.md). The chat itself runs on the Hub, which keeps the API key and pays the
@@ -130,9 +131,11 @@ export async function runAppTool(chatId: number, call: HubDjCall): Promise<{ con
       const list = input.shuffle === true ? shuffled(tracks) : tracks;
       const p = usePlayer.getState();
       const mode = input.mode === 'next' || input.mode === 'end' ? input.mode : 'now';
-      if (mode === 'now') p.playTracks(list);
+      // the AI DJ's own music: the Talking DJ may introduce these (lib/djVoice.ts), never what you pick yourself
+      if (mode === 'now') p.playTracks(list, 0, 0, 'dj');
       else if (mode === 'next') p.playNext(list);
       else p.enqueue(list);
+      markDjQueued(list);
       return out({ ok: true, songs: list.length, mode, ...(unknown.length && { unknownRefs: unknown }) });
     }
     case 'save_playlist': {

@@ -31,6 +31,35 @@ export let djVoiceProblem = '';
 /** Songs DJ mode introduces itself (lib/djStation.ts): no extra line before them. */
 export const stationTalks = new Set<string>();
 
+/**
+ * Songs the AI DJ chat queued (lib/dj.ts): the Talking DJ only talks before the DJ's own music, DJ mode's or
+ * these, never over songs you picked yourself. Emptied when you start a queue of your own.
+ */
+export const djQueued = new Set<string>();
+/** Mark songs the AI DJ chat just played or queued, so the Talking DJ may introduce them. */
+export function markDjQueued(tracks: Track[]) {
+  for (const t of tracks) djQueued.add(key(t));
+}
+
+/** Bumped by `hush`: a line still being fetched or decoded when you took over isn't read. */
+let talkGen = 0;
+/** Stops the line being read right now, if any. */
+let stopNow: (() => void) | null = null;
+
+/**
+ * You took over (played your own music, stopped DJ mode): stop the DJ mid-sentence, bring the music back up, and
+ * drop lines already written for songs to come.
+ */
+export function hush() {
+  talkGen++;
+  lines.clear();
+  if (canSpeak) speechSynthesis.cancel();
+  const stop = stopNow;
+  stopNow = null;
+  stop?.();
+  engine.duck(1, 0.5);
+}
+
 /** Songs played since the DJ last talked. */
 let since = 0;
 interface Line { text: string; audio: Promise<Blob | null> | null }
@@ -101,13 +130,15 @@ export function setStationTalking(fn: () => boolean) {
 }
 
 /**
- * Whether the DJ talks between songs now: the Talking DJ (Settings → Playback) is on, or DJ mode is on air with
- * "The DJ talks" on, which talks between its songs too without the Talking DJ setting.
+ * Whether the DJ talks before `next`: only over the DJ's own music. DJ mode on air with "The DJ talks" on talks
+ * between its songs; the Talking DJ (Settings → Playback) talks before songs the AI DJ chat played for you. Music
+ * you picked yourself (Library, an album, a playlist, search) is never talked over.
  */
-function ready() {
+function ready(next: Track) {
   const s = useSettings.getState().djVoice;
   const station = stationTalking() && featureOn('djMode');
-  return (station || (s.on && featureOn('djVoice'))) && (canSpeak || hubVoiceOn()) && !!hubClient();
+  const chat = s.on && featureOn('djVoice') && djQueued.has(key(next));
+  return (station || chat) && (canSpeak || hubVoiceOn()) && !!hubClient();
 }
 
 /** Whether the song after `t` gets a link. */
@@ -135,10 +166,13 @@ export function voices(): SpeechSynthesisVoice[] {
 
 /** Read `text` aloud over the music, ducked: in the Hub's voice when it has one, else this device's. Resolves when done. */
 export async function say(text: string, audio?: Promise<Blob | null> | null): Promise<void> {
+  const gen = talkGen;
   if (audio || (await hubVoiceOnSoon())) {
     const blob = await (audio ?? hubAudio(text));
-    if (blob) return play(blob);
+    if (gen !== talkGen) return;
+    if (blob) return play(blob, gen);
   }
+  if (gen !== talkGen) return;
   return sayOnDevice(text);
 }
 
@@ -186,11 +220,12 @@ async function djContext(): Promise<AudioContext> {
  * Play the Hub's MP3 over the ducked music, through Web Audio so it can be louder than the music's own volume
  * (an <audio> element stops at 100%), with a compressor so a boost doesn't clip.
  */
-async function play(blob: Blob): Promise<void> {
+async function play(blob: Blob, gen: number): Promise<void> {
   const gain = loudness() * Math.max(0.05, usePlayer.getState().volume ?? 1);
   try {
     const ctx = await djContext();
     const buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+    if (gen !== talkGen) return;
     return await new Promise<void>((resolve) => {
       const src = ctx.createBufferSource();
       src.buffer = buf;
@@ -208,6 +243,14 @@ async function play(blob: Blob): Promise<void> {
         resolve();
       };
       src.onended = end;
+      stopNow = () => {
+        try {
+          src.stop();
+        } catch {
+          /* already stopped */
+        }
+        end();
+      };
       engine.duck(duckLevel(), 0.6);
       src.start();
       setTimeout(end, (buf.duration + 5) * 1000);
@@ -233,6 +276,10 @@ function playElement(blob: Blob, volume: number): Promise<void> {
     };
     a.onended = end;
     a.onerror = end;
+    stopNow = () => {
+      a.pause();
+      end();
+    };
     engine.duck(duckLevel(), 0.6);
     a.play().catch(end);
     // a stuck element mustn't keep the music down
@@ -271,7 +318,17 @@ export function startDjVoice() {
   void hubVoiceInfo();
   let current: string | undefined;
   let prefetched: string | undefined;
+  let queueId = usePlayer.getState().queueId;
   usePlayer.subscribe((st) => {
+    // a queue you started yourself: the AI DJ chat's songs are over, and the DJ stops talking
+    if (st.queueId !== queueId) {
+      queueId = st.queueId;
+      if (st.queueBy === 'you') {
+        const was = djQueued.size > 0;
+        djQueued.clear();
+        if (was) hush();
+      }
+    }
     const t = st.queue[st.index];
     if (!t) return;
     const k = key(t);
@@ -284,7 +341,7 @@ export function startDjVoice() {
         return;
       }
       const line = lines.get(k);
-      if (line && ready() && t.kind === 'track') {
+      if (line && ready(t) && t.kind === 'track') {
         since = 0;
         void line.then(async (l) => {
           if (!l) return;
@@ -302,7 +359,7 @@ export function startDjVoice() {
     // song is dropped)
     const next = st.queue[st.index + 1];
     const left = (st.duration || t.duration || 0) - st.position;
-    if (next && next.kind === 'track' && t.kind === 'track' && !stationTalks.has(key(next)) && prefetched !== key(next) && st.playing && left > 0 && left < 75 && due() && ready()) {
+    if (next && next.kind === 'track' && t.kind === 'track' && !stationTalks.has(key(next)) && prefetched !== key(next) && st.playing && left > 0 && left < 75 && due() && ready(next)) {
       prefetched = key(next);
       void fetchLine(t, next);
     }
