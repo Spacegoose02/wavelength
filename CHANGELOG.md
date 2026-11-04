@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **DJ Trash Panda only plays when you ask.** Playing your own music, like a couple of songs from an album in your
+  Library, could bring the DJ in: the Talking DJ talked over any music every few songs, and DJ mode kept running
+  when the album held songs the station had queued. Now the DJ only talks over music it played for you (the AI DJ
+  chat, or DJ mode started from the raccoon button), and starting your own song, album or playlist anywhere ends
+  DJ mode and stops the DJ mid-sentence. **Play next** and **Add to queue** still keep DJ mode going.
 
 ## 0.24.4
 - **US spelling.** Labels and messages use US English: **Your favorites**, **Forgotten favorites**, **Favorites (kept

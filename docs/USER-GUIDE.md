@@ -1064,7 +1064,9 @@ start: **Mix it up**, a segment, one of your playlists ("more like Road Trip"), 
 and top hits in turns, or more like your playlist, each introduced out loud. Tap a segment or type to change course,
 and use **DJ loudness** if the DJ is hard to hear over the music. Songs on the list you don't have (like Top hits
 you're missing) show up under **songs you don't have**, with **Get** or **Request** for each, or all at once. In the DJ chat you can also ask about your playlists
-("make me something like my Gym playlist"). Play anything else and DJ mode steps aside. See [AI-DJ.md](AI-DJ.md#dj-mode).
+("make me something like my Gym playlist"). DJ mode only starts when you start it from that panel. Play your own
+music (pick a song, album or playlist in your Library) and DJ mode stops, the DJ goes quiet mid-sentence and your
+music plays; **Play next** and **Add to queue** keep DJ mode going. See [AI-DJ.md](AI-DJ.md#whos-in-charge).
 
 ### Talking DJ
 
@@ -1072,7 +1074,8 @@ When an admin turns on **Talking AI DJ** (**Settings → Features**), **Settings
 DJ speak between songs like a radio presenter: a line about what you just heard and what's next, over the start
 of the song with the music turned down. Choose how often (every song up to every 10th), a style (**Laid back**,
 **Hype** or **Trivia**), a name for it to call you, and the voice and speed on this device. **Hear the voice**
-tries it. It uses a little of your AI DJ allowance each time.
+tries it. It uses a little of your AI DJ allowance each time. It only talks over music the DJ played for you (songs
+from the AI DJ chat, and DJ mode), never over songs you picked yourself.
 
 If your admin set up a Hub voice (**Kokoro**, free, or **OpenAI**), the **Voice** list has **DJ voices** that sound
 far more natural than the built-in ones. Pick one, or choose one of **This device's voices** to keep the old one.
