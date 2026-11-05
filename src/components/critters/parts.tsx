@@ -326,7 +326,34 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
  * it about the old shoulder, which `Pivot` puts on the species' own. `children` (a drumstick, say) are drawn
  * under the hand and move with the arm.
  */
-export function Arm({ part, d, hand, children }: { part: string; d: string; hand: [number, number]; children?: ReactNode }) {
+export function Arm({ part, d, hand, handLater, children }: { part: string; d: string; hand: [number, number]; handLater?: boolean; children?: ReactNode }) {
+  const g = useArm(part, d, hand);
+  return (
+    <Pivot from={g.base} to={g.sh} part={part}>
+      <path className="limb-outline" d={g.path} fill="none" strokeWidth={g.arm + 5} strokeLinecap="round" />
+      <path className="sleeve" d={g.path} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
+      <g transform={g.held}>{children}</g>
+      {!handLater && <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />}
+    </Pivot>
+  );
+}
+
+/**
+ * The hand of an `Arm` drawn with `handLater`, for an arm that goes behind an instrument with only the hand in
+ * front (the guitar acts): draw the arm before the instrument and this after it, with the same `part`, `d` and
+ * `hand`. The rig copies the arm's transform onto it every frame (`data-follow`).
+ */
+export function ArmHand({ part, d, hand }: { part: string; d: string; hand: [number, number] }) {
+  const g = useArm(part, d, hand);
+  return (
+    <Pivot from={g.base} to={g.sh} follow={part}>
+      <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />
+    </Pivot>
+  );
+}
+
+/** Where an arm goes on this species: from its shoulder, bending through the act's control point, to the hand (brought within reach). */
+function useArm(part: string, d: string, hand: [number, number]) {
   const { shoulders, arm, paw, reach } = useSpecies().figure;
   const right = part === 'arm-r';
   const base: [number, number] = right ? [262, 268] : [138, 268];
@@ -337,14 +364,14 @@ export function Arm({ part, d, hand, children }: { part: string; d: string; hand
   const at = (p: [number, number]) => [sh[0] + (p[0] - sh[0]) * k, sh[1] + (p[1] - sh[1]) * k];
   const [hx, hy] = at(hand);
   const [qx, qy] = at([cx, cy]);
-  const held = k < 1 ? `translate(${(hx - hand[0]).toFixed(1)} ${(hy - hand[1]).toFixed(1)})` : undefined;
-  const path = `M${sh[0]} ${sh[1]} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${hx.toFixed(1)} ${hy.toFixed(1)}`;
-  return (
-    <Pivot from={base} to={sh} part={part}>
-      <path className="limb-outline" d={path} fill="none" strokeWidth={arm + 5} strokeLinecap="round" />
-      <path className="sleeve" d={path} fill="none" strokeWidth={arm} strokeLinecap="round" />
-      <g transform={held}>{children}</g>
-      <circle className="hand ol-thin" cx={hx.toFixed(1)} cy={hy.toFixed(1)} r={paw} />
-    </Pivot>
-  );
+  return {
+    base,
+    sh,
+    arm,
+    paw,
+    hx: hx.toFixed(1),
+    hy: hy.toFixed(1),
+    held: k < 1 ? `translate(${(hx - hand[0]).toFixed(1)} ${(hy - hand[1]).toFixed(1)})` : undefined,
+    path: `M${sh[0]} ${sh[1]} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${hx.toFixed(1)} ${hy.toFixed(1)}`,
+  };
 }

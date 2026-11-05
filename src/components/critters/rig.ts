@@ -74,6 +74,8 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
     const glows = [...svg.querySelectorAll<SVGElement>('[data-glow]')];
     const voiceGlows = [...svg.querySelectorAll<SVGElement>('[data-voice-glow]')];
     const shines = [...svg.querySelectorAll<SVGElement>('[data-shine]')];
+    // parts drawn in two layers (an arm behind a guitar, its hand in front): the copy takes the part's transform
+    const followers = [...svg.querySelectorAll<SVGElement>('[data-follow]')].map((el) => [el, find(el.dataset.follow!)] as const);
     const mouths = new Map<string, SVGElement>();
     for (const m of svg.querySelectorAll<SVGElement>('[data-mouth]')) mouths.set(m.dataset.mouth!, m);
     const face = createFace();
@@ -205,6 +207,10 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       }
 
       frame({ t, a, idle, bob, tempo, flourish, hit, rock, $ });
+      for (const [el, of] of followers) {
+        const tr = of?.getAttribute('transform');
+        if (tr) el.setAttribute('transform', tr);
+      }
     };
     loop();
     return () => cancelAnimationFrame(raf);

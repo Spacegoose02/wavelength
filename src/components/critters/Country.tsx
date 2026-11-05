@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { swell, windUp } from './flourish';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -78,6 +78,9 @@ export function Country({ species, still }: ActProps) {
         }
       />
 
+      <Arm part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} handLater />
+      <Arm part="arm-r" d="M262 268 Q 262 308 306 264" hand={[306, 264]} handLater />
+
       {/* five-string banjo, neck up to the right: a drum-head pot with a metal rim, a long thin neck and the
           short fifth string's peg halfway up */}
       <g data-part="guitar">
@@ -104,8 +107,9 @@ export function Country({ species, still }: ActProps) {
         </g>
       </g>
 
-      <Arm part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} />
-      <Arm part="arm-r" d="M262 268 Q 292 286 304 266" hand={[306, 264]} />
+      {/* hands in front of the banjo, arms behind it */}
+      <ArmHand part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} />
+      <ArmHand part="arm-r" d="M262 268 Q 262 308 306 264" hand={[306, 264]} />
     </CritterFrame>
   );
 }
