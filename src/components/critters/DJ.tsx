@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig, type RigFrame } from './rig';
 
@@ -11,7 +11,6 @@ import { useCritterRig, type RigFrame } from './rig';
  * the air. Paused, he adjusts his headphones now and then.
  */
 export function DJ({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ spin: 0, pulse: 0 });
 
@@ -49,12 +48,10 @@ export function DJ({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="dj" species={species.id} label={`A ${species.noun} DJ playing records`}>
-      {Tail && <Tail />}
-      <Legs species={species}>{null}</Legs>
+    <CritterFrame ref={root} kind="dj" species={species} label={`A ${species.noun} DJ playing records`}>
+      <Legs species={species} />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
         <path d="M190 254 L188 284 M210 254 L212 284" className="strings" strokeWidth="3" strokeLinecap="round" />
         <BodyOutfits />
       </Body>
@@ -94,8 +91,8 @@ export function DJ({ species, still }: ActProps) {
         )),
       )}
 
-      <Arm part="arm-l" d="M138 268 Q 146 300 176 318" hand={[178, 320]} thumb={[186, 318]} />
-      <Arm part="arm-r" d="M262 268 Q 284 290 290 316" hand={[290, 318]} thumb={[283, 316]} />
+      <Arm part="arm-l" d="M138 268 Q 146 300 176 318" hand={[178, 320]} />
+      <Arm part="arm-r" d="M262 268 Q 284 290 290 316" hand={[290, 318]} />
     </CritterFrame>
   );
 }

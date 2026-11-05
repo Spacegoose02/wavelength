@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { swell, windUp } from './flourish';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -11,7 +11,6 @@ import { useCritterRig } from './rig';
  * on its pot and tips the hat. Paused, he tips his hat now and then.
  */
 export function Country({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const hands = useRef(newGuitarHands());
 
@@ -33,7 +32,7 @@ export function Country({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="country" species={species.id} label={`A country ${species.noun} playing guitar`}>
+    <CritterFrame ref={root} kind="country" species={species} label={`A country ${species.noun} playing guitar`}>
       <defs>
         <pattern id="raccoon-plaid" width="18" height="18" patternUnits="userSpaceOnUse">
           <rect x="0" y="0" width="18" height="6" fill="rgb(0 0 0 / 0.22)" />
@@ -55,18 +54,12 @@ export function Country({ species, still }: ActProps) {
 
       {[34, 104, 296, 366].map((x) => <Shadow key={x} cx={x + 4} cy={324} rx={12} ry={3} />)}
       <Shadow cx={200} cy={366} rx={66} />
-      {Tail && <Tail />}
 
       {/* legs and boots */}
-      <Legs species={species}>
-        <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
-        <path className="boot" d="M156 346 H190 V364 H148 Q 148 352 156 346 Z" />
-        <path data-part="boot" className="boot" d="M210 346 H244 Q 252 352 252 364 H210 Z" />
-      </Legs>
+      <Legs species={species} shoe="boot" />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
-        <path d={TORSO} fill="url(#raccoon-plaid)" />
+        <rect x="100" y="200" width="200" height="200" fill="url(#raccoon-plaid)" />
         <path d="M178 246 L 200 262 L 222 246" fill="none" stroke="rgb(0 0 0 / 0.3)" strokeWidth="3" />
         <path className="bandana" d="M166 244 Q 200 254 234 244 L 200 280 Z" />
         <circle cx="192" cy="256" r="2" fill="#fff" opacity="0.7" /><circle cx="208" cy="256" r="2" fill="#fff" opacity="0.7" /><circle cx="200" cy="267" r="2" fill="#fff" opacity="0.7" />
@@ -111,8 +104,8 @@ export function Country({ species, still }: ActProps) {
         </g>
       </g>
 
-      <Arm part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} thumb={[190, 302]} />
-      <Arm part="arm-r" d="M262 268 Q 292 286 304 266" hand={[306, 264]} thumb={[300, 258]} />
+      <Arm part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} />
+      <Arm part="arm-r" d="M262 268 Q 292 286 304 266" hand={[306, 264]} />
     </CritterFrame>
   );
 }
