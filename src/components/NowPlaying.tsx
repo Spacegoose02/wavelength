@@ -60,6 +60,7 @@ export function NowPlaying() {
             ? <button className="np-link" title="Go to artist" onClick={() => go({ view: 'artist', artist })}>{t.artist}</button>
             : live ? t.title : t.artist}</div>
           {p.error && <div className="np-error" role="status">{p.error}</div>}
+          {!p.error && p.noSignal && <div className="np-note muted small" role="status">No signal · playing songs saved on this device until it's back</div>}
           <div className="np-actions">
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} label="Add to playlist" />}
             <EqButton className="chip" />

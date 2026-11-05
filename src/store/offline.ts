@@ -19,7 +19,8 @@ export interface OfflineTrack {
 export interface OfflineCollection {
   id: string;
   /** `auto`: kept by smart offline (lib/smartOffline.ts), which adds and drops its songs by itself */
-  kind: 'album' | 'playlist' | 'auto';
+  /** `cushion`: the dead zone cushion's rolling cache (lib/deadZone.ts): the queue ahead and songs like the one playing */
+  kind: 'album' | 'playlist' | 'auto' | 'cushion';
   name: string;
   subtitle?: string;
   cover?: string;

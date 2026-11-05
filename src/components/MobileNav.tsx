@@ -45,7 +45,9 @@ export function MobileNav() {
             <div className="track-title">{live ? p.liveTitle ?? t.title : t.title}</div>
             {p.error
               ? <div className="track-sub err" title={p.error}>{p.error}</div>
-              : <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>}
+              : p.noSignal
+                ? <div className="track-sub" title="No signal: playing songs saved on this phone">No signal · saved songs</div>
+                : <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>}
           </div>
           <DjModeButton className="tbtn" />
           <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.toggle(); }}>{p.playing ? <IconPause /> : <IconPlay />}</button>

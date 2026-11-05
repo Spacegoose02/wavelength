@@ -44,6 +44,8 @@ interface PlayerState {
   queueBy: QueueBy;
   /** The queue ran out: the last song finished (or couldn't play) and nothing came after it. */
   ranOut: boolean;
+  /** No signal: the music server can't be reached, so saved songs are standing in (lib/deadZone.ts). */
+  noSignal: boolean;
   current(): Track | undefined;
   playTracks(tracks: Track[], start?: number, startAt?: number, by?: QueueBy): void;
   enqueue(tracks: Track[]): void;
@@ -101,12 +103,50 @@ export const setPlayerIntercept = (fn?: PlayerIntercept) => {
   intercept = fn;
 };
 
+/**
+ * Dead zone cushion (lib/deadZone.ts) plugs in here, so this store doesn't import it (it imports this store).
+ * `offline()`: the music server looked unreachable last time anyone checked. `check()`: look now (resolves true
+ * when it's unreachable, and starts watching for the signal to come back). `standIn(t)`: a saved song to play in
+ * place of `t` while there's no signal, or undefined when there's nothing left to play.
+ */
+export interface DeadZoneHook {
+  offline(): boolean;
+  check(): Promise<boolean>;
+  standIn(instead?: Track): Track | undefined;
+}
+let deadZone: DeadZoneHook | undefined;
+export const setDeadZoneHook = (h?: DeadZoneHook) => {
+  deadZone = h;
+};
+
+/** Whether a song plays without the network: downloaded on this device (and not going to a speaker). */
+const isSaved = (t: Track) => !engine.isRemote() && !!useOffline.getState().tracks[trackKey(t)];
+
+/**
+ * No signal and `t` isn't saved: put a saved song in front of it and play that instead. `t` stays where it was in
+ * the queue, so once the signal is back it plays when the stand-in ends. Returns true when it did.
+ */
+function standInFor(t: Track | undefined, at: number): boolean {
+  if (!deadZone || intercept || (t && (t.kind !== 'track' || isSaved(t)))) return false;
+  const s = deadZone.standIn(t);
+  if (!s) return false;
+  usePlayer.setState((st) => {
+    const queue = [...st.queue];
+    queue.splice(at, 0, s);
+    return { queue, index: at, noSignal: true };
+  });
+  failStreak = 0;
+  void loadCurrent();
+  return true;
+}
+
 export const usePlayer = create<PlayerState>()((set, get) => ({
   queue: [],
   index: -1,
   queueId: 0,
   queueBy: 'you',
   ranOut: false,
+  noSignal: false,
   playing: false,
   buffering: false,
   position: 0,
@@ -185,6 +225,8 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     const { index, queue, repeat } = get();
     if (index + 1 < queue.length) set({ index: index + 1 });
     else if (repeat === 'all' && queue.length) set({ index: 0 });
+    // the queue ran out with no signal (DJ mode and song radio can't fetch more): keep going on saved songs
+    else if (deadZone?.offline() && queue.length && standInFor(undefined, queue.length)) return;
     else {
       engine.pause();
       set({ ranOut: true });
@@ -240,6 +282,8 @@ let nowPlayingTimer: number | undefined;
 let loadSeq = 0;
 /** blob: URL of the downloaded song playing on Android (see offlinePlaybackUrl) */
 let localBlob: string | undefined;
+/** The song playing is coming over the network (not from a downloaded file). */
+let fromStream = false;
 
 function releaseLocalBlob() {
   if (localBlob) URL.revokeObjectURL(localBlob);
@@ -250,7 +294,9 @@ function releaseLocalBlob() {
 function begin(t: Track, startAt: number) {
   scrobbled = false;
   listened = 0;
+  waitingForSignal = false;
   usePlayer.setState({ position: startAt, duration: t.duration ?? 0, error: undefined, liveTitle: undefined, liveCover: undefined, buffering: true, ranOut: false });
+  armStallWatch(false);
   updateMediaSession(t);
   watchNowPlaying(t);
   applyLevel(t);
@@ -274,9 +320,10 @@ async function loadCurrent(startAt = 0) {
   try {
     // Loaded ahead on the idle deck while the last song played: starts with no gap
     if (ahead?.key === trackKey(t)) {
-      const { url } = ahead;
+      const { url, local } = ahead;
       ahead = undefined;
       releaseLocalBlob();
+      fromStream = !local;
       await engine.load(url, startAt);
       if (t.kind === 'track') sourceOf(t)?.scrobble?.(t, false).catch(() => {});
       return;
@@ -291,10 +338,17 @@ async function loadCurrent(startAt = 0) {
     if (local) {
       releaseLocalBlob();
       if (local.startsWith('blob:')) localBlob = local;
+      fromStream = false;
       await engine.load(local, startAt);
       if (t.kind === 'track') sourceOf(t)?.scrobble?.(t, false).catch(() => {});
       return;
     }
+    // No signal (lib/deadZone.ts): don't wait for a server we know is out of reach, play a saved song first
+    if (deadZone?.offline() && standInFor(t, usePlayer.getState().index)) return;
+    if (t.kind === 'track' && usePlayer.getState().noSignal && !deadZone?.offline()) usePlayer.setState({ noSignal: false });
+    // a song that was cut off by a dead zone picks up where it stopped
+    if (!startAt && resumeAt?.key === trackKey(t)) startAt = resumeAt.at;
+    resumeAt = undefined;
     // Refresh tokens / open listening sessions (podcast episodes, saved Navidrome tracks…)
     const prepared = (await sourceOf(t)?.prepare?.(t)) ?? { track: t };
     if (token !== loadSeq) return;
@@ -304,6 +358,7 @@ async function loadCurrent(startAt = 0) {
     }
     if (!ready.streamUrl) throw new Error('No stream for this item');
     releaseLocalBlob();
+    fromStream = true;
     await engine.load(ready.streamUrl, startAt || prepared.startAt || 0);
     if (ready.kind === 'track') sourceOf(ready)?.scrobble?.(ready, false).catch(() => {});
   } catch (e) {
@@ -322,8 +377,43 @@ let skipTimer: number | undefined;
  * A song couldn't load or play: say so, and move on to the next one after a moment (a missing song shouldn't
  * stop a whole album). Not while a listening party's host is in charge, and not past the end of the queue.
  */
-function failed(message: string) {
+function failed(message: string, stalled = false) {
   window.clearTimeout(skipTimer);
+  armStallWatch(false);
+  const t = usePlayer.getState().current();
+  // The song was streaming, and the dead zone cushion has saved it since: carry on from the file
+  if (t && t.kind === 'track' && fromStream && isSaved(t) && !intercept) {
+    rememberSpot(t);
+    fromStream = false;
+    void loadCurrent(resumeAt?.at ?? 0);
+    resumeAt = undefined;
+    return;
+  }
+  // A streamed song failed: if it's because the signal went (lib/deadZone.ts), play saved songs instead of
+  // skipping through a queue that can't load either
+  if (deadZone && t && t.kind === 'track' && !isSaved(t) && !intercept) {
+    const seq = loadSeq;
+    usePlayer.setState({ buffering: true });
+    void deadZone.check().then((off) => {
+      if (seq !== loadSeq) return; // the person picked something else meanwhile
+      if (off) {
+        rememberSpot(t);
+        if (standInFor(t, usePlayer.getState().index)) return;
+        // nothing saved to play: wait for the signal rather than skip through songs that can't load either
+        waitingForSignal = true;
+        usePlayer.setState({ error: 'No signal · it carries on when the signal is back', buffering: false, playing: false, noSignal: true });
+        return;
+      }
+      // the server answers, so it's only a slow connection: keep waiting rather than skip a song that works
+      if (!off && stalled) return armStallWatch(true);
+      skipOrStop(message);
+    });
+    return;
+  }
+  skipOrStop(message);
+}
+
+function skipOrStop(message: string) {
   const { index, queue, repeat } = usePlayer.getState();
   const more = index + 1 < queue.length || (repeat === 'all' && queue.length > 1);
   const skip = more && !intercept && ++failStreak < MAX_FAILS;
@@ -336,10 +426,49 @@ function failed(message: string) {
   }, 2000);
 }
 
+// ---- dead zones: a stream that stops coming ----------------------------------
+
+/** Stopped because the signal went and nothing saved was left to play. */
+let waitingForSignal = false;
+
+/** The music server answers again (lib/deadZone.ts): clear the note, and carry on if the music had stopped. */
+export function signalBack() {
+  usePlayer.setState({ noSignal: false });
+  if (!waitingForSignal) return;
+  waitingForSignal = false;
+  void loadCurrent();
+}
+
+/** Where a streamed song was when the signal went, so it carries on from there once it's back. */
+let resumeAt: { key: string; at: number } | undefined;
+const rememberSpot = (t: Track) => {
+  const at = engine.el.currentTime;
+  resumeAt = at > 5 ? { key: trackKey(t), at: Math.max(0, at - 2) } : undefined;
+};
+
+/**
+ * A stream that's buffering for this long counts as failed. Losing signal often doesn't raise an error at
+ * all: the `<audio>` element just waits, so without this the music would stop until the signal came back.
+ */
+export const STALL_SECONDS = 12;
+let stallTimer: number | undefined;
+function armStallWatch(on: boolean) {
+  window.clearTimeout(stallTimer);
+  stallTimer = undefined;
+  if (!on || !deadZone) return;
+  const t = usePlayer.getState().current();
+  if (!t || t.kind !== 'track' || !fromStream) return;
+  const seq = loadSeq;
+  stallTimer = window.setTimeout(() => {
+    stallTimer = undefined;
+    if (seq === loadSeq && usePlayer.getState().buffering && !engine.el.paused) failed('The stream stopped', true);
+  }, STALL_SECONDS * 1000);
+}
+
 // ---- gapless and crossfade ------------------------------------------------
 
 /** The next song, loaded ahead on the idle deck (engine.preload): which song and its stream URL. */
-let ahead: { key: string; url: string; plan?: Transition } | undefined;
+let ahead: { key: string; url: string; local?: boolean; plan?: Transition } | undefined;
 /** the song we last started preparing ahead, so it's only done once */
 let aheadFor: string | undefined;
 const AHEAD_SECONDS = 20;
@@ -363,13 +492,15 @@ async function prepareAhead(cur: Track) {
   const key = trackKey(next);
   if (aheadFor === key) return;
   aheadFor = key;
+  // no signal: nothing to fetch, and the stand-in decision is made when its turn comes
+  if (deadZone?.offline() && !useOffline.getState().tracks[key]) return;
   try {
     if (useOffline.getState().tracks[key]) {
       if (isAndroid) return;
       const local = await offlinePlaybackUrl(next);
       if (local) {
         engine.preload(local);
-        ahead = { key, url: local };
+        ahead = { key, url: local, local: true };
         void planAhead(cur, next, key);
       }
       return;
@@ -422,9 +553,10 @@ function startCrossfade(remaining: number, rate: number) {
   const next = i === undefined ? undefined : usePlayer.getState().queue[i];
   if (!next || trackKey(next) !== ahead.key) return;
   const { replayGain, replayGainPreamp } = useSettings.getState().playback;
-  const url = ahead.url;
+  const { url, local } = ahead;
   if (!engine.crossfade(url, Math.max(1, remaining), replayGainFactor(next.replayGain, replayGain, replayGainPreamp), rate)) return;
   ahead = undefined;
+  fromStream = !local;
   usePlayer.setState({ index: i! });
   begin(next, 0);
   usePlayer.setState({ buffering: false });
@@ -470,9 +602,13 @@ engine.on('durationchange', (_, el) => {
 engine.on('play', () => usePlayer.setState({ playing: true }));
 engine.on('playing', () => {
   failStreak = 0;
+  armStallWatch(false);
   usePlayer.setState({ playing: true, buffering: false });
 });
-engine.on('waiting', () => usePlayer.setState({ buffering: true }));
+engine.on('waiting', () => {
+  usePlayer.setState({ buffering: true });
+  armStallWatch(true);
+});
 engine.on('pause', () => usePlayer.setState({ playing: false }));
 engine.on('error', (_, el) => failed(`Playback failed (code ${el.error?.code ?? '?'})`));
 engine.on('ended', () => {
