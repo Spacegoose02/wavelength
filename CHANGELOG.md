@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.24.6
 - **Music keeps playing through dead zones.** Lose signal for 10 or 15 minutes (a tunnel, the countryside, a car
   park) and the phone no longer goes quiet. While you listen, Wavelength saves about 20 minutes of your queue ahead
   and about 20 minutes of songs like the one playing. When the signal drops, the queue carries on from those files.
