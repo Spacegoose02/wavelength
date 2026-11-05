@@ -76,9 +76,15 @@ the asset work and a risk on low-end phones and the iOS WebView.
   right and the far eye is narrower), so the face still reads clearly at Now Playing size. The named parts are
   the same, so the rig and phases 1–2 work unchanged; the eyes now blink about their own centre, and `fit.eyeY`
   moves shades and glasses to where each species' eyes are.
-- **Next: 4 body templates** to replace the shared torso: raccoon compact and hunched, shark broad wedge,
-  aliens spindly and floating, bears heavy and grounded. The bodies, arms and props are still the old flat
-  style until then, so the outlined heads sit on unoutlined bodies.
+- **Bodies, signed off (November 2026):** a sheet of the four body types dressed for seven acts
+  (`docs/critters/body-sheet.html`). Raccoon: a short chunky top with paws held in front, stout fur legs, big
+  feet and a big tail. Bears: a puffy jacket, round paws out at the sides, baggy trousers, mid-stride. Shark:
+  one slim torpedo from head to a crescent tail, pectoral fins high on the sides, a white belly, no legs and
+  no dorsal fin. Aliens: spindly arms and legs, a short thick neck so the head rests on the collar, and a hover
+  glow under the feet. On review: rim light stays on heads only (on bodies it read as a red outline); the
+  green alien wears a space-age tunic, not a space suit and not bare. Heads are smaller against the body than
+  in the app today.
+- **Next:** build those bodies into the app.
 - The skeleton contract (named parts, the mouth anchor, shoulders and hands) stays, so the rig and phases 1–2
   carry over.
 
