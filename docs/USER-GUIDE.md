@@ -440,9 +440,10 @@ lyrics move the mouth with the music rather than the voice.
 
 **A new look.** The critters' faces are drawn like vinyl toys: big round heads with soft shading, a dark
 outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge that takes your
-skin's colours. Their bodies and clothes are being redrawn to match next.
+skin's colours. Their bodies match: the raccoon short and chunky with a big striped tail, the bears in puffy
+jackets, the shark one slim torpedo with its fins for arms, and the aliens spindly and hovering.
 
-<img src="screenshots/critter-new-faces.png" alt="All six critters with the new faces, each playing the DJ, Rapper and Synth acts" width="100%">
+<img src="screenshots/critter-new-faces.png" alt="All six critters with the new faces and bodies, each playing the DJ, Rapper and Synth acts" width="100%">
 
 **Their faces act.** The mouth takes one of six shapes as they sing: closed, a wide-open *ah*, a round *oh*, a
 wide *ee*, lips pressed together for *m*, *b* and *p*, and an open grin when they belt a big note. With synced

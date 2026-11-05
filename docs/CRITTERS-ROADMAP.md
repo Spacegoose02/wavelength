@@ -84,7 +84,12 @@ the asset work and a risk on low-end phones and the iOS WebView.
   glow under the feet. On review: rim light stays on heads only (on bodies it read as a red outline); the
   green alien wears a space-age tunic, not a space suit and not bare. Heads are smaller against the body than
   in the app today.
-- **Next:** build those bodies into the app.
+- **Bodies in the app (done):** `bodies.tsx` gives each species a figure: a smaller head, its top, shoulders on
+  the top's outer edges, sleeve width, paw size, a reach that keeps hands from stretching to the old wide body's
+  instruments, and its legs, feet, neck and tail. The acts kept their poses and pivots; `Pivot` moves each arm,
+  the tail and the country boot onto the figure's own joints.
+- **Next:** the act outfits fitted to these bodies and the review changes (phase 4), and reframing each scene
+  around the smaller figures.
 - The skeleton contract (named parts, the mouth anchor, shoulders and hands) stays, so the rig and phases 1–2
   carry over.
 

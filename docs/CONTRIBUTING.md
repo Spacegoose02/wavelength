@@ -87,9 +87,12 @@ grey alien, black or brown bear) playing an **act** (DJ, Country, Rapper, Rocker
 Accordion), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
 for how the pieces fit.
 
-Everything is drawn on one skeleton so faces, acts, the rig and the outfits all fit together: head centred on
-200,178 (about 160 wide, 130 tall, top near y 112 where the hats sit), eyes on y 166 to 190 (each species' `fit.eyeY`), mouth around y 212,
-shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
+Faces, hats and glasses are drawn on one head skeleton: centred on 200,178 (about 160 wide, 130 tall, top near
+y 112 where the hats sit), eyes on y 166 to 190 (each species' `fit.eyeY`), mouth around y 212. Each species'
+**figure** (`bodies.tsx`) then places and shrinks that head and gives the body: the top's silhouette, the
+shoulders, sleeve width, paw size and reach, and the legs, feet, neck and tail. Acts still write the old pivots
+(arms about 138,268 and 262,268, the tail about 268,292, the country boot about 236,362); `Pivot` moves each of
+those parts so the pivot lands on the figure's own shoulder, tail root or foot.
 
 - **A critter (species):** faces live in `faces.tsx`, the species list in `species.tsx`.
   1. Write a `MyFace` component in `faces.tsx`, in the house style: draw it in its own art frame and place it on
@@ -108,14 +111,16 @@ shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
      notes), `data-voice-glow` on antennae (brighten with a high voice). Put brows outside the `eyes` group so
      blinks don't squash them. Features that stick out (fins, antennae) go in the face too; hats are drawn over
      them. The style frames in `docs/critters/` are the reference drawings.
-  2. Optionally a `MyTail` with `data-part="tail"`, rooted at 268,292 (the rig wags it), and a `MyLower` drawn
-     instead of every act's trousers and shoes for a critter without legs (the shark's tail end). It needs a
-     `data-part="boot"`, which the country act taps.
-  3. Fit it, if it isn't the usual round head on the usual body: `build` narrows the body (the aliens are
-     0.78 to 0.82), `fit` resizes the shared hats, headphones and hoods (`w`, `lift`) and stretches glasses
-     over bigger eyes (`eyes`) and moves them to where the eyes are (`eyeY`, the eyes' line on the skeleton),
-     and `shadow` is the ellipse the head casts under the chin. Check it in a hat,
-     shades and the nuclear hood.
+  2. Give it a body: use one of the `FIGURES` in `bodies.tsx` (raccoon, bear, shark, alien, grey) or add one in
+     the same style (outlined with `.ol`, shaded with `url(#critter-vinyl)` over a flat class colour, no rim
+     light). `Under` draws the legs in the act's `legs` class and the feet in its `shoe` class (bare feet when
+     there's none), with the right foot inside `<Pivot from={[236, 362]} … part="boot">` and a tail inside
+     `<Pivot from={[268, 292]} … part="tail">`; a figure without legs still needs an empty `data-part="boot"`.
+     Put the shoulders on the outer edges of the top, and set `reach` so hands don't stretch to the old wide
+     body's instruments.
+  3. Fit the headwear, if it isn't the usual round head: `fit` resizes the shared hats, headphones and hoods
+     (`w`, `lift`), stretches glasses over bigger eyes (`eyes`) and moves them to where the eyes are (`eyeY`,
+     the eyes' line on the skeleton). Check it in a hat, shades and the nuclear hood.
   4. Add an entry to `SPECIES` and its id to `Species` (`store/settings.ts`).
   5. In `styles.css`, `.species-<id> { --skin: …; --skin-dark: …; --belly: …; }` (hands, thumbs, bare arms
      and legs; `--belly` for necklines) and its
@@ -126,12 +131,14 @@ shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
      [user guide](USER-GUIDE.md#critters).
 - **An act:** copy the nearest one (`Drums.tsx`, say) to `components/critters/MyAct.tsx`, then:
   1. Take `ActProps` (`{ species, still }`) and wrap the scene in `CritterFrame` with `kind="myact"` (the
-     `critter-myact` class for its colours) and `species={species.id}`.
-  2. Draw behind to front: background, `{Tail && <Tail />}`, legs inside `<Legs species={species}>` (so a
-     legless critter swaps in its own), `<Body species={species}>` (`TORSO` clothes, then `BodyOutfits`; it
-     narrows for slim critters and adds the chin shadow, so don't draw your own), `<Head species={species}
+     `critter-myact` class for its colours) and `species={species}`.
+  2. Draw behind to front: background, `<Legs species={species} shoe="…" />` (the species draws its own legs,
+     feet and tail; `legs="bare"` for fur instead of trousers), `<Body species={species}>` with the top's prints
+     and `BodyOutfits` (it draws the species' top in `.top`, clips what you put in it to the top and adds the
+     chin shadow and shading, so don't draw your own), `<Head species={species}
      hat={…} eyewear={…} />` with the act's headwear (`className="own-hat"`, and `data-part="adjust"` to
-     have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`Arm`, classes `sleeve` and `hand`, can hold a prop).
+     have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`<Arm part d hand>`, classes `sleeve` and `hand`, can hold a prop; `d` is drawn from
+     the old shoulder, and the arm is redrawn from the species' own).
   3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Move
      things in time with `tempo` (`phase` through the beat, `index`, `locked`) rather than raw `a.beat`
      where you can, and give the act a flourish: when `flourish` is above 0, draw one move with `windUp` or

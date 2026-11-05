@@ -5,7 +5,12 @@
   outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge in your skin's
   colours. The raccoon has fluffy cheeks and white brow patches, the shark a friendlier toothy grin, the aliens
   glossy eyes, and the bears big muzzles. Shades and glasses still sit over their eyes in every
-  act. Their bodies and clothes get the same treatment next (`docs/CRITTERS-ROADMAP.md`, phase 3).
+  act.
+- **New bodies for the critters.** Each species has its own body in the same style: the raccoon a short chunky top,
+  stout furry legs, big feet and a big striped tail; the bears a puffy jacket and baggy trousers, mid-stride; the
+  shark one slim torpedo down to a crescent tail, with its fins for arms; the aliens spindly arms and legs over a
+  hover glow. Heads are a little smaller so the bodies show, and arms hang from each body's shoulders. The act
+  outfits are fitted to them next (`docs/CRITTERS-ROADMAP.md`, phase 4).
 - **The critters' faces act while they sing.** Instead of one oval that opens and shuts, each critter's mouth now
   takes six shapes (closed, *ah*, *oh*, *ee*, lips pressed for *m*/*b*/*p*, and an open grin when belting). With
   synced lyrics the shapes follow each syllable of the line; without them they follow a rough guess from the
