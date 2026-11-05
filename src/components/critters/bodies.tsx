@@ -109,7 +109,7 @@ const RACCOON_TAIL = 'M236 340 C 316 344, 350 300, 344 250 C 340 214, 312 200, 2
 const raccoon: Figure = {
   head: [196, 0.86],
   torso: 'M178 258 Q 200 250 222 258 Q 242 280 242 312 Q 222 324 200 324 Q 178 324 158 312 Q 158 280 178 258 Z',
-  shoulders: [[180, 270], [220, 270]],
+  shoulders: [[168, 272], [232, 272]],
   arm: 20,
   paw: 10,
   reach: 62,
@@ -172,7 +172,7 @@ const SHARK_TAIL = 'M200.6 368 C 189.7 356 174.9 348 160.1 348 C 171.5 364 186.3
 const shark: Figure = {
   head: [207, 0.69],
   torso: SHARK_BODY,
-  shoulders: [[172, 258], [228, 258]],
+  shoulders: [[159, 262], [241, 262]],
   arm: 16,
   paw: 8,
   reach: 60,
@@ -201,7 +201,7 @@ const ALIEN_TOP = 'M178 256 Q 200 248 222 256 Q 232 290 220 322 Q 200 330 180 32
 const alien = (headY: number, neck: [top: number, bottom: number, width: number]): Figure => ({
   head: [headY, 0.85],
   torso: ALIEN_TOP,
-  shoulders: [[186, 264], [214, 264]],
+  shoulders: [[177, 266], [223, 266]],
   arm: 10,
   paw: 7,
   reach: 62,
