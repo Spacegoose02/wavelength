@@ -1,6 +1,4 @@
 import { forwardRef, type ReactNode } from 'react';
-import type { Viseme } from '../../player/visemes';
-import { Pivot, SpeciesContext, useSpecies, type LegsStyle } from './bodies';
 import type { SpeciesInfo } from './species';
 
 /**
@@ -8,16 +6,15 @@ import type { SpeciesInfo } from './species';
  * fur and skin are fixed, clothes and lights take the skin's `--accent` / `--viz-*`, and the outfit layers
  * below are all in the SVG but hidden until `data-skin-group` (set in App.tsx) or `data-skin` asks for one.
  *
- * Faces, hats and glasses are drawn on one head skeleton: centred on 200,178 (about 160 wide, 130 tall, top
- * near y 112 where the hats sit), eyes on y 166, mouth on y 212. `Head` then scales and places it for the
- * species' figure (bodies.tsx), which also gives the top, shoulders, legs and tail.
+ * Every critter is drawn on the same skeleton so the rig and the outfits fit all of them: head centred
+ * on 200,178 (about 160 wide, 130 tall, top near y 112 where the hats sit), eyes on y 166, mouth on
+ * y 212, shoulders at 138,268 and 262,268, tail root at 268,292, torso `TORSO`.
  */
 
 /** The <svg> with the shared defs and the backlight. `kind` is the act (`critter-<act>` class), `species` who plays it. */
-export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: SpeciesInfo; label: string; children: ReactNode }>(function CritterFrame({ kind, species, label, children }, ref) {
+export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: string; label: string; children: ReactNode }>(function CritterFrame({ kind, species, label, children }, ref) {
   return (
-    <SpeciesContext.Provider value={species}>
-    <svg ref={ref} className={`np-scene-canvas critter critter-${kind} species-${species.id}`} viewBox="0 0 400 400" role="img" aria-label={label}>
+    <svg ref={ref} className={`np-scene-canvas critter critter-${kind} species-${species}`} viewBox="0 0 400 400" role="img" aria-label={label}>
       <defs>
         <radialGradient id="critter-spot">
           <stop offset="0" className="spot-stop" />
@@ -30,67 +27,53 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: S
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        {/* soft edges for contact shadows */}
-        <filter id="critter-soft" x="-20%" y="-100%" width="140%" height="300%">
-          <feGaussianBlur stdDeviation="3" />
-        </filter>
         <clipPath id="critter-torso">
-          <path d={species.figure.torso} />
+          <path d={TORSO} />
         </clipPath>
-        {/* the vinyl shading laid over a flat colour: lit at the upper left, darker away from it */}
-        <radialGradient id="critter-vinyl" cx="0.35" cy="0.25" r="0.9">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
-          <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.3" />
-        </radialGradient>
-        <filter id="critter-blur" x="-30%" y="-60%" width="160%" height="220%">
-          <feGaussianBlur stdDeviation="4" />
-        </filter>
       </defs>
       <ellipse data-part="spot" cx="200" cy="200" rx="190" ry="170" fill="url(#critter-spot)" />
       {children}
     </svg>
-    </SpeciesContext.Provider>
   );
 });
 
-/**
- * A soft contact shadow on the ground (an ellipse centred on `cx`,`cy`), so feet, stands and props sit on the
- * floor instead of floating over it. Draw it before what stands on it.
- */
-export function Shadow({ cx, cy, rx, ry = 6 }: { cx: number; cy: number; rx: number; ry?: number }) {
-  return <ellipse className="contact-shadow" cx={cx} cy={cy} rx={rx} ry={ry} filter="url(#critter-soft)" />;
-}
-
-/**
- * The body (`body` part, which the rig bobs): the species' top in the act's `.top` colour (or the shark's
- * skin and vest), then the act's prints (`children`) clipped to it, the shadow the head casts under the chin
- * and the vinyl shading.
- */
-export function Body({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
-  const { torso, Top, Skin, chin } = species.figure;
+export function Tail() {
   return (
-    <g data-part="body">
-      {Top ? <Top /> : <path className="top ol" d={torso} />}
-      <g clipPath="url(#critter-torso)">
-        {Skin && <Skin />}
-        {children}
-        <ellipse className="chin-shadow" cx="200" cy={chin[0]} rx={chin[1]} ry="16" filter="url(#critter-blur)" />
-        <path d={torso} fill="url(#critter-vinyl)" />
-      </g>
-      <path d={torso} fill="none" className="ol" />
+    <g data-part="tail">
+      <path d="M268 292 C 330 292, 352 244, 330 196" className="fur-mid" fill="none" strokeWidth="26" strokeLinecap="round" />
+      <path d="M268 292 C 330 292, 352 244, 330 196" className="fur-dark" fill="none" strokeWidth="26" strokeDasharray="13 13" strokeDashoffset="6" />
     </g>
   );
 }
 
-/** Everything the species has behind its top: legs and feet in the act's trousers (`legs`) and shoes (`shoe`), neck, tail. */
-export function Legs({ species, legs = 'legs', shoe }: { species: SpeciesInfo } & Partial<LegsStyle>) {
-  const { Under } = species.figure;
-  return <>{Under({ legs, shoe })}</>;
-}
+/** The usual torso outline (hoodie, shirt, jacket, hazmat suit). */
+export const TORSO = 'M116 304 C 116 262, 150 244, 200 244 C 250 244, 284 262, 284 304 Z';
 
 /** `translate(200 0) scale(k 1) translate(-200 0)`: squeeze about the middle of the picture. */
 const narrow = (k: number) => (k === 1 ? undefined : `translate(200 0) scale(${k} 1) translate(-200 0)`);
+
+/**
+ * The body (`body` part, which the rig bobs): the act's top and anything printed on it, narrowed for slim
+ * species (`build`), with the shadow the head casts just under the chin. Draw the top on `TORSO`.
+ */
+export function Body({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
+  const k = species.build ?? 1;
+  const { rx, ry, cy } = species.shadow ?? { rx: 70, ry: 62, cy: 190 };
+  return (
+    <g data-part="body">
+      <g transform={narrow(k)}>
+        {children}
+        <ellipse className="chin-shadow" cx="200" cy={cy} rx={rx / k} ry={ry} clipPath="url(#critter-torso)" />
+      </g>
+    </g>
+  );
+}
+
+/** The act's trousers and shoes, or the species' own lower half where it has one (the shark's tail end). */
+export function Legs({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
+  const { Lower } = species;
+  return Lower ? <Lower /> : <>{children}</>;
+}
 
 /** A radiation trefoil: three 60° blades round a dot. */
 function trefoil(cx: number, cy: number, r: number) {
@@ -109,7 +92,7 @@ export function BodyOutfits() {
   return (
     <>
       <g className="outfit outfit-nuclear">
-        <rect className="hazmat" x="100" y="200" width="200" height="200" />
+        <path className="hazmat" d={TORSO} />
         <path d="M200 252 L200 304" stroke="#8a6d00" strokeWidth="2.5" />
         <circle cx="236" cy="282" r="14" fill="#1b1b1f" />
         <circle cx="236" cy="282" r="12" className="hazmat" />
@@ -124,104 +107,35 @@ export function BodyOutfits() {
   );
 }
 
-/** One mouth shape's outline, in the mouth's own frame (centre `x`, top `y`, half-width `w`, depth `h`). */
-function mouthPath(shape: Viseme, x: number, y: number, w: number, h: number) {
-  const f = (n: number) => n.toFixed(1);
-  switch (shape) {
-    case 'ah': // jaw dropped: a deep rounded D
-      return `M${f(x - w)} ${f(y)} Q${f(x)} ${f(y + h * 0.12)} ${f(x + w)} ${f(y)} C${f(x + w * 1.05)} ${f(y + h * 1.05)} ${f(x - w * 1.05)} ${f(y + h * 1.05)} ${f(x - w)} ${f(y)} Z`;
-    case 'oh': // small and round
-      return `M${f(x)} ${f(y)} C${f(x + w * 0.8)} ${f(y)} ${f(x + w * 0.8)} ${f(y + h * 0.85)} ${f(x)} ${f(y + h * 0.85)} C${f(x - w * 0.8)} ${f(y + h * 0.85)} ${f(x - w * 0.8)} ${f(y)} ${f(x)} ${f(y)} Z`;
-    case 'ee': // wide and short
-      return `M${f(x - w * 1.35)} ${f(y)} Q${f(x)} ${f(y + h * 0.1)} ${f(x + w * 1.35)} ${f(y)} Q${f(x + w * 1.1)} ${f(y + h * 0.5)} ${f(x)} ${f(y + h * 0.52)} Q${f(x - w * 1.1)} ${f(y + h * 0.5)} ${f(x - w * 1.35)} ${f(y)} Z`;
-    case 'smile': // open grin, corners up
-      return `M${f(x - w * 1.55)} ${f(y - 3)} Q${f(x)} ${f(y + h * 0.08)} ${f(x + w * 1.55)} ${f(y - 3)} Q${f(x + w * 1.25)} ${f(y + h * 0.85)} ${f(x)} ${f(y + h * 0.9)} Q${f(x - w * 1.25)} ${f(y + h * 0.85)} ${f(x - w * 1.55)} ${f(y - 3)} Z`;
-    default:
-      return '';
-  }
-}
-
-/** A row of `n` triangular teeth between x0 and x1 on line y, pointing down (dir 1) or up (dir -1). */
-function teethRow(x0: number, x1: number, y: number, n: number, size: number, dir: 1 | -1) {
-  const step = (x1 - x0) / n;
-  let d = `M${x0.toFixed(1)} ${y.toFixed(1)}`;
-  for (let i = 0; i < n; i++) d += ` L${(x0 + step * (i + 0.5)).toFixed(1)} ${(y + dir * size).toFixed(1)} L${(x0 + step * (i + 1)).toFixed(1)} ${y.toFixed(1)}`;
-  return `${d} Z`;
-}
-
-export interface MouthProps {
-  /** names the clip paths: one per species, so cards for different critters on one page don't share them */
-  id: string;
-  /** centre and top of the mouth, where the closed smile sits */
-  x: number;
-  y: number;
-  /** half-width and how deep the open "ah" drops */
-  w: number;
-  h: number;
-  /** inside of the mouth */
-  fill: string;
-  /** lips-pressed line colour, for `mm` */
-  line: string;
-  /** `rows`: top and bottom rows of pointed teeth (the shark); default a band of upper teeth */
-  teeth?: 'band' | 'rows' | 'none';
-}
-
 /**
- * The singing mouth (`yawn` part): every shape in `player/visemes.ts`, one `<g data-mouth>` each. The rig
- * (rig.ts) shows the one `face.ts` picks and scales it open from its top edge; `mm` is shown at full size
- * (it's a closed mouth). Drawn in its own frame around (`x`, `y`) so a redrawn face can reuse it.
+ * The raccoon's face: ears, mask, eyes, nose and mouth. Every species' face (species.tsx) has the same
+ * named parts: `eyes` (blinks, scaled about y 166), `smile` (hidden while the mouth is
+ * open) and `yawn` (the open mouth, scaled from y 212).
  */
-export function Mouth({ id, x, y, w, h, fill, line, teeth = 'band' }: MouthProps) {
+export function RaccoonFace() {
   return (
-    <g data-part="yawn" style={{ transform: 'scaleY(0)' }}>
-      {(['ah', 'oh', 'ee', 'smile'] as const).map((shape) => {
-        const d = mouthPath(shape, x, y, w, h);
-        const clip = `mouth-${id}-${shape}`;
-        const depth = shape === 'ah' ? h * 0.82 : shape === 'oh' ? h * 0.85 : shape === 'ee' ? h * 0.5 : h * 0.86;
-        const half = shape === 'ee' ? w * 1.35 : shape === 'smile' ? w * 1.55 : w;
-        return (
-          <g key={shape} data-mouth={shape} style={{ display: 'none' }}>
-            <clipPath id={clip}>
-              <path d={d} />
-            </clipPath>
-            <path d={d} fill={fill} />
-            <g clipPath={`url(#${clip})`}>
-              {/* tongue */}
-              {shape !== 'ee' && <ellipse cx={x} cy={y + depth} rx={half * 0.6} ry={depth * 0.32} fill="#d86a78" />}
-              {teeth === 'band' && shape !== 'oh' && <rect x={x - half * 1.2} y={y - 4} width={half * 2.4} height={4 + depth * 0.16} rx="2" fill="#fff" />}
-              {teeth === 'rows' && (
-                <>
-                  <path d={teethRow(x - half * 1.1, x + half * 1.1, y - 1, shape === 'oh' ? 4 : 8, depth * 0.24 + 2, 1)} fill="#fff" />
-                  <path d={teethRow(x - half * 1.1, x + half * 1.1, y + depth + 1, shape === 'oh' ? 3 : 7, depth * 0.2 + 2, -1)} fill="#fff" />
-                </>
-              )}
-            </g>
-          </g>
-        );
-      })}
-      {/* lips pressed together (m, b, p): a closed line with the lower lip pushed out a little */}
-      <g data-mouth="mm" style={{ display: 'none' }}>
-        <path d={`M${x - w * 1.1} ${y + 2} Q${x} ${y + 5} ${x + w * 1.1} ${y + 2}`} fill="none" stroke={line} strokeWidth="3.5" strokeLinecap="round" />
-        <path d={`M${x - w * 0.6} ${y + 7} Q${x} ${y + 10} ${x + w * 0.6} ${y + 7}`} fill="none" stroke={line} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+    <>
+      <ellipse className="fur-mid" cx="138" cy="122" rx="22" ry="28" transform="rotate(-20 138 122)" />
+      <ellipse className="fur-dark" cx="140" cy="125" rx="11" ry="16" transform="rotate(-20 140 125)" />
+      <ellipse className="fur-mid" cx="262" cy="122" rx="22" ry="28" transform="rotate(20 262 122)" />
+      <ellipse className="fur-dark" cx="260" cy="125" rx="11" ry="16" transform="rotate(20 260 125)" />
+      <ellipse className="fur-mid" cx="200" cy="178" rx="80" ry="66" />
+      <path className="fur-light" d="M122 196 Q 140 236 196 242 Q 150 214 122 196 Z M278 196 Q 260 236 204 242 Q 250 214 278 196 Z" />
+      <path className="fur-dark-soft" d="M192 114 Q 200 110 208 114 L 204 156 L 196 156 Z" />
+      <path className="fur-dark" d="M134 166 Q 150 140 184 154 Q 200 160 216 154 Q 250 140 266 166 Q 254 190 228 186 Q 210 182 200 176 Q 190 182 172 186 Q 146 190 134 166 Z" />
+      <ellipse className="fur-light" cx="200" cy="208" rx="34" ry="24" />
+      <g data-part="eyes">
+        <circle cx="170" cy="166" r="9" fill="#fff" />
+        <circle cx="230" cy="166" r="9" fill="#fff" />
+        <circle cx="171" cy="167" r="5" fill="#111" />
+        <circle cx="229" cy="167" r="5" fill="#111" />
+        <circle cx="173" cy="164" r="1.6" fill="#fff" />
+        <circle cx="231" cy="164" r="1.6" fill="#fff" />
       </g>
-    </g>
-  );
-}
-
-/**
- * Two brows (`brow-l`, `brow-r`), raised and tilted by the rig (face.ts: up on a crescendo or a held note, down
- * at the inner end on a squint). `l` is the left brow's path; the right one is its mirror about x 200, drawn in a
- * mirrored group, so the rig gives both the same rotation and they tilt as a pair.
- */
-export function Brows({ l, className, stroke, width = 4 }: { l: string; className?: string; stroke?: string; width?: number }) {
-  return (
-    <g className="brows">
-      <path data-part="brow-l" d={l} fill="none" className={className} stroke={stroke} strokeWidth={width} strokeLinecap="round" />
-      {/* mirrored in a group: the rig's CSS transform on the path would replace a transform attribute on it */}
-      <g transform="translate(400 0) scale(-1 1)">
-        <path data-part="brow-r" d={l} fill="none" className={className} stroke={stroke} strokeWidth={width} strokeLinecap="round" />
-      </g>
-    </g>
+      <ellipse cx="200" cy="194" rx="10" ry="7" fill="#111" />
+      <path data-part="smile" d="M186 212 Q 200 224 214 212" fill="none" stroke="#2b2b31" strokeWidth="3" strokeLinecap="round" />
+      <ellipse data-part="yawn" cx="200" cy="220" rx="10" ry="11" fill="#5a1a24" transform="scale(1 0)" />
+    </>
   );
 }
 
@@ -238,12 +152,9 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
   const lift = fit.lift ?? 0;
   const [ex, ey] = fit.eyes ?? [1, 1];
   const onTop = w === 1 && !lift ? undefined : `translate(0 ${lift}) ${narrow(w) ?? ''}`.trim();
-  const eyeY = fit.eyeY ?? 166;
-  const onEyes = ex === 1 && ey === 1 && eyeY === 166 ? undefined : `translate(200 ${eyeY}) scale(${ex} ${ey}) translate(-200 -166)`;
-  const [y, s] = species.figure.head;
+  const onEyes = ex === 1 && ey === 1 ? undefined : `translate(200 166) scale(${ex} ${ey}) translate(-200 -166)`;
   return (
     <g data-part="head">
-      <g transform={`translate(200 ${y}) scale(${s}) translate(-200 -178)`}>
       <Face />
 
       <g transform={onEyes}>{eyewear}</g>
@@ -315,86 +226,21 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
         <path d="M240 58 C 226 44, 226 28, 240 32 C 254 28, 254 44, 240 58 Z" fill="#ff5c8a" />
       </g>
       </g>
-      </g>
     </g>
   );
 }
 
 /**
- * An arm from the species' shoulder to a hand at `hand`, bending through the act's `d` (drawn from the old
- * shoulder, `M138 268 Q cx cy …` or `M262 268 …`), with the sleeve and hand coloured by CSS. The acts turn
- * it about the old shoulder, which `Pivot` puts on the species' own. `children` (a drumstick, say) are drawn
- * under the hand and move with the arm.
+ * An arm from the shoulder to a hand, with the sleeve and hand coloured by CSS. `children` (a drumstick,
+ * say) are drawn under the hand and move with the arm.
  */
-export function Arm({ part, d, hand, children }: { part: string; d: string; hand: [number, number]; children?: ReactNode }) {
-  const { shoulders, arm, paw, reach } = useSpecies().figure;
-  const right = part === 'arm-r';
-  const base: [number, number] = right ? [262, 268] : [138, 268];
-  const sh = shoulders[right ? 1 : 0];
-  const [, , cx, cy] = d.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
-  // out of reach for this body: bring the hand (and what it holds) in towards the shoulder, keeping the bend
-  const k = Math.min(1, reach / Math.hypot(hand[0] - sh[0], hand[1] - sh[1]));
-  const at = (p: [number, number]) => [sh[0] + (p[0] - sh[0]) * k, sh[1] + (p[1] - sh[1]) * k];
-  const [hx, hy] = at(hand);
-  const [qx, qy] = at([cx, cy]);
-  const held = k < 1 ? `translate(${(hx - hand[0]).toFixed(1)} ${(hy - hand[1]).toFixed(1)})` : undefined;
-  const path = `M${sh[0]} ${sh[1]} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${hx.toFixed(1)} ${hy.toFixed(1)}`;
+export function Arm({ part, d, hand, thumb, children }: { part: string; d: string; hand: [number, number]; thumb: [number, number]; children?: ReactNode }) {
   return (
-    <Pivot from={base} to={sh} part={part}>
-      <path className="limb-outline" d={path} fill="none" strokeWidth={arm + 5} strokeLinecap="round" />
-      <path className="sleeve" d={path} fill="none" strokeWidth={arm} strokeLinecap="round" />
-      <g transform={held}>{children}</g>
-      <circle className="hand ol-thin" cx={hx.toFixed(1)} cy={hy.toFixed(1)} r={paw} />
-    </Pivot>
-  );
-}
-
-type Pt = [number, number];
-
-/**
- * The fretting arm's curve: from the shoulder down to an elbow under the neck and back up to the hand, the way
- * a player's arm hangs under a guitar neck. `playGuitar` (guitar.ts) redraws it as the hand slides.
- */
-export function fretArmPath(sh: Pt, hand: Pt): string {
-  const qx = (sh[0] + hand[0]) / 2 + 6;
-  const qy = Math.max(sh[1], hand[1]) + 64;
-  return `M${sh[0]} ${sh[1]} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${hand[0].toFixed(1)} ${hand[1].toFixed(1)}`;
-}
-
-/** Where the fretting hand sits for this body: `hand`, brought in to the species' reach. */
-function fretHandAt(shoulders: [Pt, Pt], reach: number, hand: Pt): { sh: Pt; at: Pt } {
-  const sh = shoulders[1];
-  const k = Math.min(1, reach / Math.hypot(hand[0] - sh[0], hand[1] - sh[1]));
-  return { sh, at: [sh[0] + (hand[0] - sh[0]) * k, sh[1] + (hand[1] - sh[1]) * k] };
-}
-
-/**
- * The fretting arm (`arm-r`) of a guitar or banjo, drawn *before* the instrument so the arm is behind it; its
- * hand is `FretHand`, drawn after the instrument so only the hand wraps the front of the neck. The arm hangs
- * from the species' shoulder (it doesn't cross the chest), and `playGuitar` slides the hand along the neck while
- * the shoulder stays put. Acts turn both `arm-r` and `arm-r-hand` about the old shoulder (262,268).
- */
-export function FretArm({ hand }: { hand: Pt }) {
-  const { shoulders, arm, reach } = useSpecies().figure;
-  const { sh, at } = fretHandAt(shoulders, reach, hand);
-  const d = fretArmPath(sh, at);
-  return (
-    <Pivot from={[262, 268]} to={sh} part="arm-r">
-      <g data-fret-arm={`${sh[0]} ${sh[1]} ${at[0].toFixed(1)} ${at[1].toFixed(1)}`}>
-        <path className="limb-outline" data-fret="outline" d={d} fill="none" strokeWidth={arm + 5} strokeLinecap="round" />
-        <path className="sleeve" data-fret="sleeve" d={d} fill="none" strokeWidth={arm} strokeLinecap="round" />
-      </g>
-    </Pivot>
-  );
-}
-
-/** The fretting hand, on the front of the neck (see `FretArm`). */
-export function FretHand({ hand }: { hand: Pt }) {
-  const { shoulders, paw, reach } = useSpecies().figure;
-  const { sh, at } = fretHandAt(shoulders, reach, hand);
-  return (
-    <Pivot from={[262, 268]} to={sh} part="arm-r-hand">
-      <circle className="hand ol-thin" data-fret="hand" cx={at[0].toFixed(1)} cy={at[1].toFixed(1)} r={paw} />
-    </Pivot>
+    <g data-part={part}>
+      <path className="sleeve" d={d} fill="none" strokeWidth="20" strokeLinecap="round" />
+      {children}
+      <circle className="hand" cx={hand[0]} cy={hand[1]} r="11" />
+      <circle className="fur-dark thumb" cx={thumb[0]} cy={thumb[1]} r="3.5" />
+    </g>
   );
 }

@@ -8,11 +8,6 @@
   into the title tag, show as "God's Plan" and lyrics are looked up without the number, so more songs get synced
   lyrics. **Library care → Numbered titles** (Hub admins) finds them across the library and fixes the files, and
   **Edit tags** can fix one album (`docs/USER-GUIDE.md#library-care`).
-- **The guitar and banjo players' fretting arm hangs behind the neck.** It used to start in the middle of the
-  chest and cross in front of the instrument, and slid across the body when the hand changed chord. Now it hangs
-  from the shoulder behind the instrument with only the hand on the front of the neck, and the shoulder stays put
-  while the hand moves. For every species, in the rocker and country acts.
-
 ## 0.24.6
 - **Music keeps playing through dead zones.** Lose signal for 10 or 15 minutes (a tunnel, the countryside, a car
   park) and the phone no longer goes quiet. While you listen, Wavelength saves about 20 minutes of your queue ahead

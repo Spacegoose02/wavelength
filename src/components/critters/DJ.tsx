@@ -1,34 +1,30 @@
 import { useRef } from 'react';
-import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig, type RigFrame } from './rig';
 
 /**
  * DJ raccoon behind a pair of decks. The hoodie, headphones, record labels and deck lights take the skin's
  * colours. The right hand scratches on strong high-frequency hits, the left rides the mixer with the mids,
- * and the records spin while something plays. Flourish: a fast double-scratch with the other hand thrown in
- * the air. Paused, he adjusts his headphones now and then.
+ * and the records spin while something plays. Paused, he adjusts his headphones now and then.
  */
 export function DJ({ species, still }: ActProps) {
+  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ spin: 0, pulse: 0 });
 
   useCritterRig(
     root,
-    ({ t, a, rock, hit, flourish, $ }: RigFrame) => {
+    ({ t, a, rock, hit, $ }: RigFrame) => {
       const s = state.current;
       const svg = root.current!;
-      // flourish: the left hand swings round and up into the air beside the head while the right scratches
-      const show = swell(flourish);
-      const scratch = flourish ? Math.sin(t * 34) * show : rock;
-      $('arm-r').setAttribute('transform', `rotate(${(scratch * 11).toFixed(2)} 262 268)`);
-      $('arm-l').setAttribute('transform', `rotate(${((a.live ? -a.mid * 14 : Math.sin(t * 1.3) * 2) * (1 - show) + show * 188).toFixed(2)} 138 268)`);
+      $('arm-r').setAttribute('transform', `rotate(${(rock * 9).toFixed(2)} 262 268)`);
+      $('arm-l').setAttribute('transform', `rotate(${(a.live ? -a.mid * 14 : Math.sin(t * 1.3) * 2).toFixed(2)} 138 268)`);
 
       // records: 33⅓ rpm-ish while playing; the scratched one runs backwards for a moment
       if (a.playing) s.spin += (Math.PI * 2 * 0.55) / 60;
       [$('mark-l'), $('mark-r')].forEach((m, i) => {
-        const ang = i === 1 && (hit || flourish) ? s.spin - scratch * 0.9 : s.spin + i * 1.7;
+        const ang = i === 1 && hit ? s.spin - rock * 0.9 : s.spin + i * 1.7;
         const cx = i ? 300 : 100;
         m.setAttribute('cx', (cx + Math.cos(ang) * 36).toFixed(1));
         m.setAttribute('cy', (326 + Math.sin(ang) * 11).toFixed(1));
@@ -48,10 +44,12 @@ export function DJ({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="dj" species={species} label={`A ${species.noun} DJ playing records`}>
-      <Legs species={species} />
+    <CritterFrame ref={root} kind="dj" species={species.id} label={`A ${species.noun} DJ playing records`}>
+      {Tail && <Tail />}
+      <Legs species={species}>{null}</Legs>
 
       <Body species={species}>
+        <path className="top" d={TORSO} />
         <path d="M190 254 L188 284 M210 254 L212 284" className="strings" strokeWidth="3" strokeLinecap="round" />
         <BodyOutfits />
       </Body>
@@ -91,8 +89,8 @@ export function DJ({ species, still }: ActProps) {
         )),
       )}
 
-      <Arm part="arm-l" d="M138 268 Q 146 300 176 318" hand={[178, 320]} />
-      <Arm part="arm-r" d="M262 268 Q 284 290 290 316" hand={[290, 318]} />
+      <Arm part="arm-l" d="M138 268 Q 146 300 176 318" hand={[178, 320]} thumb={[186, 318]} />
+      <Arm part="arm-r" d="M262 268 Q 284 290 290 316" hand={[290, 318]} thumb={[283, 316]} />
     </CritterFrame>
   );
 }
