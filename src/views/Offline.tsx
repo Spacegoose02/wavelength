@@ -28,7 +28,7 @@ export function Offline() {
               <button key={c.id} className="card" onClick={() => go({ view: 'offlineCollection', id: c.id })}>
                 <Cover src={offlineCover(c.cover)} alt={c.name} />
                 <div className="card-title">{c.name}</div>
-                <div className="card-sub"><span>{c.kind === 'album' ? 'Album' : c.kind === 'auto' ? 'Kept automatically' : 'Playlist'} · {saved === c.keys.length ? `${saved} songs` : `${saved}/${c.keys.length} saved`}</span></div>
+                <div className="card-sub"><span>{c.kind === 'album' ? 'Album' : c.kind === 'auto' ? 'Kept automatically' : c.kind === 'cushion' ? 'Kept for dead zones' : 'Playlist'} · {saved === c.keys.length ? `${saved} songs` : `${saved}/${c.keys.length} saved`}</span></div>
               </button>
             );
           })}
@@ -49,7 +49,7 @@ export function OfflineCollectionView({ id }: { id: string }) {
       <header className="hero">
         <Cover src={offlineCover(c.cover)} alt={c.name} className="hero-art" />
         <div>
-          <div className="kicker">{c.kind === 'auto' ? 'Kept offline automatically' : `Downloaded ${c.kind}`}</div>
+          <div className="kicker">{c.kind === 'auto' ? 'Kept offline automatically' : c.kind === 'cushion' ? 'Kept for dead zones' : `Downloaded ${c.kind}`}</div>
           <h1>{c.name}</h1>
           {c.subtitle && <div className="muted">{c.subtitle}</div>}
           <div className="hero-actions">

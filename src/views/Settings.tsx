@@ -18,6 +18,7 @@ import { ServerTab } from './ServerTab';
 import { DjAdminTab } from './DjAdmin';
 import { FeaturesAdminTab } from './FeaturesAdmin';
 import { SmartOfflineSettings } from '../components/SmartOfflineSettings';
+import { DeadZoneSettings } from '../components/DeadZoneSettings';
 import { MouthTuner } from '../components/MouthTuner';
 import { useFeature } from '../lib/features';
 import { DjVoiceSettings } from '../components/DjVoiceSettings';
@@ -729,6 +730,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       )}
       {tab === 'downloads' && (
         <>
+          <DeadZoneSettings />
           <SmartOfflineSettings />
           <DownloadsTab />
         </>
