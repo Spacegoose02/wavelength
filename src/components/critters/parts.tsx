@@ -327,18 +327,24 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
  * under the hand and move with the arm.
  */
 export function Arm({ part, d, hand, children }: { part: string; d: string; hand: [number, number]; children?: ReactNode }) {
-  const { shoulders, arm, paw } = useSpecies().figure;
+  const { shoulders, arm, paw, reach } = useSpecies().figure;
   const right = part === 'arm-r';
   const base: [number, number] = right ? [262, 268] : [138, 268];
   const sh = shoulders[right ? 1 : 0];
   const [, , cx, cy] = d.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
-  const path = `M${sh[0]} ${sh[1]} Q ${cx} ${cy} ${hand[0]} ${hand[1]}`;
+  // out of reach for this body: bring the hand (and what it holds) in towards the shoulder, keeping the bend
+  const k = Math.min(1, reach / Math.hypot(hand[0] - sh[0], hand[1] - sh[1]));
+  const at = (p: [number, number]) => [sh[0] + (p[0] - sh[0]) * k, sh[1] + (p[1] - sh[1]) * k];
+  const [hx, hy] = at(hand);
+  const [qx, qy] = at([cx, cy]);
+  const held = k < 1 ? `translate(${(hx - hand[0]).toFixed(1)} ${(hy - hand[1]).toFixed(1)})` : undefined;
+  const path = `M${sh[0]} ${sh[1]} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${hx.toFixed(1)} ${hy.toFixed(1)}`;
   return (
     <Pivot from={base} to={sh} part={part}>
       <path className="limb-outline" d={path} fill="none" strokeWidth={arm + 5} strokeLinecap="round" />
       <path className="sleeve" d={path} fill="none" strokeWidth={arm} strokeLinecap="round" />
-      {children}
-      <circle className="hand ol-thin" cx={hand[0]} cy={hand[1]} r={paw} />
+      <g transform={held}>{children}</g>
+      <circle className="hand ol-thin" cx={hx.toFixed(1)} cy={hy.toFixed(1)} r={paw} />
     </Pivot>
   );
 }
