@@ -348,3 +348,53 @@ export function Arm({ part, d, hand, children }: { part: string; d: string; hand
     </Pivot>
   );
 }
+
+type Pt = [number, number];
+
+/**
+ * The fretting arm's curve: from the shoulder down to an elbow under the neck and back up to the hand, the way
+ * a player's arm hangs under a guitar neck. `playGuitar` (guitar.ts) redraws it as the hand slides.
+ */
+export function fretArmPath(sh: Pt, hand: Pt): string {
+  const qx = (sh[0] + hand[0]) / 2 + 6;
+  const qy = Math.max(sh[1], hand[1]) + 64;
+  return `M${sh[0]} ${sh[1]} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${hand[0].toFixed(1)} ${hand[1].toFixed(1)}`;
+}
+
+/** Where the fretting hand sits for this body: `hand`, brought in to the species' reach. */
+function fretHandAt(shoulders: [Pt, Pt], reach: number, hand: Pt): { sh: Pt; at: Pt } {
+  const sh = shoulders[1];
+  const k = Math.min(1, reach / Math.hypot(hand[0] - sh[0], hand[1] - sh[1]));
+  return { sh, at: [sh[0] + (hand[0] - sh[0]) * k, sh[1] + (hand[1] - sh[1]) * k] };
+}
+
+/**
+ * The fretting arm (`arm-r`) of a guitar or banjo, drawn *before* the instrument so the arm is behind it; its
+ * hand is `FretHand`, drawn after the instrument so only the hand wraps the front of the neck. The arm hangs
+ * from the species' shoulder (it doesn't cross the chest), and `playGuitar` slides the hand along the neck while
+ * the shoulder stays put. Acts turn both `arm-r` and `arm-r-hand` about the old shoulder (262,268).
+ */
+export function FretArm({ hand }: { hand: Pt }) {
+  const { shoulders, arm, reach } = useSpecies().figure;
+  const { sh, at } = fretHandAt(shoulders, reach, hand);
+  const d = fretArmPath(sh, at);
+  return (
+    <Pivot from={[262, 268]} to={sh} part="arm-r">
+      <g data-fret-arm={`${sh[0]} ${sh[1]} ${at[0].toFixed(1)} ${at[1].toFixed(1)}`}>
+        <path className="limb-outline" data-fret="outline" d={d} fill="none" strokeWidth={arm + 5} strokeLinecap="round" />
+        <path className="sleeve" data-fret="sleeve" d={d} fill="none" strokeWidth={arm} strokeLinecap="round" />
+      </g>
+    </Pivot>
+  );
+}
+
+/** The fretting hand, on the front of the neck (see `FretArm`). */
+export function FretHand({ hand }: { hand: Pt }) {
+  const { shoulders, paw, reach } = useSpecies().figure;
+  const { sh, at } = fretHandAt(shoulders, reach, hand);
+  return (
+    <Pivot from={[262, 268]} to={sh} part="arm-r-hand">
+      <circle className="hand ol-thin" data-fret="hand" cx={at[0].toFixed(1)} cy={at[1].toFixed(1)} r={paw} />
+    </Pivot>
+  );
+}

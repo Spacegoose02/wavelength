@@ -25,6 +25,8 @@ import { DownloadButton } from '../components/DownloadButton';
 import { ArtworkButton } from '../components/ArtworkButton';
 import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
 import { loadParts } from '../lib/albumParts';
+import { artistOfAlbum } from '../lib/trackLinks';
+import { primaryArtist } from '../lib/match';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
 import { ArtistNews, notOneArtist, useCanGet } from '../components/ArtistNews';
@@ -573,9 +575,11 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
         <div>
           <div className="kicker">Album{album.year ? ` · ${album.year}` : ''}</div>
           <h1>{both ? ref.title : album.title} <Rating explicit={both ? shown : explicitOfAlbum(album)} /></h1>
+          {/* the library artist, else their Deezer releases, so the link always goes somewhere (lib/trackLinks.ts) */}
           <button className="link" onClick={() => {
-            const artist = useCatalog.getState().artists.find((a) => (a.refs ?? [a]).some((r) => r.id === ref.artistId && r.sourceId === ref.sourceId));
+            const artist = artistOfAlbum({ ...album, refs: [ref, ...refs] }, useCatalog.getState().artists);
             if (artist) useUi.getState().go({ view: 'artist', artist });
+            else useUi.getState().go({ view: 'artistReleases', artist: { id: '', sourceId: '', name: primaryArtist(album.artist) } });
           }}>{album.artist}</button>
           <div className="muted">{tracks ? `${tracks.length} tracks · ${fmtTime(total)}` : ''}</div>
           <div className="hero-actions">

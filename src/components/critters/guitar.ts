@@ -1,3 +1,4 @@
+import { fretArmPath } from './parts';
 import type { RigFrame } from './rig';
 
 /** Hand state for a raccoon holding a guitar (country, rocker). */
@@ -9,8 +10,8 @@ export interface GuitarHands {
 export const newGuitarHands = (): GuitarHands => ({ chord: 0, target: 0 });
 
 /**
- * Strumming hand on `arm-l` (shoulder 138,268), fretting hand on `arm-r` sliding along a neck tilted
- * `neckDeg` degrees, strings (`strings`) shaking with the bass and the guitar (`guitar`) rocking on beats.
+ * Strumming hand on `arm-l` (shoulder 138,268), fretting hand (`FretArm` and `FretHand` in parts.tsx: the arm
+ * behind the neck, the hand in front) sliding along a neck tilted `neckDeg` degrees, strings (`strings`) shaking with the bass and the guitar (`guitar`) rocking on beats.
  * Once the tempo is locked the hand strums in time: down on the beat and up between, `strokes` per beat
  * (2, eighth notes, for the rocker; 4, a sixteenth-note banjo roll, for country), deeper when the band is
  * loud. Otherwise it strums on each detected hit. A strong high hit always gets a hard strum. Changes chord
@@ -25,8 +26,18 @@ export function playGuitar({ t, a, idle, bob, tempo, hit, rock, $ }: RigFrame, s
   if ((tempo.locked ? tempo.on : a.beat) && Math.random() < 0.35) s.target = [-22, -10, 0, 8][Math.floor(Math.random() * 4)];
   if (idle) s.target = 0;
   s.chord += (s.target - s.chord) * 0.25;
+  // the hand slides along the neck and the arm is redrawn from the shoulder, which stays put (parts.tsx FretArm)
   const rad = (neckDeg * Math.PI) / 180;
-  $('arm-r').setAttribute('transform', `translate(${(Math.cos(rad) * s.chord).toFixed(2)} ${(-Math.sin(rad) * s.chord).toFixed(2)})`);
+  const arm = $('arm-r').querySelector<SVGElement>('[data-fret-arm]');
+  if (arm) {
+    const [sx, sy, hx, hy] = arm.dataset.fretArm!.split(' ').map(Number);
+    const at: [number, number] = [hx + Math.cos(rad) * s.chord, hy - Math.sin(rad) * s.chord];
+    const d = fretArmPath([sx, sy], at);
+    for (const path of arm.querySelectorAll('path')) path.setAttribute('d', d);
+    const hand = $('arm-r-hand')?.querySelector('circle');
+    hand?.setAttribute('cx', at[0].toFixed(1));
+    hand?.setAttribute('cy', at[1].toFixed(1));
+  }
 
   const buzz = a.playing ? Math.sin(t * 70) * (0.4 + a.bass * 1.6) : 0;
   $('strings').setAttribute('transform', `translate(0 ${buzz.toFixed(2)})`);

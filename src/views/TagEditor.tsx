@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cleanTitle } from '../lib/match';
+import { numberedTitle } from '../lib/trackTitles';
 import type { HubTagMatch, HubTags, HubTagSong } from '../sources/hub';
 import type { Album } from '../sources/types';
 import { hubClient } from '../store/hub';
@@ -63,6 +64,16 @@ export function TagEditor({ album }: { album: Album }) {
     return vals.size === 1 ? [...vals][0] : '';
   };
   const changed = (rows ?? []).filter((r) => Object.keys(r.edit).some((k) => (r.edit[k as keyof HubTags] ?? '') !== (r.tags[k as keyof HubTags] ?? '')));
+
+  // "04 - Song" titles a renaming tool left (lib/trackTitles.ts)
+  const numbered = (rows ?? []).filter((r) => numberedTitle(r.edit.title ?? '', num(r.edit.track) || undefined)).length;
+  const unnumber = () => {
+    setRows((rs) => rs?.map((r) => {
+      const hit = numberedTitle(r.edit.title ?? '', num(r.edit.track) || undefined);
+      return hit ? { ...r, edit: { ...r.edit, title: hit.title } } : r;
+    }));
+    setMsg(`Took the track number out of ${numbered} title${numbered === 1 ? '' : 's'}. Check them, then Save`);
+  };
 
   const find = async () => {
     setMsg('Looking it up…');
@@ -145,6 +156,7 @@ export function TagEditor({ album }: { album: Album }) {
             </div>
             <div className="row gap">
               <button className="btn" onClick={find} disabled={busy}>Find on Deezer and MusicBrainz</button>
+              {numbered > 0 && <button className="btn" onClick={unnumber} disabled={busy}>Take track numbers out of titles ({numbered})</button>}
               <button className="btn primary" onClick={save} disabled={busy || !changed.length}>Save {changed.length ? `(${changed.length})` : ''}</button>
               {lastBatch && <button className="btn ghost" onClick={undo} disabled={busy}>Undo</button>}
               {msg && <span className="small">{msg}</span>}

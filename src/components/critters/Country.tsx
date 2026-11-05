@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { swell, windUp } from './flourish';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, Body, FretArm, FretHand, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -23,7 +23,7 @@ export function Country({ species, still }: ActProps) {
         const up = swell(f.flourish);
         f.$('guitar').setAttribute('transform', `rotate(${(360 * windUp(f.flourish)).toFixed(1)} 170 318)`);
         f.$('arm-l').setAttribute('transform', `rotate(${(-28 * up).toFixed(2)} 138 268)`);
-        f.$('arm-r').setAttribute('transform', `rotate(${(-18 * up).toFixed(2)} 262 268)`);
+        for (const part of ['arm-r', 'arm-r-hand']) f.$(part).setAttribute('transform', `rotate(${(-18 * up).toFixed(2)} 262 268)`);
         f.$('adjust').setAttribute('transform', `translate(0 ${(-10 * up).toFixed(2)}) rotate(${(-8 * up).toFixed(2)} 200 110)`);
       }
       f.$('boot').setAttribute('transform', `rotate(${(f.a.live ? -f.bob * 16 : f.idle ? 0 : -Math.max(0, Math.sin(f.t * 6)) * 12).toFixed(2)} 236 362)`);
@@ -78,6 +78,9 @@ export function Country({ species, still }: ActProps) {
         }
       />
 
+      {/* the fretting arm hangs behind the banjo; only its hand is in front, on the neck */}
+      <FretArm hand={[306, 264]} />
+
       {/* five-string banjo, neck up to the right: a drum-head pot with a metal rim, a long thin neck and the
           short fifth string's peg halfway up */}
       <g data-part="guitar">
@@ -105,7 +108,7 @@ export function Country({ species, still }: ActProps) {
       </g>
 
       <Arm part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} />
-      <Arm part="arm-r" d="M262 268 Q 292 286 304 266" hand={[306, 264]} />
+      <FretHand hand={[306, 264]} />
     </CritterFrame>
   );
 }

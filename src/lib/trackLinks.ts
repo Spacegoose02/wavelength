@@ -56,6 +56,26 @@ export function artistOfTrack(t: Track, artists: Artist[], album?: Album): Artis
   return undefined;
 }
 
+/**
+ * The library artist an album is by, for the album page's artist link: the catalog artist holding the album's
+ * artist id on its server, else the one with the album artist's name (or its first name, for "A & B"). When the
+ * catalog has neither (still loading, or the server files the album under an artist id the artist list doesn't
+ * have) but the server gave an artist id, that artist on that server, which its page can still load.
+ */
+export function artistOfAlbum(album: Album, artists: Artist[]): Artist | undefined {
+  const refs = album.refs ?? [album];
+  const byId = artists.find((a) => (a.refs ?? [a]).some((r) => refs.some((x) => x.artistId === r.id && x.sourceId === r.sourceId)));
+  if (byId) return byId;
+  const named = (name: string) => {
+    const key = norm(name);
+    return key ? artists.find((a) => norm(a.name) === key) : undefined;
+  };
+  const hit = named(album.artist) ?? named(primaryArtist(album.artist));
+  if (hit) return hit;
+  const withId = refs.find((r) => r.artistId);
+  return withId ? { id: withId.artistId!, sourceId: withId.sourceId, name: album.artist } : undefined;
+}
+
 /** Which row of an album's songs `focus` is: the same song on the same server, else (another server's copy) the same title. */
 export function focusIndex(tracks: Track[], focus?: { id: string; sourceId: string; title?: string }) {
   if (!focus) return -1;

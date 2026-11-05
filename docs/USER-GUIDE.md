@@ -831,7 +831,7 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
 
 ## Library care
 
-**Albums → Library care** (on a phone, Library → Library care) has two lists:
+**Albums → Library care** (on a phone, Library → Library care) has two lists, and a third for Hub admins:
 
 - **Duplicates:** albums your server has more than once, counting editions like "Deluxe" or "25th Anniversary"
   as the same album, with the most complete copy first. Explicit and clean versions don't count, nor does the
@@ -839,6 +839,14 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
   for 30 days.
 - **Missing albums:** for the 40 artists you have the most albums by, the studio albums Deezer lists that you
   don't have, with preview and **Get** / **Request**. Live albums, compilations and remix albums are left out.
+- **Numbered titles** (Hub admins): songs whose title has the track number in front, like "04 - God's Plan".
+  Some renaming and tagging tools copy the file name into the title tag, and then lyrics and Deezer can't find
+  the song. **Find numbered titles** reads every album's tags through the Hub and lists what it would change;
+  **Fix** writes the title without the number back into the files. Each fix can be undone under
+  **Settings → Server → Tag edits**. A number only counts as a track number when it has a leading zero ("04") or
+  is the song's own track number, so "7 Rings" and "99 Problems" are left alone. Wavelength already shows and
+  looks up these songs without the number before you fix them, and an album's **Edit tags** page has a
+  **Take track numbers out of titles** button for one album.
 
 ## Selecting several albums or artists
 
