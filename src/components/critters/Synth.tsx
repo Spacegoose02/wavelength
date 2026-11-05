@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell, windUp } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -20,7 +20,6 @@ const KEYS = Array.from({ length: 14 }, (_, i) => 118 + i * 11.7);
  * keys with the other hand thrown up. Paused, the hands rest.
  */
 export function Synth({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ pulse: 0, glide: 0 });
 
@@ -57,7 +56,7 @@ export function Synth({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="synth" species={species.id} label={`A ${species.noun} playing a synth in a wheat field`}>
+    <CritterFrame ref={root} kind="synth" species={species} label={`A ${species.noun} playing a synth in a wheat field`}>
       {/* night sky, the saucer and its beam, a wheat field with a crop circle */}
       {STARS.map(([cx, cy, r]) => <circle key={`${cx},${cy}`} data-star="" cx={cx} cy={cy} r={r} fill="#fff" />)}
       <path data-part="beam" className="beam" d="M172 52 L 228 52 L 330 350 L 70 350 Z" />
@@ -76,17 +75,11 @@ export function Synth({ species, still }: ActProps) {
       })}
 
       <Shadow cx={200} cy={366} rx={66} />
-      {Tail && <Tail />}
 
       {/* black trousers and boots */}
-      <Legs species={species}>
-        <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
-        <path className="boot-black" d="M154 346 H190 V366 H146 Q 146 352 154 346 Z" />
-        <path className="boot-black" d="M210 346 H246 Q 254 352 254 366 H210 Z" />
-      </Legs>
+      <Legs species={species} shoe="boot-black" />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
         <BodyOutfits />
       </Body>
 
@@ -107,8 +100,8 @@ export function Synth({ species, still }: ActProps) {
       <rect className="synth-trim" x="110" y="290" width="180" height="5" rx="2" />
 
       {/* hands on the keys */}
-      <Arm part="arm-l" d="M138 268 Q 136 292 158 298" hand={[160, 298]} thumb={[166, 292]} />
-      <Arm part="arm-r" d="M262 268 Q 264 292 242 298" hand={[240, 298]} thumb={[234, 292]} />
+      <Arm part="arm-l" d="M138 268 Q 136 292 158 298" hand={[160, 298]} />
+      <Arm part="arm-r" d="M262 268 Q 264 292 242 298" hand={[240, 298]} />
     </CritterFrame>
   );
 }

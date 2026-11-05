@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -17,7 +17,6 @@ const STARS: [number, number, number][] = [
  * Paused, the hands drop and the antennae perk up now and then.
  */
 export function Theremin({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ pulse: 0, vol: 0, pitch: 0 });
 
@@ -61,7 +60,7 @@ export function Theremin({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="theremin" species={species.id} label={`A ${species.noun} playing a theremin on the moon`}>
+    <CritterFrame ref={root} kind="theremin" species={species} label={`A ${species.noun} playing a theremin on the moon`}>
       {/* space: stars, a ringed planet, the UFO, the moon's surface */}
       {STARS.map(([cx, cy, r]) => <circle key={`${cx},${cy}`} data-star="" cx={cx} cy={cy} r={r} fill="#fff" />)}
       <circle className="planet" cx="336" cy="74" r="22" />
@@ -79,17 +78,11 @@ export function Theremin({ species, still }: ActProps) {
 
       <Shadow cx={200} cy={364} rx={64} />
       <Shadow cx={200} cy={377} rx={28} ry={4} />
-      {Tail && <Tail />}
 
       {/* space-suit trousers and moon boots */}
-      <Legs species={species}>
-        <path className="legs" d="M160 296 H188 V348 H160 Z M212 296 H240 V348 H212 Z" />
-        <path className="moon-boot" d="M152 342 H192 V364 H146 Q 146 348 152 342 Z" />
-        <path className="moon-boot" d="M208 342 H248 Q 254 348 254 364 H208 Z" />
-      </Legs>
+      <Legs species={species} shoe="moon-boot" />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
         <ellipse className="suit-trim" cx="200" cy="248" rx="48" ry="9" />
         <rect x="178" y="262" width="44" height="22" rx="4" fill="#16161a" />
         {[0, 1, 2].map((i) => <circle key={i} data-glow="" className={`led led-${i}`} cx={188 + i * 12} cy="273" r="4" />)}
@@ -110,8 +103,8 @@ export function Theremin({ species, still }: ActProps) {
       <path data-part="wave-b" className="wave wave-b" d="M262 250" fill="none" strokeWidth="2.5" strokeLinecap="round" filter="url(#critter-glow)" />
 
       {/* volume hand over the loop (left of picture), pitch hand by the antenna (right) */}
-      <Arm part="arm-l" d="M138 268 Q 114 276 112 262" hand={[112, 258]} thumb={[120, 254]} />
-      <Arm part="arm-r" d="M262 268 Q 256 284 242 276" hand={[240, 274]} thumb={[234, 280]} />
+      <Arm part="arm-l" d="M138 268 Q 114 276 112 262" hand={[112, 258]} />
+      <Arm part="arm-r" d="M262 268 Q 256 284 242 276" hand={[240, 274]} />
     </CritterFrame>
   );
 }

@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 import { swell } from './flourish';
@@ -17,7 +17,6 @@ const BUBBLES: [number, number, number, number][] = [
  * with both sticks, ending on the crash. Paused, the sticks rest.
  */
 export function Drums({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ rise: 0 });
 
@@ -60,7 +59,7 @@ export function Drums({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="drums" species={species.id} label={`A ${species.noun} playing the drums under the sea`}>
+    <CritterFrame ref={root} kind="drums" species={species} label={`A ${species.noun} playing the drums under the sea`}>
       {/* sunlight through the water, sea floor, seaweed and bubbles */}
       <path d="M40 0 L 90 0 L 150 340 L 120 340 Z M200 0 L 240 0 L 270 340 L 230 340 Z M320 0 L 350 0 L 380 340 L 350 340 Z" fill="rgb(255 255 255 / 0.05)" />
       <path className="sand" d="M0 350 Q 100 338 200 348 T 400 346 V400 H0 Z" />
@@ -72,11 +71,9 @@ export function Drums({ species, still }: ActProps) {
       ))}
       {BUBBLES.map(([x, r], i) => <circle key={i} data-bubble="" cx={x} cy="340" r={r} fill="rgb(255 255 255 / 0.12)" stroke="rgb(255 255 255 / 0.6)" strokeWidth="1.5" />)}
 
-      {Tail && <Tail />}
-      <Legs species={species}>{null}</Legs>
+      <Legs species={species} />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
         <path d="M144 262 H256 M126 278 H274 M118 294 H282" className="tee-stripe" strokeWidth="6" />
         <path className="neckline" d="M184 246 L 200 266 L 216 246 Z" />
         <BodyOutfits />
@@ -111,10 +108,10 @@ export function Drums({ species, still }: ActProps) {
       </g>
 
       {/* fins with sticks: snare hand (left of picture), cymbal hand (right) */}
-      <Arm part="arm-l" d="M138 268 Q 118 286 116 300" hand={[116, 302]} thumb={[124, 298]}>
+      <Arm part="arm-l" d="M138 268 Q 118 286 116 300" hand={[116, 302]}>
         <path className="stick" d="M116 302 L 80 318" strokeWidth="4" strokeLinecap="round" />
       </Arm>
-      <Arm part="arm-r" d="M262 268 Q 282 278 294 264" hand={[296, 262]} thumb={[290, 256]}>
+      <Arm part="arm-r" d="M262 268 Q 282 278 294 264" hand={[296, 262]}>
         <path className="stick" d="M296 262 L 330 242" strokeWidth="4" strokeLinecap="round" />
       </Arm>
     </CritterFrame>

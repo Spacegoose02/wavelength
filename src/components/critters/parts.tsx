@@ -1,5 +1,6 @@
 import { forwardRef, type ReactNode } from 'react';
 import type { Viseme } from '../../player/visemes';
+import { Pivot, SpeciesContext, useSpecies, type LegsStyle } from './bodies';
 import type { SpeciesInfo } from './species';
 
 /**
@@ -7,15 +8,16 @@ import type { SpeciesInfo } from './species';
  * fur and skin are fixed, clothes and lights take the skin's `--accent` / `--viz-*`, and the outfit layers
  * below are all in the SVG but hidden until `data-skin-group` (set in App.tsx) or `data-skin` asks for one.
  *
- * Every critter is drawn on the same skeleton so the rig and the outfits fit all of them: head centred
- * on 200,178 (about 160 wide, 130 tall, top near y 112 where the hats sit), eyes on y 166, mouth on
- * y 212, shoulders at 138,268 and 262,268, tail root at 268,292, torso `TORSO`.
+ * Faces, hats and glasses are drawn on one head skeleton: centred on 200,178 (about 160 wide, 130 tall, top
+ * near y 112 where the hats sit), eyes on y 166, mouth on y 212. `Head` then scales and places it for the
+ * species' figure (bodies.tsx), which also gives the top, shoulders, legs and tail.
  */
 
 /** The <svg> with the shared defs and the backlight. `kind` is the act (`critter-<act>` class), `species` who plays it. */
-export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: string; label: string; children: ReactNode }>(function CritterFrame({ kind, species, label, children }, ref) {
+export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: SpeciesInfo; label: string; children: ReactNode }>(function CritterFrame({ kind, species, label, children }, ref) {
   return (
-    <svg ref={ref} className={`np-scene-canvas critter critter-${kind} species-${species}`} viewBox="0 0 400 400" role="img" aria-label={label}>
+    <SpeciesContext.Provider value={species}>
+    <svg ref={ref} className={`np-scene-canvas critter critter-${kind} species-${species.id}`} viewBox="0 0 400 400" role="img" aria-label={label}>
       <defs>
         <radialGradient id="critter-spot">
           <stop offset="0" className="spot-stop" />
@@ -33,12 +35,22 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: s
           <feGaussianBlur stdDeviation="3" />
         </filter>
         <clipPath id="critter-torso">
-          <path d={TORSO} />
+          <path d={species.figure.torso} />
         </clipPath>
+        {/* the vinyl shading laid over a flat colour: lit at the upper left, darker away from it */}
+        <radialGradient id="critter-vinyl" cx="0.35" cy="0.25" r="0.9">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.28" />
+          <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.3" />
+        </radialGradient>
+        <filter id="critter-blur" x="-30%" y="-60%" width="160%" height="220%">
+          <feGaussianBlur stdDeviation="4" />
+        </filter>
       </defs>
       <ellipse data-part="spot" cx="200" cy="200" rx="190" ry="170" fill="url(#critter-spot)" />
       {children}
     </svg>
+    </SpeciesContext.Provider>
   );
 });
 
@@ -50,43 +62,35 @@ export function Shadow({ cx, cy, rx, ry = 6 }: { cx: number; cy: number; rx: num
   return <ellipse className="contact-shadow" cx={cx} cy={cy} rx={rx} ry={ry} filter="url(#critter-soft)" />;
 }
 
-export function Tail() {
+/**
+ * The body (`body` part, which the rig bobs): the species' top in the act's `.top` colour (or the shark's
+ * skin and vest), then the act's prints (`children`) clipped to it, the shadow the head casts under the chin
+ * and the vinyl shading.
+ */
+export function Body({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
+  const { torso, Top, Skin, chin } = species.figure;
   return (
-    <g data-part="tail">
-      <path d="M268 292 C 330 292, 352 244, 330 196" className="fur-mid" fill="none" strokeWidth="26" strokeLinecap="round" />
-      <path d="M268 292 C 330 292, 352 244, 330 196" className="fur-dark" fill="none" strokeWidth="26" strokeDasharray="13 13" strokeDashoffset="6" />
+    <g data-part="body">
+      {Top ? <Top /> : <path className="top ol" d={torso} />}
+      <g clipPath="url(#critter-torso)">
+        {Skin && <Skin />}
+        {children}
+        <ellipse className="chin-shadow" cx="200" cy={chin[0]} rx={chin[1]} ry="16" filter="url(#critter-blur)" />
+        <path d={torso} fill="url(#critter-vinyl)" />
+      </g>
+      <path d={torso} fill="none" className="ol" />
     </g>
   );
 }
 
-/** The usual torso outline (hoodie, shirt, jacket, hazmat suit). */
-export const TORSO = 'M116 304 C 116 262, 150 244, 200 244 C 250 244, 284 262, 284 304 Z';
+/** Everything the species has behind its top: legs and feet in the act's trousers (`legs`) and shoes (`shoe`), neck, tail. */
+export function Legs({ species, legs = 'legs', shoe }: { species: SpeciesInfo } & Partial<LegsStyle>) {
+  const { Under } = species.figure;
+  return <>{Under({ legs, shoe })}</>;
+}
 
 /** `translate(200 0) scale(k 1) translate(-200 0)`: squeeze about the middle of the picture. */
 const narrow = (k: number) => (k === 1 ? undefined : `translate(200 0) scale(${k} 1) translate(-200 0)`);
-
-/**
- * The body (`body` part, which the rig bobs): the act's top and anything printed on it, narrowed for slim
- * species (`build`), with the shadow the head casts just under the chin. Draw the top on `TORSO`.
- */
-export function Body({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
-  const k = species.build ?? 1;
-  const { rx, ry, cy } = species.shadow ?? { rx: 70, ry: 62, cy: 190 };
-  return (
-    <g data-part="body">
-      <g transform={narrow(k)}>
-        {children}
-        <ellipse className="chin-shadow" cx="200" cy={cy} rx={rx / k} ry={ry} clipPath="url(#critter-torso)" />
-      </g>
-    </g>
-  );
-}
-
-/** The act's trousers and shoes, or the species' own lower half where it has one (the shark's tail end). */
-export function Legs({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
-  const { Lower } = species;
-  return Lower ? <Lower /> : <>{children}</>;
-}
 
 /** A radiation trefoil: three 60° blades round a dot. */
 function trefoil(cx: number, cy: number, r: number) {
@@ -105,7 +109,7 @@ export function BodyOutfits() {
   return (
     <>
       <g className="outfit outfit-nuclear">
-        <path className="hazmat" d={TORSO} />
+        <rect className="hazmat" x="100" y="200" width="200" height="200" />
         <path d="M200 252 L200 304" stroke="#8a6d00" strokeWidth="2.5" />
         <circle cx="236" cy="282" r="14" fill="#1b1b1f" />
         <circle cx="236" cy="282" r="12" className="hazmat" />
@@ -236,8 +240,10 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
   const onTop = w === 1 && !lift ? undefined : `translate(0 ${lift}) ${narrow(w) ?? ''}`.trim();
   const eyeY = fit.eyeY ?? 166;
   const onEyes = ex === 1 && ey === 1 && eyeY === 166 ? undefined : `translate(200 ${eyeY}) scale(${ex} ${ey}) translate(-200 -166)`;
+  const [y, s] = species.figure.head;
   return (
     <g data-part="head">
+      <g transform={`translate(200 ${y}) scale(${s}) translate(-200 -178)`}>
       <Face />
 
       <g transform={onEyes}>{eyewear}</g>
@@ -309,21 +315,36 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
         <path d="M240 58 C 226 44, 226 28, 240 32 C 254 28, 254 44, 240 58 Z" fill="#ff5c8a" />
       </g>
       </g>
+      </g>
     </g>
   );
 }
 
 /**
- * An arm from the shoulder to a hand, with the sleeve and hand coloured by CSS. `children` (a drumstick,
- * say) are drawn under the hand and move with the arm.
+ * An arm from the species' shoulder to a hand at `hand`, bending through the act's `d` (drawn from the old
+ * shoulder, `M138 268 Q cx cy …` or `M262 268 …`), with the sleeve and hand coloured by CSS. The acts turn
+ * it about the old shoulder, which `Pivot` puts on the species' own. `children` (a drumstick, say) are drawn
+ * under the hand and move with the arm.
  */
-export function Arm({ part, d, hand, thumb, children }: { part: string; d: string; hand: [number, number]; thumb: [number, number]; children?: ReactNode }) {
+export function Arm({ part, d, hand, children }: { part: string; d: string; hand: [number, number]; children?: ReactNode }) {
+  const { shoulders, arm, paw, reach } = useSpecies().figure;
+  const right = part === 'arm-r';
+  const base: [number, number] = right ? [262, 268] : [138, 268];
+  const sh = shoulders[right ? 1 : 0];
+  const [, , cx, cy] = d.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+  // out of reach for this body: bring the hand (and what it holds) in towards the shoulder, keeping the bend
+  const k = Math.min(1, reach / Math.hypot(hand[0] - sh[0], hand[1] - sh[1]));
+  const at = (p: [number, number]) => [sh[0] + (p[0] - sh[0]) * k, sh[1] + (p[1] - sh[1]) * k];
+  const [hx, hy] = at(hand);
+  const [qx, qy] = at([cx, cy]);
+  const held = k < 1 ? `translate(${(hx - hand[0]).toFixed(1)} ${(hy - hand[1]).toFixed(1)})` : undefined;
+  const path = `M${sh[0]} ${sh[1]} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${hx.toFixed(1)} ${hy.toFixed(1)}`;
   return (
-    <g data-part={part}>
-      <path className="sleeve" d={d} fill="none" strokeWidth="20" strokeLinecap="round" />
-      {children}
-      <circle className="hand" cx={hand[0]} cy={hand[1]} r="11" />
-      <circle className="fur-dark thumb" cx={thumb[0]} cy={thumb[1]} r="3.5" />
-    </g>
+    <Pivot from={base} to={sh} part={part}>
+      <path className="limb-outline" d={path} fill="none" strokeWidth={arm + 5} strokeLinecap="round" />
+      <path className="sleeve" d={path} fill="none" strokeWidth={arm} strokeLinecap="round" />
+      <g transform={held}>{children}</g>
+      <circle className="hand ol-thin" cx={hx.toFixed(1)} cy={hy.toFixed(1)} r={paw} />
+    </Pivot>
   );
 }

@@ -1555,7 +1555,12 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .bare { fill: var(--skin); }
 .critter .neckline { fill: var(--belly, var(--skin)); }
 .critter .top { fill: var(--accent); }
-.critter .chin-shadow { fill: rgb(0 0 0 / 0.2); }
+.critter .chin-shadow { fill: rgb(10 5 5 / 0.35); }
+/* bodies (bodies.tsx): outlined limbs, bare feet, the shark's fins (its arms stay bare), the aliens' hover glow */
+.critter .limb-outline { stroke: #24170f; }
+.critter .foot { fill: var(--skin-dark); }
+.critter .hover-glow { fill: #8af6ff; opacity: 0.35; }
+.critter.species-shark .sleeve { stroke: var(--skin); }
 .critter .sleeve { stroke: var(--accent); }
 .critter .strings { stroke: var(--accent-ink, #fff); }
 .critter .phones { stroke: var(--viz-high); }

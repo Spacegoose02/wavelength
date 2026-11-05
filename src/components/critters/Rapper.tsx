@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -11,7 +11,6 @@ import { useCritterRig } from './rig';
  * back. Paused, the mic and hand drop and he straightens his cap now and then.
  */
 export function Rapper({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ down: 1, pulse: 0 });
 
@@ -40,7 +39,7 @@ export function Rapper({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="rapper" species={species.id} label={`A rapper ${species.noun} with a microphone`}>
+    <CritterFrame ref={root} kind="rapper" species={species} label={`A rapper ${species.noun} with a microphone`}>
       {/* speaker stacks and stage */}
       {[14, 316].map((x) => (
         <g key={x}>
@@ -61,18 +60,11 @@ export function Rapper({ species, still }: ActProps) {
 
       {[49, 351].map((cx) => <Shadow key={cx} cx={cx} cy={346} rx={42} ry={5} />)}
       <Shadow cx={200} cy={366} rx={66} />
-      {Tail && <Tail />}
 
       {/* baggy jeans and sneakers */}
-      <Legs species={species}>
-        <path className="legs" d="M154 296 H190 L188 352 H156 Z M210 296 H246 L244 352 H212 Z" />
-        <path className="sneaker" d="M150 348 H192 Q 196 360 190 366 H146 Q 142 354 150 348 Z" />
-        <path className="sneaker" d="M208 348 H250 Q 258 354 254 366 H210 Q 204 360 208 348 Z" />
-        <path className="sneaker-stripe" d="M156 356 L 182 352 M216 352 L 242 356" strokeWidth="3" strokeLinecap="round" />
-      </Legs>
+      <Legs species={species} shoe="sneaker" />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
         <path d="M156 250 Q 200 304 244 250" fill="none" className="chain" strokeWidth="5" strokeDasharray="6 3" />
         <circle cx="200" cy="284" r="13" className="medallion" />
         <text x="200" y="289.5" textAnchor="middle" fontSize="15" fontWeight="900" className="medallion-mark">W</text>
@@ -100,15 +92,12 @@ export function Rapper({ species, still }: ActProps) {
       />
 
       {/* mic hand (left of picture), hype hand (right) */}
-      <g data-part="arm-l">
-        <path className="sleeve" d="M138 268 Q 124 242 164 226" fill="none" strokeWidth="20" strokeLinecap="round" />
+      <Arm part="arm-l" d="M138 268 Q 124 242 164 226" hand={[164, 230]}>
         <path d="M168 228 L 156 252" stroke="#1a1a1e" strokeWidth="9" strokeLinecap="round" />
         <circle cx="176" cy="216" r="11" fill="#c9c9d1" />
         <path d="M168 212 H184 M167 217 H185 M169 222 H183" stroke="#8a8a93" strokeWidth="1.2" />
-        <circle className="hand" cx="164" cy="230" r="11" />
-        <circle className="fur-dark thumb" cx="170" cy="224" r="3.5" />
-      </g>
-      <Arm part="arm-r" d="M262 268 Q 300 256 302 222" hand={[302, 218]} thumb={[296, 222]} />
+      </Arm>
+      <Arm part="arm-r" d="M262 268 Q 300 256 302 222" hand={[302, 218]} />
     </CritterFrame>
   );
 }
