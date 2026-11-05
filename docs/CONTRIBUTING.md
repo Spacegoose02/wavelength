@@ -125,7 +125,11 @@ shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
      narrows for slim critters and adds the chin shadow, so don't draw your own), `<Head species={species}
      hat={…} eyewear={…} />` with the act's headwear (`className="own-hat"`, and `data-part="adjust"` to
      have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`Arm`, classes `sleeve` and `hand`, can hold a prop).
-  3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Write
+  3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Move
+     things in time with `tempo` (`phase` through the beat, `index`, `locked`) rather than raw `a.beat`
+     where you can, and give the act a flourish: when `flourish` is above 0, draw one move with `windUp` or
+     `swell` from `flourish.ts` (set it after the act's usual transforms so it wins). Put `<Shadow>`s on
+     the floor under the feet and any stand or prop, before what stands on them. Write
      attributes straight onto `data-part` elements; don't set React state per frame. Keep it moving with
      `a.live` false (made-up signal) and calm when `idle`. Mouths sing on their own; pass `talk: false`
      only if the act covers the mouth.

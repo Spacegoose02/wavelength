@@ -6,9 +6,9 @@ all drawn for Wavelength; games like Incredibox, Rhythm Heaven and Animal Crossi
 
 | Phase | What | Size | Status |
 |---|---|---|---|
-| 1 | Faces that sing: mouth shapes, brows, eye acting, species details | medium, 1 PR | **Done** (this file's first PR) |
-| 2 | Rhythm and secondary motion: tempo tracker, beat-locked bobs, strumming, flourishes, contact shadows | medium, 1 PR | Next |
-| 3 | Silhouettes and the 3/4 turn: 6 faces redrawn, 4 body templates | large, 2–3 PRs | Starts with a style frame for sign-off |
+| 1 | Faces that sing: mouth shapes, brows, eye acting, species details | medium, 1 PR | **Done** |
+| 2 | Rhythm and secondary motion: tempo tracker, beat-locked bobs, strumming, flourishes, contact shadows | medium, 1 PR | **Done** (same PR as phase 1) |
+| 3 | Silhouettes and the 3/4 turn: 6 faces redrawn, 4 body templates | large, 2–3 PRs | Next; starts with a style frame for sign-off |
 | 4 | Species-fitted outfits and act colourways | large, ~4 PRs (2 acts each) | After 3 |
 | 5 | Stage lighting: rim light, set lighting, particles, reduced-effects switch | medium, 1–2 PRs | After 4 |
 
@@ -47,16 +47,22 @@ the asset work and a risk on low-end phones and the iOS WebView.
 - **Species details**: shark teeth rows in every open shape; raccoon whiskers and snarl; alien antennae that glow
   with a bright voice; alien and grey eye shines that widen on loud notes; bear ears that flick.
 
-## Phase 2: rhythm and secondary motion
+## Phase 2: rhythm and secondary motion (done)
 
-- A tempo tracker that locks onto the detected beats and gives a steady beat phase, bar count and BPM, falling
-  back to a gentle tempo when the audio can't be read.
-- Bobs and taps on the beat, ear wiggle on the bounce (bears, raccoon), tail sway in time (shark, raccoon),
-  boot-heel tap (raccoon).
-- Strumming and plucking on beat subdivisions (`guitar.ts`) rather than only on hits.
-- One flourish per act on a track change or a solo (a gap between synced lines with high energy): banjo spin
-  (Country), record scratch (DJ), shades push-up (Rapper), knob twist (Synth), and so on.
-- Soft contact shadows under feet, instruments and props.
+- **Tempo tracker** (`player/tempo.ts`): the gaps between the analyser's bass hits are folded into one octave
+  (0.4–0.8 s, 75–150 BPM) and voted into 10 ms bins for the period; hits near the grid pull its phase a third of
+  the way and build confidence; it counts as locked above half. It keeps going between hits and free-runs when
+  the audio can't be read. Tests cover jitter (±20 ms), missed and extra hits, and silence.
+- Once locked, the rig's `bob`, an alternating sway, the tail (one way per beat) and the ears ride the grid; the
+  country boot and every act that uses `bob` follow it too.
+- **Strumming** (`guitar.ts`): down on the beat and up between, eighth notes on the rocker's guitar and a
+  four-stroke roll on the banjo, deeper when the band is loud; a strong high hit still gets a hard strum.
+- **Flourishes** (`flourish.ts`, drawn per act): on a new song, or 2.5 s into a loud gap after a sung line, at most
+  every 12 s. Banjo spin and hat tip (Country), double-scratch with a hand in the air (DJ), shades pushed up onto
+  the cap (Rapper), windmill strum (Rocker), fill into the crash (Drums), antenna swoop (Theremin), glissando
+  (Synth), a long bellows stretch (Accordion). Each starts with a small wind-up (anticipation).
+- **Contact shadows** (`Shadow` in `parts.tsx`) under feet, stands, amps, speakers, the drum kit and the campfire.
+- Not done yet: a solo needs synced lyrics to be noticed; without them only song changes trigger a flourish.
 
 ## Phase 3: silhouettes and the 3/4 turn
 

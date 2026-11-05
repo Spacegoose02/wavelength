@@ -1541,6 +1541,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter [data-part='whisker-r'] { transform-box: fill-box; transform-origin: 0 50%; }
 .critter [data-part='ear-l'] { transform-box: fill-box; transform-origin: 80% 90%; }
 .critter [data-part='ear-r'] { transform-box: fill-box; transform-origin: 20% 90%; }
+.critter .contact-shadow { fill: rgb(0 0 0 / 0.38); }
 .critter .whiskers { stroke: rgb(255 255 255 / 0.75); stroke-width: 1.6; stroke-linecap: round; fill: none; }
 .critter .bear-brow { stroke: color-mix(in srgb, var(--bear-muzzle) 70%, var(--bear-fur)); }
 /* bare skin or fur (accordion legs, the drummer's neckline) */

@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { swell } from './flourish';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -12,7 +13,8 @@ const FIREFLIES = [[40, 230], [96, 180], [300, 200], [360, 250], [70, 290], [340
  * A bear in the woods at night by a campfire, playing an accordion. Black or brown fur (two picks, one
  * drawing); the beanie, sweater and bellows take the skin's colours. The bellows squeeze in and out faster
  * with the bass and puff on the beat, the campfire flares with the bass, fireflies blink with the highs.
- * Paused, the bellows breathe slowly and he pulls his beanie straight now and then.
+ * Flourish: one long, full stretch of the bellows and a big squeeze. Paused, the bellows breathe slowly and
+ * he pulls his beanie straight now and then.
  */
 export function Accordion({ species, still }: ActProps) {
   const { Tail } = species;
@@ -21,11 +23,12 @@ export function Accordion({ species, still }: ActProps) {
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, $ }) => {
+    ({ t, a, idle, bob, flourish, $ }) => {
       const s = state.current;
       const svg = root.current!;
       s.ph += (idle ? 0.8 : a.live ? 2.5 + a.bass * 6 : 3.5) / 60;
-      const dx = Math.sin(s.ph) * (idle ? 3 : 9) + (a.playing ? bob * 4 : 0);
+      // flourish: one long, full stretch of the bellows and a big squeeze back
+      const dx = flourish ? 20 * Math.sin(flourish * Math.PI * 2) * swell(flourish) ** 0.5 : Math.sin(s.ph) * (idle ? 3 : 9) + (a.playing ? bob * 4 : 0);
       $('bellows').setAttribute('transform', `translate(200 0) scale(${(1 + dx / 44).toFixed(3)} 1) translate(-200 0)`);
       $('acc-l').setAttribute('transform', `translate(${(-dx).toFixed(2)} 0)`);
       $('acc-r').setAttribute('transform', `translate(${dx.toFixed(2)} 0)`);
@@ -54,6 +57,7 @@ export function Accordion({ species, still }: ActProps) {
       ))}
       <path className="forest-floor" d="M0 338 Q 200 326 400 338 V400 H0 Z" />
       {/* the tail goes behind the campfire, not through it */}
+      <Shadow cx={332} cy={368} rx={42} ry={5} />
       {Tail && <Tail />}
       <path className="log" d="M300 360 L 364 346 L 368 356 L 304 370 Z M300 346 L 364 360 L 360 370 L 296 356 Z" />
       <circle data-glow="" className="fire-glow" cx="332" cy="340" r="34" />
@@ -63,6 +67,7 @@ export function Accordion({ species, still }: ActProps) {
       </g>
       {FIREFLIES.map(([x, y]) => <circle key={`${x},${y}`} data-fly="" className="firefly" cx={x} cy={y} r="2.6" />)}
 
+      <Shadow cx={200} cy={362} rx={62} />
       {/* legs and big paws */}
       <Legs species={species}>
         <path className="bare" d="M158 296 H190 V350 H158 Z M210 296 H242 V350 H210 Z" />

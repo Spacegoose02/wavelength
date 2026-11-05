@@ -516,7 +516,15 @@ All the critters behave the same way around the music:
 
 - **Playing:** the head bobs on each beat (the rocker headbangs harder), the face sings along with the
   vocals (mouth shapes, brows and eyes, above), and the hands and instrument follow the music as in the act
-  table above.
+  table above. After a few bars they find the song's tempo and keep it, so the bob, a side-to-side sway, the
+  tail and the bouncing ears stay steady even where the beat is quiet, and the guitar hand strums in time
+  (down on the beat, up between; a quick four-stroke roll on the banjo).
+- **Showing off:** when a new song starts, or in an instrumental break after a sung line (with synced lyrics),
+  each act does its flourish, at most once every 12 seconds: the country critter spins the banjo and tips the hat,
+  the DJ double-scratches with a hand in the air, the rapper pushes the shades up onto the cap, the rocker does a
+  windmill strum, the drummer plays a fill into the crash, the theremin player swoops up the antenna, the synth
+  player runs a glissando down the keys, and the accordion player gives the bellows one long stretch.
+- Everyone casts a soft shadow on the floor, and so do the stands, amps, speakers and drum kit.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ the
   headphones, the country act tips the hat, the rapper fixes the cap, the rocker pushes the mohawk up, the
   accordion player pulls the beanie straight). The rapper lowers the mic, the drummer rests the sticks, the
@@ -542,7 +550,14 @@ All the critters behave the same way around the music:
 >   follows `player/singing.ts`: the vocal detector in `player/voice.ts` (centre-channel, tonal and
 >   drum-hit rejection on mid/side spectra the engine taps with `engine.voiceTaps()`), gated by the
 >   song's synced lyrics (`lib/singAlong.ts`: sung spans per line, syllable pacing when the audio can't be
->   read). The face's acting is `face.ts` (`createFace`): from the mouth's open amount, the shape the
+>   read). The steady beat is `player/tempo.ts` (`createTempo`): gaps between the analyser's bass hits,
+>   folded into 0.4–0.8 s and voted into 10 ms bins, give the period; hits near the grid nudge its phase and
+>   build confidence; `locked` above half. The rig passes it as `tempo` (`phase`, `index`, `bpm`, `on`,
+>   `locked`) and, once locked, drives `bob`, the sway and the tail from it. `flourish.ts` decides when an
+>   act shows off (a new song; 2.5 s into a loud gap after a sung line; 12 s cooldown) and the rig passes
+>   `flourish`, 0 or 0..1 through it; each act's `frame` draws its own with `windUp` (a dip back, then the
+>   move) or `swell` (out and back). `Shadow` in `parts.tsx` is a blurred contact shadow (`critter-soft`).
+>   The face's acting is `face.ts` (`createFace`): from the mouth's open amount, the shape the
 >   singing suggests (`singingReading.shape`: the lyric syllable via `player/visemes.ts`, or a vowel guessed
 >   from three formant bands of the centre spectrum) and the band's loudness, it picks the mouth shape
 >   (held at least 80 ms), the brow lift, the squint, an accent pulse and beat blinks. The rig shows that

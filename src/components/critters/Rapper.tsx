@@ -1,12 +1,14 @@
 import { useRef } from 'react';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { swell } from './flourish';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
  * Rapper raccoon between two speaker stacks: snapback, shades and gold chain, a mic in one hand and the
  * other hand riding the beat. His mouth moves with the mids while playing and the speaker cones pump with
- * the bass. Paused, the mic and hand drop and he straightens his cap now and then.
+ * the bass. Flourish: pushes the shades up onto the cap with the hype hand thrown high, then drops them
+ * back. Paused, the mic and hand drop and he straightens his cap now and then.
  */
 export function Rapper({ species, still }: ActProps) {
   const { Tail } = species;
@@ -15,13 +17,15 @@ export function Rapper({ species, still }: ActProps) {
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, $ }) => {
+    ({ t, a, idle, bob, flourish, $ }) => {
       const s = state.current;
       const svg = root.current!;
       s.down += ((idle ? 1 : 0) - s.down) * 0.06;
       $('arm-l').setAttribute('transform', `rotate(${(s.down * -48 + (idle ? 0 : Math.sin(t * 2) * 2)).toFixed(2)} 138 268)`);
       const hype = a.live ? -bob * 22 : idle ? 0 : -Math.max(0, Math.sin(t * 4)) * 14;
-      $('arm-r').setAttribute('transform', `rotate(${(s.down * 62 + hype).toFixed(2)} 262 268)`);
+      const show = swell(flourish);
+      $('arm-r').setAttribute('transform', `rotate(${(s.down * 62 + hype - show * 30).toFixed(2)} 262 268)`);
+      $('shades').setAttribute('transform', `translate(0 ${(-30 * Math.min(1, show * 1.6)).toFixed(2)})`);
 
       svg.querySelectorAll<SVGElement>('[data-cone]').forEach((c) => {
         const [cx, cy] = c.dataset.cone!.split(',').map(Number);
@@ -55,6 +59,8 @@ export function Rapper({ species, still }: ActProps) {
         <rect key={i} data-strip="" className={`led led-${i % 3}`} x={26 + i * 30} y="378" width="18" height="6" rx="3" />
       ))}
 
+      {[49, 351].map((cx) => <Shadow key={cx} cx={cx} cy={346} rx={42} ry={5} />)}
+      <Shadow cx={200} cy={366} rx={66} />
       {Tail && <Tail />}
 
       {/* baggy jeans and sneakers */}
@@ -85,7 +91,7 @@ export function Rapper({ species, still }: ActProps) {
           </g>
         }
         eyewear={
-          <g className="own-eyewear">
+          <g className="own-eyewear" data-part="shades">
             <path d="M144 156 H192 V166 Q 192 180 176 180 H160 Q 144 180 144 166 Z M208 156 H256 V166 Q 256 180 240 180 H224 Q 208 180 208 166 Z" fill="#0b0b0d" />
             <path d="M192 160 H208" stroke="#0b0b0d" strokeWidth="4" />
             <path data-glow="" d="M150 162 L 160 160 M214 162 L 224 160" className="shade-glint" strokeWidth="2.5" strokeLinecap="round" />

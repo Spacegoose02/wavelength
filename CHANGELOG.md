@@ -9,6 +9,12 @@
   twitch and its lip curls on big drum hits, the alien's antennae glow brighter with a high voice, the aliens'
   eye shines widen on loud notes, and the bears' ears flick. First step of the critter art plan in
   `docs/CRITTERS-ROADMAP.md`.
+- **The critters keep time.** They now find the song's tempo from the beats they hear and stay on it, so the head
+  bob, a side-to-side sway, the tail and the ears (which now bounce on the beat) are steady instead of jumping on
+  every kick, and the guitar and banjo hands strum in time. When a new song starts, or in an instrumental break
+  between sung lines, each act shows off with its own flourish: a banjo spin, a DJ double-scratch with a hand in
+  the air, shades pushed up, a windmill strum, a drum fill, a theremin swoop, a synth glissando or a long squeeze
+  of the accordion. Critters, stands and props cast soft shadows on the floor.
 - **DJ mode no longer stops after about ten songs.** A mix has no song limit, but when the DJ took longer to find the
   next segment than the last songs took to play (a slow Hub or music server, or a phone in your pocket), the new songs
   were added behind a stopped player and the music went quiet. They now start playing as soon as they arrive. Finding

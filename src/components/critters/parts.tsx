@@ -28,6 +28,10 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: s
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        {/* soft edges for contact shadows */}
+        <filter id="critter-soft" x="-20%" y="-100%" width="140%" height="300%">
+          <feGaussianBlur stdDeviation="3" />
+        </filter>
         <clipPath id="critter-torso">
           <path d={TORSO} />
         </clipPath>
@@ -37,6 +41,14 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: s
     </svg>
   );
 });
+
+/**
+ * A soft contact shadow on the ground (an ellipse centred on `cx`,`cy`), so feet, stands and props sit on the
+ * floor instead of floating over it. Draw it before what stands on it.
+ */
+export function Shadow({ cx, cy, rx, ry = 6 }: { cx: number; cy: number; rx: number; ry?: number }) {
+  return <ellipse className="contact-shadow" cx={cx} cy={cy} rx={rx} ry={ry} filter="url(#critter-soft)" />;
+}
 
 export function Tail() {
   return (
@@ -219,10 +231,15 @@ export function Brows({ l, className, stroke, width = 4 }: { l: string; classNam
 export function RaccoonFace() {
   return (
     <>
-      <ellipse className="fur-mid" cx="138" cy="122" rx="22" ry="28" transform="rotate(-20 138 122)" />
-      <ellipse className="fur-dark" cx="140" cy="125" rx="11" ry="16" transform="rotate(-20 140 125)" />
-      <ellipse className="fur-mid" cx="262" cy="122" rx="22" ry="28" transform="rotate(20 262 122)" />
-      <ellipse className="fur-dark" cx="260" cy="125" rx="11" ry="16" transform="rotate(20 260 125)" />
+      {/* ears bounce on the beat and flick on accents (rig) */}
+      <g data-part="ear-l">
+        <ellipse className="fur-mid" cx="138" cy="122" rx="22" ry="28" transform="rotate(-20 138 122)" />
+        <ellipse className="fur-dark" cx="140" cy="125" rx="11" ry="16" transform="rotate(-20 140 125)" />
+      </g>
+      <g data-part="ear-r">
+        <ellipse className="fur-mid" cx="262" cy="122" rx="22" ry="28" transform="rotate(20 262 122)" />
+        <ellipse className="fur-dark" cx="260" cy="125" rx="11" ry="16" transform="rotate(20 260 125)" />
+      </g>
       <ellipse className="fur-mid" cx="200" cy="178" rx="80" ry="66" />
       <path className="fur-light" d="M122 196 Q 140 236 196 242 Q 150 214 122 196 Z M278 196 Q 260 236 204 242 Q 250 214 278 196 Z" />
       <path className="fur-dark-soft" d="M192 114 Q 200 110 208 114 L 204 156 L 196 156 Z" />

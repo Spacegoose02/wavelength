@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { swell } from './flourish';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig, type RigFrame } from './rig';
@@ -6,7 +7,8 @@ import { useCritterRig, type RigFrame } from './rig';
 /**
  * DJ raccoon behind a pair of decks. The hoodie, headphones, record labels and deck lights take the skin's
  * colours. The right hand scratches on strong high-frequency hits, the left rides the mixer with the mids,
- * and the records spin while something plays. Paused, he adjusts his headphones now and then.
+ * and the records spin while something plays. Flourish: a fast double-scratch with the other hand thrown in
+ * the air. Paused, he adjusts his headphones now and then.
  */
 export function DJ({ species, still }: ActProps) {
   const { Tail } = species;
@@ -15,16 +17,19 @@ export function DJ({ species, still }: ActProps) {
 
   useCritterRig(
     root,
-    ({ t, a, rock, hit, $ }: RigFrame) => {
+    ({ t, a, rock, hit, flourish, $ }: RigFrame) => {
       const s = state.current;
       const svg = root.current!;
-      $('arm-r').setAttribute('transform', `rotate(${(rock * 9).toFixed(2)} 262 268)`);
-      $('arm-l').setAttribute('transform', `rotate(${(a.live ? -a.mid * 14 : Math.sin(t * 1.3) * 2).toFixed(2)} 138 268)`);
+      // flourish: the left hand swings round and up into the air beside the head while the right scratches
+      const show = swell(flourish);
+      const scratch = flourish ? Math.sin(t * 34) * show : rock;
+      $('arm-r').setAttribute('transform', `rotate(${(scratch * 11).toFixed(2)} 262 268)`);
+      $('arm-l').setAttribute('transform', `rotate(${((a.live ? -a.mid * 14 : Math.sin(t * 1.3) * 2) * (1 - show) + show * 188).toFixed(2)} 138 268)`);
 
       // records: 33⅓ rpm-ish while playing; the scratched one runs backwards for a moment
       if (a.playing) s.spin += (Math.PI * 2 * 0.55) / 60;
       [$('mark-l'), $('mark-r')].forEach((m, i) => {
-        const ang = i === 1 && hit ? s.spin - rock * 0.9 : s.spin + i * 1.7;
+        const ang = i === 1 && (hit || flourish) ? s.spin - scratch * 0.9 : s.spin + i * 1.7;
         const cx = i ? 300 : 100;
         m.setAttribute('cx', (cx + Math.cos(ang) * 36).toFixed(1));
         m.setAttribute('cy', (326 + Math.sin(ang) * 11).toFixed(1));

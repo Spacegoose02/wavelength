@@ -2,7 +2,10 @@ import { useEffect, type RefObject } from 'react';
 import { createAudioReader, type AudioSample } from '../../player/analysis';
 import { createSingingReader, currentTune, singingReading } from '../../player/singing';
 import type { Viseme } from '../../player/visemes';
+import { createTempo, type Tempo } from '../../player/tempo';
+import { usePlayer } from '../../store/player';
 import { OPEN_AT, createFace } from './face';
+import { createFlourish, swell } from './flourish';
 
 /** What each critter's own animation gets every frame. */
 export interface RigFrame {
@@ -10,8 +13,15 @@ export interface RigFrame {
   t: number;
   a: AudioSample;
   idle: boolean;
-  /** 1 on a detected beat, easing back to 0 */
+  /** 1 on the beat, easing back to 0: on the steady tempo grid once it's locked, else on each detected hit */
   bob: number;
+  /** the steady beat (player/tempo.ts): phase through the beat, beat count, BPM, whether it's locked on */
+  tempo: Tempo;
+  /**
+   * 0, or 0..1 through the act's flourish (flourish.ts: a new song, or a solo between sung lines). Each act
+   * draws its own; `windUp` and `swell` there are the usual curves.
+   */
+  flourish: number;
   /** a strong high-frequency hit happened in the last ~0.45 s */
   hit: boolean;
   /** -1..1 fast wobble while `hit` is true (scratching, strumming), else 0 */
@@ -33,7 +43,11 @@ export interface RigOptions {
  * The animation every critter shares, written straight to SVG attributes from requestAnimationFrame
  * (no React re-render per frame):
  *
- * - `head` bobs on beats and sways; `body` follows a little.
+ * - `head` bobs on beats and sways; `body` follows a little. Once the tempo tracker (player/tempo.ts) locks
+ *   on, the bob and an alternating side-to-side sway ride its steady grid instead of the raw bass hits, and
+ *   the tail sways one way per beat. Ears (`ear-l`, `ear-r`) bounce on the beat.
+ * - On a new song or a solo the act does its flourish (`flourish`, flourish.ts) and the head throws back a
+ *   little with it.
  * - The face sings (face.ts): the mouth (`yawn`, hiding `smile`) opens with the vocals in one of six shapes
  *   (`[data-mouth]` children, player/visemes.ts), the brows (`brow-l`, `brow-r`) lift on a crescendo or a held
  *   note, the `eyes` squint on high notes and blink now and then on a beat. Species details: `whisker-l` /
@@ -72,6 +86,12 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
 
     const read = createAudioReader();
     const singAlong = createSingingReader();
+    const tempoAt = createTempo();
+    const flourishAt = createFlourish();
+    const trackKey = () => {
+      const tr = usePlayer.getState().current();
+      return tr ? `${tr.sourceId}:${tr.id}` : '';
+    };
     let t = 0;
     let raf = 0;
     let bob = 0;
@@ -87,11 +107,22 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       const a = read(t);
       const idle = !a.playing;
 
-      if (a.beat && a.live) bob = 1;
-      bob *= 0.86;
-      const sway = idle ? Math.sin(t * 0.8) * 2.5 : a.live ? Math.sin(t * 2.2) * 1.5 : Math.sin(t * 2) * 4;
+      const tempo = tempoAt(t, a.beat, a.live);
+      const grid = tempo.locked && !idle;
+      if (grid) {
+        // on the grid: a sharp drop on each beat easing back over ~0.1 s, like the hit-driven bob
+        bob = Math.exp((-tempo.phase * 60) / tempo.bpm / 0.11);
+      } else {
+        if (a.beat && a.live) bob = 1;
+        bob *= 0.86;
+      }
+      // a side-to-side sway that swings one way each beat once locked on
+      const beatSwing = Math.sin(Math.PI * (tempo.index + tempo.phase));
+      const sway = idle ? Math.sin(t * 0.8) * 2.5 : grid ? beatSwing * 2.2 : a.live ? Math.sin(t * 2.2) * 1.5 : Math.sin(t * 2) * 4;
       const nod = a.live ? bob * nodScale : idle ? 0 : (Math.sin(t * 4) + 1) * 1.5;
-      set('head', `translate(0 ${nod.toFixed(2)}) rotate(${sway.toFixed(2)} 200 240)`);
+      const flourish = still ? 0 : flourishAt({ t, track: trackKey(), playing: a.playing, line: singingReading.line, energy: (a.mid + a.treble) / 2 });
+      const throwBack = -swell(flourish) * 6;
+      set('head', `translate(0 ${nod.toFixed(2)}) rotate(${(sway + throwBack).toFixed(2)} 200 240)`);
       set('body', `translate(0 ${(nod * 0.3).toFixed(2)})`);
 
       if (a.transient) hitUntil = t + 0.45;
@@ -155,13 +186,16 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       const snarl = find('snarl');
       if (snarl) snarl.setAttribute('opacity', Math.max(0, (acting.accent - 0.35) / 0.65).toFixed(2));
       const flick = Math.max(acting.accent, acting.brow * 0.5) * Math.sin(t * 30);
-      css('ear-l', `rotate(${(-flick * 8).toFixed(2)}deg)`);
-      css('ear-r', `rotate(${(flick * 8).toFixed(2)}deg)`);
+      // ears flick on accents and bounce outward on the beat
+      const ears = flick * 8 + (a.playing ? bob * 6 : 0);
+      css('ear-l', `rotate(${(-ears).toFixed(2)}deg)`);
+      css('ear-r', `rotate(${ears.toFixed(2)}deg)`);
       const wide = 1 + Math.min(1, mouth) * Math.min(1, a.mid * 1.5) * 0.6;
       for (const el of shines) el.style.transform = `scale(${wide.toFixed(2)})`;
       const voice = singingReading.bright * Math.min(1, mouth / 0.5);
       set('adjust', `translate(0 ${(-6 * adj).toFixed(2)})`);
-      set('tail', `rotate(${(Math.sin(t * (idle ? 0.9 : 1.8)) * 7 + bob * 4).toFixed(2)} 268 292)`);
+      const tail = grid ? beatSwing * 8 + bob * 3 : Math.sin(t * (idle ? 0.9 : 1.8)) * 7 + bob * 4;
+      set('tail', `rotate(${tail.toFixed(2)} 268 292)`);
       const spot = find('spot');
       if (spot) spot.style.opacity = (0.18 + a.bass * 0.55).toFixed(2);
       for (const g of glows) g.style.opacity = (0.55 + a.bass * 0.45 + bob * 0.2).toFixed(2);
@@ -170,7 +204,7 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
         g.style.transform = `scale(${(1 + voice * 0.5).toFixed(2)})`;
       }
 
-      frame({ t, a, idle, bob, hit, rock, $ });
+      frame({ t, a, idle, bob, tempo, flourish, hit, rock, $ });
     };
     loop();
     return () => cancelAnimationFrame(raf);
