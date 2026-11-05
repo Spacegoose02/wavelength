@@ -143,7 +143,7 @@ const raccoon: Figure = {
 const bear: Figure = {
   head: [190, 0.86],
   torso: 'M174 256 Q 200 248 226 256 Q 250 264 254 290 Q 257 314 250 326 Q 200 338 150 326 Q 143 314 146 290 Q 150 264 174 256 Z',
-  shoulders: [[176, 272], [224, 272]],
+  shoulders: [[156, 276], [244, 276]],
   arm: 25,
   paw: 13,
   reach: 66,
