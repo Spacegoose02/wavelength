@@ -222,58 +222,6 @@ export function Brows({ l, className, stroke, width = 4 }: { l: string; classNam
 }
 
 /**
- * The raccoon's face: ears, mask, eyes, nose and mouth. Every species' face (species.tsx) has the same
- * named parts: `eyes` (blinks and squints, scaled about y 166), `brow-l` / `brow-r`, `smile` (the closed mouth,
- * hidden while singing) and `yawn` (the singing mouth, `Mouth` above). Species details are optional parts:
- * `whisker-l` / `whisker-r` and `snarl` (raccoon), `ear-l` / `ear-r` (bears), `[data-shine]` eye shines and
- * `[data-voice-glow]` antennae (aliens).
- */
-export function RaccoonFace() {
-  return (
-    <>
-      {/* ears bounce on the beat and flick on accents (rig) */}
-      <g data-part="ear-l">
-        <ellipse className="fur-mid" cx="138" cy="122" rx="22" ry="28" transform="rotate(-20 138 122)" />
-        <ellipse className="fur-dark" cx="140" cy="125" rx="11" ry="16" transform="rotate(-20 140 125)" />
-      </g>
-      <g data-part="ear-r">
-        <ellipse className="fur-mid" cx="262" cy="122" rx="22" ry="28" transform="rotate(20 262 122)" />
-        <ellipse className="fur-dark" cx="260" cy="125" rx="11" ry="16" transform="rotate(20 260 125)" />
-      </g>
-      <ellipse className="fur-mid" cx="200" cy="178" rx="80" ry="66" />
-      <path className="fur-light" d="M122 196 Q 140 236 196 242 Q 150 214 122 196 Z M278 196 Q 260 236 204 242 Q 250 214 278 196 Z" />
-      <path className="fur-dark-soft" d="M192 114 Q 200 110 208 114 L 204 156 L 196 156 Z" />
-      <path className="fur-dark" d="M134 166 Q 150 140 184 154 Q 200 160 216 154 Q 250 140 266 166 Q 254 190 228 186 Q 210 182 200 176 Q 190 182 172 186 Q 146 190 134 166 Z" />
-      <ellipse className="fur-light" cx="200" cy="208" rx="34" ry="24" />
-      <g data-part="eyes">
-        <circle cx="170" cy="166" r="9" fill="#fff" />
-        <circle cx="230" cy="166" r="9" fill="#fff" />
-        <circle cx="171" cy="167" r="5" fill="#111" />
-        <circle cx="229" cy="167" r="5" fill="#111" />
-        <circle cx="173" cy="164" r="1.6" fill="#fff" />
-        <circle cx="231" cy="164" r="1.6" fill="#fff" />
-      </g>
-      <Brows l="M156 146 Q 168 139 182 146" stroke="#c9c9d2" width={3.5} />
-      {/* whiskers twitch on accents (rig) */}
-      <g data-part="whisker-l" className="whiskers">
-        <path d="M176 206 L 140 198 M176 211 L 138 211 M177 216 L 142 224" />
-      </g>
-      <g data-part="whisker-r" className="whiskers">
-        <path d="M224 206 L 260 198 M224 211 L 262 211 M223 216 L 258 224" />
-      </g>
-      <ellipse cx="200" cy="194" rx="10" ry="7" fill="#111" />
-      <path data-part="smile" d="M186 212 Q 200 224 214 212" fill="none" stroke="#2b2b31" strokeWidth="3" strokeLinecap="round" />
-      {/* a little snarl on strong accents: the lip lifts at one corner over a fang */}
-      <g data-part="snarl" opacity="0">
-        <path d="M181 210 Q 186 203 193 208" fill="none" stroke="#2b2b31" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M186 210 L 190 210 L 188 217 Z" fill="#fff" />
-      </g>
-      <Mouth id="raccoon" x={200} y={210} w={12} h={24} fill="#5a1a24" line="#2b2b31" />
-    </>
-  );
-}
-
-/**
  * The head: the species' face, then the act's own headwear (`hat`, `eyewear`), the skin-group outfit,
  * anything that goes over the outfit (`over`, e.g. the DJ's headphones) and the holiday hats. Hats,
  * headphones and hoods are sized for the usual head and refitted with the species' `fit`; glasses are
@@ -286,7 +234,8 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
   const lift = fit.lift ?? 0;
   const [ex, ey] = fit.eyes ?? [1, 1];
   const onTop = w === 1 && !lift ? undefined : `translate(0 ${lift}) ${narrow(w) ?? ''}`.trim();
-  const onEyes = ex === 1 && ey === 1 ? undefined : `translate(200 166) scale(${ex} ${ey}) translate(-200 -166)`;
+  const eyeY = fit.eyeY ?? 166;
+  const onEyes = ex === 1 && ey === 1 && eyeY === 166 ? undefined : `translate(200 ${eyeY}) scale(${ex} ${ey}) translate(-200 -166)`;
   return (
     <g data-part="head">
       <Face />

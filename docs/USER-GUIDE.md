@@ -438,6 +438,12 @@ are no synced lyrics. A centred instrument with the same range as a
 voice (a synth lead, say) can still open it in songs without synced lyrics. Mono songs without synced
 lyrics move the mouth with the music rather than the voice.
 
+**A new look.** The critters' faces are drawn like vinyl toys: big round heads with soft shading, a dark
+outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge that takes your
+skin's colours. Their bodies and clothes are being redrawn to match next.
+
+<img src="screenshots/critter-new-faces.png" alt="All six critters with the new faces, each playing the DJ, Rapper and Synth acts" width="100%">
+
 **Their faces act.** The mouth takes one of six shapes as they sing: closed, a wide-open *ah*, a round *oh*, a
 wide *ee*, lips pressed together for *m*, *b* and *p*, and an open grin when they belt a big note. With synced
 lyrics the shapes follow the words of the line (each syllable's vowel, spelled rather than pronounced, so it's
