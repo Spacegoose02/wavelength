@@ -201,8 +201,6 @@ export function AlienFace() {
       <circle data-voice-glow="" className="antenna-2 ol-thin" cx="272" cy="46" r="8" filter="url(#critter-glow)" />
       <HeadShape id="alien" fill="url(#al-skin)" d="M206 74 C 282 74, 316 118, 308 166 C 300 212, 250 254, 206 256 C 162 254, 110 212, 102 166 C 94 118, 130 74, 206 74 Z">
         <ellipse cx="170" cy="104" rx="46" ry="18" fill="rgb(255 255 255 / 0.22)" transform="rotate(-14 170 104)" />
-        <ellipse cx="150" cy="210" rx="14" ry="8" fill="#f28aa8" opacity="0.45" />
-        <ellipse cx="262" cy="210" rx="12" ry="7" fill="#f28aa8" opacity="0.45" />
       </HeadShape>
       <g data-part="eyes">
         <path d="M128 168 C 132 138, 170 128, 194 150 C 202 174, 180 196, 154 192 C 136 188, 126 180, 128 168 Z" fill="url(#al-eye)" className="ol-thin" />

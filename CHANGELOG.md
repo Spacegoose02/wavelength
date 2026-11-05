@@ -4,7 +4,7 @@
 - **New faces for the critters.** All six are redrawn like vinyl toys: big round heads with soft shading, a dark
   outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge in your skin's
   colours. The raccoon has fluffy cheeks and white brow patches, the shark a friendlier toothy grin, the aliens
-  glossy eyes and rosy cheeks, and the bears big muzzles. Shades and glasses still sit over their eyes in every
+  glossy eyes, and the bears big muzzles. Shades and glasses still sit over their eyes in every
   act. Their bodies and clothes get the same treatment next (`docs/CRITTERS-ROADMAP.md`, phase 3).
 - **The critters' faces act while they sing.** Instead of one oval that opens and shuts, each critter's mouth now
   takes six shapes (closed, *ah*, *oh*, *ee*, lips pressed for *m*/*b*/*p*, and an open grin when belting). With
