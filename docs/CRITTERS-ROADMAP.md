@@ -84,8 +84,9 @@ the asset work and a risk on low-end phones and the iOS WebView.
 
 ## Phase 4: species-fitted outfits and act colourways
 
-- Each act's clothes drawn for the 4 body types (8 × 4 = 32 outfits), starting with a review sheet of the seven
-  acts other than Country in the new style; for example the shark's throat bandana,
+- Each act's clothes drawn for the 4 body types (8 × 4 = 32 outfits), starting from the review sheet of the seven
+  acts other than Country in the new style (`docs/critters/outfit-sheet.html`, drafted November 2026, not yet
+  signed off); for example the shark's throat bandana,
   sleeveless denim vest around the fin and fin strap; the aliens' neon-wire hat and hover banjo; the raccoon's
   patchwork vest, rolled sleeves and slouch hat; the bear's shearling vest and notched Stetson.
 - A fixed palette per act (Country ochre and denim, Synth cyan and magenta, …) with the app skin tinting only
