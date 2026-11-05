@@ -1,5 +1,6 @@
 import { BlendView, MixView } from './views/Mix';
 import { startSmartOffline } from './lib/smartOffline';
+import { startDeadZone } from './lib/deadZone';
 import { startDjVoice } from './lib/djVoice';
 import { startDjStation } from './lib/djStation';
 import { startSingMode } from './lib/singMode';
@@ -204,6 +205,7 @@ export default function App() {
     startRemote();
     startTogether();
     startSmartOffline();
+    startDeadZone();
     startDjVoice();
     startDjStation();
     startSingMode();

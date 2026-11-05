@@ -42,6 +42,7 @@ export function PlayerBar() {
               <span className={p.shuffle ? 'on' : ''}>SHUF</span>
               <span className={p.repeat !== 'off' ? 'on' : ''}>{p.repeat === 'one' ? 'REP1' : 'REP'}</span>
               {p.error && <span className="err" title={p.error}>ERR</span>}
+              {!p.error && p.noSignal && <span className="on" title="No signal: playing saved songs">OFFL</span>}
             </div>
           </div>
           <Visualizer className="lcd-viz" bars={19} mode="classic" />

@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Music keeps playing through dead zones.** Lose signal for 10 or 15 minutes (a tunnel, the countryside, a car
+  park) and the phone no longer goes quiet. While you listen, Wavelength saves about 20 minutes of your queue ahead
+  and about 20 minutes of songs like the one playing. When the signal drops, the queue carries on from those files.
+  If it runs out, the similar songs, your smart offline shelves and your other downloads stand in. Then it picks your
+  queue back up, from the spot where the song was cut off, once the signal is back. The mini player says
+  *No signal · saved songs* meanwhile. On by default, including on mobile data, because that's where dead zones
+  are. Change it in **Settings → Downloads → Dead zones**. Windows and Android app (`docs/USER-GUIDE.md#dead-zones`).
 - **New faces for the critters.** All six are redrawn like vinyl toys: big round heads with soft shading, a dark
   outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge in your skin's
   colours. The raccoon has fluffy cheeks and white brow patches, the shark a friendlier toothy grin, the aliens

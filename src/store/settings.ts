@@ -170,6 +170,9 @@ interface SettingsState {
   /** Settings → Downloads → Smart offline (lib/smartOffline.ts). Per device, not synced. */
   smartOffline: SmartOfflineSettings;
   setSmartOffline(p: Partial<SmartOfflineSettings>): void;
+  /** Settings → Downloads → Dead zones (lib/deadZone.ts). Per device, not synced. */
+  deadZone: DeadZoneSettings;
+  setDeadZone(p: Partial<DeadZoneSettings>): void;
   /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
   updates: { auto: boolean; prerelease: boolean };
   setUpdates(u: Partial<SettingsState['updates']>): void;
@@ -204,6 +207,18 @@ export interface SmartOfflineSettings {
   /** last finished run, ms */
   lastRun?: number;
 }
+
+/** The dead zone cushion's settings (lib/deadZone.ts): saved music that keeps playing when the signal goes. */
+export interface DeadZoneSettings {
+  enabled: boolean;
+  /** how many minutes of music to keep ready: the queue ahead, and as much again of songs like the one playing */
+  minutes: number;
+  /** keep songs like the one playing too, not only the queue ahead */
+  similar: boolean;
+  /** only fetch on Wi-Fi (off by default: on the road is where dead zones are) */
+  wifiOnly: boolean;
+}
+export const DEFAULT_DEAD_ZONE: DeadZoneSettings = { enabled: true, minutes: 20, similar: true, wifiOnly: false };
 
 export interface DjVoiceSettings {
   on: boolean;
@@ -255,6 +270,8 @@ export const useSettings = create<SettingsState>()(
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       smartOffline: DEFAULT_SMART_OFFLINE,
       setSmartOffline: (p) => set((st) => ({ smartOffline: { ...st.smartOffline, ...p } })),
+      deadZone: DEFAULT_DEAD_ZONE,
+      setDeadZone: (p) => set((st) => ({ deadZone: { ...st.deadZone, ...p } })),
       mouthTune: DEFAULT_TUNE,
       setMouthTune: (t) => set((st) => ({ mouthTune: t === null ? DEFAULT_TUNE : cleanTune({ ...st.mouthTune, ...t }) })),
       mouthOffsets: {},
@@ -380,7 +397,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, mouthTune: cleanTune(s.mouthTune) };
+        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, deadZone: { ...current.deadZone, ...s.deadZone }, mouthTune: cleanTune(s.mouthTune) };
       },
     },
   ),

@@ -1046,6 +1046,32 @@ house make Blends with me** first, since a Blend shows a little of what they pla
 other and with their own kids; kids only with their parents. A Hub admin can turn mixes and Blend off in
 **Settings → Features**.
 
+## Dead zones
+
+Lose signal on your phone for a few minutes, in a tunnel, out in the countryside or in an underground car park, and
+the music keeps going. **Settings → Downloads → Dead zones** (on by default) keeps two small, rolling sets of songs
+on the device while you listen:
+
+- **Up next**: the song playing and the next ones in your queue, about 20 minutes of them. They play from the file,
+  so the queue just carries on through the dead zone.
+- **Songs like the one playing**: about as much again, picked with **Sounds like this** when you have a Hub, or song
+  radio otherwise. These are refreshed every half hour of listening.
+
+When the signal goes and the next song isn't saved, Wavelength plays a saved song in its place. It tries the songs
+like the one playing first, then your [smart offline](#smart-offline) shelves, then anything else you downloaded,
+and avoids songs you played lately. The mini player says **No signal · saved songs**, and the desktop deck shows
+**OFFL**. Your queue waits behind the stand-ins. Once your server answers again (Wavelength checks every 15
+seconds), the queue picks up where it was, and a song that was cut off part way carries on from that spot. If you
+were in DJ mode or song radio and the queue ran out, saved songs keep going until there's signal to fetch more. If
+nothing at all is saved, the music stops and starts again by itself when the signal comes back.
+
+Choose **10 to 60 minutes** of music to keep ready. Untick **Also keep songs like the one playing** to keep only
+your queue, or tick **Only on Wi-Fi**. It's on for mobile data by default, because the road is where dead zones
+are. Twenty minutes is about 40–50 MB at 320 kbps, or two or three times that for FLAC. Played songs are deleted as
+new ones come in. The two sets show in **Downloaded** as *Kept for dead zones*. Radio, audiobooks and podcasts
+aren't covered: they can't stand in for each other the way songs can. Windows and Android app only. A Hub admin
+who turns **Smart offline** off in **Settings → Features** turns this off too.
+
 ## Smart offline
 
 **Settings → Downloads → Smart offline** keeps music on the device by itself, so the phone plays in the car or on

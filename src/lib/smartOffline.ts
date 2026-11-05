@@ -75,7 +75,7 @@ registerShelf({
 const AVG_SONG = 8e6;
 
 /** Whether the device says it's on a metered/cellular connection (Android WebView exposes this). */
-function onCellular(): boolean {
+export function onCellular(): boolean {
   const c = (navigator as Navigator & { connection?: { type?: string; saveData?: boolean } }).connection;
   return c?.type === 'cellular' || !!c?.saveData;
 }

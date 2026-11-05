@@ -130,6 +130,32 @@ OpenSubsonic) and Settings → Playback into a linear gain, capped by the song's
 5. Audiobooks/podcasts: sync position to Audiobookshelf every 15 s.
 6. Radio: every 15 s, poll the station's now-playing endpoint (Icecast `status-json.xsl`, SUB/WAVE `/api/now-playing`, …) for the live title and artwork, and when that gives nothing read the ICY title from inside the stream (directly in the apps, through the Hub in a browser; see SOURCES.md → Radio).
 
+**Dead zones** (`lib/deadZone.ts`, hooked into `store/player.ts` through `setDeadZoneHook` so the store doesn't
+import it). Audio streams from the music server, so losing signal used to stop the song once its buffer ran out,
+fail every song after it, and stop the player after three failures. Now:
+
+- *Two rolling caches*, as offline collections of kind `cushion`: `cushion:ahead` (the queue from the song playing
+  onward, `aheadPlan`, about `deadZone.minutes` of it) and `cushion:similar` (about as much of songs like the one
+  playing, from `sonic.soundsLike` with a Hub or `songRadio` without, rebuilt every 30 min of listening). They are
+  refreshed 4 s after the queue or index changes (`trim` drops songs that left, `download` fetches new ones). Smart
+  offline only manages `auto` collections, so the two never delete each other's files.
+- *Noticing the signal is gone.* A streamed song that errors, or sits buffering for `STALL_SECONDS` (12 s, since a
+  lost connection often raises no error at all), calls `failed()`, which asks the hook's `check()`: a GET to the
+  song's server with a 5 s timeout. Any answer, even a 401, means the network works, and the old skip rules apply
+  (a stall just keeps waiting). No answer marks the device offline and polls every 15 s, plus the
+  `online`/`offline` window events.
+- *Standing in.* While offline, `loadCurrent` doesn't try the network for a song that isn't saved.
+  `standInFor` puts `standIn()`'s pick in front of it in the queue and plays that, so the real song waits in place.
+  The pick order is `cushion:similar`, then the `auto` shelves, then album/playlist downloads, kid-safe, not used
+  this time and not in the last 40 plays (`pickStandIn`). `next()` at the end of the queue does the same, which keeps
+  DJ mode and song radio going when they can't fetch more. Nothing saved at all: the player says so and waits, and
+  `signalBack()` carries on.
+- *Mid-song.* If the song that stopped was streaming and is saved by now (the ahead cache includes the song
+  playing), it reloads from the file at the same spot. Otherwise the spot is kept in `resumeAt`, and the song
+  starts from there when its turn comes again after the signal is back.
+- `PlayerState.noSignal` drives the *No signal · saved songs* note (mini player, Now Playing, `OFFL` on the deck).
+  Music only: radio, books and podcasts behave as before.
+
 **System integration.**
 - Desktop: `navigator.mediaSession` (Windows media keys, overlay).
 - Android: `lib/nativeMedia.ts` mirrors player state to the native `MediaBridge` (see §5), and receives
@@ -143,9 +169,9 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 
 | Store / key | Contents | Persisted as |
 |---|---|---|
-| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations and their order, hidden/ordered server stations (`hiddenStations`, `stationOrder`), skin plus `seasonal`/`randomDaily`, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`) and songs marked Not interested (`discoverHidden`), equalizer (`eq`) | `tonearm.settings` (versioned; `migrate` handles upgrades) |
+| `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations and their order, hidden/ordered server stations (`hiddenStations`, `stationOrder`), skin plus `seasonal`/`randomDaily`, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`) and songs marked Not interested (`discoverHidden`), equalizer (`eq`), smart offline (`smartOffline`) and dead zones (`deadZone`), both per device | `tonearm.settings` (versioned; `migrate` handles upgrades) |
 | `store/library.ts` | Mixed-source playlists, local play history | `tonearm.library` |
-| `store/offline.ts` | Downloaded tracks (path, size), covers, downloaded collections | `tonearm.offline` (files in `<app data>/offline/`) |
+| `store/offline.ts` | Downloaded tracks (path, size), covers, downloaded collections (`album`, `playlist`, smart offline's `auto`, the dead zone cushion's `cushion`) | `tonearm.offline` (files in `<app data>/offline/`) |
 | `store/catalog.ts` | Merged albums/artists/books/podcasts loaded at start | memory |
 | `store/player.ts` | Queue, index, position, volume, shuffle/repeat, live radio title/art | memory (+ `tonearm.volume`) |
 | `store/ui.ts` | Current route, history, overlays | memory |
