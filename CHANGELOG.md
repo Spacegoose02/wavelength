@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **DJ mode no longer stops after about ten songs.** A mix has no song limit, but when the DJ took longer to find the
+  next segment than the last songs took to play (a slow Hub or music server, or a phone in your pocket), the new songs
+  were added behind a stopped player and the music went quiet. They now start playing as soon as they arrive. Finding
+  the next segment also keeps trying every 30 seconds instead of waiting for the next song, gives up on a request that
+  hangs, and a short first segment can fall back on an **Encore** too.
 
 ## 0.24.5
 - **DJ Trash Panda only plays when you ask.** Playing your own music, like a couple of songs from an album in your

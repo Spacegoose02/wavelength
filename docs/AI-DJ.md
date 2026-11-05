@@ -299,7 +299,11 @@ holds songs the station played (see [Who's in charge](#whos-in-charge)). A song 
 of the station's with **Play next** or **Add to queue** just plays and the station carries on after it. Songs are matched by
 title and artist as well as their id, so a source handing back a copy of a song doesn't stop it. If nothing at all can
 be found, not even songs like the one playing, the station replays its own earlier songs (**Encore**) rather than
-let the music stop. **×** stops it
+let the music stop. There's no cap on how many songs a mix plays: it runs until you stop it. Asking for the next
+segment never gives up while DJ mode is on: one that finds nothing tries again every 30 seconds, one that hangs (a
+slow Hub or music server) is dropped after two minutes and asked again, and when the next songs arrive after the
+queue already ran out they start playing (the player's `ranOut` flag; they used to sit behind a stopped player, so
+the mix went quiet after its first dozen songs or so). **×** stops it
 too, and **–** folds the panel into a small pill.
 
 ### Who's in charge

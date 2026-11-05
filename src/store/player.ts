@@ -42,6 +42,8 @@ interface PlayerState {
   queueId: number;
   /** Who started the queue that's playing (`QueueBy`). */
   queueBy: QueueBy;
+  /** The queue ran out: the last song finished (or couldn't play) and nothing came after it. */
+  ranOut: boolean;
   current(): Track | undefined;
   playTracks(tracks: Track[], start?: number, startAt?: number, by?: QueueBy): void;
   enqueue(tracks: Track[]): void;
@@ -104,6 +106,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   index: -1,
   queueId: 0,
   queueBy: 'you',
+  ranOut: false,
   playing: false,
   buffering: false,
   position: 0,
@@ -184,6 +187,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     else if (repeat === 'all' && queue.length) set({ index: 0 });
     else {
       engine.pause();
+      set({ ranOut: true });
       return;
     }
     loadCurrent();
@@ -246,7 +250,7 @@ function releaseLocalBlob() {
 function begin(t: Track, startAt: number) {
   scrobbled = false;
   listened = 0;
-  usePlayer.setState({ position: startAt, duration: t.duration ?? 0, error: undefined, liveTitle: undefined, liveCover: undefined, buffering: true });
+  usePlayer.setState({ position: startAt, duration: t.duration ?? 0, error: undefined, liveTitle: undefined, liveCover: undefined, buffering: true, ranOut: false });
   updateMediaSession(t);
   watchNowPlaying(t);
   applyLevel(t);
@@ -323,7 +327,7 @@ function failed(message: string) {
   const { index, queue, repeat } = usePlayer.getState();
   const more = index + 1 < queue.length || (repeat === 'all' && queue.length > 1);
   const skip = more && !intercept && ++failStreak < MAX_FAILS;
-  usePlayer.setState({ error: skip ? `${message} · skipping to the next song` : message, buffering: false, playing: false });
+  usePlayer.setState({ error: skip ? `${message} · skipping to the next song` : message, buffering: false, playing: false, ...(!more && { ranOut: true }) });
   if (!skip) return;
   const seq = loadSeq;
   skipTimer = window.setTimeout(() => {

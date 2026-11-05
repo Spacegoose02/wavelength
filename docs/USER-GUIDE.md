@@ -1066,7 +1066,9 @@ and use **DJ loudness** if the DJ is hard to hear over the music. Songs on the l
 you're missing) show up under **songs you don't have**, with **Get** or **Request** for each, or all at once. In the DJ chat you can also ask about your playlists
 ("make me something like my Gym playlist"). DJ mode only starts when you start it from that panel. Play your own
 music (pick a song, album or playlist in your Library) and DJ mode stops, the DJ goes quiet mid-sentence and your
-music plays; **Play next** and **Add to queue** keep DJ mode going. See [AI-DJ.md](AI-DJ.md#whos-in-charge).
+music plays; **Play next** and **Add to queue** keep DJ mode going. There's no limit on how many songs it plays:
+the DJ picks the next segment (about 12 songs) while the last few of this one play, and keeps going until you press
+**×**. See [AI-DJ.md](AI-DJ.md#whos-in-charge).
 
 ### Talking DJ
 
