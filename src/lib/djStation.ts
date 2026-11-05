@@ -72,6 +72,13 @@ let recent: { title: string; artist: string }[] = [];
 let anchor: { name: string; songs: { title: string; artist: string }[] } | null = null;
 let topping = false;
 let lastTry = 0;
+/** Counts top-ups, so one that hung and was given up on can't queue its songs late. */
+let topGen = 0;
+/** A top-up that found nothing tries again on this timer, as nothing else wakes it once the music has stopped. */
+let retryTimer: ReturnType<typeof setTimeout> | undefined;
+/** Wait between tries for the next segment, and how long one may take before it's given up on. */
+const RETRY_MS = 30_000;
+const STUCK_MS = 120_000;
 
 async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?: HubStationKind | null }): Promise<{ seg: HubStationSegment; tracks: Track[]; missing: HubMixSong[] }> {
   const hub = hubClient();
@@ -135,6 +142,9 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
     playedTracks = [];
     upcoming.clear();
     lastTry = 0;
+    clearTimeout(retryTimer);
+    topGen++;
+    topping = false;
     claim(tracks);
     stationTalks.add(keyOf(tracks[0]));
     useStation.setState({ on: true, picking: false, kind: seg.kind, title: seg.title, intro: seg.intro ?? '', missing, busy: false });
@@ -148,6 +158,9 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
 export function stopStation() {
   // an intro or link mid-sentence stops too, and the music comes back up
   if (useStation.getState().on) hush();
+  clearTimeout(retryTimer);
+  topGen++;
+  topping = false;
   anchor = null;
   ours.clear();
   oursNames.clear();
@@ -176,12 +189,21 @@ async function moreLikeThis(): Promise<{ seg: HubStationSegment; tracks: Track[]
  * Queue the next segment when the last songs of this one are playing. A segment with none of its songs in your
  * library moves on to the next one in the rotation (it used to ask for the same one again, so the station went
  * quiet when the queue ran out, often after Top hits); when none has anything, songs like the one playing.
+ *
+ * It never gives up while DJ mode is on: a top-up that finds nothing tries again in 30 s, one that hangs (a slow
+ * Hub or music server) is dropped after two minutes, and songs that arrive after the queue ran out start playing
+ * (they used to be added behind the last song with the player stopped, so the station went quiet after about ten).
  */
 async function topUp() {
-  if (topping || Date.now() - lastTry < 30_000) return;
+  if (topping && Date.now() - lastTry < STUCK_MS) return;
+  if (!topping && Date.now() - lastTry < RETRY_MS) return;
+  const gen = ++topGen;
+  const stale = () => gen !== topGen || !useStation.getState().on;
   topping = true;
   lastTry = Date.now();
+  clearTimeout(retryTimer);
   useStation.setState({ busy: true });
+  let queuedSome = false;
   try {
     const queued = [...upcoming.values()];
     let last = queued.length ? queued[queued.length - 1].seg.kind : useStation.getState().kind;
@@ -197,18 +219,20 @@ async function topUp() {
         problem = errText(e);
         break;
       }
-      if (!useStation.getState().on) return;
+      if (stale()) return;
     }
     if (!next) {
       const like = await moreLikeThis();
+      if (stale()) return;
       if (like) next = { ...like, missing: [] };
     }
-    // last resort, so the music never just stops: the station's own songs again, shuffled, not the last few
-    if (!next && playedTracks.length > 8) {
-      const again = [...playedTracks.slice(0, -6)].sort(() => Math.random() - 0.5).slice(0, SIZE);
+    // last resort, so the music never just stops: the station's own songs again, shuffled, leaving out the
+    // last few (half of them on a short run; it used to need nine played, so a short first segment had none)
+    if (!next && playedTracks.length >= 2) {
+      const again = [...playedTracks.slice(0, -Math.min(6, Math.floor(playedTracks.length / 2)))].sort(() => Math.random() - 0.5).slice(0, SIZE);
       next = { seg: { kind: 'ask', title: 'Encore', songs: [], intro: null, spent: 0, limit: null }, tracks: again, missing: [] };
     }
-    if (!useStation.getState().on) return;
+    if (stale()) return;
     if (!next) {
       if (problem) useStation.setState({ error: problem });
       return;
@@ -219,10 +243,20 @@ async function topUp() {
     upcoming.set(keyOf(tracks[0]), { seg, missing });
     // a fallback without an intro: the talking DJ may introduce its first song like any other
     if (seg.intro) stationTalks.add(keyOf(tracks[0]));
-    usePlayer.getState().enqueue(tracks);
+    const p = usePlayer.getState();
+    // the queue ran out while this was looking: play the new songs rather than leave them behind a stopped player
+    const resume = p.ranOut;
+    const from = p.queue.length;
+    p.enqueue(tracks);
+    if (resume) usePlayer.getState().jump(from);
+    queuedSome = true;
   } finally {
-    topping = false;
-    useStation.setState({ busy: false });
+    if (gen === topGen) {
+      topping = false;
+      useStation.setState({ busy: false });
+      // found nothing: try again in a while, even with the music stopped (nothing else would ask)
+      if (!queuedSome && useStation.getState().on) retryTimer = setTimeout(() => void topUp(), RETRY_MS);
+    }
   }
 }
 
@@ -264,6 +298,7 @@ export function startDjStation() {
       }
     }
     // ask for the next segment with three songs to go: picking songs and writing an intro can take a minute
-    if (!st.busy && p.queue.length - p.index <= 3) void topUp();
+    // (not while a segment you picked is loading; a top-up that's stuck is retried, topUp() decides when)
+    if ((!st.busy || topping) && p.queue.length - p.index <= 3) void topUp();
   });
 }
