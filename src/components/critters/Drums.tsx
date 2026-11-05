@@ -1,7 +1,8 @@
 import { useRef } from 'react';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
+import { swell } from './flourish';
 
 /** Bubbles: x, size, where in the climb each starts (0..1), speed. */
 const BUBBLES: [number, number, number, number][] = [
@@ -12,16 +13,16 @@ const BUBBLES: [number, number, number, number][] = [
 /**
  * Drummer shark under the sea, behind a drum kit. A striped sailor tee, the drum shells and the kick drum's
  * logo take the skin's colours. The snare hand hits on the beat, the cymbal hand crashes on strong highs,
- * the kick drum thumps, the bubbles rise faster with the bass and the seaweed sways. Paused, the sticks rest.
+ * the kick drum thumps, the bubbles rise faster with the bass and the seaweed sways. Flourish: a quick fill
+ * with both sticks, ending on the crash. Paused, the sticks rest.
  */
 export function Drums({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ rise: 0 });
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, hit, rock, $ }) => {
+    ({ t, a, idle, bob, hit, rock, flourish, $ }) => {
       const s = state.current;
       const svg = root.current!;
       // snare hand lifts between beats and comes down on them; cymbal hand crashes on sharp highs
@@ -29,7 +30,14 @@ export function Drums({ species, still }: ActProps) {
       $('arm-l').setAttribute('transform', `rotate(${lift.toFixed(2)} 138 268)`);
       const crash = idle ? Math.sin(t * 0.9) * 1.5 : hit ? -Math.abs(rock) * 14 : a.live ? -a.mid * 10 : -Math.max(0, Math.sin(t * 2)) * 8;
       $('arm-r').setAttribute('transform', `rotate(${crash.toFixed(2)} 262 268)`);
-      $('crash').setAttribute('transform', `rotate(${(hit ? rock * 7 : bob * 2).toFixed(2)} 344 236)`);
+      // flourish: a fast drum fill, both sticks alternating, ending on a crash
+      if (flourish) {
+        const fill = flourish < 0.75 ? Math.sin(t * 40) : 0;
+        $('arm-l').setAttribute('transform', `rotate(${(8 + fill * 12).toFixed(2)} 138 268)`);
+        $('arm-r').setAttribute('transform', `rotate(${(flourish < 0.75 ? 6 - fill * 12 : -16 * swell((flourish - 0.75) * 4)).toFixed(2)} 262 268)`);
+      }
+      const ring = flourish > 0.75 ? Math.sin(t * 38) * 8 * (1 - flourish) * 4 : 0;
+      $('crash').setAttribute('transform', `rotate(${(hit ? rock * 7 : bob * 2 + ring).toFixed(2)} 344 236)`);
       $('snare').setAttribute('transform', `translate(0 ${(a.playing ? bob * 1.5 : 0).toFixed(2)})`);
       $('hihat').setAttribute('transform', `translate(0 ${(a.playing ? -(1 - bob) * 3 : 0).toFixed(2)})`);
       const k = 1 + (a.playing ? bob * 0.05 : 0);
@@ -51,7 +59,7 @@ export function Drums({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="drums" species={species.id} label={`A ${species.noun} playing the drums under the sea`}>
+    <CritterFrame ref={root} kind="drums" species={species} label={`A ${species.noun} playing the drums under the sea`}>
       {/* sunlight through the water, sea floor, seaweed and bubbles */}
       <path d="M40 0 L 90 0 L 150 340 L 120 340 Z M200 0 L 240 0 L 270 340 L 230 340 Z M320 0 L 350 0 L 380 340 L 350 340 Z" fill="rgb(255 255 255 / 0.05)" />
       <path className="sand" d="M0 350 Q 100 338 200 348 T 400 346 V400 H0 Z" />
@@ -63,11 +71,9 @@ export function Drums({ species, still }: ActProps) {
       ))}
       {BUBBLES.map(([x, r], i) => <circle key={i} data-bubble="" cx={x} cy="340" r={r} fill="rgb(255 255 255 / 0.12)" stroke="rgb(255 255 255 / 0.6)" strokeWidth="1.5" />)}
 
-      {Tail && <Tail />}
-      <Legs species={species}>{null}</Legs>
+      <Legs species={species} />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
         <path d="M144 262 H256 M126 278 H274 M118 294 H282" className="tee-stripe" strokeWidth="6" />
         <path className="neckline" d="M184 246 L 200 266 L 216 246 Z" />
         <BodyOutfits />
@@ -76,6 +82,8 @@ export function Drums({ species, still }: ActProps) {
       <Head species={species} />
 
       {/* the kit: hi-hat, snare, kick with a tom on it, floor tom, crash */}
+      <Shadow cx={200} cy={392} rx={74} ry={7} />
+      {[[44, 378, 22], [104, 368, 22], [300, 372, 38], [344, 378, 22]].map(([cx, cy, rx]) => <Shadow key={cx} cx={cx} cy={cy} rx={rx} ry={4} />)}
       <path className="stand" d="M44 276 V366 M44 366 L 30 378 M44 366 L 58 378 M104 334 V352 L 88 368 M104 352 L 120 368 M344 236 V366 L 330 378 M344 366 L 358 378 M276 350 V372 M324 350 V372" fill="none" strokeWidth="3" strokeLinecap="round" />
       <ellipse className="cymbal" cx="44" cy="294" rx="30" ry="5" />
       <ellipse data-part="hihat" className="cymbal" cx="44" cy="288" rx="30" ry="5" />
@@ -100,10 +108,10 @@ export function Drums({ species, still }: ActProps) {
       </g>
 
       {/* fins with sticks: snare hand (left of picture), cymbal hand (right) */}
-      <Arm part="arm-l" d="M138 268 Q 118 286 116 300" hand={[116, 302]} thumb={[124, 298]}>
+      <Arm part="arm-l" d="M138 268 Q 118 286 116 300" hand={[116, 302]}>
         <path className="stick" d="M116 302 L 80 318" strokeWidth="4" strokeLinecap="round" />
       </Arm>
-      <Arm part="arm-r" d="M262 268 Q 282 278 294 264" hand={[296, 262]} thumb={[290, 256]}>
+      <Arm part="arm-r" d="M262 268 Q 282 278 294 264" hand={[296, 262]}>
         <path className="stick" d="M296 262 L 330 242" strokeWidth="4" strokeLinecap="round" />
       </Arm>
     </CritterFrame>
