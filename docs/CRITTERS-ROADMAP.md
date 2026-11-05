@@ -89,8 +89,9 @@ the asset work and a risk on low-end phones and the iOS WebView.
   signed off); for example the shark's throat bandana,
   sleeveless denim vest around the fin and fin strap; the aliens' neon-wire hat and hover banjo; the raccoon's
   patchwork vest, rolled sleeves and slouch hat; the bear's shearling vest and notched Stetson.
-- A fixed palette per act (Country ochre and denim, Synth cyan and magenta, …) with the app skin tinting only
-  lights and glow. **Open decision** before this phase: today the clothes follow the skin colours.
+- **Colours: the clothes keep following the app skin** (decided November 2026). The outfit sheet's own colours
+  per act were only for the drawings; in the app each outfit's main colours take the skin's `--accent` and
+  `--viz-*`, with fixed colours kept for materials (denim, leather, chrome, gold).
 - Holiday hats and skin outfits refitted as each body type lands.
 
 ## Phase 5: stage lighting
