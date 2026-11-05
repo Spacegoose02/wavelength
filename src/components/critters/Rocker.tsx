@@ -6,10 +6,9 @@ import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
- * Rocker raccoon in front of two amp stacks: a spiky mohawk and a flying-V in the skin's colours, a studded
+ * Rocker raccoon in front of two amp stacks: a flying-V in the skin's colours, a studded
  * leather jacket, and a proper headbang on the beat. The amp lights follow the bass, mids and highs.
- * Strums eighth notes in time. Flourish: a full windmill strum with the guitar tipped up. Paused, he pushes
- * his hair back up now and then.
+ * Strums eighth notes in time. Flourish: a full windmill strum with the guitar tipped up. Paused, he rests.
  */
 export function Rocker({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
@@ -66,15 +65,8 @@ export function Rocker({ species, still }: ActProps) {
         <BodyOutfits />
       </Body>
 
-      <Head
-        species={species}
-        hat={
-          <g data-part="adjust" className="own-hat">
-            <path className="mohawk" d="M166 124 L 172 74 L 184 112 L 194 50 L 204 108 L 216 56 L 222 112 L 234 78 L 236 124 Z" />
-            <path className="mohawk-tip" d="M172 74 L 176 92 M194 50 L 196 74 M216 56 L 214 78 M234 78 L 230 96" fill="none" strokeWidth="3" strokeLinecap="round" />
-          </g>
-        }
-      />
+      <Head species={species} />
+
 
       {/* flying-V, neck up to the right */}
       <g data-part="guitar">
