@@ -8,7 +8,7 @@ all drawn for Wavelength; games like Incredibox, Rhythm Heaven and Animal Crossi
 |---|---|---|---|
 | 1 | Faces that sing: mouth shapes, brows, eye acting, species details | medium, 1 PR | **Done** |
 | 2 | Rhythm and secondary motion: tempo tracker, beat-locked bobs, strumming, flourishes, contact shadows | medium, 1 PR | **Done** (same PR as phase 1) |
-| 3 | Silhouettes and the 3/4 turn: 6 faces redrawn, 4 body templates | large, 2–3 PRs | Next; starts with a style frame for sign-off |
+| 3 | Silhouettes and the 3/4 turn: 6 faces redrawn, 4 body templates | large, 2–3 PRs | **Faces done**; bodies next |
 | 4 | Species-fitted outfits and act colourways | large, ~4 PRs (2 acts each) | After 3 |
 | 5 | Stage lighting: rim light, set lighting, particles, reduced-effects switch | medium, 1–2 PRs | After 4 |
 
@@ -66,15 +66,26 @@ the asset work and a risk on low-end phones and the iOS WebView.
 
 ## Phase 3: silhouettes and the 3/4 turn
 
-- A style frame of one critter (the Country raccoon) for sign-off before the rest is drawn.
-- Redraw the 6 faces at a 3/4 angle, and replace the shared torso with 4 body templates: raccoon compact and
-  hunched, shark broad wedge, aliens spindly and floating, bears heavy and grounded.
+- **Style frame, signed off (November 2026):** the Country raccoon in the new style, then a sheet of all six
+  heads. Both are in `docs/critters/` (`country-raccoon.html`, `face-sheet.html`; open them in a browser). The
+  first try kept the old raccoon's proportions and read as odd; the signed-off face is a big round chibi head
+  with the eyes low and wide, cheek fluff flaring out at the mask and a small central nose and mouth.
+- **Faces (done):** all six redrawn in `faces.tsx` in that style: a dark outline, radial "vinyl" shading lit
+  from the upper left, a rim of stage light on the right edge (the skin's `--viz-high`), and big eyes with a
+  coloured iris and two highlights. The heads turn only slightly (the eyes, brows and mouth sit a little to the
+  right and the far eye is narrower), so the face still reads clearly at Now Playing size. The named parts are
+  the same, so the rig and phases 1–2 work unchanged; the eyes now blink about their own centre, and `fit.eyeY`
+  moves shades and glasses to where each species' eyes are.
+- **Next: 4 body templates** to replace the shared torso: raccoon compact and hunched, shark broad wedge,
+  aliens spindly and floating, bears heavy and grounded. The bodies, arms and props are still the old flat
+  style until then, so the outlined heads sit on unoutlined bodies.
 - The skeleton contract (named parts, the mouth anchor, shoulders and hands) stays, so the rig and phases 1–2
   carry over.
 
 ## Phase 4: species-fitted outfits and act colourways
 
-- Each act's clothes drawn for the 4 body types (8 × 4 = 32 outfits), for example the shark's throat bandana,
+- Each act's clothes drawn for the 4 body types (8 × 4 = 32 outfits), starting with a review sheet of the seven
+  acts other than Country in the new style; for example the shark's throat bandana,
   sleeveless denim vest around the fin and fin strap; the aliens' neon-wire hat and hover banjo; the raccoon's
   patchwork vest, rolled sleeves and slouch hat; the bear's shearling vest and notched Stetson.
 - A fixed palette per act (Country ochre and denim, Synth cyan and magenta, …) with the app skin tinting only

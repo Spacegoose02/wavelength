@@ -160,7 +160,7 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       });
       if (acting.blink) nextBlink = t + 0.1;
       lids = Math.min(lids, 1 - acting.squint * 0.45);
-      set('eyes', `translate(0 166) scale(1 ${lids.toFixed(2)}) translate(0 -166)`);
+      css('eyes', `scaleY(${lids.toFixed(2)})`);
 
       // the mouth: one shape at a time, scaled open from its top edge; lips pressed (mm) show at full size
       const shape = mouth > OPEN_AT ? acting.shape : 'rest';
