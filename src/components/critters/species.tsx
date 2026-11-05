@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { Species } from '../../store/settings';
-import { RaccoonFace, Tail as RaccoonTail } from './parts';
+import { Brows, Mouth, RaccoonFace, Tail as RaccoonTail } from './parts';
 
 /**
  * Who plays: each species is a face (drawn on the shared skeleton, see parts.tsx) and an optional tail.
@@ -80,12 +80,9 @@ function SharkFace() {
         <path d="M164 206 Q 200 232 236 206" fill="none" stroke="#1e2a36" strokeWidth="3.5" strokeLinecap="round" />
         <path d={TEETH} fill="#fff" />
       </g>
-      {/* singing, the grin opens into a toothy mouth instead of a plain hole */}
-      <g data-part="yawn" transform="scale(1 0)">
-        <path d="M178 210 Q 200 204 222 210 Q 226 236 200 238 Q 174 236 178 210 Z" fill="#5a1a24" />
-        <path d="M182 210 l4 7 l4 -8 l4 8 l4 -9 l4 9 l4 -8 l4 8 l4 -7 Z" fill="#fff" />
-        <path d="M186 235 l4 -6 l4 6 l4 -7 l4 7 l4 -6 l4 6 Z" fill="#fff" />
-      </g>
+      <Brows l="M156 150 Q 168 145 183 152" stroke="#4a6780" width={4.5} />
+      {/* singing, the grin opens into a mouth with top and bottom rows of teeth instead of a plain hole */}
+      <Mouth id="shark" x={200} y={208} w={19} h={30} fill="#5a1a24" line="#1e2a36" teeth="rows" />
     </>
   );
 }
@@ -121,22 +118,24 @@ function AlienFace() {
     // a little narrower than the shared skeleton: aliens are slim
     <g transform="translate(200 0) scale(0.86 1) translate(-200 0)">
       <path className="alien-dark" d="M178 110 Q 168 82 154 66 M222 110 Q 232 82 246 66" fill="none" strokeWidth="4" strokeLinecap="round" />
-      <circle data-glow="" className="antenna" cx="154" cy="64" r="8" filter="url(#critter-glow)" />
-      <circle data-glow="" className="antenna" cx="246" cy="64" r="8" filter="url(#critter-glow)" />
+      {/* glow with the bass, and brighter and bigger with a high voice while singing (rig) */}
+      <circle data-voice-glow="" className="antenna" cx="154" cy="64" r="8" filter="url(#critter-glow)" />
+      <circle data-voice-glow="" className="antenna" cx="246" cy="64" r="8" filter="url(#critter-glow)" />
       <path className="alien-skin" d="M200 104 C 268 104 290 150 282 182 C 274 222 238 246 200 246 C 162 246 126 222 118 182 C 110 150 132 104 200 104 Z" />
       <path className="alien-dark" d="M150 124 q 6 -4 12 0 M238 124 q 6 -4 12 0 M196 116 q 4 -3 8 0" fill="none" strokeWidth="3" strokeLinecap="round" />
       <circle className="alien-dark" cx="138" cy="200" r="4" /><circle className="alien-dark" cx="262" cy="200" r="4" />
       <g data-part="eyes">
         <path d="M130 150 Q 162 142 186 166 Q 180 188 160 186 Q 134 180 130 150 Z" fill="#111" />
         <path d="M270 150 Q 238 142 214 166 Q 220 188 240 186 Q 266 180 270 150 Z" fill="#111" />
-        <circle cx="150" cy="158" r="4.5" fill="#fff" />
-        <circle cx="232" cy="162" r="4.5" fill="#fff" />
+        <circle data-shine="" cx="150" cy="158" r="4.5" fill="#fff" />
+        <circle data-shine="" cx="232" cy="162" r="4.5" fill="#fff" />
         <circle cx="168" cy="176" r="1.8" fill="#fff" />
         <circle cx="250" cy="176" r="1.8" fill="#fff" />
       </g>
       <circle cx="195" cy="198" r="2.2" fill="#2b4a1f" /><circle cx="205" cy="198" r="2.2" fill="#2b4a1f" />
+      <Brows l="M134 140 Q 154 130 178 142" className="alien-dark" width={3.5} />
       <path data-part="smile" d="M184 214 Q 200 226 216 214" fill="none" stroke="#2b4a1f" strokeWidth="3" strokeLinecap="round" />
-      <ellipse data-part="yawn" cx="200" cy="220" rx="10" ry="10" fill="#3a1030" transform="scale(1 0)" />
+      <Mouth id="alien" x={200} y={213} w={10} h={18} fill="#3a1030" line="#2b4a1f" teeth="none" />
     </g>
   );
 }
@@ -149,16 +148,17 @@ function GreyFace() {
       <path className="grey-shade" d="M152 98 C 120 118 114 148 121 172 C 128 206 164 238 196 256 C 164 232 138 204 133 172 C 129 144 136 116 152 98 Z" />
       <ellipse cx="244" cy="112" rx="18" ry="6" transform="rotate(30 244 112)" fill="rgb(255 255 255 / 0.55)" />
       <circle cx="224" cy="100" r="2" fill="rgb(255 255 255 / 0.7)" /><circle cx="232" cy="98" r="1.6" fill="rgb(255 255 255 / 0.7)" />
-      <path className="grey-line" d="M134 150 Q 154 132 186 148 M266 150 Q 246 132 214 148" fill="none" strokeWidth="2" strokeLinecap="round" />
+      {/* brow ridges: they lift and tilt like brows (rig) */}
+      <Brows l="M134 150 Q 154 132 186 148" className="grey-line" width={2.5} />
       <g data-part="eyes">
         <ellipse cx="164" cy="168" rx="30" ry="19" fill="#0b0b0d" transform="rotate(24 164 168)" />
         <ellipse cx="236" cy="168" rx="30" ry="19" fill="#0b0b0d" transform="rotate(-24 236 168)" />
-        <ellipse cx="157" cy="161" rx="6" ry="4" fill="#fff" transform="rotate(-10 157 161)" />
-        <ellipse cx="242" cy="161" rx="6" ry="3.6" fill="#fff" transform="rotate(-25 242 161)" />
+        <ellipse data-shine="" cx="157" cy="161" rx="6" ry="4" fill="#fff" transform="rotate(-10 157 161)" />
+        <ellipse data-shine="" cx="242" cy="161" rx="6" ry="3.6" fill="#fff" transform="rotate(-25 242 161)" />
       </g>
       <path className="grey-line" d="M194 204 h4 M202 204 h4" fill="none" strokeWidth="2.5" strokeLinecap="round" />
       <path data-part="smile" d="M188 222 Q 200 230 212 222" fill="none" className="grey-line" strokeWidth="2.5" strokeLinecap="round" />
-      <ellipse data-part="yawn" cx="200" cy="226" rx="8" ry="9" fill="#2a2030" transform="scale(1 0)" />
+      <Mouth id="grey" x={200} y={221} w={8} h={15} fill="#2a2030" line="#46505a" teeth="none" />
     </>
   );
 }
@@ -167,10 +167,15 @@ function GreyFace() {
 function BearFace() {
   return (
     <>
-      <circle className="bear-fur" cx="140" cy="122" r="24" />
-      <circle className="bear-fur" cx="260" cy="122" r="24" />
-      <circle className="bear-muzzle" cx="140" cy="122" r="12" />
-      <circle className="bear-muzzle" cx="260" cy="122" r="12" />
+      {/* ears twitch on accents and loud notes (rig) */}
+      <g data-part="ear-l" className="ear-l">
+        <circle className="bear-fur" cx="140" cy="122" r="24" />
+        <circle className="bear-muzzle" cx="140" cy="122" r="12" />
+      </g>
+      <g data-part="ear-r" className="ear-r">
+        <circle className="bear-fur" cx="260" cy="122" r="24" />
+        <circle className="bear-muzzle" cx="260" cy="122" r="12" />
+      </g>
       <ellipse className="bear-fur" cx="200" cy="178" rx="82" ry="68" />
       <ellipse className="bear-muzzle" cx="200" cy="208" rx="36" ry="27" />
       <g data-part="eyes">
@@ -182,8 +187,10 @@ function BearFace() {
       <ellipse cx="200" cy="194" rx="13" ry="9" fill="#111" />
       <ellipse cx="196" cy="191" rx="4" ry="2" fill="rgb(255 255 255 / 0.5)" />
       <path d="M200 203 V212" stroke="#2b1d12" strokeWidth="2.5" strokeLinecap="round" />
+      <Brows l="M156 152 Q 167 145 180 151" className="bear-brow" width={4} />
       <path data-part="smile" d="M186 212 Q 200 224 214 212" fill="none" stroke="#2b1d12" strokeWidth="3" strokeLinecap="round" />
-      <ellipse data-part="yawn" cx="200" cy="222" rx="12" ry="12" fill="#5a1a24" transform="scale(1 0)" />
+      {/* the biggest jaw drop of the lot */}
+      <Mouth id="bear" x={200} y={210} w={13} h={27} fill="#5a1a24" line="#2b1d12" />
     </>
   );
 }

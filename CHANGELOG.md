@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **The critters' faces act while they sing.** Instead of one oval that opens and shuts, each critter's mouth now
+  takes six shapes (closed, *ah*, *oh*, *ee*, lips pressed for *m*/*b*/*p*, and an open grin when belting). With
+  synced lyrics the shapes follow each syllable of the line; without them they follow a rough guess from the
+  voice. The brows lift on a crescendo or a long held note, the eyes squint on high notes, and they blink now and
+  then on the beat. Species touches: the shark sings with top and bottom rows of teeth, the raccoon's whiskers
+  twitch and its lip curls on big drum hits, the alien's antennae glow brighter with a high voice, the aliens'
+  eye shines widen on loud notes, and the bears' ears flick. First step of the critter art plan in
+  `docs/CRITTERS-ROADMAP.md`.
 - **DJ mode no longer stops after about ten songs.** A mix has no song limit, but when the DJ took longer to find the
   next segment than the last songs took to play (a slow Hub or music server, or a phone in your pocket), the new songs
   were added behind a stopped player and the music went quiet. They now start playing as soon as they arrive. Finding

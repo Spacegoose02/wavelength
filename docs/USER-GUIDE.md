@@ -434,9 +434,20 @@ server or LRCLIB), the mouth also stays shut through intros, solos and gaps betw
 readily during a line, so it keeps up with a singer in a busy mix. On radio stations and servers the app
 can't read (no CORS, see above), and on **mono** songs (old recordings, mono streams), where there's no
 "centre" to listen to, it mouths along in time with the words of each line, or chatters gently if there
-are no synced lyrics. It can't shape individual words, and a centred instrument with the same range as a
+are no synced lyrics. A centred instrument with the same range as a
 voice (a synth lead, say) can still open it in songs without synced lyrics. Mono songs without synced
 lyrics move the mouth with the music rather than the voice.
+
+**Their faces act.** The mouth takes one of six shapes as they sing: closed, a wide-open *ah*, a round *oh*, a
+wide *ee*, lips pressed together for *m*, *b* and *p*, and an open grin when they belt a big note. With synced
+lyrics the shapes follow the words of the line (each syllable's vowel, spelled rather than pronounced, so it's
+close but not perfect); without them it's a rough guess from the sound of the voice, which reads as singing even
+when the vowel is wrong. The brows lift on a crescendo or a long held note, the eyes squint on high notes, and they
+blink now and then on the beat. Each critter has its own touches: the shark sings with rows of teeth, the
+raccoon's whiskers twitch and its lip curls over a fang on a big drum hit, the alien's antennae glow brighter and
+bigger with a high voice, both aliens' eye shines widen on loud notes, and the bears' ears flick.
+
+<img src="screenshots/critter-faces.png" alt="All six critters' faces: before (the old closed smile and a plain open oval), then the new closed mouth, the ah, oh, ee, mm and smile shapes, belting (smile with brows up and wide eye shines) and an accent (squint, the raccoon's snarl and whiskers)" width="100%">
 
 **Tuning the mouths.** If a mouth opens on the drums, misses quiet singing, or moves a moment before or after
 the words, tap **Tune mouth** (under Switch act) to open the tuner beside the critter, or go to **Settings →
@@ -503,8 +514,9 @@ The original critter, behind two decks:
 
 All the critters behave the same way around the music:
 
-- **Playing:** the head bobs on each beat (the rocker headbangs harder), the mouth sings along with the
-  vocals, and the hands and instrument follow the music as in the act table above.
+- **Playing:** the head bobs on each beat (the rocker headbangs harder), the face sings along with the
+  vocals (mouth shapes, brows and eyes, above), and the hands and instrument follow the music as in the act
+  table above.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ the
   headphones, the country act tips the hat, the rapper fixes the cap, the rocker pushes the mohawk up, the
   accordion player pulls the beanie straight). The rapper lowers the mic, the drummer rests the sticks, the
@@ -530,10 +542,18 @@ All the critters behave the same way around the music:
 >   follows `player/singing.ts`: the vocal detector in `player/voice.ts` (centre-channel, tonal and
 >   drum-hit rejection on mid/side spectra the engine taps with `engine.voiceTaps()`), gated by the
 >   song's synced lyrics (`lib/singAlong.ts`: sung spans per line, syllable pacing when the audio can't be
->   read). Each act passes a `frame` callback for its own hands and instrument;
+>   read). The face's acting is `face.ts` (`createFace`): from the mouth's open amount, the shape the
+>   singing suggests (`singingReading.shape`: the lyric syllable via `player/visemes.ts`, or a vowel guessed
+>   from three formant bands of the centre spectrum) and the band's loudness, it picks the mouth shape
+>   (held at least 80 ms), the brow lift, the squint, an accent pulse and beat blinks. The rig shows that
+>   shape's `[data-mouth]` child of `yawn` and writes CSS transforms on `brow-l` / `brow-r`, `whisker-l` /
+>   `whisker-r`, `snarl`, `ear-l` / `ear-r`, `[data-shine]` and `[data-voice-glow]`, each about its own box
+>   (`transform-box: fill-box` in `styles.css`). Each act passes a `frame` callback for its own hands and instrument;
 >   `guitar.ts` is the strum/fret/string-buzz shared by the country and rocker acts.
 > - `parts.tsx` has what they share: the frame and defs, the raccoon face and tail, the head (with the
 >   holiday hats and the skin-group outfits), the body outfits and `Arm` (which can hold a drumstick).
+>   `Mouth` (the six mouth shapes, drawn in their own frame around the mouth's centre and top, with tongue
+>   and a band of teeth or the shark's rows) and `Brows` (a left brow and its mirror).
 >   Every face is drawn on the same skeleton (head centred on 200,178, eyes on y 166, mouth on y 212,
 >   shoulders at 138,268 and 262,268, tail root at 268,292), so every act, the rig and every outfit fit
 >   every species.

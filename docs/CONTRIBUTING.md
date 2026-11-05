@@ -93,9 +93,15 @@ shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
 
 - **A critter (species):** in `species.tsx`,
   1. Write a `MyFace` component: everything from ears to mouth, with `data-part="eyes"` centred on y 166,
-     `data-part="smile"` and `data-part="yawn"` (an open mouth around y 212 to 232, starting
-     `transform="scale(1 0)"`; the rig opens it to sing and yawn). Features that stick out (fins,
-     antennae) go in the face too; hats are drawn over them.
+     `data-part="smile"` (the closed mouth) and the singing mouth as `<Mouth id="myface" x={200} y={…} w={…}
+     h={…} fill="…" line="…" />` from `parts.tsx` (`y` where the smile sits, about 210; `w` the half-width,
+     `h` how deep *ah* drops; `teeth="rows"` for a toothy one, `"none"` for none). It draws all six shapes
+     (`player/visemes.ts`); the rig shows the one `face.ts` picks. Add `<Brows l="M… Q … …" />` with the left
+     brow's path above the eyes (it's mirrored for the right). Optional details the rig animates if they're
+     there: `whisker-l` / `whisker-r` and `snarl` (shown on accents), `ear-l` / `ear-r` (flick), `data-shine`
+     on eye highlights (widen on loud notes), `data-voice-glow` on antennae (brighten with a high voice). Put
+     brows outside the `eyes` group so blinks don't squash them. Features that stick out (fins, antennae) go
+     in the face too; hats are drawn over them.
   2. Optionally a `MyTail` with `data-part="tail"`, rooted at 268,292 (the rig wags it), and a `MyLower` drawn
      instead of every act's trousers and shoes for a critter without legs (the shark's tail end). It needs a
      `data-part="boot"`, which the country act taps.

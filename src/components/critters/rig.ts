@@ -1,6 +1,8 @@
 import { useEffect, type RefObject } from 'react';
 import { createAudioReader, type AudioSample } from '../../player/analysis';
-import { createSingingReader, currentTune } from '../../player/singing';
+import { createSingingReader, currentTune, singingReading } from '../../player/singing';
+import type { Viseme } from '../../player/visemes';
+import { OPEN_AT, createFace } from './face';
 
 /** What each critter's own animation gets every frame. */
 export interface RigFrame {
@@ -32,9 +34,13 @@ export interface RigOptions {
  * (no React re-render per frame):
  *
  * - `head` bobs on beats and sways; `body` follows a little.
- * - `eyes` blink; the mouth (`yawn`, hiding `smile`) sings along with the vocals. Paused, they yawn
- *   and now and then lift `adjust`
- *   (headphones, hat, cap, hair or beanie) as if setting it straight.
+ * - The face sings (face.ts): the mouth (`yawn`, hiding `smile`) opens with the vocals in one of six shapes
+ *   (`[data-mouth]` children, player/visemes.ts), the brows (`brow-l`, `brow-r`) lift on a crescendo or a held
+ *   note, the `eyes` squint on high notes and blink now and then on a beat. Species details: `whisker-l` /
+ *   `whisker-r` twitch and `snarl` shows on accents, `ear-l` / `ear-r` flick, `[data-shine]` eye shines widen
+ *   on loud notes and `[data-voice-glow]` antennae brighten with a high voice.
+ * - Paused, the eyes blink, the critter yawns and now and then lifts `adjust` (headphones, hat, cap, hair or
+ *   beanie) as if setting it straight.
  * - `tail` wags, `spot` (the backlight) breathes with the bass, `[data-glow]` parts (neon and laser
  *   outfits) pulse with the bass.
  *
@@ -52,6 +58,17 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
     const $ = (name: string) => find(name)!;
     const set = (name: string, transform: string) => find(name)?.setAttribute('transform', transform);
     const glows = [...svg.querySelectorAll<SVGElement>('[data-glow]')];
+    const voiceGlows = [...svg.querySelectorAll<SVGElement>('[data-voice-glow]')];
+    const shines = [...svg.querySelectorAll<SVGElement>('[data-shine]')];
+    const mouths = new Map<string, SVGElement>();
+    for (const m of svg.querySelectorAll<SVGElement>('[data-mouth]')) mouths.set(m.dataset.mouth!, m);
+    const face = createFace();
+    let shown: Viseme | '' = '';
+    /** CSS transform on a part (they rotate and scale about their own box, styles.css) */
+    const css = (name: string, transform: string) => {
+      const el = find(name);
+      if (el) el.style.transform = transform;
+    };
 
     const read = createAudioReader();
     const singAlong = createSingingReader();
@@ -99,15 +116,59 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       const sing = talk ? singAlong(t, a) * tune.gain : 0;
       singing += (sing - singing) * (sing > singing ? tune.attack : tune.release);
       const mouth = Math.max(yawn, singing);
+      const acting = face({
+        t,
+        open: mouth,
+        hint: talk ? singingReading.shape : null,
+        bright: singingReading.bright,
+        energy: (a.mid + a.treble) / 2,
+        beat: a.beat && a.live,
+        transient: a.transient,
+        idle,
+        yawning: yawn > singing,
+      });
+      if (acting.blink) nextBlink = t + 0.1;
+      lids = Math.min(lids, 1 - acting.squint * 0.45);
       set('eyes', `translate(0 166) scale(1 ${lids.toFixed(2)}) translate(0 -166)`);
-      set('yawn', `translate(0 212) scale(1 ${mouth.toFixed(2)}) translate(0 -212)`);
+
+      // the mouth: one shape at a time, scaled open from its top edge; lips pressed (mm) show at full size
+      const shape = mouth > OPEN_AT ? acting.shape : 'rest';
+      if (shape !== shown) {
+        for (const [k, el] of mouths) el.style.display = k === shape ? '' : 'none';
+        shown = shape;
+      }
+      const yawnEl = find('yawn');
+      if (yawnEl) yawnEl.style.transform = `scaleY(${shape === 'rest' ? 0 : shape === 'mm' ? 1 : (0.35 + 0.65 * Math.min(1, mouth)).toFixed(2)})`;
       const smile = find('smile');
-      if (smile) smile.style.opacity = mouth > 0.15 ? '0' : '1';
+      if (smile) smile.style.opacity = shape === 'rest' ? '1' : '0';
+
+      // brows: up on a crescendo, inner ends down on a squint or an accent
+      const lift = -acting.brow * 7;
+      const tilt = acting.brow * 8 - acting.squint * 7 - acting.accent * 4;
+      css('brow-l', `translate(0px, ${lift.toFixed(2)}px) rotate(${(-tilt).toFixed(2)}deg)`);
+      // the right brow is drawn mirrored (parts.tsx, Brows), so the same rotation tilts it the other way
+      css('brow-r', `translate(0px, ${lift.toFixed(2)}px) rotate(${(-tilt).toFixed(2)}deg)`);
+      // species details
+      const twitch = acting.accent * Math.sin(t * 46);
+      css('whisker-l', `rotate(${(twitch * 7).toFixed(2)}deg)`);
+      css('whisker-r', `rotate(${(-twitch * 7).toFixed(2)}deg)`);
+      const snarl = find('snarl');
+      if (snarl) snarl.setAttribute('opacity', Math.max(0, (acting.accent - 0.35) / 0.65).toFixed(2));
+      const flick = Math.max(acting.accent, acting.brow * 0.5) * Math.sin(t * 30);
+      css('ear-l', `rotate(${(-flick * 8).toFixed(2)}deg)`);
+      css('ear-r', `rotate(${(flick * 8).toFixed(2)}deg)`);
+      const wide = 1 + Math.min(1, mouth) * Math.min(1, a.mid * 1.5) * 0.6;
+      for (const el of shines) el.style.transform = `scale(${wide.toFixed(2)})`;
+      const voice = singingReading.bright * Math.min(1, mouth / 0.5);
       set('adjust', `translate(0 ${(-6 * adj).toFixed(2)})`);
       set('tail', `rotate(${(Math.sin(t * (idle ? 0.9 : 1.8)) * 7 + bob * 4).toFixed(2)} 268 292)`);
       const spot = find('spot');
       if (spot) spot.style.opacity = (0.18 + a.bass * 0.55).toFixed(2);
       for (const g of glows) g.style.opacity = (0.55 + a.bass * 0.45 + bob * 0.2).toFixed(2);
+      for (const g of voiceGlows) {
+        g.style.opacity = Math.min(1, 0.5 + a.bass * 0.4 + bob * 0.15 + voice * 0.5).toFixed(2);
+        g.style.transform = `scale(${(1 + voice * 0.5).toFixed(2)})`;
+      }
 
       frame({ t, a, idle, bob, hit, rock, $ });
     };
