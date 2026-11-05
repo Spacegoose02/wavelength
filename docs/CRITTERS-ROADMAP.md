@@ -59,7 +59,7 @@ the asset work and a risk on low-end phones and the iOS WebView.
   four-stroke roll on the banjo, deeper when the band is loud; a strong high hit still gets a hard strum.
 - **Flourishes** (`flourish.ts`, drawn per act): on a new song, or 2.5 s into a loud gap after a sung line, at most
   every 12 s. Banjo spin and hat tip (Country), double-scratch with a hand in the air (DJ), shades pushed up onto
-  the cap (Rapper), windmill strum (Rocker), fill into the crash (Drums), antenna swoop (Theremin), glissando
+  the cap (Rapper; the hype hand alone since the shades came off), windmill strum (Rocker), fill into the crash (Drums), antenna swoop (Theremin), glissando
   (Synth), a long bellows stretch (Accordion). Each starts with a small wind-up (anticipation).
 - **Contact shadows** (`Shadow` in `parts.tsx`) under feet, stands, amps, speakers, the drum kit and the campfire.
 - Not done yet: a solo needs synced lyrics to be noticed; without them only song changes trigger a flourish.
@@ -88,8 +88,7 @@ the asset work and a risk on low-end phones and the iOS WebView.
   the top's outer edges, sleeve width, paw size, a reach that keeps hands from stretching to the old wide body's
   instruments, and its legs, feet, neck and tail. The acts kept their poses and pivots; `Pivot` moves each arm,
   the tail and the country boot onto the figure's own joints.
-- **Next:** the act outfits fitted to these bodies and the review changes (phase 4), and reframing each scene
-  around the smaller figures.
+- **Next:** the act outfits fitted to these bodies (phase 4).
 - The skeleton contract (named parts, the mouth anchor, shoulders and hands) stays, so the rig and phases 1–2
   carry over.
 
@@ -97,7 +96,8 @@ the asset work and a risk on low-end phones and the iOS WebView.
 
 - Each act's clothes drawn for the 4 body types (8 × 4 = 32 outfits), starting from the review sheet of the seven
   acts other than Country in the new style (`docs/critters/outfit-sheet.html`, November 2026; after review the Synth visor,
-  the Rapper's shades and the Rocker's mohawk came off and the Rapper's cap turned backwards); for example the shark's throat bandana,
+  the Rapper's shades and the Rocker's mohawk came off and the Rapper's cap turned backwards, and the
+  Theremin space suit became a space-age tunic; the app outfits had all of that by November 2026); for example the shark's throat bandana,
   sleeveless denim vest around the fin and fin strap; the aliens' neon-wire hat and hover banjo; the raccoon's
   patchwork vest, rolled sleeves and slouch hat; the bear's shearling vest and notched Stetson.
 - **Colours: the clothes keep following the app skin** (decided November 2026). The outfit sheet's own colours

@@ -1602,7 +1602,8 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .cap { fill: var(--viz-high); }
 .critter .cap-brim { fill: var(--viz-mid); }
 .critter .cap-logo { fill: var(--accent); }
-.critter .shade-glint { stroke: var(--viz-high); }
+.critter .cap-gap { fill: rgb(0 0 0 / 0.45); }
+.critter .cap-strap { stroke: var(--viz-mid); }
 /* rocker */
 .critter .amp { fill: #141417; stroke: #2e2e34; stroke-width: 2; }
 .critter .amp-logo { fill: var(--viz-high); }
@@ -1611,8 +1612,6 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .boot-black { fill: #0f0f12; }
 .critter .leather { fill: #1d1d22; }
 .critter-rocker .sleeve { stroke: #1d1d22; }
-.critter .mohawk { fill: var(--viz-high); }
-.critter .mohawk-tip { stroke: var(--viz-peak, #fff); }
 .critter .fretboard { fill: #222226; }
 .critter .axe { fill: var(--viz-mid); stroke: #111; stroke-width: 2; }
 
@@ -1622,7 +1621,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
 /* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
-.critter:is(.critter-country, .critter-rapper, .critter-rocker, .critter-accordion) .shark-fin,
+.critter:is(.critter-country, .critter-rapper, .critter-accordion) .shark-fin,
 :root[data-skin-group='nuclear'] .critter .shark-fin,
 :root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
@@ -1640,12 +1639,12 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .stand { stroke: #9a9aa4; }
 .critter .stick { stroke: #e8d2a6; }
 
-/* alien face (species.tsx) and the Theremin act (Theremin.tsx): space suit, UFO lights, antennae and sound waves follow the skin */
+/* alien face (species.tsx) and the Theremin act (Theremin.tsx): space-age tunic, UFO lights, antennae and sound waves follow the skin */
 .critter .alien-skin { fill: #8fd16a; }
 .critter .alien-dark { fill: #5f9e45; stroke: #5f9e45; }
-.critter-theremin .legs { fill: #c9ced8; }
-.critter .moon-boot { fill: #ececf1; }
-.critter .suit-trim { fill: #c9ced8; }
+.critter-theremin .legs { fill: color-mix(in srgb, var(--accent) 70%, #000); }
+.critter .tunic-collar { fill: color-mix(in srgb, var(--accent) 55%, #fff); }
+.critter .tunic-belt { fill: #e8c15a; }
 .critter .antenna { fill: var(--viz-high); }
 .critter .planet { fill: var(--viz-low); }
 .critter .planet-ring { stroke: var(--viz-mid); }
@@ -1716,7 +1715,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 :root[data-skin='meltdown'] .critter .sleeve { stroke: #ff8a1f; }
 :root:is([data-skin='uranium'], [data-skin='isotope']) .critter .sleeve { stroke: #b6e83a; }
 :root[data-skin-group='nuclear'] .critter .legs { fill: #e0b10a; }
-:root[data-skin-group='nuclear'] .critter :is(.hand, .boot, .boot-black, .sneaker, .moon-boot) { fill: #1b1b1f; }
+:root[data-skin-group='nuclear'] .critter :is(.hand, .boot, .boot-black, .sneaker) { fill: #1b1b1f; }
 :root[data-skin-group='nuclear'] .critter .thumb { fill: #3a3a40; }
 /* Lasers: a visor with a glowing beam; Neon: glow sticks */
 .critter .visor-strap { stroke: #1b1b22; }

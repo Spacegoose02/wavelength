@@ -5,10 +5,9 @@ import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
- * Rapper raccoon between two speaker stacks: snapback, shades and gold chain, a mic in one hand and the
- * other hand riding the beat. His mouth moves with the mids while playing and the speaker cones pump with
- * the bass. Flourish: pushes the shades up onto the cap with the hype hand thrown high, then drops them
- * back. Paused, the mic and hand drop and he straightens his cap now and then.
+ * Rapper raccoon between two speaker stacks: a snapback worn backwards and a gold chain, a mic in one hand
+ * and the other hand riding the beat. His mouth moves with the mids while playing and the speaker cones pump with
+ * the bass. Flourish: the hype hand thrown high. Paused, the mic and hand drop and he straightens his cap now and then.
  */
 export function Rapper({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
@@ -24,7 +23,6 @@ export function Rapper({ species, still }: ActProps) {
       const hype = a.live ? -bob * 22 : idle ? 0 : -Math.max(0, Math.sin(t * 4)) * 14;
       const show = swell(flourish);
       $('arm-r').setAttribute('transform', `rotate(${(s.down * 62 + hype - show * 30).toFixed(2)} 262 268)`);
-      $('shades').setAttribute('transform', `translate(0 ${(-30 * Math.min(1, show * 1.6)).toFixed(2)})`);
 
       svg.querySelectorAll<SVGElement>('[data-cone]').forEach((c) => {
         const [cx, cy] = c.dataset.cone!.split(',').map(Number);
@@ -75,18 +73,15 @@ export function Rapper({ species, still }: ActProps) {
         species={species}
         hat={
           <g data-part="adjust" className="own-hat">
-            <path className="cap" d="M140 128 Q 142 70 200 68 Q 258 70 260 128 Z" />
-            <path d="M200 70 V128 M168 76 Q 160 100 162 128 M232 76 Q 240 100 238 128" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2" />
-            <ellipse className="cap-brim" cx="262" cy="126" rx="46" ry="9" transform="rotate(14 262 126)" />
-            <circle className="cap" cx="200" cy="69" r="5" />
-            <circle className="cap-logo" cx="200" cy="104" r="9" />
-          </g>
-        }
-        eyewear={
-          <g className="own-eyewear" data-part="shades">
-            <path d="M144 156 H192 V166 Q 192 180 176 180 H160 Q 144 180 144 166 Z M208 156 H256 V166 Q 256 180 240 180 H224 Q 208 180 208 166 Z" fill="#0b0b0d" />
-            <path d="M192 160 H208" stroke="#0b0b0d" strokeWidth="4" />
-            <path data-glow="" d="M150 162 L 160 160 M214 162 L 224 160" className="shade-glint" strokeWidth="2.5" strokeLinecap="round" />
+            {/* worn backwards: the brim sticks out behind on the left, the strap's gap shows over the brow */}
+            <g transform="translate(200 178) scale(0.84) translate(-204 -168)">
+              <path className="cap-brim ol" d="M114 120 Q 92 110 78 118 Q 94 134 120 134 Z" />
+              <path className="cap ol" d="M118 140 C 112 74, 300 74, 294 140 Q 206 126 118 140 Z" />
+              <path d="M118 140 C 112 74, 300 74, 294 140 Q 206 126 118 140 Z" fill="url(#critter-vinyl)" />
+              <path className="cap-gap ol-thin" d="M178 132 Q 180 112 206 110 Q 232 112 234 132 Q 206 128 178 132 Z" />
+              <path className="cap-strap" d="M180 124 H 232" strokeWidth="3" strokeLinecap="round" />
+              <circle className="cap-logo ol-thin" cx="206" cy="84" r="5" />
+            </g>
           </g>
         }
       />

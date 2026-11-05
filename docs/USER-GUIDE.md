@@ -419,10 +419,10 @@ alien are all possible.
 |---|---|---|
 | **DJ** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
 | **Country** | Cowboy hat, plaid shirt, bandana, five-string banjo, on a porch | Strums on the beat, changes chords, taps a boot |
-| **Rapper** | Snapback, shades, gold chain, mic, between two speaker stacks | Throws a hand up on the beat, the speaker cones pump with the bass |
-| **Rocker** | Spiky mohawk, studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
+| **Rapper** | Snapback worn backwards, gold chain, mic, between two speaker stacks | Throws a hand up on the beat, the speaker cones pump with the bass |
+| **Rocker** | Studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
 | **Drummer** | Striped sailor tee, behind a drum kit on the sea floor | Hits the snare on the beat, crashes the cymbal on sharp hits, the kick drum thumps, bubbles rise faster with the bass and the seaweed sways |
-| **Theremin** | Space suit and moon boots, on the moon under a hovering UFO | One hand rises over the volume loop with the bass, the other moves toward the pitch antenna with the highs, glowing sound waves pour off the antenna, the UFO lights chase on the beat |
+| **Theremin** | Space-age tunic with a belt and planet badge, on the moon under a hovering UFO | One hand rises over the volume loop with the bass, the other moves toward the pitch antenna with the highs, glowing sound waves pour off the antenna, the UFO lights chase on the beat |
 | **Synth** | Turtleneck, a synth on an X stand in a crop circle, under a saucer's tractor beam | The keys light up with the music, one hand hops on the beat, the other glides along the keys with the highs, the beam brightens with the bass |
 | **Accordion** | A beanie with a pom-pom and a sweater, by a campfire in the pines | The bellows pump faster with the bass and puff out on the beat, the campfire flares with the bass, fireflies blink with the highs |
 
@@ -502,9 +502,8 @@ Some groups of skins give them a whole outfit:
 | **Editor palettes** | Thick-rimmed coder glasses |
 | **Holidays** | A hat in place of their own: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an Uncle Sam hat for July 4th and heart boppers for Valentine's Day |
 
-Outfits swap out what they'd clash with: the hazmat hood and holiday hats replace the act's hat, cap,
-mohawk or beanie (the DJ keeps the headphones on over the hood), and visors and glasses replace the rapper's
-shades. The alien's antennae and the shark's fin poke out from under any hat. The outfit follows the skin on screen, so it changes with Seasonal
+Outfits swap out what they'd clash with: the hazmat hood and holiday hats replace the act's hat, cap
+or beanie (the DJ keeps the headphones on over the hood). The alien's antennae and the shark's fin poke out from under any hat. The outfit follows the skin on screen, so it changes with Seasonal
 and Random daily too.
 
 <img src="screenshots/raccoon-outfits.png" alt="All four raccoons in six skins: Cherenkov (hazmat suits), Laser show (visors), Outrun (glow sticks), Game Boy Color (8-bit shades), Dracula (coder glasses) and Christmas (Santa hats)" width="100%">
@@ -528,12 +527,12 @@ All the critters behave the same way around the music:
   (down on the beat, up between; a quick four-stroke roll on the banjo).
 - **Showing off:** when a new song starts, or in an instrumental break after a sung line (with synced lyrics),
   each act does its flourish, at most once every 12 seconds: the country critter spins the banjo and tips the hat,
-  the DJ double-scratches with a hand in the air, the rapper pushes the shades up onto the cap, the rocker does a
+  the DJ double-scratches with a hand in the air, the rapper throws the hype hand high, the rocker does a
   windmill strum, the drummer plays a fill into the crash, the theremin player swoops up the antenna, the synth
   player runs a glissando down the keys, and the accordion player gives the bellows one long stretch.
 - Everyone casts a soft shadow on the floor, and so do the stands, amps, speakers and drum kit.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ the
-  headphones, the country act tips the hat, the rapper fixes the cap, the rocker pushes the mohawk up, the
+  headphones, the country act tips the hat, the rapper fixes the cap, the
   accordion player pulls the beanie straight). The rapper lowers the mic, the drummer rests the sticks, the
   theremin hands drop, the synth hands rest on the keys and the bellows breathe slowly.
 - **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.

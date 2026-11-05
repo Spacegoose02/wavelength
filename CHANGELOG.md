@@ -18,6 +18,9 @@
   shark one slim torpedo down to a crescent tail, with its fins for arms; the aliens spindly arms and legs over a
   hover glow. Heads are a little smaller so the bodies show, and arms hang from each body's shoulders. The act
   outfits are fitted to them next (`docs/CRITTERS-ROADMAP.md`, phase 4).
+- **Outfit changes from the review.** The rapper wears the cap backwards and no shades, the rocker loses the
+  mohawk (the shark's fin shows again there), and the theremin player wears a space-age tunic with a belt, a
+  glowing buckle and a planet badge instead of a space suit.
 - **The critters' faces act while they sing.** Instead of one oval that opens and shuts, each critter's mouth now
   takes six shapes (closed, *ah*, *oh*, *ee*, lips pressed for *m*/*b*/*p*, and an open grin when belting). With
   synced lyrics the shapes follow each syllable of the line; without them they follow a rough guess from the

@@ -10,7 +10,7 @@ const STARS: [number, number, number][] = [
 ];
 
 /**
- * Theremin alien on the moon, under a hovering UFO. The space suit, the UFO lights and the sound waves take
+ * Theremin alien on the moon, under a hovering UFO. The space-age tunic, the UFO lights and the sound waves take
  * the skin's colours. The left hand rises over the volume loop with the bass, the right moves toward the
  * pitch antenna with the highs and wobbles on sharp hits, waves pour off the antenna, the antennae glow with
  * the bass and the stars twinkle. Flourish: a swoop up the antenna with a wide vibrato and big waves.
@@ -79,13 +79,16 @@ export function Theremin({ species, still }: ActProps) {
       <Shadow cx={200} cy={364} rx={64} />
       <Shadow cx={200} cy={377} rx={28} ry={4} />
 
-      {/* space-suit trousers and moon boots */}
-      <Legs species={species} shoe="moon-boot" />
+      {/* tunic leggings and boots */}
+      <Legs species={species} shoe="boot-black" />
 
       <Body species={species}>
-        <ellipse className="suit-trim" cx="200" cy="248" rx="48" ry="9" />
-        <rect x="178" y="262" width="44" height="22" rx="4" fill="#16161a" />
-        {[0, 1, 2].map((i) => <circle key={i} data-glow="" className={`led led-${i}`} cx={188 + i * 12} cy="273" r="4" />)}
+        {/* a space-age tunic: collar band, belt with a glowing buckle, a ringed-planet badge */}
+        <path className="tunic-collar ol-thin" d="M150 250 Q 200 272 250 250 L 248 262 Q 200 284 152 262 Z" />
+        <rect className="tunic-belt ol-thin" x="140" y="300" width="120" height="8" />
+        <rect data-glow="" className="led led-0 ol-thin" x="194" y="298" width="12" height="12" rx="2" />
+        <circle className="planet ol-thin" cx="212" cy="282" r="7" />
+        <ellipse cx="212" cy="282" rx="12" ry="3.5" fill="none" stroke="#24170f" strokeWidth="1.6" transform="rotate(-18 212 282)" />
         <BodyOutfits />
       </Body>
 
