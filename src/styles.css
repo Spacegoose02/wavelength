@@ -1533,6 +1533,17 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .species-grey { --skin: #a9b4bc; --skin-dark: #7f8c95; }
 .species-bear-black { --bear-fur: #2b2622; --bear-fur-dark: #1c1916; --bear-muzzle: #b48f66; --skin: var(--bear-fur); --skin-dark: var(--bear-fur-dark); --belly: var(--bear-muzzle); }
 .species-bear-brown { --bear-fur: #7a4e2d; --bear-fur-dark: #5e3b20; --bear-muzzle: #d6ad7c; --skin: var(--bear-fur); --skin-dark: var(--bear-fur-dark); --belly: var(--bear-muzzle); }
+/* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
+   eye shines move about their own box, so the rig can write plain CSS transforms on them */
+.critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }
+.critter :is([data-part^='brow-'], [data-shine], [data-voice-glow]) { transform-box: fill-box; transform-origin: 50% 50%; }
+.critter [data-part='whisker-l'] { transform-box: fill-box; transform-origin: 100% 50%; }
+.critter [data-part='whisker-r'] { transform-box: fill-box; transform-origin: 0 50%; }
+.critter [data-part='ear-l'] { transform-box: fill-box; transform-origin: 80% 90%; }
+.critter [data-part='ear-r'] { transform-box: fill-box; transform-origin: 20% 90%; }
+.critter .contact-shadow { fill: rgb(0 0 0 / 0.38); }
+.critter .whiskers { stroke: rgb(255 255 255 / 0.75); stroke-width: 1.6; stroke-linecap: round; fill: none; }
+.critter .bear-brow { stroke: color-mix(in srgb, var(--bear-muzzle) 70%, var(--bear-fur)); }
 /* bare skin or fur (accordion legs, the drummer's neckline) */
 .critter .bare { fill: var(--skin); }
 .critter .neckline { fill: var(--belly, var(--skin)); }

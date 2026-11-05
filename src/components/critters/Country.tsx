@@ -1,12 +1,14 @@
 import { useRef } from 'react';
+import { swell, windUp } from './flourish';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
  * Country raccoon on a porch in front of a fence: cowboy hat, plaid shirt and bandana in the skin's colours,
- * a five-string banjo, and a boot that taps the beat. Paused, he tips his hat now and then.
+ * a five-string banjo rolled in time, and a boot that taps the beat. Flourish: spins the banjo a full turn
+ * on its pot and tips the hat. Paused, he tips his hat now and then.
  */
 export function Country({ species, still }: ActProps) {
   const { Tail } = species;
@@ -16,7 +18,15 @@ export function Country({ species, still }: ActProps) {
   useCritterRig(
     root,
     (f) => {
-      playGuitar(f, hands.current, 22);
+      // a banjo roll: four picking strokes a beat
+      playGuitar(f, hands.current, 22, 1, 4);
+      if (f.flourish) {
+        const up = swell(f.flourish);
+        f.$('guitar').setAttribute('transform', `rotate(${(360 * windUp(f.flourish)).toFixed(1)} 170 318)`);
+        f.$('arm-l').setAttribute('transform', `rotate(${(-28 * up).toFixed(2)} 138 268)`);
+        f.$('arm-r').setAttribute('transform', `rotate(${(-18 * up).toFixed(2)} 262 268)`);
+        f.$('adjust').setAttribute('transform', `translate(0 ${(-10 * up).toFixed(2)}) rotate(${(-8 * up).toFixed(2)} 200 110)`);
+      }
       f.$('boot').setAttribute('transform', `rotate(${(f.a.live ? -f.bob * 16 : f.idle ? 0 : -Math.max(0, Math.sin(f.t * 6)) * 12).toFixed(2)} 236 362)`);
     },
     { still },
@@ -43,6 +53,8 @@ export function Country({ species, still }: ActProps) {
         <path key={y} d={`M0 ${y} H400`} className="porch-line" strokeWidth="2" />
       ))}
 
+      {[34, 104, 296, 366].map((x) => <Shadow key={x} cx={x + 4} cy={324} rx={12} ry={3} />)}
+      <Shadow cx={200} cy={366} rx={66} />
       {Tail && <Tail />}
 
       {/* legs and boots */}

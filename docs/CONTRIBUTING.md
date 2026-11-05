@@ -93,9 +93,15 @@ shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
 
 - **A critter (species):** in `species.tsx`,
   1. Write a `MyFace` component: everything from ears to mouth, with `data-part="eyes"` centred on y 166,
-     `data-part="smile"` and `data-part="yawn"` (an open mouth around y 212 to 232, starting
-     `transform="scale(1 0)"`; the rig opens it to sing and yawn). Features that stick out (fins,
-     antennae) go in the face too; hats are drawn over them.
+     `data-part="smile"` (the closed mouth) and the singing mouth as `<Mouth id="myface" x={200} y={…} w={…}
+     h={…} fill="…" line="…" />` from `parts.tsx` (`y` where the smile sits, about 210; `w` the half-width,
+     `h` how deep *ah* drops; `teeth="rows"` for a toothy one, `"none"` for none). It draws all six shapes
+     (`player/visemes.ts`); the rig shows the one `face.ts` picks. Add `<Brows l="M… Q … …" />` with the left
+     brow's path above the eyes (it's mirrored for the right). Optional details the rig animates if they're
+     there: `whisker-l` / `whisker-r` and `snarl` (shown on accents), `ear-l` / `ear-r` (flick), `data-shine`
+     on eye highlights (widen on loud notes), `data-voice-glow` on antennae (brighten with a high voice). Put
+     brows outside the `eyes` group so blinks don't squash them. Features that stick out (fins, antennae) go
+     in the face too; hats are drawn over them.
   2. Optionally a `MyTail` with `data-part="tail"`, rooted at 268,292 (the rig wags it), and a `MyLower` drawn
      instead of every act's trousers and shoes for a critter without legs (the shark's tail end). It needs a
      `data-part="boot"`, which the country act taps.
@@ -119,7 +125,11 @@ shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
      narrows for slim critters and adds the chin shadow, so don't draw your own), `<Head species={species}
      hat={…} eyewear={…} />` with the act's headwear (`className="own-hat"`, and `data-part="adjust"` to
      have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`Arm`, classes `sleeve` and `hand`, can hold a prop).
-  3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Write
+  3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Move
+     things in time with `tempo` (`phase` through the beat, `index`, `locked`) rather than raw `a.beat`
+     where you can, and give the act a flourish: when `flourish` is above 0, draw one move with `windUp` or
+     `swell` from `flourish.ts` (set it after the act's usual transforms so it wins). Put `<Shadow>`s on
+     the floor under the feet and any stand or prop, before what stands on them. Write
      attributes straight onto `data-part` elements; don't set React state per frame. Keep it moving with
      `a.live` false (made-up signal) and calm when `idle`. Mouths sing on their own; pass `talk: false`
      only if the act covers the mouth.

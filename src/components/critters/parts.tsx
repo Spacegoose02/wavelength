@@ -1,4 +1,5 @@
 import { forwardRef, type ReactNode } from 'react';
+import type { Viseme } from '../../player/visemes';
 import type { SpeciesInfo } from './species';
 
 /**
@@ -27,6 +28,10 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: s
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        {/* soft edges for contact shadows */}
+        <filter id="critter-soft" x="-20%" y="-100%" width="140%" height="300%">
+          <feGaussianBlur stdDeviation="3" />
+        </filter>
         <clipPath id="critter-torso">
           <path d={TORSO} />
         </clipPath>
@@ -36,6 +41,14 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: s
     </svg>
   );
 });
+
+/**
+ * A soft contact shadow on the ground (an ellipse centred on `cx`,`cy`), so feet, stands and props sit on the
+ * floor instead of floating over it. Draw it before what stands on it.
+ */
+export function Shadow({ cx, cy, rx, ry = 6 }: { cx: number; cy: number; rx: number; ry?: number }) {
+  return <ellipse className="contact-shadow" cx={cx} cy={cy} rx={rx} ry={ry} filter="url(#critter-soft)" />;
+}
 
 export function Tail() {
   return (
@@ -107,18 +120,126 @@ export function BodyOutfits() {
   );
 }
 
+/** One mouth shape's outline, in the mouth's own frame (centre `x`, top `y`, half-width `w`, depth `h`). */
+function mouthPath(shape: Viseme, x: number, y: number, w: number, h: number) {
+  const f = (n: number) => n.toFixed(1);
+  switch (shape) {
+    case 'ah': // jaw dropped: a deep rounded D
+      return `M${f(x - w)} ${f(y)} Q${f(x)} ${f(y + h * 0.12)} ${f(x + w)} ${f(y)} C${f(x + w * 1.05)} ${f(y + h * 1.05)} ${f(x - w * 1.05)} ${f(y + h * 1.05)} ${f(x - w)} ${f(y)} Z`;
+    case 'oh': // small and round
+      return `M${f(x)} ${f(y)} C${f(x + w * 0.8)} ${f(y)} ${f(x + w * 0.8)} ${f(y + h * 0.85)} ${f(x)} ${f(y + h * 0.85)} C${f(x - w * 0.8)} ${f(y + h * 0.85)} ${f(x - w * 0.8)} ${f(y)} ${f(x)} ${f(y)} Z`;
+    case 'ee': // wide and short
+      return `M${f(x - w * 1.35)} ${f(y)} Q${f(x)} ${f(y + h * 0.1)} ${f(x + w * 1.35)} ${f(y)} Q${f(x + w * 1.1)} ${f(y + h * 0.5)} ${f(x)} ${f(y + h * 0.52)} Q${f(x - w * 1.1)} ${f(y + h * 0.5)} ${f(x - w * 1.35)} ${f(y)} Z`;
+    case 'smile': // open grin, corners up
+      return `M${f(x - w * 1.55)} ${f(y - 3)} Q${f(x)} ${f(y + h * 0.08)} ${f(x + w * 1.55)} ${f(y - 3)} Q${f(x + w * 1.25)} ${f(y + h * 0.85)} ${f(x)} ${f(y + h * 0.9)} Q${f(x - w * 1.25)} ${f(y + h * 0.85)} ${f(x - w * 1.55)} ${f(y - 3)} Z`;
+    default:
+      return '';
+  }
+}
+
+/** A row of `n` triangular teeth between x0 and x1 on line y, pointing down (dir 1) or up (dir -1). */
+function teethRow(x0: number, x1: number, y: number, n: number, size: number, dir: 1 | -1) {
+  const step = (x1 - x0) / n;
+  let d = `M${x0.toFixed(1)} ${y.toFixed(1)}`;
+  for (let i = 0; i < n; i++) d += ` L${(x0 + step * (i + 0.5)).toFixed(1)} ${(y + dir * size).toFixed(1)} L${(x0 + step * (i + 1)).toFixed(1)} ${y.toFixed(1)}`;
+  return `${d} Z`;
+}
+
+export interface MouthProps {
+  /** names the clip paths: one per species, so cards for different critters on one page don't share them */
+  id: string;
+  /** centre and top of the mouth, where the closed smile sits */
+  x: number;
+  y: number;
+  /** half-width and how deep the open "ah" drops */
+  w: number;
+  h: number;
+  /** inside of the mouth */
+  fill: string;
+  /** lips-pressed line colour, for `mm` */
+  line: string;
+  /** `rows`: top and bottom rows of pointed teeth (the shark); default a band of upper teeth */
+  teeth?: 'band' | 'rows' | 'none';
+}
+
+/**
+ * The singing mouth (`yawn` part): every shape in `player/visemes.ts`, one `<g data-mouth>` each. The rig
+ * (rig.ts) shows the one `face.ts` picks and scales it open from its top edge; `mm` is shown at full size
+ * (it's a closed mouth). Drawn in its own frame around (`x`, `y`) so a redrawn face can reuse it.
+ */
+export function Mouth({ id, x, y, w, h, fill, line, teeth = 'band' }: MouthProps) {
+  return (
+    <g data-part="yawn" style={{ transform: 'scaleY(0)' }}>
+      {(['ah', 'oh', 'ee', 'smile'] as const).map((shape) => {
+        const d = mouthPath(shape, x, y, w, h);
+        const clip = `mouth-${id}-${shape}`;
+        const depth = shape === 'ah' ? h * 0.82 : shape === 'oh' ? h * 0.85 : shape === 'ee' ? h * 0.5 : h * 0.86;
+        const half = shape === 'ee' ? w * 1.35 : shape === 'smile' ? w * 1.55 : w;
+        return (
+          <g key={shape} data-mouth={shape} style={{ display: 'none' }}>
+            <clipPath id={clip}>
+              <path d={d} />
+            </clipPath>
+            <path d={d} fill={fill} />
+            <g clipPath={`url(#${clip})`}>
+              {/* tongue */}
+              {shape !== 'ee' && <ellipse cx={x} cy={y + depth} rx={half * 0.6} ry={depth * 0.32} fill="#d86a78" />}
+              {teeth === 'band' && shape !== 'oh' && <rect x={x - half * 1.2} y={y - 4} width={half * 2.4} height={4 + depth * 0.16} rx="2" fill="#fff" />}
+              {teeth === 'rows' && (
+                <>
+                  <path d={teethRow(x - half * 1.1, x + half * 1.1, y - 1, shape === 'oh' ? 4 : 8, depth * 0.24 + 2, 1)} fill="#fff" />
+                  <path d={teethRow(x - half * 1.1, x + half * 1.1, y + depth + 1, shape === 'oh' ? 3 : 7, depth * 0.2 + 2, -1)} fill="#fff" />
+                </>
+              )}
+            </g>
+          </g>
+        );
+      })}
+      {/* lips pressed together (m, b, p): a closed line with the lower lip pushed out a little */}
+      <g data-mouth="mm" style={{ display: 'none' }}>
+        <path d={`M${x - w * 1.1} ${y + 2} Q${x} ${y + 5} ${x + w * 1.1} ${y + 2}`} fill="none" stroke={line} strokeWidth="3.5" strokeLinecap="round" />
+        <path d={`M${x - w * 0.6} ${y + 7} Q${x} ${y + 10} ${x + w * 0.6} ${y + 7}`} fill="none" stroke={line} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+      </g>
+    </g>
+  );
+}
+
+/**
+ * Two brows (`brow-l`, `brow-r`), raised and tilted by the rig (face.ts: up on a crescendo or a held note, down
+ * at the inner end on a squint). `l` is the left brow's path; the right one is its mirror about x 200, drawn in a
+ * mirrored group, so the rig gives both the same rotation and they tilt as a pair.
+ */
+export function Brows({ l, className, stroke, width = 4 }: { l: string; className?: string; stroke?: string; width?: number }) {
+  return (
+    <g className="brows">
+      <path data-part="brow-l" d={l} fill="none" className={className} stroke={stroke} strokeWidth={width} strokeLinecap="round" />
+      {/* mirrored in a group: the rig's CSS transform on the path would replace a transform attribute on it */}
+      <g transform="translate(400 0) scale(-1 1)">
+        <path data-part="brow-r" d={l} fill="none" className={className} stroke={stroke} strokeWidth={width} strokeLinecap="round" />
+      </g>
+    </g>
+  );
+}
+
 /**
  * The raccoon's face: ears, mask, eyes, nose and mouth. Every species' face (species.tsx) has the same
- * named parts: `eyes` (blinks, scaled about y 166), `smile` (hidden while the mouth is
- * open) and `yawn` (the open mouth, scaled from y 212).
+ * named parts: `eyes` (blinks and squints, scaled about y 166), `brow-l` / `brow-r`, `smile` (the closed mouth,
+ * hidden while singing) and `yawn` (the singing mouth, `Mouth` above). Species details are optional parts:
+ * `whisker-l` / `whisker-r` and `snarl` (raccoon), `ear-l` / `ear-r` (bears), `[data-shine]` eye shines and
+ * `[data-voice-glow]` antennae (aliens).
  */
 export function RaccoonFace() {
   return (
     <>
-      <ellipse className="fur-mid" cx="138" cy="122" rx="22" ry="28" transform="rotate(-20 138 122)" />
-      <ellipse className="fur-dark" cx="140" cy="125" rx="11" ry="16" transform="rotate(-20 140 125)" />
-      <ellipse className="fur-mid" cx="262" cy="122" rx="22" ry="28" transform="rotate(20 262 122)" />
-      <ellipse className="fur-dark" cx="260" cy="125" rx="11" ry="16" transform="rotate(20 260 125)" />
+      {/* ears bounce on the beat and flick on accents (rig) */}
+      <g data-part="ear-l">
+        <ellipse className="fur-mid" cx="138" cy="122" rx="22" ry="28" transform="rotate(-20 138 122)" />
+        <ellipse className="fur-dark" cx="140" cy="125" rx="11" ry="16" transform="rotate(-20 140 125)" />
+      </g>
+      <g data-part="ear-r">
+        <ellipse className="fur-mid" cx="262" cy="122" rx="22" ry="28" transform="rotate(20 262 122)" />
+        <ellipse className="fur-dark" cx="260" cy="125" rx="11" ry="16" transform="rotate(20 260 125)" />
+      </g>
       <ellipse className="fur-mid" cx="200" cy="178" rx="80" ry="66" />
       <path className="fur-light" d="M122 196 Q 140 236 196 242 Q 150 214 122 196 Z M278 196 Q 260 236 204 242 Q 250 214 278 196 Z" />
       <path className="fur-dark-soft" d="M192 114 Q 200 110 208 114 L 204 156 L 196 156 Z" />
@@ -132,9 +253,22 @@ export function RaccoonFace() {
         <circle cx="173" cy="164" r="1.6" fill="#fff" />
         <circle cx="231" cy="164" r="1.6" fill="#fff" />
       </g>
+      <Brows l="M156 146 Q 168 139 182 146" stroke="#c9c9d2" width={3.5} />
+      {/* whiskers twitch on accents (rig) */}
+      <g data-part="whisker-l" className="whiskers">
+        <path d="M176 206 L 140 198 M176 211 L 138 211 M177 216 L 142 224" />
+      </g>
+      <g data-part="whisker-r" className="whiskers">
+        <path d="M224 206 L 260 198 M224 211 L 262 211 M223 216 L 258 224" />
+      </g>
       <ellipse cx="200" cy="194" rx="10" ry="7" fill="#111" />
       <path data-part="smile" d="M186 212 Q 200 224 214 212" fill="none" stroke="#2b2b31" strokeWidth="3" strokeLinecap="round" />
-      <ellipse data-part="yawn" cx="200" cy="220" rx="10" ry="11" fill="#5a1a24" transform="scale(1 0)" />
+      {/* a little snarl on strong accents: the lip lifts at one corner over a fang */}
+      <g data-part="snarl" opacity="0">
+        <path d="M181 210 Q 186 203 193 208" fill="none" stroke="#2b2b31" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M186 210 L 190 210 L 188 217 Z" fill="#fff" />
+      </g>
+      <Mouth id="raccoon" x={200} y={210} w={12} h={24} fill="#5a1a24" line="#2b2b31" />
     </>
   );
 }

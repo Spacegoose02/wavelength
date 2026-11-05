@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { swell, windUp } from './flourish';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -15,7 +16,8 @@ const KEYS = Array.from({ length: 14 }, (_, i) => 118 + i * 11.7);
  * Grey alien in a wheat field at night, playing a synth under the tractor beam of its saucer: the classic
  * big-headed grey with huge black eyes and a slim grey body. The synth and the beam take the skin's colours.
  * The keys light up with the spectrum, the left hand hops on the beat, the right glides along the keys with
- * the highs, the beam brightens with the bass and the saucer's lights chase. Paused, the hands rest.
+ * the highs, the beam brightens with the bass and the saucer's lights chase. Flourish: a glissando down the
+ * keys with the other hand thrown up. Paused, the hands rest.
  */
 export function Synth({ species, still }: ActProps) {
   const { Tail } = species;
@@ -24,18 +26,23 @@ export function Synth({ species, still }: ActProps) {
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, rock, $ }) => {
+    ({ t, a, idle, bob, rock, flourish, $ }) => {
       const s = state.current;
       const svg = root.current!;
       s.glide += ((idle ? 0 : a.live ? Math.min(1, a.treble * 1.8) * 2 - 1 : Math.sin(t * 0.8)) - s.glide) * 0.1;
       const hop = idle ? 0 : a.live ? bob * 8 : Math.max(0, Math.sin(t * 4)) * 6;
       $('arm-l').setAttribute('transform', `rotate(${(-hop + (idle ? 4 : 0)).toFixed(2)} 138 268)`);
-      $('arm-r').setAttribute('transform', `rotate(${(-s.glide * 18 + rock * 3).toFixed(2)} 262 268)`);
+      // flourish: a glissando, the hand sweeping down the keys with the lit key running ahead of it, the other
+      // hand thrown up
+      const gliss = flourish ? windUp(flourish) : 0;
+      $('arm-r').setAttribute('transform', `rotate(${(flourish ? -18 + gliss * 40 : -s.glide * 18 + rock * 3).toFixed(2)} 262 268)`);
+      if (flourish) $('arm-l').setAttribute('transform', `rotate(${(-70 * swell(flourish)).toFixed(2)} 138 268)`);
 
       const bins = a.freq.length;
       svg.querySelectorAll<SVGElement>('[data-key]').forEach((k, i) => {
         const v = a.playing ? a.freq[Math.floor(((i + 0.5) / KEYS.length) * bins * 0.6)] ?? 0 : 0;
-        k.style.opacity = v > 0.45 ? '1' : '0';
+        const run = flourish && Math.abs(i / (KEYS.length - 1) - (1 - Math.max(0, gliss))) < 0.08;
+        k.style.opacity = v > 0.45 || run ? '1' : '0';
       });
       $('beam').style.opacity = (0.12 + (a.playing ? a.bass * 0.4 + bob * 0.15 : 0.04)).toFixed(2);
       $('saucer').setAttribute('transform', `translate(0 ${(Math.sin(t * 1.2) * 3).toFixed(2)})`);
@@ -68,6 +75,7 @@ export function Synth({ species, still }: ActProps) {
         return <path key={x} className="wheat" d={`M${x} 336 q -2 -14 2 -24 M${x + 8} 338 q 2 -12 -1 -22`} fill="none" strokeWidth="2.5" strokeLinecap="round" />;
       })}
 
+      <Shadow cx={200} cy={366} rx={66} />
       {Tail && <Tail />}
 
       {/* black trousers and boots */}
@@ -85,6 +93,7 @@ export function Synth({ species, still }: ActProps) {
       <Head species={species} />
 
       {/* the synth on an X stand */}
+      <Shadow cx={200} cy={373} rx={52} ry={4} />
       <path className="stand" d="M160 322 L 240 372 M240 322 L 160 372" fill="none" strokeWidth="4" strokeLinecap="round" />
       <rect className="synth" x="110" y="290" width="180" height="34" rx="6" />
       <rect x="114" y="296" width="172" height="22" rx="2" fill="#0d0d10" />

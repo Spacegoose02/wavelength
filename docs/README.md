@@ -24,6 +24,8 @@ around in an afternoon, fix bugs without archaeology, and add features in the ho
    suggestions: how it works and its API.
 12. **[AI-DJ.md](AI-DJ.md)** — the AI DJ chat: setup guide for admins (API key, model, costs, limits,
    per-account switch), how the agent loop splits work between the Hub and the app, and its API.
+13. **[CRITTERS-ROADMAP.md](CRITTERS-ROADMAP.md)** — the plan for the critters' art and animation overhaul
+   (singing faces, rhythm, 3/4 silhouettes, species-fitted outfits, stage lighting) and where it stands.
 
 ## The 60-second tour
 

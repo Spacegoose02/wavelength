@@ -1,13 +1,15 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { swell, windUp } from './flourish';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, TORSO } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
  * Rocker raccoon in front of two amp stacks: a spiky mohawk and a flying-V in the skin's colours, a studded
  * leather jacket, and a proper headbang on the beat. The amp lights follow the bass, mids and highs.
- * Paused, he pushes his hair back up now and then.
+ * Strums eighth notes in time. Flourish: a full windmill strum with the guitar tipped up. Paused, he pushes
+ * his hair back up now and then.
  */
 export function Rocker({ species, still }: ActProps) {
   const { Tail } = species;
@@ -17,7 +19,11 @@ export function Rocker({ species, still }: ActProps) {
   useCritterRig(
     root,
     (f) => {
-      playGuitar(f, hands.current, 24, 1.3);
+      playGuitar(f, hands.current, 24, 1.3, 2);
+      if (f.flourish) {
+        f.$('arm-l').setAttribute('transform', `rotate(${(-360 * windUp(f.flourish)).toFixed(1)} 138 268)`);
+        f.$('guitar').setAttribute('transform', `rotate(${(-10 * swell(f.flourish)).toFixed(2)} 200 320)`);
+      }
       const levels = [f.a.bass, f.a.mid, f.a.treble * 1.6];
       root.current!.querySelectorAll<SVGElement>('[data-level]').forEach((led) => {
         const [band, step] = led.dataset.level!.split(':').map(Number);
@@ -47,6 +53,8 @@ export function Rocker({ species, still }: ActProps) {
         )),
       )}
 
+      {[52, 348].map((cx) => <Shadow key={cx} cx={cx} cy={346} rx={46} ry={5} />)}
+      <Shadow cx={200} cy={366} rx={66} />
       {Tail && <Tail />}
 
       {/* ripped black jeans and boots */}
