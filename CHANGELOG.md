@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Discover is back near the top of the sidebar,** under Search and the AI DJ, where it was before the sidebar got
+  sections. It had moved down into Explore, where a folded section could hide it.
 
 ## 0.25.1
 - **Girl critters get their own outfits.** Each act has a skirt or dress for the girls: a cowgirl denim fringe

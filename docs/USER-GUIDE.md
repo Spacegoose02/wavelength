@@ -253,8 +253,8 @@ outside closes it.
 
 ## The sidebar
 
-Pages are grouped: Home, Search and the AI DJ at the top, then **Your library** (Recently added, Albums, Artists,
-Favorites, Downloaded, History, Audiobooks, Podcasts), **Explore** (Discover, Radio, SUB/WAVE), and Downloads,
+Pages are grouped: Home, Search, the AI DJ and Discover at the top, then **Your library** (Recently added, Albums,
+Artists, Favorites, Downloaded, History, Audiobooks, Podcasts), **Explore** (Radio, SUB/WAVE), and Downloads,
 Inbox and Settings. Click a section's heading to fold it; it stays folded on this device, and the page you're on
 still shows.
 
