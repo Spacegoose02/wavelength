@@ -78,7 +78,6 @@ export function Country({ species, still }: ActProps) {
         }
       />
 
-      <Arm part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} handLater />
       <Arm part="arm-r" d="M262 268 Q 262 308 306 264" hand={[306, 264]} handLater />
 
       {/* five-string banjo, neck up to the right: a drum-head pot with a metal rim, a long thin neck and the
@@ -107,8 +106,8 @@ export function Country({ species, still }: ActProps) {
         </g>
       </g>
 
-      {/* hands in front of the banjo, arms behind it */}
-      <ArmHand part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} />
+      {/* the strumming arm goes over the guitar body; only the fretting arm is behind the neck */}
+      <Arm part="arm-l" d="M138 268 Q 146 300 182 308" hand={[184, 308]} />
       <ArmHand part="arm-r" d="M262 268 Q 262 308 306 264" hand={[306, 264]} />
     </CritterFrame>
   );
