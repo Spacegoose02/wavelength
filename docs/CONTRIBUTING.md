@@ -119,7 +119,7 @@ those parts so the pivot lands on the figure's own shoulder, tail root or foot.
      light). `Under` draws the legs in the act's `legs` class and the feet in its `shoe` class (bare feet when
      there's none), with the right foot inside `<Pivot from={[236, 362]} … part="boot">` and a tail inside
      `<Pivot from={[268, 292]} … part="tail">`; a figure without legs still needs an empty `data-part="boot"`.
-     Put the shoulders on the outer edges of the top, and set `reach` so hands don't stretch to the old wide
+     Set `waist` (`[y, half-width, length]`) for where a girl's skirt hangs. Put the shoulders on the outer edges of the top, and set `reach` so hands don't stretch to the old wide
      body's instruments.
   3. Fit the headwear, if it isn't the usual round head: `fit` resizes the shared hats, headphones and hoods
      (`w`, `lift`), stretches glasses over bigger eyes (`eyes`) and moves them to where the eyes are (`eyeY`,
@@ -143,7 +143,8 @@ those parts so the pivot lands on the figure's own shoulder, tail root or foot.
   2. Draw behind to front: background, `<Legs species={species} shoe="…" />` (the species draws its own legs,
      feet and tail; `legs="bare"` for fur instead of trousers), `<Body species={species}>` with the top's prints
      and `BodyOutfits` (it draws the species' top in `.top`, clips what you put in it to the top and adds the
-     chin shadow and shading, so don't draw your own), `<Head species={species}
+     chin shadow and shading, so don't draw your own), the girls' `<Skirt species={species} style=… />` right after
+     it (`aline`, `pleated`, `ruffle`, `tutu` or `fringe`; `className` colours it, `top` for a dress), `<Head species={species}
      hat={…} eyewear={…} />` with the act's headwear (`className="own-hat"`, and `data-part="adjust"` to
      have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`<Arm part d hand>`, classes `sleeve` and `hand`, can hold a prop; `d` is drawn from
      the old shoulder, and the arm is redrawn from the species' own).
