@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
 import { swell, windUp } from './flourish';
-import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -64,6 +64,7 @@ export function Rocker({ species, still }: ActProps) {
         {[[140, 262], [152, 256], [164, 252], [260, 262], [248, 256], [236, 252]].map(([cx, cy]) => <circle key={cx} cx={cx} cy={cy} r="2.6" fill="#d8d8de" />)}
         <BodyOutfits />
       </Body>
+      <Skirt species={species} style="tutu" className="skirt-tutu" />
 
       <Head species={species} />
 

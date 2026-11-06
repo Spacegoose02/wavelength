@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 import { swell } from './flourish';
@@ -78,6 +78,7 @@ export function Drums({ species, still }: ActProps) {
         <path className="neckline" d="M184 246 L 200 266 L 216 246 Z" />
         <BodyOutfits />
       </Body>
+      <Skirt species={species} style="pleated" trim="skirt-trim" />
 
       <Head species={species} />
 

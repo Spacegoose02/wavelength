@@ -26,6 +26,8 @@ export interface Figure {
   paw: number;
   /** how far a hand reaches from the shoulder; the acts' hands are brought in to it */
   reach: number;
+  /** where a girl's skirt hangs from: waist y, half-width there, and the skirt's length */
+  waist: [y: number, w: number, len: number];
   /** the shadow the head casts on the top, just under the chin */
   chin: [cy: number, rx: number];
   /** drawn behind the top: legs and feet (`legs` and `shoe` are the act's classes), neck, tail */
@@ -116,6 +118,7 @@ const raccoon: Figure = {
   arm: 20,
   paw: 10,
   reach: 62,
+  waist: [306, 40, 30],
   chin: [254, 40],
   Under: ({ shoe }) => (
     <>
@@ -150,6 +153,7 @@ const bear: Figure = {
   arm: 25,
   paw: 13,
   reach: 66,
+  waist: [314, 52, 30],
   chin: [252, 50],
   Under: ({ legs, shoe }) => (
     <>
@@ -179,6 +183,7 @@ const shark: Figure = {
   arm: 16,
   paw: 8,
   reach: 60,
+  waist: [292, 30, 30],
   chin: [244, 34],
   Under: () => (
     <>
@@ -208,6 +213,7 @@ const alien = (headY: number, neck: [top: number, bottom: number, width: number]
   arm: 10,
   paw: 7,
   reach: 62,
+  waist: [310, 25, 26],
   chin: [252, 40],
   Under: ({ legs, shoe }) => (
     <>

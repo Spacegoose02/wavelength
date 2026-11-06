@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -91,6 +91,7 @@ export function Theremin({ species, still }: ActProps) {
         <ellipse cx="212" cy="282" rx="12" ry="3.5" fill="none" stroke="#24170f" strokeWidth="1.6" transform="rotate(-18 212 282)" />
         <BodyOutfits />
       </Body>
+      <Skirt species={species} trim="tunic-trim" />
 
       <Head species={species} />
 

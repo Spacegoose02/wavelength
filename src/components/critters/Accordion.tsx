@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -74,6 +74,7 @@ export function Accordion({ species, still }: ActProps) {
         <path d="M166 248 Q 200 262 234 248" fill="none" stroke="rgb(0 0 0 / 0.25)" strokeWidth="6" />
         <BodyOutfits />
       </Body>
+      <Skirt species={species} trim="knit-trim" />
 
       <Head
         species={species}
