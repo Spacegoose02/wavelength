@@ -111,6 +111,10 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .track-menu { position: fixed; right: auto; width: 250px; max-height: min(480px, calc(100vh - 16px)); z-index: 61; }
 .track-menu-title { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .menu-sep { height: 1px; background: var(--line); margin: 4px 2px; }
+.settings-search { position: relative; margin-left: auto; width: min(280px, 100%); }
+.settings-search input { width: 100%; }
+.settings-found { left: 0; right: 0; width: auto; }
+.tabs-divider { align-self: center; padding: 0 6px 0 14px; margin-left: 6px; border-left: 1px solid var(--line); color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
 .track-menu .menu-item { justify-content: flex-start; gap: 8px; background: none; border: 0; color: inherit; text-align: left; width: 100%; cursor: pointer; font: inherit; }
 .track-menu .menu-item:disabled { opacity: 0.5; cursor: default; }
 .track-menu .menu-wrap { display: flex; }

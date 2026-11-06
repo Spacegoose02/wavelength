@@ -48,3 +48,12 @@ test('sidebar sections fold and stay folded', async ({ page }) => {
   await page.reload();
   await expect(page.locator('nav.sidebar button.nav', { hasText: 'Albums' })).toBeHidden();
 });
+
+test('settings search opens the right tab', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav.sidebar button.nav', { hasText: 'Settings' }).click();
+  await page.getByLabel('Search settings').fill('crossfade');
+  await page.locator('.settings-found .menu-item', { hasText: 'Volume levelling' }).click();
+  await expect(page.locator('.tabs button.on')).toHaveText('Playback');
+  await expect(page.locator('h2', { hasText: 'Volume levelling and crossfade' })).toBeVisible();
+});

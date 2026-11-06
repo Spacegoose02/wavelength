@@ -607,20 +607,73 @@ function MouthTunerSection() {
   );
 }
 
+/** Personal settings first, then the Hub's (admins and family managers only), set apart in the tab row. */
 const TABS: { id: SettingsTab; label: string; admin?: boolean; manager?: boolean }[] = [
   { id: 'account', label: 'Account' },
-  { id: 'family', label: 'My family', manager: true },
-  { id: 'users', label: 'Users', admin: true },
-  { id: 'server', label: 'Server', admin: true },
-  { id: 'dj', label: 'AI DJ', admin: true },
-  { id: 'features', label: 'Features', admin: true },
   { id: 'sources', label: 'Sources' },
   { id: 'playback', label: 'Playback' },
   { id: 'downloads', label: 'Downloads' },
   { id: 'themes', label: 'Themes' },
   { id: 'discover', label: 'Discover' },
   { id: 'updates', label: 'Updates' },
+  { id: 'family', label: 'My family', manager: true },
+  { id: 'users', label: 'Users', admin: true },
+  { id: 'server', label: 'Server', admin: true },
+  { id: 'dj', label: 'AI DJ', admin: true },
+  { id: 'features', label: 'Features', admin: true },
 ];
+
+/**
+ * What the settings search finds: each section's heading on its tab (plus a few other words people search for).
+ * Picking one opens the tab and scrolls to the heading. Keep in step with the <h2>s when adding a section.
+ */
+const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string }[] = [
+  { tab: 'account', heading: 'Wavelength Hub', also: 'sign in sign out password two-step 2fa pin profile' },
+  { tab: 'account', heading: 'Signed-in devices', also: 'devices sessions' },
+  { tab: 'sources', heading: 'Sources', also: 'servers navidrome plex audiobookshelf login add server' },
+  { tab: 'playback', heading: 'Now Playing visualizer', also: 'scene critter act boy girl' },
+  { tab: 'playback', heading: 'Critter mouths', also: 'mouth tuner singing' },
+  { tab: 'playback', heading: 'Volume levelling and crossfade', also: 'replaygain loudness crossfade gapless automix' },
+  { tab: 'playback', heading: 'Talking DJ', also: 'voice dj name' },
+  { tab: 'playback', heading: 'Discord status' },
+  { tab: 'playback', heading: 'Bit-perfect output', also: 'wasapi exclusive hi-res' },
+  { tab: 'playback', heading: 'Explicit and clean versions', also: 'explicit clean' },
+  { tab: 'playback', heading: 'Equalizer', also: 'eq bass treble' },
+  { tab: 'downloads', heading: 'Dead zones', also: 'offline signal tunnel' },
+  { tab: 'downloads', heading: 'Smart offline', also: 'offline favorites mixes storage' },
+  { tab: 'downloads', heading: 'Downloads', also: 'folder' },
+  { tab: 'downloads', heading: 'deemix' },
+  { tab: 'downloads', heading: 'yt-dlp', also: 'youtube' },
+  { tab: 'downloads', heading: 'Soulseek', also: 'slskd' },
+  { tab: 'themes', heading: 'Theme', also: 'skin dark light seasonal colors' },
+  { tab: 'discover', heading: 'Discover charts', also: 'charts billboard apple deezer genres' },
+  { tab: 'updates', heading: 'Updates', also: 'version install' },
+  { tab: 'users', heading: 'People', also: 'users accounts roles admin kid' },
+  { tab: 'users', heading: 'Invite someone', also: 'invite link' },
+  { tab: 'users', heading: 'Kid-safe music', also: 'kids parental' },
+  { tab: 'users', heading: 'Families', also: 'family managers' },
+  { tab: 'server', heading: 'Load', also: 'cpu memory slow' },
+  { tab: 'server', heading: 'Storage', also: 'disk space' },
+  { tab: 'server', heading: 'Library updates', also: 'scan rescan navidrome login' },
+  { tab: 'server', heading: 'Navidrome accounts' },
+  { tab: 'server', heading: 'Containers', also: 'docker restart' },
+  { tab: 'server', heading: 'Push notifications', also: 'ntfy' },
+  { tab: 'server', heading: 'Backup', also: 'restore' },
+  { tab: 'server', heading: 'Deleted albums', also: 'trash' },
+  { tab: 'server', heading: 'Tag edits', also: 'undo' },
+  { tab: 'dj', heading: 'Provider and key', also: 'anthropic claude openai api key' },
+  { tab: 'dj', heading: 'Ollama', also: 'local model' },
+  { tab: 'dj', heading: 'Spending', also: 'limits cost' },
+  { tab: 'dj', heading: 'Talking DJ voice', also: 'kokoro tts' },
+  { tab: 'features', heading: 'Features', also: 'switches turn on off' },
+];
+
+/** Settings search: headings (and their extra words) that contain every typed word. */
+export function searchSettings(q: string, tabs: SettingsTab[]): typeof SEARCH_INDEX {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  return SEARCH_INDEX.filter((e) => tabs.includes(e.tab) && words.every((w) => `${e.heading} ${e.also ?? ''}`.toLowerCase().includes(w))).slice(0, 8);
+}
 
 /** Explicit / clean versions (lib/versions.ts). Kid profiles always get the clean one. */
 function PlaybackOptions() {
@@ -698,16 +751,49 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   // My family is for a family's managers who aren't Hub admins (admins run every family under Users)
   const isManager = useHub((s) => !!s.token && !!s.user?.familyManager && s.user.role !== 'kid' && !s.permissions.includes('users.manage'));
   const tabs = TABS.filter((t) => (!t.admin || isAdmin) && (!t.manager || isManager));
+  const [q, setQ] = useState('');
+  const [jump, setJump] = useState<string>();
+  const found = searchSettings(q, tabs.map((t) => t.id));
   useEffect(() => {
     if (initial) setTab(initial);
   }, [initial]);
+  // after a search pick: scroll to that heading once its tab has drawn
+  useEffect(() => {
+    if (!jump) return;
+    const h = window.setTimeout(() => {
+      const el = [...document.querySelectorAll('.page h2')].find((x) => x.textContent?.trim().toLowerCase().startsWith(jump.toLowerCase()));
+      el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      setJump(undefined);
+    }, 120);
+    return () => window.clearTimeout(h);
+  }, [jump, tab]);
+  const personal = tabs.filter((t) => !t.admin && !t.manager);
+  const hubTabs = tabs.filter((t) => t.admin || t.manager);
 
   return (
     <div className="page narrow">
-      <header className="page-head"><h1>Settings</h1></header>
+      <header className="page-head">
+        <h1>Settings</h1>
+        <div className="settings-search">
+          <input type="search" placeholder="Search settings…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />
+          {q.trim() && (
+            <div className="menu settings-found">
+              {found.length ? found.map((e) => (
+                <button type="button" key={`${e.tab}:${e.heading}`} className="menu-item" onClick={() => { setTab(e.tab); setJump(e.heading); setQ(''); }}>
+                  {e.heading}<small>{TABS.find((t) => t.id === e.tab)?.label}</small>
+                </button>
+              )) : <div className="menu-hint">Nothing called that</div>}
+            </div>
+          )}
+        </div>
+      </header>
       <div className="tabs" ref={tabsRef} role="tablist">
-        {tabs.map((t) => (
+        {personal.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
+        ))}
+        {hubTabs.length > 0 && <span className="tabs-divider" aria-hidden>Hub admin</span>}
+        {hubTabs.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id} className={`admin-tab ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
       </div>
 
