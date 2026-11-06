@@ -299,7 +299,7 @@ export function Brows({ l, className, stroke, width = 4 }: { l: string; classNam
  * `className="own-eyewear"` so outfits that replace them can hide them. Girls wear a bow instead of the act's
  * hat, unless `girlHat` (the beanie) keeps it, when the bow goes on the hat in another colour.
  */
-export function Head({ species, hat, eyewear, over, girlHat }: { species: SpeciesInfo; hat?: ReactNode; eyewear?: ReactNode; over?: ReactNode; girlHat?: boolean }) {
+export function Head({ species, hat, eyewear, over, girlHat, hidesEars }: { species: SpeciesInfo; hat?: ReactNode; eyewear?: ReactNode; over?: ReactNode; girlHat?: boolean; hidesEars?: boolean }) {
   const { Face, fit = {} } = species;
   const girl = useContext(GirlContext);
   const w = fit.w ?? 1;
@@ -312,7 +312,10 @@ export function Head({ species, hat, eyewear, over, girlHat }: { species: Specie
   return (
     <g data-part="head">
       <g transform={`translate(200 ${y}) scale(${s}) translate(-200 -178)`}>
-      <Face />
+      {/* a hat that sits down over the head (the cowboy hat) hides the ears while it's worn */}
+      <g className={hidesEars && hat && (!girl || girlHat) ? 'under-hat' : undefined}>
+        <Face />
+      </g>
 
       <g transform={onEyes}>{eyewear}</g>
       {/* hidden rather than left out, so the rig still finds the hat's parts (`adjust`) */}
@@ -322,6 +325,7 @@ export function Head({ species, hat, eyewear, over, girlHat }: { species: Specie
       <g className="outfit outfit-nuclear" transform={narrow(w)}>
         <path className="hazmat" fillRule="evenodd" d="M100 168 A100 96 0 1 1 300 168 A100 96 0 1 1 100 168 Z M134 184 A66 58 0 1 0 266 184 A66 58 0 1 0 134 184 Z" />
         <ellipse cx="200" cy="184" rx="67" ry="59" fill="rgb(160 220 255 / 0.14)" stroke="#8a6d00" strokeWidth="4" />
+        <g transform={fit.mask ? `translate(0 ${fit.mask})` : undefined}>
         <path d="M164 196 Q 200 186 236 196 L 232 226 Q 200 244 168 226 Z" fill="#3b3b42" />
         <circle cx="200" cy="218" r="10" fill="#26262c" />
         <path d="M193 214 L207 214 M192 218 L208 218 M193 222 L207 222" stroke="#55555e" strokeWidth="1.6" />
@@ -329,6 +333,7 @@ export function Head({ species, hat, eyewear, over, girlHat }: { species: Specie
         <circle cx="240" cy="224" r="13" fill="#4a4a52" stroke="#f4c20d" strokeWidth="3" />
         <circle cx="160" cy="224" r="5" fill="#2a2a30" />
         <circle cx="240" cy="224" r="5" fill="#2a2a30" />
+        </g>
       </g>
       <g className="outfit outfit-lasers" transform={onEyes}>
         <path d="M128 166 L 140 164 M272 166 L 260 164" className="visor-strap" strokeWidth="6" strokeLinecap="round" />
@@ -337,18 +342,12 @@ export function Head({ species, hat, eyewear, over, girlHat }: { species: Specie
         <rect x="138" y="152" width="124" height="26" rx="13" fill="none" className="visor-rim" strokeWidth="2.5" />
       </g>
       <g className="outfit outfit-neon" transform={onTop}>
-        <path data-glow="" d="M136 140 Q 200 112 264 140" className="glow-b" fill="none" strokeWidth="5" strokeLinecap="round" filter="url(#critter-glow)" />
+        <path data-glow="" d="M128 148 Q 200 106 272 148" className="glow-b" fill="none" strokeWidth="5" strokeLinecap="round" filter="url(#critter-glow)" />
       </g>
       <g className="outfit outfit-retro" transform={onEyes}>
         {/* 8-bit shades */}
         <path d="M146 156 H254 V164 H246 V172 H238 V180 H214 V172 H206 V164 H194 V172 H186 V180 H162 V172 H154 V164 H146 Z" fill="#0b0b0d" />
         <path d="M158 164 H166 V168 H158 Z M218 164 H226 V168 H218 Z" fill="#fff" />
-      </g>
-      <g className="outfit outfit-editor" transform={onEyes}>
-        {/* coder glasses */}
-        <circle cx="170" cy="166" r="15" fill="rgb(255 255 255 / 0.18)" className="coder-frame" strokeWidth="4.5" />
-        <circle cx="230" cy="166" r="15" fill="rgb(255 255 255 / 0.18)" className="coder-frame" strokeWidth="4.5" />
-        <path d="M185 164 Q 200 156 215 164 M155 162 L 134 156 M245 162 L 266 156" fill="none" className="coder-frame" strokeWidth="4.5" strokeLinecap="round" />
       </g>
 
       <g transform={onTop}>

@@ -1604,6 +1604,9 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .skirt-trim { stroke: #fff; }
 .critter .tunic-trim { stroke: color-mix(in srgb, var(--accent) 55%, #fff); }
 .critter .knit-trim { stroke: rgb(0 0 0 / 0.22); }
+.critter .under-hat :is([data-part='ear-l'], [data-part='ear-r']) { display: none; }
+/* holiday hats and the hazmat hood replace the act's hat: the ears come back */
+:root:is([data-skin-group='holidays'], [data-skin-group='nuclear']) .critter .under-hat :is([data-part='ear-l'], [data-part='ear-r']) { display: inline; }
 .critter .bow-alt .bow { fill: var(--viz-high); }
 .critter .bow-alt .bow-knot { fill: color-mix(in srgb, var(--viz-high) 70%, #000); }
 .critter.species-shark .sleeve { stroke: var(--skin); }
@@ -1744,10 +1747,11 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 :root[data-skin-group='nuclear'] .critter .outfit-nuclear,
 :root[data-skin-group='lasers'] .critter .outfit-lasers,
 :root[data-skin-group='neon'] .critter .outfit-neon,
-:root[data-skin-group='retro'] .critter .outfit-retro,
-:root[data-skin-group='editor'] .critter .outfit-editor { display: inline; }
+:root[data-skin-group='retro'] .critter .outfit-retro { display: inline; }
 :root[data-skin-group='nuclear'] .critter .own-hat,
-:root:is([data-skin-group='nuclear'], [data-skin-group='lasers'], [data-skin-group='retro'], [data-skin-group='editor']) .critter .own-eyewear { display: none; }
+:root:is([data-skin-group='nuclear'], [data-skin-group='lasers'], [data-skin-group='retro']) .critter .own-eyewear { display: none; }
+/* the respirator covers the mouth (the shark's grin shows under it, which reads fine) */
+:root[data-skin-group='nuclear'] .critter:not(.species-shark) :is([data-part='smile'], [data-part='yawn'], [data-part='snarl']) { display: none; }
 /* Nuclear: yellow hazmat suit, hood and respirator, black rubber gloves and boots */
 .critter .hazmat { fill: #f4c20d; }
 :root[data-skin='meltdown'] .critter .hazmat { fill: #ff8a1f; }
@@ -1764,8 +1768,6 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .visor-rim { stroke: var(--viz-mid); }
 .critter .glow-a { stroke: var(--viz-high); }
 .critter .glow-b { stroke: var(--viz-mid); }
-/* Editor palettes: thick-rimmed coder glasses */
-.critter .coder-frame { stroke: var(--viz-low); }
 
 /* ============ Radio: editing "Your stations" and ordering favorites ============ */
 .station-hero.editing { cursor: grab; grid-template-columns: 1fr; }

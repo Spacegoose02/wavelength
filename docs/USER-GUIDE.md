@@ -535,14 +535,13 @@ Some groups of skins give them a whole outfit:
 | **Lasers** | A wraparound visor with a laser beam across it that pulses with the bass |
 | **Neon** | Glow-stick necklaces and a glow headband that pulse with the bass |
 | **Retro** | 8-bit pixel shades |
-| **Editor palettes** | Thick-rimmed coder glasses |
 | **Holidays** | A hat in place of their own: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an Uncle Sam hat for July 4th and heart boppers for Valentine's Day |
 
 Outfits swap out what they'd clash with: the hazmat hood and holiday hats replace the act's hat
 or beanie (the DJ keeps the headphones on over the hood). The alien's antennae and the shark's fin poke out from under any hat. The outfit follows the skin on screen, so it changes with Seasonal
 and Random daily too.
 
-<img src="screenshots/raccoon-outfits.png" alt="All four raccoons in six skins: Cherenkov (hazmat suits), Laser show (visors), Outrun (glow sticks), Game Boy Color (8-bit shades), Dracula (coder glasses) and Christmas (Santa hats)" width="100%">
+<img src="screenshots/raccoon-outfits.png" alt="All four raccoons in six skins: Cherenkov (hazmat suits), Laser show (visors), Outrun (glow sticks), Game Boy Color (8-bit shades), Dracula (coder glasses, since removed) and Christmas (Santa hats)" width="100%">
 
 <img src="screenshots/critters-outfits.png" alt="The shark and the alien in three skins: Reactor core (hazmat suits), Christmas (Santa hats) and Laser show (visors)" width="60%">
 
