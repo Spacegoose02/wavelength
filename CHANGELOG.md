@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Less lag with Now Playing open.** The player bar no longer animates behind the full-screen Now Playing, the
+  screen no longer redraws everything (the critter's whole drawing included) each time the clock ticks, and the
+  critter and visualizers slow to 20 frames a second while paused. In a test with the CPU slowed to phone speed,
+  Now Playing with a critter went from 64% to 49% of the main thread while playing and from 51% to 21% paused.
 - **The artist link on an album page always works.** It used to do nothing when the album's artist id wasn't
   one in the library's artist list. It now finds the artist by name too, else opens the artist on that server by
   its id, else their Deezer releases.

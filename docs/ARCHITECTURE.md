@@ -226,3 +226,11 @@ Tauri generates this project once; we edit it by hand and commit it.
   (`store/settings.ts`), each with a `group` for Settings → Themes. The skin on screen is not always the saved
   one: `App.tsx` shows `useUi.previewSkin` (a hover preview) or else `activeSkin()` from `lib/seasons.ts`,
   which applies Seasonal and Random daily from the device's local date.
+- **Keeping it smooth**: `position` in `store/player.ts` changes about four times a second while a song plays.
+  A component that calls `usePlayer()` with no selector re-renders on every change, and so does everything
+  inside it. Read the store with a selector, or with `usePlayerControls()` from `components/PlayerClock.tsx`
+  (the whole store minus `position`), and show the time with `Elapsed`, `Seek` or `MiniProgress` from the
+  same file. Animation loops (`Visualizer`, `Scenes`, `critters/rig.ts`) go through `lib/framePace.ts`:
+  `createPacer()` keeps full frame rate while music plays and drops to 20 fps while paused, and
+  `createCssVars()` reads the skin colours twice a second instead of calling `getComputedStyle` every frame.
+  The deck under Now Playing stops drawing (`Visualizer off`, `.deck.covered`) since Now Playing covers it.

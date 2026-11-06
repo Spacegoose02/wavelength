@@ -77,6 +77,9 @@ genre names cover it).
 - **SVG or DOM scene** (like the critters): its own component, rendered by `NowPlayingStage` for its id.
   Call `createAudioReader()` from `player/analysis.ts` inside a `requestAnimationFrame` loop and write
   attributes directly instead of setting React state every frame.
+- Pace the loop with `createPacer()` from `lib/framePace.ts` (skip the frame when it returns 0, and advance
+  your clock by the seconds it returns), and read skin colours with `createCssVars()`, not `getComputedStyle`
+  each frame (`docs/ARCHITECTURE.md`, Keeping it smooth).
 - Both must keep moving with no readable audio (paused, or a stream without CORS): the reader gives a calm
   made-up signal with `live: false`.
 

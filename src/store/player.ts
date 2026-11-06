@@ -24,7 +24,7 @@ export type Repeat = 'off' | 'all' | 'one';
  */
 export type QueueBy = 'you' | 'dj' | 'station';
 
-interface PlayerState {
+export interface PlayerState {
   queue: Track[];
   index: number;
   playing: boolean;

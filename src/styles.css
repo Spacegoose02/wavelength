@@ -332,6 +332,8 @@ section h2 { font-size: 19px; margin-bottom: 14px; display: flex; align-items: c
 .lcd-mid { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .lcd-marquee { overflow: hidden; white-space: nowrap; font-size: 13px; }
 .lcd-marquee span { display: inline-block; animation: marquee 18s linear infinite; }
+/* under Now Playing (it covers the whole window) the deck stops animating */
+.deck.covered .lcd-marquee span, .deck.covered .blink { animation-play-state: paused; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .lcd-flags { display: flex; gap: 8px; font-size: 9.5px; letter-spacing: 1px; }
 .lcd-flags span { color: var(--lcd-dim); text-shadow: none; }
