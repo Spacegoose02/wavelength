@@ -154,6 +154,9 @@ interface SettingsState {
   setMouthOffset(key: string, seconds: number): void;
   /** Discord status on this computer (lib/discord.ts). Not synced: the app ID is, the switch isn't. */
   discord: { on: boolean; appId: string };
+  /** Desktop extras (lib/desktop.ts), per computer: Ctrl+Alt hotkeys, and closing the window to the tray. */
+  desktop: { hotkeys: boolean; closeToTray: boolean };
+  setDesktop(p: Partial<SettingsState['desktop']>): void;
   setDiscord(p: Partial<SettingsState['discord']>): void;
   /** The talking DJ (lib/djVoice.ts): a spoken link between songs. Synced, except the device voice (and whether to use it) is per device. */
   djVoice: DjVoiceSettings;
@@ -306,6 +309,8 @@ export const useSettings = create<SettingsState>()(
           return { mouthOffsets: next };
         }),
       discord: { on: false, appId: '' },
+      desktop: { hotkeys: true, closeToTray: false },
+      setDesktop: (p) => set((st) => ({ desktop: { ...st.desktop, ...p } })),
       setDiscord: (p) => set((st) => ({ discord: { ...st.discord, ...p } })),
       djVoice: DEFAULT_DJ_VOICE,
       setDjVoice: (p) => set((st) => ({ djVoice: { ...st.djVoice, ...p } })),

@@ -1,4 +1,4 @@
-# Builds the Windows installer/exe and the signed Android APK and attaches them to a GitHub release.
+# Builds the Windows installer/exe, the Linux AppImage and .deb, the Mac .dmg (and the .app.tar.gz it updates from) and the signed Android APK and attaches them to a GitHub release.
 #
 # Runs when a release is published, or by hand (Actions → Release builds → Run workflow) for a tag
 # that already has a release, e.g. to (re)attach binaries to an older release.
@@ -140,10 +140,18 @@ jobs:
         run: npm run tauri build -- --bundles appimage deb
 
       - name: Upload to release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          gh release upload "$TAG" --clobber src-tauri/target/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/deb/*.deb
+          FILES=(src-tauri/target/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/deb/*.deb)
+          # the AppImage updates itself (src-tauri/src/update.rs), so it carries a .sig like the Windows files
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            for f in src-tauri/target/release/bundle/appimage/*.AppImage; do npx tauri signer sign "$f"; FILES+=("$f.sig"); done
+          fi
+          gh release upload "$TAG" --clobber "${FILES[@]}"
 
   macos:
     runs-on: macos-latest
@@ -206,13 +214,24 @@ jobs:
           done
 
       - name: Build (universal, Apple silicon and Intel)
-        run: npm run tauri build -- --target universal-apple-darwin --bundles dmg
+        run: npm run tauri build -- --target universal-apple-darwin --bundles app,dmg
 
       - name: Upload to release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          gh release upload "$TAG" --clobber src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          B=src-tauri/target/universal-apple-darwin/release/bundle
+          # Wavelength.app as a .tar.gz: what the Mac app updates itself from (src-tauri/src/update.rs)
+          UPD="$B/macos/Wavelength_${TAG#v}_universal.app.tar.gz"
+          tar -czf "$UPD" -C "$B/macos" Wavelength.app
+          FILES=("$B"/dmg/*.dmg "$UPD")
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            npx tauri signer sign "$UPD"; FILES+=("$UPD.sig")
+          fi
+          gh release upload "$TAG" --clobber "${FILES[@]}"
 
   ios:
     # The iPhone app (docs/IOS.md). Needs an Apple Developer account: without its secrets this job is skipped.

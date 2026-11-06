@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- **Don't play this.** From any song's menu, keep a song or a whole artist out of song radio, Sounds like this,
+  Smart Shuffle, DJ mode and your Made for you mixes. Undo it there or in Settings → Playback → Don't play. Synced
+  with a Hub, which leaves them out of your mixes too (`docs/USER-GUIDE.md#dont-play-this`).
+- **Smart Shuffle.** Press shuffle twice: your songs shuffled, with a song you might like after every three
+  (`docs/USER-GUIDE.md#smart-shuffle`).
+- **Mini player, tray icon and hotkeys** in the desktop apps: a small always-on-top player, play/pause/next/previous
+  from the tray or menu bar, Ctrl+Alt+Space / → / ← from any app, and optionally keep playing in the tray when the
+  window is closed (`docs/USER-GUIDE.md#mini-player-tray-and-hotkeys`).
+- **The Mac app and the Linux AppImage update themselves,** like the Windows and Android apps. Releases now carry
+  a `Wavelength_X.Y.Z_universal.app.tar.gz` for that (`docs/RELEASING.md#in-app-updates`).
 - **One menu for every song.** Right-click a song (press and hold on a phone) for Play next, Add to queue, Add to
   playlist, Song radio, Sounds like this, Go to artist or album, Share and Copy song name
   (`docs/USER-GUIDE.md#the-song-menu`).

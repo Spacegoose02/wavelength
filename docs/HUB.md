@@ -575,6 +575,10 @@ On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favorites and Time Capsul
 artist (plus the track that played, for songs the person played), and each app finds them in its own library.
 Blends mix two to six people who have all said yes (`blend_optin`).
 
+
+**Don't play this.** Artists and songs a person set to "Don't play" in the app (a synced setting,
+`settings.dontPlay` in their prefs) are left out of every mix and DJ station segment, cached ones included
+(`hub/src/dontPlay.ts`; the app matches the same way in `src/lib/dontPlay.ts`).
 ## Discover
 
 Besides keeping a copy of the charts (`hub/src/discover.ts`, `GET /api/discover/fetch`), the Hub helps Discover

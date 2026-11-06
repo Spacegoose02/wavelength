@@ -1,3 +1,4 @@
+import { DesktopSettings } from '../components/DesktopSettings';
 import { DontPlaySettings } from '../components/DontPlaySettings';
 import { useEffect, useState } from 'react';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
@@ -636,6 +637,7 @@ const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string }[] = [
   { tab: 'playback', heading: 'Critter mouths', also: 'mouth tuner singing' },
   { tab: 'playback', heading: 'Volume levelling and crossfade', also: 'replaygain loudness crossfade gapless automix' },
   { tab: 'playback', heading: 'Talking DJ', also: 'voice dj name' },
+  { tab: 'playback', heading: 'Mini player, tray and hotkeys', also: 'mini player tray menu bar hotkey shortcut keyboard global always on top close minimize' },
   { tab: 'playback', heading: 'Discord status' },
   { tab: 'playback', heading: 'Bit-perfect output', also: 'wasapi exclusive hi-res' },
   { tab: 'playback', heading: 'Explicit and clean versions', also: 'explicit clean' },
@@ -812,6 +814,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <MouthTunerSection />
           <PlaybackOptions />
           <DjVoiceSettings />
+          <DesktopSettings />
           <DiscordSettings />
           <HifiSettings />
           <VersionsPicker />

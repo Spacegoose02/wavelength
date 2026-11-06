@@ -51,7 +51,7 @@ export function UpdatesTab() {
     return (
       <section>
         <h2>Updates</h2>
-        <p className="muted small">Updates install themselves in the Windows and Android apps. On a Mac or Linux, get each new version from {RELEASES_URL}.</p>
+        <p className="muted small">Updates install themselves in the Windows, Mac and Android apps and the Linux AppImage. Here (a .deb install or a test build), get each new version from {RELEASES_URL}.</p>
       </section>
     );
   }
@@ -80,6 +80,10 @@ export function UpdatesTab() {
                 ? 'Android shows its install prompt; tap Install (or Update). Your settings and downloads are kept.'
                 : target === 'portable'
                   ? 'Wavelength.exe is replaced in place and restarted.'
+                  : target === 'appimage'
+                    ? 'The AppImage is replaced in place and restarted.'
+                    : target === 'mac'
+                      ? 'Wavelength.app is replaced in place and opened again.'
                   : 'The installer runs with a progress bar, closes Wavelength and opens it again when it’s done.'}
             </p>
           </div>

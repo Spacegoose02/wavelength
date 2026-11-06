@@ -72,3 +72,35 @@ test('a playlist moved into a folder shows under it in the sidebar', async ({ pa
   await page.getByRole('button', { name: 'Pin', exact: true }).click();
   await expect(page.locator('.side-list > .side-item', { hasText: 'Leg day' })).toHaveCount(1);
 });
+
+test("Don't play from the song menu lists the artist in Settings, and Play again removes it", async ({ page }) => {
+  const t = { id: 't1', sourceId: 'x', kind: 'track', title: 'Song 1', artist: 'Some Band feat. Guest', album: 'An Album', duration: 200 };
+  await page.addInitScript((tracks) => {
+    localStorage.setItem('tonearm.library', JSON.stringify({ state: { playlists: [{ id: 'p1', name: 'Test', tracks, createdAt: 0, updatedAt: 0 }], history: [] }, version: 0 }));
+  }, [t]);
+  await page.goto('/');
+  await page.locator('.side-item', { hasText: 'Test' }).dispatchEvent('click');
+  await page.locator('.track-row').first().click({ button: 'right' });
+  await page.locator('.track-menu .menu-item', { hasText: "Don't play Some Band" }).click();
+  await page.locator('nav.sidebar button.nav', { hasText: 'Settings' }).click();
+  await page.getByLabel('Search settings').fill('block');
+  await page.locator('.settings-found .menu-item', { hasText: "Don't play" }).click();
+  const list = page.locator('.dont-play-list li');
+  await expect(list).toHaveCount(1);
+  await expect(list).toContainText('Some Band');
+  await list.getByRole('button', { name: 'Play again' }).click();
+  await expect(list).toHaveCount(0);
+});
+
+test('the shuffle button goes off, Shuffle, Smart Shuffle, off', async ({ page }) => {
+  await page.goto('/');
+  const btn = page.locator('.deck-center .shuffle-btn');
+  await expect(btn).not.toHaveClass(/\bon\b/);
+  await btn.click();
+  await expect(btn).toHaveClass(/\bon\b/);
+  await expect(btn).not.toHaveClass(/smart/);
+  await btn.click();
+  await expect(btn).toHaveClass(/smart/);
+  await btn.click();
+  await expect(btn).not.toHaveClass(/\bon\b/);
+});

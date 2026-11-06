@@ -1,3 +1,4 @@
+import { canDesktop, toggleMiniPlayer } from '../lib/desktop';
 import { useSettings } from '../store/settings';
 import { ShuffleButton } from './ShuffleButton';
 import { trackArt, useArtworkList } from '../lib/artwork';
@@ -9,7 +10,7 @@ import { CastButton } from './CastButton';
 import { DjModeButton, DjStationPanel } from './DjStation';
 import { TogetherButton } from './Together';
 import { EqButton } from './Equalizer';
-import { IconNext, IconPause, IconPlay, IconPrev, IconQueue, IconRepeat, IconVolume } from './Icons';
+import { IconNext, IconPause, IconPlay, IconPrev, IconMini, IconQueue, IconRepeat, IconVolume } from './Icons';
 import { Visualizer } from './Visualizer';
 
 /** Bottom deck: Plexamp layout with a Winamp LCD in the middle. */
@@ -70,6 +71,7 @@ export function PlayerBar() {
         <DevicesButton />
         <CastButton />
         <EqButton />
+        {canDesktop && <button type="button" className="tbtn small" onClick={() => void toggleMiniPlayer()} title="Mini player"><IconMini /></button>}
         <button className={`tbtn small ${ui.queueOpen ? 'on' : ''}`} onClick={ui.toggleQueue} title="Queue"><IconQueue /></button>
         <IconVolume className="vol-icon" />
         <input className="vol" type="range" min={0} max={1} step={0.01} value={p.volume} onChange={(e) => p.setVolume(Number(e.target.value))}
