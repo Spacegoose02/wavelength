@@ -5,9 +5,9 @@ import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
- * Rapper raccoon between two speaker stacks: a snapback worn backwards and a gold chain, a mic in one hand
+ * Rapper raccoon between two speaker stacks: a gold chain, no hat, a mic in one hand
  * and the other hand riding the beat. His mouth moves with the mids while playing and the speaker cones pump with
- * the bass. Flourish: the hype hand thrown high. Paused, the mic and hand drop and he straightens his cap now and then.
+ * the bass. Flourish: the hype hand thrown high. Paused, the mic and hand drop.
  */
 export function Rapper({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
@@ -69,28 +69,14 @@ export function Rapper({ species, still }: ActProps) {
         <BodyOutfits />
       </Body>
 
-      <Head
-        species={species}
-        hat={
-          <g data-part="adjust" className="own-hat">
-            {/* worn backwards: the brim sticks out behind on the left, the strap's gap shows over the brow */}
-            <g transform="translate(200 178) scale(0.84) translate(-204 -168)">
-              <path className="cap-brim ol" d="M114 120 Q 92 110 78 118 Q 94 134 120 134 Z" />
-              <path className="cap ol" d="M118 140 C 112 74, 300 74, 294 140 Q 206 126 118 140 Z" />
-              <path d="M118 140 C 112 74, 300 74, 294 140 Q 206 126 118 140 Z" fill="url(#critter-vinyl)" />
-              <path className="cap-gap ol-thin" d="M178 132 Q 180 112 206 110 Q 232 112 234 132 Q 206 128 178 132 Z" />
-              <path className="cap-strap" d="M180 124 H 232" strokeWidth="3" strokeLinecap="round" />
-              <circle className="cap-logo ol-thin" cx="206" cy="84" r="5" />
-            </g>
-          </g>
-        }
-      />
+      <Head species={species} />
 
       {/* mic hand (left of picture), hype hand (right) */}
-      <Arm part="arm-l" d="M138 268 Q 124 242 164 226" hand={[164, 230]}>
-        <path d="M168 228 L 156 252" stroke="#1a1a1e" strokeWidth="9" strokeLinecap="round" />
-        <circle cx="176" cy="216" r="11" fill="#c9c9d1" />
-        <path d="M168 212 H184 M167 217 H185 M169 222 H183" stroke="#8a8a93" strokeWidth="1.2" />
+      {/* held low beside the chin, tipped up at the mouth, so it doesn't hide the face */}
+      <Arm part="arm-l" d="M138 268 Q 120 270 146 256" hand={[146, 258]}>
+        <path d="M150 256 L 140 278" stroke="#1a1a1e" strokeWidth="9" strokeLinecap="round" />
+        <circle cx="157" cy="245" r="10" fill="#c9c9d1" className="ol-thin" />
+        <path d="M150 241 H164 M149 246 H165 M151 251 H163" stroke="#8a8a93" strokeWidth="1.2" />
       </Arm>
       <Arm part="arm-r" d="M262 268 Q 300 256 302 222" hand={[302, 218]} />
     </CritterFrame>

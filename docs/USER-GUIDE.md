@@ -402,7 +402,7 @@ spectrum under the title does the same.
 
 <a id="raccoons"></a>
 The last visualizer is a critter who plays along with the music. You pick **who** plays and **what** they
-play, and any critter can play any act: 6 critters × 8 acts. A rocker shark, a DJ bear and a country grey
+play, and any critter can play any act: 6 critters × 8 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
 alien are all possible.
 
 <img src="screenshots/critters.png" alt="Every critter in every act in the Neon synth skin: rows are the raccoon, shark, alien, grey alien, black bear and brown bear; columns are DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth and Accordion" width="100%">
@@ -419,7 +419,7 @@ alien are all possible.
 |---|---|---|
 | **DJ** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
 | **Country** | Cowboy hat, plaid shirt, bandana, five-string banjo, on a porch | Strums on the beat, changes chords, taps a boot |
-| **Rapper** | Snapback worn backwards, gold chain, mic, between two speaker stacks | Throws a hand up on the beat, the speaker cones pump with the bass |
+| **Rapper** | Gold chain and mic, no hat, between two speaker stacks | Throws a hand up on the beat, the speaker cones pump with the bass |
 | **Rocker** | Studded leather jacket, flying-V, in front of two amp stacks | Headbangs hard on the beat, strums on sharp hits, the amp lights follow the bass, mids and highs |
 | **Drummer** | Striped sailor tee, behind a drum kit on the sea floor | Hits the snare on the beat, crashes the cymbal on sharp hits, the kick drum thumps, bubbles rise faster with the bass and the seaweed sways |
 | **Theremin** | Space-age tunic with a belt and planet badge, on the moon under a hovering UFO | One hand rises over the volume loop with the bass, the other moves toward the pitch antenna with the highs, glowing sound waves pour off the antenna, the UFO lights chase on the beat |
@@ -485,7 +485,9 @@ defaults.
 (keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
 Playback → Now Playing visualizer**: the **Critters** cards show each critter in your current act, and the
 **Act** cards show your current critter in each act. Picking either also switches Now Playing to the
-critter. Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
+critter. The **Boy** / **Girl** switch above the cards picks the look for every critter: girls get eyelashes
+and a bow in your skin's accent colour instead of the act's hat. The accordion player keeps her beanie and wears
+the bow on it in another colour, and the DJ keeps her headphones. Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
@@ -502,7 +504,7 @@ Some groups of skins give them a whole outfit:
 | **Editor palettes** | Thick-rimmed coder glasses |
 | **Holidays** | A hat in place of their own: a witch hat for Halloween, a pilgrim hat for Thanksgiving, a Santa hat for Christmas, an Uncle Sam hat for July 4th and heart boppers for Valentine's Day |
 
-Outfits swap out what they'd clash with: the hazmat hood and holiday hats replace the act's hat, cap
+Outfits swap out what they'd clash with: the hazmat hood and holiday hats replace the act's hat
 or beanie (the DJ keeps the headphones on over the hood). The alien's antennae and the shark's fin poke out from under any hat. The outfit follows the skin on screen, so it changes with Seasonal
 and Random daily too.
 
@@ -532,7 +534,7 @@ All the critters behave the same way around the music:
   player runs a glissando down the keys, and the accordion player gives the bellows one long stretch.
 - Everyone casts a soft shadow on the floor, and so do the stands, amps, speakers and drum kit.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ the
-  headphones, the country act tips the hat, the rapper fixes the cap, the
+  headphones, the country act tips the hat, the
   accordion player pulls the beanie straight). The rapper lowers the mic, the drummer rests the sticks, the
   theremin hands drop, the synth hands rest on the keys and the bellows breathe slowly.
 - **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.

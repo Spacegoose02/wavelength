@@ -537,7 +537,7 @@ function ThemesTab() {
  * critter in that act. Picking either switches Now Playing to the critter scene.
  */
 function NowPlayingPicker() {
-  const { npScene, setNpScene, critter, setCritter, act, setAct } = useSettings();
+  const { npScene, setNpScene, critter, setCritter, act, setAct, critterLook, setCritterLook } = useSettings();
   const on = npScene === 'raccoon';
   return (
     <section id="visualizer">
@@ -550,6 +550,11 @@ function NowPlayingPicker() {
       </div>
       <h3>Critters</h3>
       <p className="muted small">Pick who plays along, then what they play: any critter can do any act. They sing along with the vocals and dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
+      <div className="chips" role="group" aria-label="Boy or girl critters">
+        {(['boy', 'girl'] as const).map((l) => (
+          <button key={l} className={`chip ${critterLook === l ? 'on' : ''}`} aria-pressed={critterLook === l} onClick={() => setCritterLook(l)}>{l === 'boy' ? 'Boy' : 'Girl'}</button>
+        ))}
+      </div>
       <div className="critter-picks">
         {SPECIES.map((sp) => (
           <button

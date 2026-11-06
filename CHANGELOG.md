@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **The Rapper's mic no longer hides the face,** and the Theremin's hands line up with it again. The mic is held
+  low beside the chin, and the pitch antenna moved out past the head, with the hands on the antenna and over the loop.
+- **Girl critters.** A **Boy** / **Girl** switch in **Settings → Playback → Critters** gives every critter
+  eyelashes and a bow in your skin's accent colour in place of the act's hat (the beanie stays, with the bow on it)
+  (`docs/USER-GUIDE.md#critters`).
+- **The Rapper's cap is gone.** The rapper plays bare-headed now, for boys and girls alike.
 - **No crash when a feature is switched on or off.** Home's Jump back in, Share, Sounds like this, the smart
   playlist editor and Radio's station rows could crash their page ("Rendered more hooks than during the previous
   render") when an admin changed a feature switch or the Hub connected while the page was open.

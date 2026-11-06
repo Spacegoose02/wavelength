@@ -1,9 +1,10 @@
 import type { ComponentType } from 'react';
-import type { Act, Species } from '../../store/settings';
+import { useSettings, type Act, type Species } from '../../store/settings';
 import { Accordion } from './Accordion';
 import { Country } from './Country';
 import { DJ } from './DJ';
 import { Drums } from './Drums';
+import { GirlContext } from './faces';
 import { Rapper } from './Rapper';
 import { Rocker } from './Rocker';
 import { SPECIES, type ActProps, type SpeciesInfo } from './species';
@@ -30,7 +31,7 @@ export interface ActInfo {
 export const ACTS: ActInfo[] = [
   { id: 'dj', label: 'DJ', blurb: 'Scratches records behind two decks', Scene: DJ },
   { id: 'country', label: 'Country', blurb: 'Cowboy hat, banjo, taps a boot on the porch', Scene: Country },
-  { id: 'rapper', label: 'Rapper', blurb: 'Backwards cap and chain, raps into the mic', Scene: Rapper },
+  { id: 'rapper', label: 'Rapper', blurb: 'Gold chain and a mic, raps between the speakers', Scene: Rapper },
   { id: 'rocker', label: 'Rocker', blurb: 'Leather jacket, flying-V, headbangs in front of the amps', Scene: Rocker },
   { id: 'drums', label: 'Drummer', blurb: 'Sailor tee, drum kit and bubbles, under the sea', Scene: Drums },
   { id: 'theremin', label: 'Theremin', blurb: 'Space-age tunic, plays a theremin on the moon under a UFO', Scene: Theremin },
@@ -52,10 +53,17 @@ export const nextAct = (id: Act) => after(ACTS, findAct(id));
 /**
  * Now Playing critter scene: `species` playing `act`. Every act shares one rig (`rig.ts`: bob to the beat,
  * blink, sing along, yawn when paused) and one head (`parts.tsx`: holiday hats and skin-group outfits over
- * the species' face). `still` draws one paused frame, for the Settings cards.
+ * the species' face). `still` draws one paused frame, for the Settings cards. The boy or girl look comes
+ * from settings (`critterLook`) unless `girl` is given.
  */
-export function Critter({ species, act, still }: { species: Species; act: Act; still?: boolean }) {
+export function Critter({ species, act, still, girl }: { species: Species; act: Act; still?: boolean; girl?: boolean }) {
   const { Scene } = findAct(act);
-  // keyed by species so the rig picks up the new face's parts when only the species changes
-  return <Scene key={species} species={findSpecies(species)} still={still} />;
+  const look = useSettings((s) => s.critterLook);
+  const isGirl = girl ?? look === 'girl';
+  // keyed by species and look so the rig picks up the new face's parts (lashes live in the eyes group)
+  return (
+    <GirlContext.Provider value={isGirl}>
+      <Scene key={`${species}-${isGirl}`} species={findSpecies(species)} still={still} />
+    </GirlContext.Provider>
+  );
 }

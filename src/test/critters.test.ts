@@ -15,3 +15,23 @@ describe('critterFromOldPick', () => {
     expect(critterFromOldPick(undefined)).toEqual({ critter: 'raccoon', act: 'dj' });
   });
 });
+
+describe('critter species and looks', () => {
+  it('adds lashes and a bow only for the girl look, on every species', async () => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    const { GirlContext } = await import('../components/critters/faces');
+    const draw = (girl: boolean, species: (typeof SPECIES)[number]) =>
+      renderToStaticMarkup(h(GirlContext.Provider, { value: girl }, h('svg', null, h(Head, { species }))));
+    for (const sp of SPECIES) {
+      expect(sp.fit?.bow, sp.id).toBeDefined();
+      const boy = draw(false, sp);
+      const girl = draw(true, sp);
+      expect(boy, sp.id).not.toMatch(/class="(lashes|girl-bow)[ "]/);
+      expect(girl, sp.id).toMatch(/class="lashes[ "]/);
+      expect(girl, sp.id).toMatch(/class="girl-bow[ "]/);
+    }
+  });
+});

@@ -23,6 +23,9 @@ export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' 
 /** Who plays in the critter scene (`npScene: 'raccoon'`, named before there were other critters): components/critters/species.tsx. */
 export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown';
 
+/** Boy or girl critters (Settings → Playback → Critters). */
+export type CritterLook = 'boy' | 'girl';
+
 /** What the critter plays: components/critters/Critter.tsx (`ACTS`). Any species can play any act. */
 export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion';
 
@@ -137,6 +140,9 @@ interface SettingsState {
   setCritter(c: Species): void;
   act: Act;
   setAct(a: Act): void;
+  /** Boy or girl critters: the girl look adds lashes and a bow in the skin's accent colour (critters/faces.tsx). */
+  critterLook: CritterLook;
+  setCritterLook(l: CritterLook): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
   /** The critter mouth tuner (components/MouthTuner.tsx, player/voice.ts). Synced. */
@@ -266,6 +272,8 @@ export const useSettings = create<SettingsState>()(
       setCritter: (critter) => set({ critter }),
       act: 'dj',
       setAct: (act) => set({ act }),
+      critterLook: 'boy',
+      setCritterLook: (critterLook) => set({ critterLook }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       smartOffline: DEFAULT_SMART_OFFLINE,
