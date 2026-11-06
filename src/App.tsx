@@ -5,6 +5,8 @@ import { startDjVoice } from './lib/djVoice';
 import { startDjStation } from './lib/djStation';
 import { startSingMode } from './lib/singMode';
 import { startDesktop } from './lib/desktop';
+import { startHouseActivity } from './lib/houseActivity';
+import { HouseActivity } from './components/HouseActivity';
 import { startDiscord } from './lib/discord';
 import { startHifi } from './lib/hifi';
 import { startArtworkChecks } from './lib/artwork';
@@ -258,6 +260,7 @@ export default function App() {
     startSingMode();
     startDiscord();
     startDesktop();
+    startHouseActivity();
     void startHifi();
   }, []);
 
@@ -326,6 +329,7 @@ export default function App() {
               </div>
             );
           })}
+          <HouseActivity />
           <SidebarPlaylists route={route} />
         </nav>
       )}

@@ -185,6 +185,9 @@ interface SettingsState {
   /** This device shows up under Devices on your other devices, which can control it (lib/remote.ts). Not synced. */
   remoteControl: boolean;
   setRemoteControl(v: boolean): void;
+  /** House activity (lib/houseActivity.ts): show the house what I'm playing. null: the default (grown-ups yes, kids no). Synced. */
+  shareListening: boolean | null;
+  setShareListening(v: boolean): void;
   /** Show Inbox news from the Hub as system notifications (lib/notify.ts). Per device, not synced. */
   notifications: boolean;
   setNotifications(v: boolean): void;
@@ -338,6 +341,8 @@ export const useSettings = create<SettingsState>()(
       saveSmartPlaylist: (p) => set((st) => ({ smartPlaylists: st.smartPlaylists.some((x) => x.id === p.id) ? st.smartPlaylists.map((x) => (x.id === p.id ? p : x)) : [...st.smartPlaylists, p] })),
       removeSmartPlaylist: (id) => set((st) => ({ smartPlaylists: st.smartPlaylists.filter((x) => x.id !== id) })),
       remoteControl: true,
+      shareListening: null,
+      setShareListening: (shareListening) => set({ shareListening }),
       setRemoteControl: (remoteControl) => set({ remoteControl }),
       notifications: true,
       setNotifications: (notifications) => set({ notifications }),

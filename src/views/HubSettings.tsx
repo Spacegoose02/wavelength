@@ -224,7 +224,28 @@ function RemoteSetting() {
         <span className="switch"><input type="checkbox" checked={on} onChange={(e) => useSettings.getState().setRemoteControl(e.target.checked)} /><span /></span>
         Let my other devices see and control this one
       </label>
+      <ShareListeningSetting />
     </div>
+  );
+}
+
+/** House activity (lib/houseActivity.ts): the sidebar's "Listening now" for the others. */
+function ShareListeningSetting() {
+  const v = useSettings((s) => s.shareListening);
+  const kid = useHub((s) => s.user?.role === 'kid');
+  const on = v ?? !kid;
+  return (
+    <>
+      <label className="check">
+        <span className="switch"><input type="checkbox" checked={on} onChange={(e) => useSettings.getState().setShareListening(e.target.checked)} /><span /></span>
+        Show the house what I'm playing
+      </label>
+      <p className="muted small">
+        {kid
+          ? 'Your grown-ups see the song you’re playing under “Listening now” in their sidebar. Nobody else does.'
+          : 'People in the house see the song you’re playing under “Listening now” in their sidebar (the song’s name, never what you played before).'}
+      </p>
+    </>
   );
 }
 

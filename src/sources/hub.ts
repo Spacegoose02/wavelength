@@ -3,6 +3,7 @@ import type { DeemixItem } from '../lib/deemixQueue';
 import type { Track } from './types';
 import type { IndexedSong, LibrarySearchResponse } from '../../hub/src/api/library';
 import type { LyricsCacheResponse, LyricsCachePut } from '../../hub/src/api/lyrics';
+import type { ActivityReport, HouseActivity } from '../../hub/src/api/activity';
 
 /**
  * The Wavelength Hub API (hub/, docs/HUB.md). The Hub owns accounts, roles and admin-only rules;
@@ -995,7 +996,11 @@ export class HubClient {
   remoteDevices = () => this.call<{ devices: HubRemoteDevice[] }>('GET', '/api/me/remote/devices');
   remoteCommand = (deviceId: number, c: Omit<HubRemoteCommand, 'id' | 'from' | 'at'>) => this.call('POST', '/api/me/remote/command', { deviceId, ...c });
   // listen together (lib/together.ts)
-  parties = () => this.call<{ parties: { id: string; name: string; host: string; members: number; joined: boolean; isHost: boolean }[] }>('GET', '/api/together');
+  parties = () => this.call<{ parties: { id: string; name: string; host: string; hostId?: number; members: number; joined: boolean; isHost: boolean }[] }>('GET', '/api/together');
+  // house activity (lib/houseActivity.ts)
+  activityReport = (r: ActivityReport) => this.call('PUT', '/api/me/activity', r);
+  activityClear = () => this.call('DELETE', '/api/me/activity');
+  houseActivity = () => this.call<HouseActivity>('GET', '/api/activity');
   startParty = (b: { name?: string; guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('POST', '/api/together', b);
   joinParty = (id: string) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/join`, {});
   leaveParty = (id: string) => this.call('POST', `/api/together/${encodeURIComponent(id)}/leave`, {});

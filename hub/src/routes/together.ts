@@ -199,7 +199,7 @@ export function togetherRoutes(app: FastifyInstance, ctx: Ctx) {
     sweep();
     return {
       parties: [...parties.values()].map((p) => ({
-        id: p.id, name: p.name, host: p.hostName, members: p.members.size, joined: p.members.has(device.id), isHost: p.hostDeviceId === device.id,
+        id: p.id, name: p.name, host: p.hostName, hostId: p.hostUserId, members: p.members.size, joined: p.members.has(device.id), isHost: p.hostDeviceId === device.id,
       })),
     };
   });

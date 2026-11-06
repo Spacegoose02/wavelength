@@ -1040,6 +1040,17 @@ see it under the same button with **Join**. As the host you play music as usual.
 **Next** on any song add it to the party (you can turn that off), and you can let guests skip and pause too.
 **Leave** or **End party** when you're done.
 
+### Who's listening
+
+With a Hub, the sidebar shows **Listening now**: what the other people in the house are playing at the moment, with
+a dot that lights up while it plays. **Play** plays the same song from your library; when they're hosting a
+listening party, **Join** joins it. Only the song now playing is shared, never what came before, and it disappears
+a few minutes after they stop.
+
+**Settings → Account → Devices → Show the house what I'm playing** turns it off for you. It's on for grown-ups
+and off for kid profiles. A kid who turns it on is seen only by their own grown-ups, and kids don't see songs
+that aren't for kids.
+
 ### Guest Jam
 
 Friends over who don't have Wavelength? As the host, open the party panel and press **Make a guest link**. It shows

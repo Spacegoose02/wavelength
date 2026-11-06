@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Listening now.** The sidebar shows what the others in the house are playing, with Play and (for a party) Join.
+  Turn it off for yourself in Settings → Account; kids are hidden unless they turn it on, and then only their
+  grown-ups see them (`docs/USER-GUIDE.md#whos-listening`).
 - **Home Assistant.** See what your devices are playing and control them from Home Assistant, with a token from
   Settings → Account → Home Assistant and the setup in `docs/HOME-ASSISTANT.md`.
 - **Guest Jam.** In a listening party, **Make a guest link**: friends scan the QR code, search your library in their
