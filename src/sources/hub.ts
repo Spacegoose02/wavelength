@@ -509,6 +509,8 @@ export interface HubParty {
   now: number;
   state: { queue: Track[]; index: number; position: number; duration: number; playing: boolean; at: number };
   members: { name: string; device: string; host: boolean }[];
+  /** Host only: the Guest Jam link, null while it's off (Hubs before Guest Jam leave it out). */
+  jam?: string | null;
 }
 export interface HubPartyRequest { id: number; action: 'add' | 'playNext' | 'next' | 'prev' | 'toggle' | 'seek' | 'jump'; tracks?: Track[]; value?: number; index?: number; from: string; at: number }
 
@@ -998,6 +1000,7 @@ export class HubClient {
   joinParty = (id: string) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/join`, {});
   leaveParty = (id: string) => this.call('POST', `/api/together/${encodeURIComponent(id)}/leave`, {});
   setParty = (id: string, b: { guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('PATCH', `/api/together/${encodeURIComponent(id)}`, b);
+  partyJam = (id: string, on: boolean) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/jam`, { on });
   partyState = (id: string, s: Omit<HubParty['state'], 'at'>) => this.call('PUT', `/api/together/${encodeURIComponent(id)}/state`, s);
   partyRequest = (id: string, r: { action: HubPartyRequest['action']; tracks?: Track[]; value?: number; index?: number }) => this.call('POST', `/api/together/${encodeURIComponent(id)}/request`, r);
   partyWait = (id: string, version: number) => this.call<{ party: HubParty | null; requests: HubPartyRequest[] }>('GET', `/api/together/${encodeURIComponent(id)}/wait?version=${version}`);

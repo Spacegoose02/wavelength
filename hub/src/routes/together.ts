@@ -2,7 +2,9 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { clientIp, HttpError, signedIn, str } from '../http.ts';
+import { clientIp, HttpError, RateLimiter, signedIn, str } from '../http.ts';
+import { jamPage } from '../jamPage.ts';
+import { songNotForKids } from '../kidSafe.ts';
 
 /**
  * Listen together (docs/USERS-AND-ADMIN.md §7.2): someone starts a party on their device, which becomes the
@@ -10,6 +12,11 @@ import { clientIp, HttpError, signedIn, str } from '../http.ts';
  * queue at the same spot. Guests can add songs (unless the host turns that off) and, if the host allows it,
  * skip and pause. Their requests go to the host's device, which applies them and reports the new state.
  * Devices long-poll for changes. Kept in memory only.
+ *
+ * Guest Jam (docs/USER-GUIDE.md "Guest Jam"): the host can make a guest link. Anyone with it, no account needed,
+ * opens a page in their phone's browser that shows what's playing and lets them search the Hub's copy of the
+ * library and add songs. Their picks reach the host like a guest's "+ Queue". Guests never get a stream, a file
+ * or a login: only song names, and the host's device plays. Turning the link off (or ending the party) ends it.
  */
 
 const MAX_WAIT_MS = 25_000;
@@ -34,6 +41,8 @@ interface Party {
   state: { queue: unknown[]; index: number; position: number; duration: number; playing: boolean; at: number };
   members: Map<number, Member>; // by device, host included
   requests: PartyRequest[];
+  /** the guest link's code, while it's on */
+  jam?: string;
 }
 
 const num = (v: unknown, min: number, max: number, fallback = 0) => {
@@ -43,9 +52,19 @@ const num = (v: unknown, min: number, max: number, fallback = 0) => {
 const tracksOf = (v: unknown, max: number) =>
   (Array.isArray(v) ? v : []).filter((t) => t && typeof t === 'object' && JSON.stringify(t).length <= 16 * 1024).slice(0, max);
 
-export function togetherRoutes(app: FastifyInstance, { db }: Ctx) {
+/** What a Jam guest may see of a song: its name, never a link. */
+const songName = (t: unknown) => {
+  const x = (t ?? {}) as Record<string, unknown>;
+  return { title: String(x.title ?? '').slice(0, 200), artist: String(x.artist ?? '').slice(0, 200) };
+};
+
+export function togetherRoutes(app: FastifyInstance, ctx: Ctx) {
+  const { db, config } = ctx;
   const parties = new Map<string, Party>();
   let nextId = 1;
+  // Jam guests: looking is cheap, adding is limited per address
+  const jamLook = new RateLimiter(240, 60_000);
+  const jamAdd = new RateLimiter(12, 10 * 60_000);
 
   app.addHook('preClose', async () => {
     for (const p of parties.values()) for (const m of p.members.values()) m.wake?.();
@@ -62,7 +81,9 @@ export function togetherRoutes(app: FastifyInstance, { db }: Ctx) {
     now: Date.now(),
     state: p.state,
     members: [...p.members.values()].map((m) => ({ name: m.name, device: m.device, host: m.deviceId === p.hostDeviceId })),
+    ...(p.hostDeviceId === deviceId && { jam: p.jam ? jamUrl(p.jam) : null }),
   });
+  const jamUrl = (code: string) => `${config.publicUrl}/jam/${code}`;
 
   const changed = (p: Party) => {
     p.version++;
@@ -89,6 +110,88 @@ export function togetherRoutes(app: FastifyInstance, { db }: Ctx) {
     m.seen = Date.now();
     return { p, m, auth };
   };
+
+  /** Host only: turn the guest link on (a new code each time) or off. `{ on: boolean }` */
+  app.post<{ Params: { id: string } }>('/api/together/:id/jam', async (req) => {
+    const { p, auth } = mine(req, req.params.id);
+    if (p.hostDeviceId !== auth.device.id) throw new HttpError(403, 'Only the host can make a guest link');
+    if (auth.user.role === 'kid') throw new HttpError(403, 'Kid profiles can’t make guest links');
+    const on = ((req.body ?? {}) as Record<string, unknown>).on !== false;
+    p.jam = on ? randomBytes(9).toString('base64url') : undefined;
+    if (on) audit(db, { actorId: auth.user.id, action: 'together.jamLink', target: p.name, ip: clientIp(req) });
+    changed(p);
+    return view(p, auth.device.id);
+  });
+
+  /** The party a guest link belongs to, or a 404 once it's off or the party ended. */
+  const jamParty = (code: string) => {
+    sweep();
+    const c = String(code).slice(0, 32);
+    const p = [...parties.values()].find((x) => x.jam && x.jam === c);
+    if (!p) throw new HttpError(404, 'This Jam has ended');
+    return p;
+  };
+  const kidsIn = (p: Party) => {
+    const ids = [...new Set([...p.members.values()].map((m) => m.userId))];
+    return ids.some((id) => (db.prepare('SELECT role FROM users WHERE id = ?').get(id) as { role: string } | undefined)?.role === 'kid');
+  };
+
+  app.get<{ Params: { code: string } }>('/jam/:code', async (req, reply) => {
+    const p = [...parties.values()].find((x) => x.jam && x.jam === String(req.params.code).slice(0, 32));
+    return reply
+      .code(p ? 200 : 404)
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('cache-control', 'no-store')
+      .header('x-frame-options', 'DENY')
+      .header('referrer-policy', 'no-referrer')
+      .header('content-security-policy', "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+      .send(jamPage(p ? { name: p.name, host: p.hostName } : null));
+  });
+
+  /** What's playing and up next, by name only. */
+  app.get<{ Params: { code: string } }>('/api/jam/:code', async (req) => {
+    jamLook.hit(clientIp(req));
+    const p = jamParty(req.params.code);
+    const s = p.state;
+    return {
+      name: p.name,
+      host: p.hostName,
+      guestsAdd: p.guestsAdd,
+      playing: s.playing,
+      now: s.index >= 0 && s.queue[s.index] ? songName(s.queue[s.index]) : null,
+      next: s.queue.slice(s.index + 1, s.index + 11).map(songName),
+    };
+  });
+
+  /** Search the Hub's copy of the library. Explicit songs are left out when a kid is in the party. */
+  app.get<{ Params: { code: string }; Querystring: { q?: string } }>('/api/jam/:code/search', async (req) => {
+    jamLook.hit(clientIp(req));
+    const p = jamParty(req.params.code);
+    const q = String(req.query.q ?? '').slice(0, 100).trim();
+    if (q.length < 2 || !(await ctx.libraryIndex.ensure())) return { songs: [] };
+    const kids = kidsIn(p);
+    const songs = ctx.libraryIndex.search(q, { songs: 40 }).songs.filter((x) => !kids || !songNotForKids(db, x)).slice(0, 25);
+    return { songs: songs.map((x) => ({ id: x.id, title: x.title, artist: x.artist, ...(x.album && { album: x.album }), ...(x.duration && { duration: x.duration }) })) };
+  });
+
+  /** A guest's pick: goes to the host's device like a party guest's "+ Queue". `{ id, name }` */
+  app.post<{ Params: { code: string } }>('/api/jam/:code/add', async (req) => {
+    const p = jamParty(req.params.code);
+    if (!p.guestsAdd) throw new HttpError(403, 'The host is choosing the songs right now');
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const name = str(b, 'name', 30).replace(/\p{Cc}/gu, '').trim();
+    if (!name) throw new HttpError(400, 'Say who you are first');
+    jamAdd.hit(clientIp(req));
+    const song = ctx.libraryIndex.get(String(b.id ?? ''));
+    if (!song) throw new HttpError(404, 'That song isn’t in the library');
+    if (kidsIn(p) && songNotForKids(db, song)) throw new HttpError(403, 'That song isn’t for kids');
+    const server = ctx.libraryIndex.status().server;
+    // shaped like an app track; the host's device finds its own copy on the same Navidrome (lib/together.ts)
+    const track = { ...song, kind: 'track', sourceId: 'jam', ...(server && { hubServer: server }) };
+    p.requests = [...p.requests, { id: nextId++, action: 'add' as const, tracks: [track], from: `${name} (guest)`, at: Date.now() }].slice(-100);
+    p.members.get(p.hostDeviceId)?.wake?.();
+    return { ok: true, title: song.title };
+  });
 
   /** Parties going on now, for "Join". */
   app.get('/api/together', async (req) => {

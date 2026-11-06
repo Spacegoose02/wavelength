@@ -721,6 +721,10 @@ with a 4xx status.
 | `PUT /api/together/:id/state` | host | `{ queue, index, position, duration, playing }`, which guests follow |
 | `POST /api/together/:id/request` | member | `{ action: add/playNext/next/prev/toggle/seek/jump, tracks?, value?, index? }`, applied by the host's device |
 | `GET /api/together/:id/wait?version=` | member | waits (up to 25 s) for a newer version; the host also gets requests. `{ party: null }` once it's over |
+| `POST /api/together/:id/jam` | host, not kids | `{ on }`: turns the Guest Jam link on (a new code each time) or off; the host's party view carries `jam` (the link, or `null`) |
+| `GET /jam/:code` | anyone | the Guest Jam page; `404` once the link is off or the party ended |
+| `GET /api/jam/:code`, `…/search?q=` | anyone with the link | what's playing and the next 10, by name only / up to 25 songs from the library index (explicit ones left out while a kid is in the party) |
+| `POST /api/jam/:code/add` | anyone with the link | `{ id, name }`: a song from the library index goes to the host as an `add` request from "<name> (guest)"; 12 per address per 10 minutes, `403` while guests can't add |
 | `GET /api/me/rewind?year=&month=&tz=` | signed in | your Rewind for a year (or one month of it); `tz` is the device's `getTimezoneOffset()` so days and hours are local |
 | `GET /api/me/rewind/periods?tz=` | signed in | `{ periods: [{ year, month, plays }] }`, newest first |
 | `PUT /api/me/prefs` | signed in | `{ changes: { key: { value, updatedAt } } }` → `{ applied, stale, prefs }`. Newest `updatedAt` wins per key. |

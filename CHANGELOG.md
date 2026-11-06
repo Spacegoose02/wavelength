@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Guest Jam.** In a listening party, **Make a guest link**: friends scan the QR code, search your library in their
+  phone's browser and add songs to your queue, no app or account (`docs/USER-GUIDE.md#guest-jam`).
 - **Don't play this.** From any song's menu, keep a song or a whole artist out of song radio, Sounds like this,
   Smart Shuffle, DJ mode and your Made for you mixes. Undo it there or in Settings → Playback → Don't play. Synced
   with a Hub, which leaves them out of your mixes too (`docs/USER-GUIDE.md#dont-play-this`).

@@ -1040,6 +1040,21 @@ see it under the same button with **Join**. As the host you play music as usual.
 **Next** on any song add it to the party (you can turn that off), and you can let guests skip and pause too.
 **Leave** or **End party** when you're done.
 
+### Guest Jam
+
+Friends over who don't have Wavelength? As the host, open the party panel and press **Make a guest link**. It shows
+a QR code and **Copy link**. Anyone who opens it on their phone (any browser, no app, no account) sees what's
+playing and what's next, types their name once, searches your library and taps **Add**. Their song joins your
+queue, with "*name* (guest) added …" on your screen. Guests only ever see song names: the music plays on your
+device, not theirs.
+
+- **Guests can add songs** in the party panel also covers Jam guests: untick it and the page says you're choosing.
+- While a kid profile is in the party, the page leaves out explicit songs.
+- Each phone can add 12 songs every 10 minutes.
+- **Turn off** (or ending the party) closes the link straight away; a new link has a new code.
+
+Guest Jam needs a Hub that has your Navidrome library listed (the same one Search uses).
+
 ## Scrobbling
 
 **Settings → Account → Scrobbling** (with a Hub) sends every song you play to

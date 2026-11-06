@@ -139,6 +139,7 @@ export class LibraryIndex {
       push(this.byPrefix, t.slice(0, PREFIX), x);
     }
     this.searchIndex = new SearchIndex(songs);
+    this.byId = undefined;
     this.server = s.url.replace(/\/+$/, '');
     this.listedAt = this.now();
     this.error = null;
@@ -148,6 +149,13 @@ export class LibraryIndex {
   search(q: string, opts?: SearchOptions): SearchResult {
     return this.searchIndex.search(q, opts);
   }
+
+  /** One song by its Navidrome id (a guest's Jam request, routes/together.ts). */
+  get(id: string): IndexedSong | undefined {
+    if (this.byId?.size !== this.songs.length) this.byId = new Map(this.songs.map((x) => [x.id, x]));
+    return this.byId.get(id);
+  }
+  private byId?: Map<string, IndexedSong>;
 
   /** The library's copy of each song, or null. */
   match(songs: { title: string; artist: string }[]): (IndexedSong | null)[] {

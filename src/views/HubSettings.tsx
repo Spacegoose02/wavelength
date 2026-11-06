@@ -1,5 +1,5 @@
+import { Qr } from '../components/Qr';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import qrcode from 'qrcode-generator';
 import { syncNow } from '../lib/hubSync';
 import { loadHubServices } from '../lib/hubServices';
 import { recheckLibrary, runExplicitCheck, stopExplicitCheck, useExplicitCheck } from '../lib/explicitCheck';
@@ -22,17 +22,6 @@ import { useUi } from '../store/ui';
 const ROLE_LABELS: Record<HubRole, string> = { admin: 'Admin', member: 'Member', kid: 'Kid' };
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
 const when = (t?: number | null) => (t ? new Date(t).toLocaleString() : 'never');
-
-/** A QR code for a link, so a phone can open it from a TV screen. */
-function Qr({ text }: { text: string }) {
-  const svg = useMemo(() => {
-    const qr = qrcode(0, 'M');
-    qr.addData(text);
-    qr.make();
-    return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  }, [text]);
-  return <div className="hub-qr" dangerouslySetInnerHTML={{ __html: svg }} />;
-}
 
 /** Shows a pairing code and waits for it to be approved in a browser. */
 function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; take?: (s: HubSession) => void }) {
