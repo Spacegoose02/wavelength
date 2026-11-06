@@ -76,3 +76,21 @@ test('makes Made for you mixes from plays, once a day, and Blends between people
   assert.ok(b.body.mix.songs.some((s: any) => s.because === 'You both play this artist'));
   assert.equal((await json(app, 'GET', `/api/blend?with=${ids.kid}`, { token: tokens.member })).status, 404);
 });
+
+test('"Don\'t play this" keeps artists and songs out of mixes, even ones made earlier today', async () => {
+  const { app, db, tokens, ids } = await seeded({}, {}, { mixLookups: look });
+  const now = Date.now();
+  let at = now - 5 * DAY;
+  for (let i = 0; i < 4; i++) for (const [t, a] of [['One', 'Drake'], ['Two', 'Drake'], ['Three', 'Future'], ['Four', 'Adele (Live)'], ['Five', 'Adele']]) play(db, ids.member, (at += 60_000), t, a);
+  const before = await json(app, 'GET', '/api/mixes', { token: tokens.member });
+  const all = (b: any) => b.mixes.flatMap((m: any) => m.songs) as { artist: string; title: string }[];
+  assert.ok(all(before.body).some((s) => s.artist === 'Drake'));
+  assert.ok(all(before.body).some((s) => s.title === 'Five'));
+  const put = await json(app, 'PUT', '/api/me/prefs', { token: tokens.member, body: { changes: { 'settings.dontPlay': { value: { artists: ['drake'], songs: [{ artist: 'Adele', title: 'Five (Remastered)' }] }, updatedAt: Date.now() } } } });
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  const after = await json(app, 'GET', '/api/mixes', { token: tokens.member });
+  assert.equal(after.body.builtAt, before.body.builtAt, 'the same mixes, filtered');
+  assert.ok(!all(after.body).some((s) => s.artist === 'Drake'));
+  assert.ok(!all(after.body).some((s) => s.title === 'Five'));
+  assert.ok(all(after.body).some((s) => s.artist === 'Future'));
+});

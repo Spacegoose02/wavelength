@@ -6,6 +6,8 @@ import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 import type { SmartPlaylist } from '../lib/smartPlaylists';
+import type { DontPlay } from '../../hub/src/api/dontPlay';
+import type { MotionPref } from '../lib/motion';
 import { cleanTune, DEFAULT_TUNE, type MouthTune } from '../player/voice';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
@@ -153,6 +155,9 @@ interface SettingsState {
   setMouthOffset(key: string, seconds: number): void;
   /** Discord status on this computer (lib/discord.ts). Not synced: the app ID is, the switch isn't. */
   discord: { on: boolean; appId: string };
+  /** Desktop extras (lib/desktop.ts), per computer: Ctrl+Alt hotkeys, and closing the window to the tray. */
+  desktop: { hotkeys: boolean; closeToTray: boolean };
+  setDesktop(p: Partial<SettingsState['desktop']>): void;
   setDiscord(p: Partial<SettingsState['discord']>): void;
   /** The talking DJ (lib/djVoice.ts): a spoken link between songs. Synced, except the device voice (and whether to use it) is per device. */
   djVoice: DjVoiceSettings;
@@ -163,6 +168,15 @@ interface SettingsState {
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';
   setVersions(v: SettingsState['versions']): void;
+  /** "Don't play this" (lib/dontPlay.ts): left out of radio, mixes, DJ mode and Smart Shuffle; synced. */
+  dontPlay: DontPlay;
+  setDontPlay(d: DontPlay): void;
+  /** Reduce motion (lib/motion.ts): follow the system, always, or never. Synced. */
+  motion: MotionPref;
+  setMotion(m: MotionPref): void;
+  /** Smart Shuffle (lib/smartShuffle.ts): shuffle with songs you might like mixed in. */
+  smartShuffle: boolean;
+  setSmartShuffle(on: boolean): void;
   /** Wavelength playlists in folders (playlist id → folder name) and pinned to the top of the sidebar; synced. */
   playlistFolders: Record<string, string>;
   pinnedPlaylists: string[];
@@ -175,6 +189,9 @@ interface SettingsState {
   /** This device shows up under Devices on your other devices, which can control it (lib/remote.ts). Not synced. */
   remoteControl: boolean;
   setRemoteControl(v: boolean): void;
+  /** House activity (lib/houseActivity.ts): show the house what I'm playing. null: the default (grown-ups yes, kids no). Synced. */
+  shareListening: boolean | null;
+  setShareListening(v: boolean): void;
   /** Show Inbox news from the Hub as system notifications (lib/notify.ts). Per device, not synced. */
   notifications: boolean;
   setNotifications(v: boolean): void;
@@ -299,6 +316,8 @@ export const useSettings = create<SettingsState>()(
           return { mouthOffsets: next };
         }),
       discord: { on: false, appId: '' },
+      desktop: { hotkeys: true, closeToTray: false },
+      setDesktop: (p) => set((st) => ({ desktop: { ...st.desktop, ...p } })),
       setDiscord: (p) => set((st) => ({ discord: { ...st.discord, ...p } })),
       djVoice: DEFAULT_DJ_VOICE,
       setDjVoice: (p) => set((st) => ({ djVoice: { ...st.djVoice, ...p } })),
@@ -306,6 +325,12 @@ export const useSettings = create<SettingsState>()(
       setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',
       setVersions: (versions) => set({ versions }),
+      dontPlay: { artists: [], songs: [] },
+      setDontPlay: (dontPlay) => set({ dontPlay }),
+      motion: 'system',
+      setMotion: (motion) => set({ motion }),
+      smartShuffle: false,
+      setSmartShuffle: (smartShuffle) => set({ smartShuffle }),
       playlistFolders: {},
       pinnedPlaylists: [],
       setPlaylistFolder: (id, folder) =>
@@ -322,6 +347,8 @@ export const useSettings = create<SettingsState>()(
       saveSmartPlaylist: (p) => set((st) => ({ smartPlaylists: st.smartPlaylists.some((x) => x.id === p.id) ? st.smartPlaylists.map((x) => (x.id === p.id ? p : x)) : [...st.smartPlaylists, p] })),
       removeSmartPlaylist: (id) => set((st) => ({ smartPlaylists: st.smartPlaylists.filter((x) => x.id !== id) })),
       remoteControl: true,
+      shareListening: null,
+      setShareListening: (shareListening) => set({ shareListening }),
       setRemoteControl: (remoteControl) => set({ remoteControl }),
       notifications: true,
       setNotifications: (notifications) => set({ notifications }),

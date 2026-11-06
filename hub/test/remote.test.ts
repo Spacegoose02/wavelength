@@ -71,3 +71,40 @@ test('closing the Hub lets waiting devices go', async () => {
   await waiting.catch(() => undefined);
   assert.ok(Date.now() - started < 5000);
 });
+
+test('Home Assistant: its own token lists the players by name and sends them commands', async () => {
+  const { app, tokens } = await seeded();
+  assert.equal((await json(app, 'POST', '/api/me/homeassistant', { token: tokens.kid })).status, 403);
+  const ha = (await json(app, 'POST', '/api/me/homeassistant', { token: tokens.member })).body;
+  assert.match(ha.token, /^wlh_/);
+  // it never shows up as a player, and can't use the devices' own routes
+  assert.equal((await json(app, 'GET', '/api/me/remote/wait?timeout=10', { token: ha.token })).status, 403);
+
+  const waiting = json(app, 'GET', '/api/me/remote/wait?timeout=2000', { token: tokens.member });
+  await json(app, 'PUT', '/api/me/remote/state', {
+    token: tokens.member,
+    body: { queue: [{ ...song('a'), album: 'LP', streamUrl: 'https://nd/rest/stream?u=mia&t=secret' }, song('b')], index: 0, position: 10, duration: 200, playing: true, volume: 0.4 },
+  });
+  const r = (await json(app, 'GET', '/api/ha/players', { token: ha.token })).body;
+  assert.equal(r.playing, 1);
+  assert.equal(r.players.length, 1);
+  const p = r.players[0];
+  assert.deepEqual([p.name, p.state, p.title, p.artist, p.album, p.volume, p.queued], ['Phone', 'playing', 'Song a', 'Band', 'LP', 0.4, 1]);
+  assert.equal(JSON.stringify(r).includes('secret'), false);
+  assert.equal((await json(app, 'GET', '/api/ha/player?name=phone', { token: ha.token })).body.title, 'Song a');
+  assert.deepEqual((await json(app, 'GET', '/api/ha/player?name=Kitchen', { token: ha.token })).body, { state: 'off', name: 'Kitchen' });
+  // someone else's Home Assistant sees none of mia's players
+  const other = (await json(app, 'POST', '/api/me/homeassistant', { token: tokens.admin })).body;
+  assert.deepEqual((await json(app, 'GET', '/api/ha/players', { token: other.token })).body.players, []);
+  assert.equal((await json(app, 'POST', `/api/ha/players/${p.id}`, { token: other.token, body: { action: 'pause' } })).status, 404);
+
+  assert.equal((await json(app, 'POST', `/api/ha/players/${p.id}`, { token: ha.token, body: { action: 'load' } })).status, 400);
+  assert.equal((await json(app, 'POST', `/api/ha/players/${p.id}`, { token: ha.token, body: { action: 'volume', value: 30 } })).status, 200);
+  const got = (await waiting).body.commands;
+  assert.deepEqual(got.map((c: { action: string; value: number; from: string }) => [c.action, c.value, c.from]), [['volume', 0.3, 'Home Assistant']]);
+  // revoked from the devices list like any device
+  const devs = (await json(app, 'GET', '/api/me/devices', { token: tokens.member })).body.devices;
+  const haDev = devs.find((d: { platform: string }) => d.platform === 'homeassistant');
+  await json(app, 'DELETE', `/api/me/devices/${haDev.id}`, { token: tokens.member });
+  assert.equal((await json(app, 'GET', '/api/ha/players', { token: ha.token })).status, 401);
+});

@@ -1,8 +1,10 @@
+import { isSmartPick, useSmartPicks } from '../lib/smartShuffle';
+import { ShuffleButton } from './ShuffleButton';
 import { SoundsLikeButton } from './SoundsLikeButton';
 import { trackArt, useArtworkList } from '../lib/artwork';
 import { Cover } from './common';
 import { Seek, usePlayerControls } from './PlayerClock';
-import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat, IconShuffle } from './Icons';
+import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat } from './Icons';
 import { Visualizer } from './Visualizer';
 import { NowPlayingStage } from './Scenes';
 import { AddToPlaylist } from './AddToPlaylist';
@@ -104,11 +106,11 @@ export function NowPlaying() {
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && <Seek className="seek big" remaining />}
           <div className="transport big">
-            <button className={`tbtn small ${p.shuffle ? 'on' : ''}`} onClick={p.toggleShuffle}><IconShuffle /></button>
-            <button className="tbtn" onClick={p.prev}><IconPrev /></button>
-            <button className="tbtn play" onClick={p.toggle}>{p.playing ? <IconPause /> : <IconPlay />}</button>
-            <button className="tbtn" onClick={p.next}><IconNext /></button>
-            <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat}><IconRepeat /></button>
+            <ShuffleButton />
+            <button className="tbtn" onClick={p.prev} aria-label="Previous"><IconPrev /></button>
+            <button className="tbtn play" onClick={p.toggle} aria-label={p.playing ? 'Pause' : 'Play'}>{p.playing ? <IconPause /> : <IconPlay />}</button>
+            <button className="tbtn" onClick={p.next} aria-label="Next"><IconNext /></button>
+            <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat} aria-label={`Repeat: ${p.repeat}`}><IconRepeat /></button>
           </div>
           {showLyrics && t.kind === 'track' && <><SingControls /><LyricsPanel track={t} /></>}
           {!(showLyrics && t.kind === 'track') && <UpNext />}
@@ -203,6 +205,7 @@ function UpNextRow({ track: q, onPlay }: { track: Track; onPlay(): void }) {
 
 export function QueuePanel() {
   const p = usePlayerControls();
+  const picks = useSmartPicks((s) => s.keys);
   return (
     <aside className="queue">
       <div className="queue-head">
@@ -215,7 +218,7 @@ export function QueuePanel() {
           <div key={`${i}:${t.id}`} className={`queue-row ${i === p.index ? 'active' : ''} ${i < p.index ? 'played' : ''}`} onDoubleClick={() => p.jump(i)}>
             <Cover src={trackArt(t)} alt={t.title} className="tiny" />
             <div className="track-main" onClick={() => p.jump(i)}>
-              <div className="track-title">{t.title}</div>
+              <div className="track-title">{t.title}{isSmartPick(picks, t) && <span className="smart-pick" title="Smart Shuffle pick"> ✦</span>}</div>
               <div className="track-sub">{t.artist}</div>
             </div>
             {i !== p.index && <button className="x" onClick={() => p.removeAt(i)} title="Remove">×</button>}

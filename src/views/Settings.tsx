@@ -1,3 +1,6 @@
+import { DesktopSettings } from '../components/DesktopSettings';
+import { MotionSettings } from '../components/MotionSettings';
+import { DontPlaySettings } from '../components/DontPlaySettings';
 import { useEffect, useState } from 'react';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid, isMobileApp } from '../lib/platform';
@@ -630,14 +633,19 @@ const TABS: { id: SettingsTab; label: string; admin?: boolean; manager?: boolean
 const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string }[] = [
   { tab: 'account', heading: 'Wavelength Hub', also: 'sign in sign out password two-step 2fa pin profile' },
   { tab: 'account', heading: 'Signed-in devices', also: 'devices sessions' },
+  { tab: 'account', heading: 'Devices', also: 'listening now house activity share what i play privacy remote control' },
+  { tab: 'account', heading: 'Home Assistant', also: 'home assistant smart home automation hass token' },
   { tab: 'sources', heading: 'Sources', also: 'servers navidrome plex audiobookshelf login add server' },
+  { tab: 'themes', heading: 'Motion', also: 'reduce motion animation accessibility vestibular calm still' },
   { tab: 'playback', heading: 'Now Playing visualizer', also: 'scene critter act boy girl' },
   { tab: 'playback', heading: 'Critter mouths', also: 'mouth tuner singing' },
   { tab: 'playback', heading: 'Volume levelling and crossfade', also: 'replaygain loudness crossfade gapless automix' },
   { tab: 'playback', heading: 'Talking DJ', also: 'voice dj name' },
+  { tab: 'playback', heading: 'Mini player, tray and hotkeys', also: 'mini player tray menu bar hotkey shortcut keyboard global always on top close minimize' },
   { tab: 'playback', heading: 'Discord status' },
   { tab: 'playback', heading: 'Bit-perfect output', also: 'wasapi exclusive hi-res' },
   { tab: 'playback', heading: 'Explicit and clean versions', also: 'explicit clean' },
+  { tab: 'playback', heading: "Don't play", also: 'block hide ban skip artist song never dislike' },
   { tab: 'playback', heading: 'Equalizer', also: 'eq bass treble' },
   { tab: 'downloads', heading: 'Dead zones', also: 'offline signal tunnel' },
   { tab: 'downloads', heading: 'Smart offline', also: 'offline favorites mixes storage' },
@@ -761,7 +769,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   useEffect(() => {
     if (!jump) return;
     const h = window.setTimeout(() => {
-      const el = [...document.querySelectorAll('.page h2')].find((x) => x.textContent?.trim().toLowerCase().startsWith(jump.toLowerCase()));
+      const el = [...document.querySelectorAll('.page h2, .page h3')].find((x) => x.textContent?.trim().toLowerCase().startsWith(jump.toLowerCase()));
       el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
       setJump(undefined);
     }, 120);
@@ -810,9 +818,11 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <MouthTunerSection />
           <PlaybackOptions />
           <DjVoiceSettings />
+          <DesktopSettings />
           <DiscordSettings />
           <HifiSettings />
           <VersionsPicker />
+          <DontPlaySettings />
           <section id="equalizer">
             <h2>Equalizer</h2>
             <Equalizer />
@@ -826,7 +836,12 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <DownloadsTab />
         </>
       )}
-      {tab === 'themes' && <ThemesTab />}
+      {tab === 'themes' && (
+        <>
+          <ThemesTab />
+          <MotionSettings />
+        </>
+      )}
       {tab === 'discover' && <DiscoverCharts />}
       {tab === 'updates' && <UpdatesTab />}
     </div>

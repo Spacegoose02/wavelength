@@ -575,6 +575,10 @@ On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favorites and Time Capsul
 artist (plus the track that played, for songs the person played), and each app finds them in its own library.
 Blends mix two to six people who have all said yes (`blend_optin`).
 
+
+**Don't play this.** Artists and songs a person set to "Don't play" in the app (a synced setting,
+`settings.dontPlay` in their prefs) are left out of every mix and DJ station segment, cached ones included
+(`hub/src/dontPlay.ts`; the app matches the same way in `src/lib/dontPlay.ts`).
 ## Discover
 
 Besides keeping a copy of the charts (`hub/src/discover.ts`, `GET /api/discover/fetch`), the Hub helps Discover
@@ -717,6 +721,13 @@ with a 4xx status.
 | `PUT /api/together/:id/state` | host | `{ queue, index, position, duration, playing }`, which guests follow |
 | `POST /api/together/:id/request` | member | `{ action: add/playNext/next/prev/toggle/seek/jump, tracks?, value?, index? }`, applied by the host's device |
 | `GET /api/together/:id/wait?version=` | member | waits (up to 25 s) for a newer version; the host also gets requests. `{ party: null }` once it's over |
+| `POST /api/me/homeassistant`, `GET /api/ha/players`, `POST /api/ha/players/:id` | signed in | Home Assistant: its own token, your players by name, commands to them ([HOME-ASSISTANT.md](HOME-ASSISTANT.md)) |
+| `PUT /api/me/activity`, `DELETE …` | signed in | house activity: `{ title, artist, album?, playing }` for the song playing now (dropped unless the person shares, `settings.shareListening`: grown-ups by default, kids only when they turn it on) / stopped |
+| `GET /api/activity` | signed in | `{ listeners: [{ userId, displayName, title, artist, album?, playing, device, at }] }` from the last 5 minutes: not yourself, kids only to their guardians, nothing not-for-kids to kids |
+| `POST /api/together/:id/jam` | host, not kids | `{ on }`: turns the Guest Jam link on (a new code each time) or off; the host's party view carries `jam` (the link, or `null`) |
+| `GET /jam/:code` | anyone | the Guest Jam page; `404` once the link is off or the party ended |
+| `GET /api/jam/:code`, `…/search?q=` | anyone with the link | what's playing and the next 10, by name only / up to 25 songs from the library index (explicit ones left out while a kid is in the party) |
+| `POST /api/jam/:code/add` | anyone with the link | `{ id, name }`: a song from the library index goes to the host as an `add` request from "<name> (guest)"; 12 per address per 10 minutes, `403` while guests can't add |
 | `GET /api/me/rewind?year=&month=&tz=` | signed in | your Rewind for a year (or one month of it); `tz` is the device's `getTimezoneOffset()` so days and hours are local |
 | `GET /api/me/rewind/periods?tz=` | signed in | `{ periods: [{ year, month, plays }] }`, newest first |
 | `PUT /api/me/prefs` | signed in | `{ changes: { key: { value, updatedAt } } }` → `{ applied, stale, prefs }`. Newest `updatedAt` wins per key. |
@@ -796,6 +807,7 @@ with a 4xx status.
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
 | `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |
+| `POST /api/lyrics/translate` | signed in, `lyricsTranslate` on, the AI DJ allowed | `{ key, lines, mode: translate\|romanize, to }` → `{ lines, cached, …allowance }`: one line out for each line in, through the AI DJ's quick model; kept in memory for the house (500 songs) |
 | `GET /api/lyrics?key=` | signed in | `{ lyrics }`: what an app in the house found for that song, or null (`hub/src/api/lyrics.ts`) |
 | `PUT /api/lyrics` | signed in | `{ key, artist, title, lyrics }`: keep lyrics for everyone; 400 when `lyrics` isn't the app's shape |
 | `POST /api/discover/match` | signed in | `{ songs: [{ title, artist }] }` (up to 300) → `{ ready, server, total, songs }`: the Hub's Navidrome song for each (Subsonic fields `id, title, artist, album, albumId, duration, track, discNumber, coverArt, explicitStatus`) or null. `ready: false` without a Navidrome scan login (every song null) |

@@ -28,6 +28,7 @@ export const FEATURES = {
   discordStatus: { on: true, kids: false },
   mouthTuner: { on: true, kids: true },
   exclusiveAudio: { on: false, kids: false },
+  lyricsTranslate: { on: true, kids: true },
 } as const satisfies Record<string, FeatureSwitch>;
 
 export type FeatureKey = keyof typeof FEATURES;

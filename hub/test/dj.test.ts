@@ -339,3 +339,41 @@ test('Talking DJ voices: device by default, Kokoro and OpenAI on the Hub, OpenAI
   assert.equal((await json(app, 'POST', '/api/admin/dj/voice/test', { token: tokens.member, body: {} })).status, 403);
   assert.equal((db.prepare("SELECT COUNT(*) AS n FROM dj_usage WHERE model LIKE 'openai:%'").get() as { n: number }).n, 1);
 });
+
+test('Lyrics translation: one call per song and language for the house, line for line', async () => {
+  const script = scripted([
+    (req) => {
+      assert.match(req.system, /into English/);
+      assert.deepEqual(JSON.parse(String(req.messages[0].content)), ['Hola', '', 'Te quiero']);
+      return text('```json\n["Hello", "", "I love you"]\n```');
+    },
+    () => text('["just one"]'), // wrong number of lines
+    (req) => {
+      assert.match(req.system, /romanize/);
+      return text('["annyeong", "", "saranghae"]');
+    },
+  ]);
+  const { app, tokens, ids } = await seeded({}, {}, { djProvider: script.factory });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { enabled: true, apiKey: 'sk-ant-x-1234' } });
+  for (const id of [ids.member, ids.admin]) await json(app, 'PUT', `/api/admin/dj/users/${id}`, { token: tokens.admin, body: { enabled: true } });
+  const ask = (token: string, body: object) => json(app, 'POST', '/api/lyrics/translate', { token, body });
+  const body = { key: 'artist|song|180', lines: ['Hola', '', 'Te quiero'], mode: 'translate', to: 'English' };
+
+  const r = await ask(tokens.member, body);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.lines, ['Hello', '', 'I love you']);
+  assert.equal(r.body.cached, false);
+  // someone else in the house gets it free
+  const again = await ask(tokens.admin, body);
+  assert.deepEqual([again.body.lines[2], again.body.cached], ['I love you', true]);
+  assert.equal(script.seen.length, 1);
+
+  assert.equal((await ask(tokens.member, { ...body, key: 'other' })).status, 502);
+  assert.deepEqual((await ask(tokens.member, { ...body, key: 'k2', mode: 'romanize', lines: ['안녕', '', '사랑해'] })).body.lines, ['annyeong', '', 'saranghae']);
+  assert.equal((await ask(tokens.member, { ...body, to: '' })).status, 400);
+  assert.equal((await ask(tokens.member, { key: 'x', lines: [] })).status, 400);
+
+  const features = (await json(app, 'GET', '/api/admin/features', { token: tokens.admin })).body.features;
+  await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { ...features, lyricsTranslate: { on: false, kids: false } } } });
+  assert.equal((await ask(tokens.member, body)).status, 403);
+});

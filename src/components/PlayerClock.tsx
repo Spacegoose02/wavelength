@@ -39,6 +39,7 @@ export function Seek({ className = 'seek', live = false, disabled = false, remai
     <div className={className}>
       <span>{fmtTime(position)}</span>
       <input type="range" min={0} max={max} step={0.5} value={value} disabled={live || disabled}
+        aria-label="Seek" aria-valuetext={live ? 'Live' : `${fmtTime(position)} of ${fmtTime(duration)}`}
         onChange={(e) => seek(Number(e.target.value))}
         style={{ ['--pct' as string]: `${live ? 100 : (position / (duration || 1)) * 100}%` }} />
       <span>{live ? 'LIVE' : remaining ? `-${fmtTime(Math.max(0, duration - position))}` : fmtTime(duration)}</span>

@@ -19,7 +19,7 @@ on GitHub, so creating the release in the web UI is enough:
 | `windows` | `windows-latest` | `Wavelength_X.Y.Z_x64-setup.exe`, `Wavelength.exe` |
 | `android` | `ubuntu-latest` | `Wavelength-X.Y.Z-android.apk` (arm64 + armv7, signed) |
 | `linux` | `ubuntu-22.04` | `Wavelength_X.Y.Z_amd64.AppImage`, `Wavelength_X.Y.Z_amd64.deb` |
-| `macos` | `macos-latest` | `Wavelength_X.Y.Z_universal.dmg` (Apple silicon + Intel; signed and notarised when the Apple secrets are set) |
+| `macos` | `macos-latest` | `Wavelength_X.Y.Z_universal.dmg` (Apple silicon + Intel; signed and notarised when the Apple secrets are set), and `Wavelength_X.Y.Z_universal.app.tar.gz` for in-app updates |
 
 - The version is taken from the **tag** (`v0.7.0` → `0.7.0`) and written into `package.json` and
   `tauri.conf.json` before building, so the file names and Android `versionCode` always match the tag.
@@ -37,8 +37,12 @@ Since in-app updates, installed apps find new releases on their own (Settings �
 [USER-GUIDE.md](USER-GUIDE.md#updates)). That relies on the release looking the way the workflow makes it:
 
 - Tag `vX.Y.Z` (plain numbers; the app compares it with its own version) and **published**, not a draft.
-- The file names stay as they are: `Wavelength_X.Y.Z_x64-setup.exe`, `Wavelength.exe` and
-  `Wavelength-X.Y.Z-android.apk`. The app looks for `_x64-setup.exe`, `Wavelength.exe` and `-android.apk`.
+- The file names stay as they are: `Wavelength_X.Y.Z_x64-setup.exe`, `Wavelength.exe`,
+  `Wavelength_X.Y.Z_amd64.AppImage`, `Wavelength_X.Y.Z_universal.app.tar.gz` and `Wavelength-X.Y.Z-android.apk`.
+  The app looks for `_x64-setup.exe`, `Wavelength.exe`, `_amd64.AppImage`, `_universal.app.tar.gz` and
+  `-android.apk`. The .dmg and .deb are for installing by hand.
+- Mac and Linux apps update themselves from the release after the one that added it (the AppImage and the
+  .app.tar.gz get a `.sig` like the Windows files). Earlier Mac and Linux installs have to be updated by hand once.
 - Apps only offer a release once its file for them is attached, so nobody gets an update in the 15–25 minutes
   before the builds finish.
 - **Pre-releases** are only offered to people who ticked **Include pre-releases**. Untick pre-release on the

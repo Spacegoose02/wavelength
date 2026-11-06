@@ -1,5 +1,5 @@
+import { Qr } from '../components/Qr';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import qrcode from 'qrcode-generator';
 import { syncNow } from '../lib/hubSync';
 import { loadHubServices } from '../lib/hubServices';
 import { recheckLibrary, runExplicitCheck, stopExplicitCheck, useExplicitCheck } from '../lib/explicitCheck';
@@ -22,17 +22,6 @@ import { useUi } from '../store/ui';
 const ROLE_LABELS: Record<HubRole, string> = { admin: 'Admin', member: 'Member', kid: 'Kid' };
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
 const when = (t?: number | null) => (t ? new Date(t).toLocaleString() : 'never');
-
-/** A QR code for a link, so a phone can open it from a TV screen. */
-function Qr({ text }: { text: string }) {
-  const svg = useMemo(() => {
-    const qr = qrcode(0, 'M');
-    qr.addData(text);
-    qr.make();
-    return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  }, [text]);
-  return <div className="hub-qr" dangerouslySetInnerHTML={{ __html: svg }} />;
-}
 
 /** Shows a pairing code and waits for it to be approved in a browser. */
 function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; take?: (s: HubSession) => void }) {
@@ -235,6 +224,64 @@ function RemoteSetting() {
         <span className="switch"><input type="checkbox" checked={on} onChange={(e) => useSettings.getState().setRemoteControl(e.target.checked)} /><span /></span>
         Let my other devices see and control this one
       </label>
+      <ShareListeningSetting />
+    </div>
+  );
+}
+
+/** House activity (lib/houseActivity.ts): the sidebar's "Listening now" for the others. */
+function ShareListeningSetting() {
+  const v = useSettings((s) => s.shareListening);
+  const kid = useHub((s) => s.user?.role === 'kid');
+  const on = v ?? !kid;
+  return (
+    <>
+      <label className="check">
+        <span className="switch"><input type="checkbox" checked={on} onChange={(e) => useSettings.getState().setShareListening(e.target.checked)} /><span /></span>
+        Show the house what I'm playing
+      </label>
+      <p className="muted small">
+        {kid
+          ? 'Your grown-ups see the song you’re playing under “Listening now” in their sidebar. Nobody else does.'
+          : 'People in the house see the song you’re playing under “Listening now” in their sidebar (the song’s name, never what you played before).'}
+      </p>
+    </>
+  );
+}
+
+/** Home Assistant (docs/HOME-ASSISTANT.md): a token of its own, shown once, revoked from the devices list. */
+function HomeAssistantSetting() {
+  const [made, setMade] = useState<{ token: string; url: string }>();
+  const [err, setErr] = useState('');
+  const connect = async () => {
+    setErr('');
+    try {
+      setMade(await hubClient()!.connectHomeAssistant());
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+  return (
+    <div className="editor">
+      <h3>Home Assistant</h3>
+      <p className="muted small">
+        Show what your devices are playing in Home Assistant and control them from it: pause the music when the doorbell rings, turn it down at
+        bedtime, or put play/pause on a dashboard. Make a token, then paste it into Home Assistant (the guide in docs/HOME-ASSISTANT.md has the
+        setup to copy). Remove it any time under your devices, where it shows as "Home Assistant".
+      </p>
+      {made ? (
+        <>
+          <p className="small">Hub address: <code>{made.url}</code></p>
+          <p className="small">Token (shown only now):</p>
+          <code className="ha-token">{made.token}</code>
+          <div className="row gap">
+            <button type="button" className="btn small" onClick={() => void navigator.clipboard?.writeText(made.token).catch(() => undefined)}>Copy token</button>
+          </div>
+        </>
+      ) : (
+        <button type="button" className="btn small" onClick={() => void connect()}>Make a Home Assistant token</button>
+      )}
+      {err && <div className="errors">{err}</div>}
     </div>
   );
 }
@@ -595,6 +642,7 @@ function SignedIn() {
       </div>
 
       <RemoteSetting />
+      {user.role !== 'kid' && <HomeAssistantSetting />}
       <NotifySetting />
       <ScrobbleSetting />
 

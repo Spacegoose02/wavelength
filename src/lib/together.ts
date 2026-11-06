@@ -6,6 +6,7 @@ import { hubClient, useHub } from '../store/hub';
 import { setPlayerIntercept, usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import { isKid, trackNotForKids } from './kids';
+import { sameNavidrome } from './discoverMatch';
 import { fromHub } from './librarySync';
 import { findInLibrary } from './match';
 
@@ -18,7 +19,8 @@ import { findInLibrary } from './match';
  * login for that server. A song from a server the guest doesn't have is looked up in their library by title.
  */
 
-type PartyTrack = Track & { hubSource?: number };
+/** `hubServer`: a Guest Jam pick, a song on the Hub's Navidrome (hub/src/routes/together.ts). */
+type PartyTrack = Track & { hubSource?: number; hubServer?: string };
 
 interface TogetherState {
   party: HubParty | null;
@@ -56,6 +58,11 @@ const keyOf = (t: PartyTrack) => `${t.hubSource ?? t.sourceId}:${t.id}`;
 async function fromParty(t: PartyTrack): Promise<Track | null> {
   if (t.kind === 'radio' || (t.streamUrl && t.hubSource === undefined)) return t;
   const sources = useSettings.getState().sources;
+  if (t.hubServer) {
+    const nd = sameNavidrome(t.hubServer, sources);
+    const { hubServer: _h, ...rest } = t;
+    if (nd) return fromHub({ ...rest, sourceId: nd.id });
+  }
   const cfg = (t.hubSource !== undefined && sources.find((s) => s.hubId === t.hubSource)) || sources.find((s) => s.id === t.sourceId);
   if (cfg?.kind === 'navidrome') {
     const { hubSource: _h, ...rest } = t;
@@ -217,6 +224,14 @@ export async function startParty(opts: { name?: string; guestsAdd: boolean; gues
 
 export async function joinParty(id: string) {
   begin(await hubClient()!.joinParty(id));
+}
+
+/** Host: turn the Guest Jam link on or off. */
+export async function setJam(on: boolean) {
+  const p = useTogether.getState().party;
+  if (!p?.isHost) return;
+  const party = await hubClient()!.partyJam(p.id, on);
+  useTogether.setState({ party });
 }
 
 /** Host: what guests may do. */

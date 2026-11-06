@@ -50,8 +50,8 @@ export function MobileNav() {
                 : <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>}
           </div>
           <DjModeButton className="tbtn" />
-          <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.toggle(); }}>{p.playing ? <IconPause /> : <IconPlay />}</button>
-          {!live && <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.next(); }}><IconNext /></button>}
+          <button className="tbtn" aria-label={p.playing ? 'Pause' : 'Play'} onClick={(e) => { e.stopPropagation(); p.toggle(); }}>{p.playing ? <IconPause /> : <IconPlay />}</button>
+          {!live && <button className="tbtn" aria-label="Next" onClick={(e) => { e.stopPropagation(); p.next(); }}><IconNext /></button>}
         </div>
       )}
       <nav className="tabbar">

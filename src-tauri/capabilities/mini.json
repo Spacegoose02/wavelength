@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "mini",
+  "description": "Mini player window: talks to the main window with events, nothing else",
+  "windows": ["mini"],
+  "platforms": ["windows", "macOS", "linux"],
+  "permissions": ["core:default"]
+}

@@ -88,6 +88,7 @@ Start at **[docs/README.md](docs/README.md)** — it's a map of the codebase wri
 - [Development](docs/DEVELOPMENT.md) — setup, run, build (desktop + Android), signing
 - [iPhone app](docs/IOS.md) — Apple account, secrets, TestFlight
 - [Sources & integrations](docs/SOURCES.md) — every server/API Wavelength talks to, and its quirks
+- [Home Assistant](docs/HOME-ASSISTANT.md) — see and control what your devices play from Home Assistant
 - [User guide](docs/USER-GUIDE.md) — browsing Deezer by artist/album/playlist, choosing Discover charts (with screenshots)
 - [Adding features](docs/CONTRIBUTING.md) — step-by-step recipes (new source, chart, page, skin…)
 - [Troubleshooting](docs/TROUBLESHOOTING.md) — symptoms → causes → fixes we've already hit

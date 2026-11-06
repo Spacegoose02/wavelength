@@ -679,6 +679,19 @@ length (a live take, say), you get its words without the karaoke timing.
 > [critters](#critters) look up the playing song's lyrics too (same cache) while their scene is on screen,
 > to know when someone is singing (`src/lib/singAlong.ts`).
 
+### Translate lyrics
+
+With a Hub whose AI DJ is set up, the lyrics have two buttons at the top:
+
+- **In English** (your device's language) puts a translation under each line. It follows the song like the lyrics do.
+- **In Latin letters** (only for lyrics written in another script: Japanese, Korean, Chinese, Russian, Arabic…)
+  writes each line the way it's pronounced, so you can sing along.
+
+Press the button again to hide it. The translation comes from the AI DJ's model (or Ollama, for free, when the Hub
+uses it), so it may not be exact. It's made once per song and language for the whole house: the next person who
+asks gets it straight away, without another call. Each call counts toward your AI DJ allowance. A Hub admin can
+turn it off in **Settings → Features → Translate lyrics**.
+
 ### Sing mode
 
 **Sing** next to **Lyrics** in Now Playing turns the singer down and opens the lyrics, karaoke style. The slider
@@ -1040,6 +1053,32 @@ see it under the same button with **Join**. As the host you play music as usual.
 **Next** on any song add it to the party (you can turn that off), and you can let guests skip and pause too.
 **Leave** or **End party** when you're done.
 
+### Who's listening
+
+With a Hub, the sidebar shows **Listening now**: what the other people in the house are playing at the moment, with
+a dot that lights up while it plays. **Play** plays the same song from your library; when they're hosting a
+listening party, **Join** joins it. Only the song now playing is shared, never what came before, and it disappears
+a few minutes after they stop.
+
+**Settings → Account → Devices → Show the house what I'm playing** turns it off for you. It's on for grown-ups
+and off for kid profiles. A kid who turns it on is seen only by their own grown-ups, and kids don't see songs
+that aren't for kids.
+
+### Guest Jam
+
+Friends over who don't have Wavelength? As the host, open the party panel and press **Make a guest link**. It shows
+a QR code and **Copy link**. Anyone who opens it on their phone (any browser, no app, no account) sees what's
+playing and what's next, types their name once, searches your library and taps **Add**. Their song joins your
+queue, with "*name* (guest) added …" on your screen. Guests only ever see song names: the music plays on your
+device, not theirs.
+
+- **Guests can add songs** in the party panel also covers Jam guests: untick it and the page says you're choosing.
+- While a kid profile is in the party, the page leaves out explicit songs.
+- Each phone can add 12 songs every 10 minutes.
+- **Turn off** (or ending the party) closes the link straight away; a new link has a new code.
+
+Guest Jam needs a Hub that has your Navidrome library listed (the same one Search uses).
+
 ## Scrobbling
 
 **Settings → Account → Scrobbling** (with a Hub) sends every song you play to
@@ -1086,6 +1125,62 @@ share come first, then each person's favourites in turn. Everyone in a Blend has
 house make Blends with me** first, since a Blend shows a little of what they play. Grown-ups can blend with each
 other and with their own kids; kids only with their parents. A Hub admin can turn mixes and Blend off in
 **Settings → Features**.
+
+## Accessibility
+
+- **Screen readers.** Buttons that only show an icon have names (Play, Next, Repeat…), the seek bar reads out
+  "1:02 of 3:45", and the volume reads as a percentage.
+- **Keyboard.** Tab moves through everything, with a visible outline. On a song, **Shift+F10** (or the menu key)
+  opens the song menu: arrows move through it, Enter picks, Esc closes it and puts you back on the song.
+- **Less motion.** **Settings → Themes → Motion**: *Like my device* (the default) follows your system's
+  reduce-motion setting; *Less motion* stops the scrolling song name and other animations, and the critters and
+  visualizers draw a couple of still frames a second instead of moving; *Full motion* always animates. It follows
+  you to your other devices with a Hub.
+
+## Don't play this
+
+Some songs you never want picked for you. Open a song's menu (right-click it, or press and hold on a phone) and
+choose **Don't play this song** or **Don't play** *artist*. From then on Wavelength leaves it out of everything it
+picks for you: song radio, **Sounds like this**, sound journeys, [Smart Shuffle](#smart-shuffle), DJ mode and your
+Made for you mixes. You can still play it yourself, from an album, a playlist or Search.
+
+A song is matched by its artist and title, so every copy and version of it ("Live", "Remastered") counts. An
+artist is matched by name, songs they're featured on included when they're the main artist. To change your mind,
+open the same menu (**Play this song again**) or **Settings → Playback → Don't play**, which lists everything with
+**Play again** next to it. With a Hub, the list follows you to every device, and the Hub keeps it out of your mixes.
+
+> **Developer notes.** `src/lib/dontPlay.ts` (the same matching as `hub/src/dontPlay.ts`), the synced setting
+> `dontPlay`, and `withoutDontPlay` in `songRadio`, `soundsLike` and `journey`. The Hub reads `settings.dontPlay`
+> from the person's prefs in `Mixes.get` and `/api/dj/station`.
+
+## Smart Shuffle
+
+The shuffle button has a third setting. Press it once for **Shuffle**, again for **Smart Shuffle** (the button gets
+a ✦), and a third time to turn shuffling off. Smart Shuffle shuffles your songs as usual and slips in a song you
+might like after every three of yours: songs from your own library by artists like the ones in the queue, never
+ones already in it or on your [Don't play](#dont-play-this) list. Picks have a ✦ in the queue; remove one like any
+queued song. Turning Smart Shuffle off takes the picks still to come back out. It only touches queues you started
+(not DJ mode or a station), and it remembers which setting you had.
+
+## Mini player, tray and hotkeys
+
+In the Windows, Mac and Linux apps:
+
+- **Mini player.** The small-window button next to the queue button in the player bar (or the tray icon's menu, or
+  **Settings → Playback**) opens a little window with the cover, the song, play/pause, next and previous. It
+  stays on top of your other apps; drag it by its background. Click the song name to bring Wavelength back.
+- **Tray icon** (the menu bar on a Mac): **Play / pause**, **Next**, **Previous**, **Mini player**, **Show
+  Wavelength** and **Quit**. Clicking the icon shows Wavelength.
+- **Hotkeys that work in any app:** Ctrl+Alt+Space play/pause, Ctrl+Alt+→ next, Ctrl+Alt+← previous (⌃⌥ on a
+  Mac). On by default; turn them off in **Settings → Playback → Mini player, tray and hotkeys**. If another app
+  already uses them, that section says so. Your keyboard's media keys keep working either way.
+- **Keep playing in the tray when I close the window** (off by default): closing the window hides it instead and
+  the music carries on. Quit from the tray icon.
+
+> **Developer notes.** `src-tauri/src/desktop.rs` (tray, the global-shortcut plugin, the `mini` window,
+> close-to-tray) sends the main window `remote` events; `src/lib/desktop.ts` acts on them and sends the mini
+> player `mini-state`. `src/components/MiniPlayer.tsx` is drawn instead of the app when the window's label is
+> `mini` (`main.tsx`), and loads none of the app's stores. Settings: `desktop` (per computer, not synced).
 
 ## Dead zones
 
@@ -1705,7 +1800,7 @@ play/pause and next. With nothing playing, tapping it opens Wavelength.
 
 ## Updates
 
-The Windows and Android apps check GitHub for a newer Wavelength on launch and every 6 hours. When there is
+The Windows, Mac and Android apps and the Linux AppImage check GitHub for a newer Wavelength on launch and every 6 hours. When there is
 one, a bar appears at the top of the page: **Install update**, **What's new** (opens **Settings → Updates**
 with the release notes) or **✕** to hide it until the next launch.
 
@@ -1716,6 +1811,10 @@ one. **Check now** checks straight away.
   just a progress bar. It closes Wavelength, installs over it and opens it again.
 - **Windows (portable `Wavelength.exe`):** the new `Wavelength.exe` replaces the old one in the same folder
   and restarts. The folder has to be writable (not `C:\Program Files`).
+- **Mac:** the new Wavelength.app replaces the old one where it is (usually Applications) and opens again. The
+  folder has to be writable by you, which Applications is for the account that installed Wavelength.
+- **Linux (AppImage):** the new AppImage replaces the old file and restarts. A **.deb** install is updated the
+  usual way: download the new .deb from the releases page and open it.
 - **Android, Android TV:** the APK downloads, then Android's own install prompt appears; tap **Install** (or
   **Update**). The first time, Android asks you to allow **Install unknown apps** for Wavelength: the button
   says **Allow installs from Wavelength** and opens that switch; turn it on, come back and tap **Install

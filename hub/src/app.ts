@@ -23,6 +23,7 @@ import { navidromeRoutes } from './routes/navidrome.ts';
 import { relayRoutes } from './routes/relay.ts';
 import { remoteRoutes } from './routes/remote.ts';
 import { togetherRoutes } from './routes/together.ts';
+import { activityRoutes } from './routes/activity.ts';
 import { dockerRoutes } from './routes/docker.ts';
 import { trashRoutes } from './routes/trash.ts';
 import { notificationRoutes } from './routes/notifications.ts';
@@ -228,6 +229,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   listeningRoutes(app, ctx);
   remoteRoutes(app, ctx);
   togetherRoutes(app, ctx);
+  activityRoutes(app, ctx);
   dockerRoutes(app, ctx);
   trashRoutes(app, ctx);
   notificationRoutes(app, ctx);

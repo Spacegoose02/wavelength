@@ -57,10 +57,12 @@ describe('in-app updates', () => {
   });
 
   test('each kind of install gets its own file', () => {
-    const r = release('v1.0.0', ['Wavelength_1.0.0_x64-setup.exe', 'Wavelength.exe', 'Wavelength-1.0.0-android.apk']);
+    const r = release('v1.0.0', ['Wavelength_1.0.0_x64-setup.exe', 'Wavelength.exe', 'Wavelength-1.0.0-android.apk', 'Wavelength_1.0.0_amd64.AppImage', 'Wavelength_1.0.0_amd64.AppImage.sig', 'Wavelength_1.0.0_amd64.deb', 'Wavelength_1.0.0_universal.dmg', 'Wavelength_1.0.0_universal.app.tar.gz']);
     expect(assetFor(r, 'installer')?.name).toBe('Wavelength_1.0.0_x64-setup.exe');
     expect(assetFor(r, 'portable')?.name).toBe('Wavelength.exe');
     expect(assetFor(r, 'android')?.name).toBe('Wavelength-1.0.0-android.apk');
+    expect(assetFor(r, 'appimage')?.name).toBe('Wavelength_1.0.0_amd64.AppImage');
+    expect(assetFor(r, 'mac')?.name).toBe('Wavelength_1.0.0_universal.app.tar.gz');
   });
 
   test('the newest release with a file wins; pre-releases only when asked', () => {

@@ -8,14 +8,25 @@
  * background doesn't jump the clock).
  */
 export const IDLE_FPS = 20;
+/** With "Reduce motion" (lib/motion.ts): a couple of calm frames a second, playing or not. */
+export const REDUCED_FPS = 2;
 
-export function createPacer(idleFps = IDLE_FPS) {
+/** Set by lib/motion.ts: the person asked for less motion (their setting, or their system's). */
+const reducedNow = () => typeof document !== 'undefined' && document.documentElement.classList.contains('reduce-motion');
+
+export function createPacer(idleFps = IDLE_FPS, reduced: () => boolean = reducedNow) {
   let last = -1;
   const gap = 1000 / idleFps - 2; // a little slack, so 60 Hz frames land on every third one
+  const slowGap = 1000 / REDUCED_FPS - 2;
   return (now: number, busy: boolean): number => {
     if (last < 0) {
       last = now;
       return 1 / 60;
+    }
+    if (reduced()) {
+      if (now - last < slowGap) return 0;
+      last = now;
+      return 1 / 60; // the clock barely moves: a sway or a bounce stays nearly still
     }
     if (!busy && now - last < gap) return 0;
     const dt = Math.min(0.1, Math.max(0.001, (now - last) / 1000));

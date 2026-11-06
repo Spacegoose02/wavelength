@@ -2114,3 +2114,43 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .dj-station-pill { position: fixed; right: 16px; bottom: 112px; z-index: 60; display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--panel); border: 1px solid var(--accent); box-shadow: 0 6px 20px rgb(0 0 0 / 0.4); font-weight: 600; font-size: 13px; }
 .dj-station-pill .trash-panda { width: 30px; height: 30px; }
 .dj-station-pill.inline { position: static; margin: 6px 10px; box-shadow: none; }
+
+.dont-play-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.dont-play-list li { display: flex; align-items: center; gap: 8px; }
+.dont-play-list li button { margin-left: auto; }
+
+.shuffle-btn.smart sup { font-size: 9px; margin-left: 1px; }
+.smart-pick { color: var(--accent); font-size: 0.85em; }
+
+/* mini player window (components/MiniPlayer.tsx) */
+.mini-player { display: flex; gap: 10px; align-items: center; height: 100vh; padding: 8px 10px; box-sizing: border-box; background: var(--bg); color: var(--text); user-select: none; overflow: hidden; }
+.mini-cover { width: 88px; height: 88px; flex: none; border-radius: 6px; object-fit: cover; background: var(--panel, #222); }
+.mini-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mini-title { all: unset; cursor: pointer; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-sub { opacity: 0.7; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-row { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.mini-time { margin-left: auto; font-size: 0.75em; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.mini-bar { height: 3px; background: color-mix(in srgb, var(--text) 15%, transparent); border-radius: 2px; overflow: hidden; }
+.mini-bar > div { height: 100%; background: var(--accent); }
+
+.jam-row .hub-qr { margin: 6px 0; }
+.ha-token { display: block; word-break: break-all; padding: 8px; margin: 4px 0 8px; border-radius: 8px; background: color-mix(in srgb, var(--text) 8%, transparent); user-select: all; }
+
+/* "Listening now" in the sidebar (components/HouseActivity.tsx) */
+.house-activity { margin: 10px 0 4px; display: grid; gap: 4px; }
+.side-head-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 0 10px; }
+.house-row { display: flex; align-items: center; gap: 6px; padding: 4px 10px; }
+.house-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.house-name { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.house-song { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.house-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+.house-dot.on { background: var(--accent); }
+
+/* lyrics translation (components/Lyrics.tsx) */
+.lyrics-tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.lyric .lyric-extra { display: block; font-size: 0.75em; opacity: 0.75; font-weight: 400; margin-top: 2px; }
+
+/* Reduce motion (lib/motion.ts) */
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+}

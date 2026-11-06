@@ -3,6 +3,7 @@ import type { DeemixItem } from '../lib/deemixQueue';
 import type { Track } from './types';
 import type { IndexedSong, LibrarySearchResponse } from '../../hub/src/api/library';
 import type { LyricsCacheResponse, LyricsCachePut } from '../../hub/src/api/lyrics';
+import type { ActivityReport, HouseActivity } from '../../hub/src/api/activity';
 
 /**
  * The Wavelength Hub API (hub/, docs/HUB.md). The Hub owns accounts, roles and admin-only rules;
@@ -509,6 +510,8 @@ export interface HubParty {
   now: number;
   state: { queue: Track[]; index: number; position: number; duration: number; playing: boolean; at: number };
   members: { name: string; device: string; host: boolean }[];
+  /** Host only: the Guest Jam link, null while it's off (Hubs before Guest Jam leave it out). */
+  jam?: string | null;
 }
 export interface HubPartyRequest { id: number; action: 'add' | 'playNext' | 'next' | 'prev' | 'toggle' | 'seek' | 'jump'; tracks?: Track[]; value?: number; index?: number; from: string; at: number }
 
@@ -790,6 +793,7 @@ export class HubClient {
   /** The house's shared lyrics (hub/src/routes/lyrics.ts). */
   lyricsGet = (key: string) => this.call<LyricsCacheResponse>('GET', `/api/lyrics?key=${encodeURIComponent(key)}`);
   lyricsPut = (body: LyricsCachePut) => this.call<{ ok: true }>('PUT', '/api/lyrics', body);
+  translateLyrics = (b: { key: string; lines: string[]; mode: 'translate' | 'romanize'; to: string }) => this.call<{ lines: string[]; cached: boolean }>('POST', '/api/lyrics/translate', b);
   librarySearch = (q: string) => this.call<LibrarySearchResponse>('GET', `/api/library/search?q=${encodeURIComponent(q)}`);
   /** Discover (hub/src/routes/discover.ts): chart songs the Hub's Navidrome has, movement, and For you. */
   discoverMatch = (songs: { title: string; artist: string }[]) =>
@@ -993,11 +997,17 @@ export class HubClient {
   remoteDevices = () => this.call<{ devices: HubRemoteDevice[] }>('GET', '/api/me/remote/devices');
   remoteCommand = (deviceId: number, c: Omit<HubRemoteCommand, 'id' | 'from' | 'at'>) => this.call('POST', '/api/me/remote/command', { deviceId, ...c });
   // listen together (lib/together.ts)
-  parties = () => this.call<{ parties: { id: string; name: string; host: string; members: number; joined: boolean; isHost: boolean }[] }>('GET', '/api/together');
+  parties = () => this.call<{ parties: { id: string; name: string; host: string; hostId?: number; members: number; joined: boolean; isHost: boolean }[] }>('GET', '/api/together');
+  // house activity (lib/houseActivity.ts)
+  activityReport = (r: ActivityReport) => this.call('PUT', '/api/me/activity', r);
+  activityClear = () => this.call('DELETE', '/api/me/activity');
+  houseActivity = () => this.call<HouseActivity>('GET', '/api/activity');
   startParty = (b: { name?: string; guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('POST', '/api/together', b);
   joinParty = (id: string) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/join`, {});
   leaveParty = (id: string) => this.call('POST', `/api/together/${encodeURIComponent(id)}/leave`, {});
   setParty = (id: string, b: { guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('PATCH', `/api/together/${encodeURIComponent(id)}`, b);
+  connectHomeAssistant = () => this.call<{ token: string; url: string; deviceId: number }>('POST', '/api/me/homeassistant', {});
+  partyJam = (id: string, on: boolean) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/jam`, { on });
   partyState = (id: string, s: Omit<HubParty['state'], 'at'>) => this.call('PUT', `/api/together/${encodeURIComponent(id)}/state`, s);
   partyRequest = (id: string, r: { action: HubPartyRequest['action']; tracks?: Track[]; value?: number; index?: number }) => this.call('POST', `/api/together/${encodeURIComponent(id)}/request`, r);
   partyWait = (id: string, version: number) => this.call<{ party: HubParty | null; requests: HubPartyRequest[] }>('GET', `/api/together/${encodeURIComponent(id)}/wait?version=${version}`);
