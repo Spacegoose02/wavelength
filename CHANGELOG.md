@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.25.1
 - **Girl critters get their own outfits.** Each act has a skirt or dress for the girls: a cowgirl denim fringe
   skirt, a pleated mini for the rapper, a pink tutu with the rocker's leather jacket, a sailor dress for the drummer,
   a space dress for the theremin, and dresses for the DJ, synth and accordion.
