@@ -90,7 +90,7 @@ export function Body({ species, children }: { species: SpeciesInfo; children: Re
 function Bust({ shoulders: [[lx, y], [rx]] }: { shoulders: [number, number][] }) {
   const half = (rx - lx) / 2;
   const r = half * 0.42;
-  const cy = y + 6;
+  const cy = y + 18;
   const fold = (cx: number) => `M${(cx - r).toFixed(1)} ${cy} Q ${cx.toFixed(1)} ${(cy + r * 1.1).toFixed(1)} ${(cx + r).toFixed(1)} ${cy}`;
   const at = [200 - half * 0.5, 200 + half * 0.5];
   return (
@@ -101,10 +101,58 @@ function Bust({ shoulders: [[lx, y], [rx]] }: { shoulders: [number, number][] })
   );
 }
 
+/** How a girl's skirt is cut (`Skirt`). */
+export type SkirtStyle = 'aline' | 'pleated' | 'ruffle' | 'tutu' | 'fringe';
+
+/**
+ * A girl's skirt, hung from the figure's `waist` over the legs: with the top in the same colour it reads as a
+ * dress. `className` colours it (`top` for a dress); `trim` adds a band at the hem (`trim` class colours it).
+ */
+export function Skirt({ species, style = 'aline', className = 'top', trim }: { species: SpeciesInfo; style?: SkirtStyle; className?: string; trim?: string }) {
+  if (!useContext(GirlContext)) return null;
+  const [y, w, len] = species.figure.waist;
+  const f = (n: number) => n.toFixed(1);
+  const flare = style === 'tutu' ? 2.1 : style === 'ruffle' ? 1.7 : 1.5;
+  const L = style === 'tutu' ? len * 0.72 : len;
+  const hw = w * flare;
+  const hem = y + L;
+  let hemPath: string;
+  if (style === 'ruffle' || style === 'tutu') {
+    // scallops (ruffle) or points (tutu) along the hem, right to left
+    const n = style === 'tutu' ? 9 : 6;
+    hemPath = '';
+    for (let i = 0; i < n; i++) {
+      const x0 = 200 + hw - (2 * hw * i) / n;
+      const x1 = 200 + hw - (2 * hw * (i + 1)) / n;
+      const mid = (x0 + x1) / 2;
+      hemPath += style === 'tutu' ? ` L ${f(mid)} ${f(hem + 6)} L ${f(x1)} ${f(hem)}` : ` Q ${f(mid)} ${f(hem + 10)} ${f(x1)} ${f(hem)}`;
+    }
+  } else {
+    hemPath = ` Q 200 ${f(hem + 8)} ${f(200 - hw)} ${f(hem)}`;
+  }
+  const d = `M${f(200 - w)} ${f(y)} Q 200 ${f(y + 4)} ${f(200 + w)} ${f(y)} L ${f(200 + hw)} ${f(hem)}${hemPath} Z`;
+  const pleats = style === 'pleated' ? [-0.6, -0.2, 0.2, 0.6] : style === 'tutu' ? [-0.7, -0.35, 0, 0.35, 0.7] : [];
+  return (
+    <g className="skirt">
+      {style === 'tutu' && <path d={d} transform={`translate(0 -5) translate(200 ${f(y)}) scale(0.9) translate(-200 ${f(-y)})`} className={`${className} ol-thin`} opacity="0.85" />}
+      <path d={d} className={`${className} ol`} />
+      {trim && <path d={`M${f(200 + hw * 0.97)} ${f(hem - 5)}${hemPath.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_m, x, yy) => `${x} ${f(Number(yy) - 5)}`)}`} fill="none" className={trim} strokeWidth="5" strokeLinecap="round" />}
+      {pleats.map((k) => <path key={k} d={`M${f(200 + w * k)} ${f(y + 3)} L ${f(200 + hw * k)} ${f(hem + 4)}`} stroke="rgb(0 0 0 / 0.25)" strokeWidth="1.8" />)}
+      {style === 'fringe' && Array.from({ length: 11 }, (_, i) => {
+        const x = 200 - hw * 0.9 + (hw * 1.8 * i) / 10;
+        return <path key={i} d={`M${f(x)} ${f(hem + 2)} v 9`} className="fringe" strokeWidth="3" strokeLinecap="round" />;
+      })}
+      <path d={d} fill="url(#critter-vinyl)" />
+    </g>
+  );
+}
+
 /** Everything the species has behind its top: legs and feet in the act's trousers (`legs`) and shoes (`shoe`), neck, tail. */
-export function Legs({ species, legs = 'legs', shoe }: { species: SpeciesInfo } & Partial<LegsStyle>) {
+export function Legs({ species, legs = 'legs', shoe, girlLegs = 'bare' }: { species: SpeciesInfo; girlLegs?: string } & Partial<LegsStyle>) {
   const { Under } = species.figure;
-  return <>{Under({ legs, shoe })}</>;
+  // girls wear a skirt (`Skirt`): bare legs under it, or tights (`girlLegs`)
+  const girl = useContext(GirlContext);
+  return <>{Under({ legs: girl ? girlLegs : legs, shoe })}</>;
 }
 
 /** `translate(200 0) scale(k 1) translate(-200 0)`: squeeze about the middle of the picture. */

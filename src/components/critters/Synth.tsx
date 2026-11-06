@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell, windUp } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -82,6 +82,7 @@ export function Synth({ species, still }: ActProps) {
       <Body species={species}>
         <BodyOutfits />
       </Body>
+      <Skirt species={species} style="ruffle" />
 
       <Head species={species} />
 

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig, type RigFrame } from './rig';
 
@@ -55,6 +55,7 @@ export function DJ({ species, still }: ActProps) {
         <path d="M190 254 L188 284 M210 254 L212 284" className="strings" strokeWidth="3" strokeLinecap="round" />
         <BodyOutfits />
       </Body>
+      <Skirt species={species} />
 
       <Head
         species={species}

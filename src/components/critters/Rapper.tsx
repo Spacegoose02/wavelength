@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -68,6 +68,7 @@ export function Rapper({ species, still }: ActProps) {
         <text x="200" y="289.5" textAnchor="middle" fontSize="15" fontWeight="900" className="medallion-mark">W</text>
         <BodyOutfits />
       </Body>
+      <Skirt species={species} style="pleated" className="skirt-alt" />
 
       <Head species={species} />
 

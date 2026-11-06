@@ -1596,6 +1596,14 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .bow { fill: var(--accent); }
 .critter .bow-knot { fill: color-mix(in srgb, var(--accent) 70%, #000); }
 /* on the beanie (also --accent) the bow takes the pom's colour */
+/* girls' skirts (parts.tsx Skirt): a dress in the top's colour, or these */
+.critter .skirt-denim { fill: #4a6fa8; }
+.critter .fringe { stroke: #3a5a8c; fill: none; }
+.critter .skirt-alt { fill: var(--viz-mid); }
+.critter .skirt-tutu { fill: var(--viz-high); }
+.critter .skirt-trim { stroke: #fff; }
+.critter .tunic-trim { stroke: color-mix(in srgb, var(--accent) 55%, #fff); }
+.critter .knit-trim { stroke: rgb(0 0 0 / 0.22); }
 .critter .bow-alt .bow { fill: var(--viz-high); }
 .critter .bow-alt .bow-knot { fill: color-mix(in srgb, var(--viz-high) 70%, #000); }
 .critter.species-shark .sleeve { stroke: var(--skin); }

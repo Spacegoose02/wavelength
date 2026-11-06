@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Girl critters get their own outfits.** Each act has a skirt or dress for the girls: a cowgirl denim fringe
+  skirt, a pleated mini for the rapper, a pink tutu with the rocker's leather jacket, a sailor dress for the drummer,
+  a space dress for the theremin, and dresses for the DJ, synth and accordion.
+- **The strumming arm is back over the guitar** in the Rocker and Country acts; only the arm on the neck goes
+  behind it.
 
 ## 0.25.0
 - **Accessibility.** Names for icon-only buttons and the seek and volume sliders, the song menu from the keyboard

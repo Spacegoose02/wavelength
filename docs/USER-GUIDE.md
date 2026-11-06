@@ -519,7 +519,9 @@ Playback → Now Playing visualizer**: the **Critters** cards show each critter 
 **Act** cards show your current critter in each act. Picking either also switches Now Playing to the
 critter. The **Boy** / **Girl** switch above the cards picks the look for every critter: girls get eyelashes
 and a bow in your skin's accent colour instead of the act's hat. The accordion player keeps her beanie and wears
-the bow on it in another colour, and the DJ keeps her headphones. Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
+the bow on it in another colour, and the DJ keeps her headphones. Girls wear their own outfit in each act: a
+cowgirl denim fringe skirt, a pleated mini (Rapper), a pink tutu (Rocker), a sailor dress (Drummer), a space dress
+(Theremin) and dresses for the DJ, synth and accordion. Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
