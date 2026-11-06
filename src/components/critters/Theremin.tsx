@@ -39,8 +39,8 @@ export function Theremin({ species, still }: ActProps) {
       const freq = 0.1 + s.pitch * 0.18;
       ['wave-a', 'wave-b'].forEach((name, i) => {
         let d = '';
-        for (let x = 262; x <= 392; x += 4) {
-          const fade = (x - 262) / 130;
+        for (let x = 298; x <= 392; x += 4) {
+          const fade = (x - 298) / 94;
           const y = 236 + i * 14 + Math.sin(x * freq - t * 9 - i) * amp * (1 - fade * 0.6) * (i ? 0.6 : 1);
           d += `${d ? 'L' : 'M'}${x} ${y.toFixed(1)} `;
         }
@@ -97,17 +97,17 @@ export function Theremin({ species, still }: ActProps) {
       {/* the theremin: a cabinet on a stand, volume loop on the left, pitch antenna on the right */}
       <path className="stand" d="M200 326 V362 L 182 376 M200 362 L 218 376" fill="none" strokeWidth="4" strokeLinecap="round" />
       <path className="rod" d="M140 308 H122 Q 102 308 102 292 Q 102 276 122 276 H130" fill="none" strokeWidth="4" strokeLinecap="round" />
-      <path className="rod" d="M254 302 V196" fill="none" strokeWidth="4" strokeLinecap="round" />
-      <circle className="rod-tip" cx="254" cy="194" r="4" />
-      <rect className="theremin" x="138" y="298" width="124" height="30" rx="5" />
-      <rect className="theremin-panel" x="146" y="304" width="108" height="18" rx="3" />
-      {[164, 200, 236].map((cx) => <circle key={cx} cx={cx} cy="313" r="5" fill="#d8d8de" stroke="#55555e" strokeWidth="1.5" />)}
-      <path data-part="wave-a" className="wave wave-a" d="M262 236" fill="none" strokeWidth="3" strokeLinecap="round" filter="url(#critter-glow)" />
-      <path data-part="wave-b" className="wave wave-b" d="M262 250" fill="none" strokeWidth="2.5" strokeLinecap="round" filter="url(#critter-glow)" />
+      <path className="rod" d="M288 302 V190" fill="none" strokeWidth="4" strokeLinecap="round" />
+      <circle className="rod-tip" cx="288" cy="188" r="4" />
+      <rect className="theremin" x="138" y="298" width="158" height="30" rx="5" />
+      <rect className="theremin-panel" x="146" y="304" width="142" height="18" rx="3" />
+      {[170, 217, 264].map((cx) => <circle key={cx} cx={cx} cy="313" r="5" fill="#d8d8de" stroke="#55555e" strokeWidth="1.5" />)}
+      <path data-part="wave-a" className="wave wave-a" d="M298 236" fill="none" strokeWidth="3" strokeLinecap="round" filter="url(#critter-glow)" />
+      <path data-part="wave-b" className="wave wave-b" d="M298 250" fill="none" strokeWidth="2.5" strokeLinecap="round" filter="url(#critter-glow)" />
 
       {/* volume hand over the loop (left of picture), pitch hand by the antenna (right) */}
-      <Arm part="arm-l" d="M138 268 Q 114 276 112 262" hand={[112, 258]} />
-      <Arm part="arm-r" d="M262 268 Q 256 284 242 276" hand={[240, 274]} />
+      <Arm part="arm-l" d="M138 268 Q 136 292 118 262" hand={[118, 260]} />
+      <Arm part="arm-r" d="M262 268 Q 268 296 274 256" hand={[274, 254]} />
     </CritterFrame>
   );
 }

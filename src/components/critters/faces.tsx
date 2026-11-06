@@ -336,45 +336,45 @@ export const BlackBearFace = () => <Bear id="bear-black" />;
 export const BrownBearFace = () => <Bear id="bear-brown" />;
 
 /**
- * Sasquatch: a big shaggy head (tufts at the cheeks and crown), a pale bare face with a heavy brow ridge,
- * small deep-set amber eyes, a wide flat nose and a big mouth.
+ * Sasquatch: a round, fluffy head of warm red-brown fur and a big pale monkey-like face (two lobes round the
+ * eyes, a round muzzle), with big friendly eyes close together, a small nose and a wide smile.
  */
 export function SasquatchFace() {
   return (
     <Placed cx={205} cy={170} s={0.84}>
       <defs>
-        <Shade id="sq-fur" hi="#a37752" mid="#74503a" lo="#3f2a1a" />
-        <Shade id="sq-face" hi="#e2bf9a" lo="#ad8259" />
+        <Shade id="sq-fur" hi="#bb7444" mid="#8b4a26" lo="#4f2512" />
+        <Shade id="sq-face" hi="#f3d6b0" lo="#c8936a" />
+        <Shade id="sq-muzzle" hi="#f8e2c2" lo="#d9a87c" />
       </defs>
       <g data-part="ear-l">
-        <ellipse cx="114" cy="180" rx="14" ry="18" fill="url(#sq-face)" className="ol" />
+        <ellipse cx="110" cy="180" rx="13" ry="16" fill="url(#sq-face)" className="ol" />
       </g>
       <g data-part="ear-r">
-        <ellipse cx="298" cy="178" rx="13" ry="17" fill="url(#sq-face)" className="ol" />
+        <ellipse cx="300" cy="178" rx="12" ry="15" fill="url(#sq-face)" className="ol" />
       </g>
       <HeadShape
         id="sasquatch"
         fill="url(#sq-fur)"
-        d="M205 72 L 216 86 L 232 76 L 238 92 C 278 98, 304 126, 304 162 L 318 172 L 304 182 L 316 196 L 300 202 C 292 236, 254 260, 205 260 C 156 260, 118 236, 110 202 L 94 196 L 106 182 L 92 172 L 106 162 C 106 126, 132 98, 172 92 L 178 76 L 194 86 Z"
+        d="M205 76 Q 225 65 239 82 Q 262 78 269 98 Q 292 102 292 123 Q 311 134 303 154 Q 318 170 303 186 Q 311 206 292 217 Q 292 238 269 242 Q 262 262 239 258 Q 225 275 205 264 Q 185 275 171 258 Q 148 262 141 242 Q 118 238 118 217 Q 99 206 107 186 Q 92 170 107 154 Q 99 134 118 123 Q 118 102 141 98 Q 149 78 171 82 Q 185 65 205 76 Z"
       >
-        {/* shaggy strands */}
-        <path d="M160 110 q 6 14 2 26 M184 100 q 4 14 0 26 M228 100 q -4 14 0 26 M252 110 q -6 14 -2 26 M126 210 q 10 8 12 20 M284 210 q -10 8 -12 20" fill="none" stroke="#3a2516" strokeWidth="2.2" strokeLinecap="round" opacity="0.6" />
-        {/* the bare face, widest at the cheeks */}
-        <path d="M205 136 C 238 136, 256 156, 254 184 C 252 218, 234 240, 205 240 C 176 240, 158 218, 156 184 C 154 156, 172 136, 205 136 Z" fill="url(#sq-face)" />
-        <ellipse cx="205" cy="156" rx="48" ry="10" fill="rgb(60 30 10 / 0.3)" />
+        {/* soft fur strands on the crown and the cheek ruff */}
+        <path d="M186 88 q 8 10 6 24 M206 84 q 4 12 0 24 M226 88 q -6 10 -4 24 M150 112 q 10 8 12 20 M260 112 q -10 8 -12 20 M132 196 q 12 4 20 14 M278 196 q -12 4 -20 14 M150 236 q 12 0 20 -8 M260 236 q -12 0 -20 -8" fill="none" stroke="#5a2c14" strokeWidth="2.4" strokeLinecap="round" opacity="0.55" />
+        {/* the bare face: a lobe round each eye, wide at the cheeks, round at the chin */}
+        <path d="M205 142 C 220 126, 254 126, 260 152 C 268 176, 266 196, 258 210 C 252 240, 232 254, 205 254 C 178 254, 158 240, 152 210 C 144 196, 142 176, 150 152 C 156 126, 190 126, 205 142 Z" fill="url(#sq-face)" className="ol-thin" />
+        <ellipse cx="205" cy="224" rx="38" ry="27" fill="url(#sq-muzzle)" />
       </HeadShape>
       <g data-part="eyes">
-        <Eye cx={180} cy={174} r={12.5} iris="#8a4e14" />
-        <Eye cx={232} cy={174} r={12.5} iris="#8a4e14" k={0.88} />
-        <Lashes l={[169, 164]} r={[243, 164]} s={0.9} />
+        <Eye cx={182} cy={170} r={15} iris="#5a3216" />
+        <Eye cx={228} cy={170} r={15} iris="#5a3216" k={0.9} />
+        <Lashes l={[168, 158]} r={[242, 158]} />
       </g>
-      {/* a heavy brow ridge */}
-      <Pair l="M158 156 Q 176 146 198 152" mid={205} stroke="#3a2516" width={7} />
-      <path d="M186 198 Q 205 186 224 198 Q 226 210 214 212 Q 205 207 196 212 Q 184 210 186 198 Z" fill="#4a2e1c" className="ol-thin" />
-      <ellipse cx="197" cy="206" rx="3.5" ry="2.5" fill="#1c120b" />
-      <ellipse cx="213" cy="206" rx="3.5" ry="2.5" fill="#1c120b" />
-      <path data-part="smile" d="M182 224 Q 205 238 228 224" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
-      <Mouth id="sasquatch" x={205} y={223} w={17} h={28} fill="#5a1a24" line={INK} />
+      <Pair l="M166 147 Q 179 139 194 145" mid={205} stroke="#9c5a30" width={4.5} />
+      <path d="M196 196 Q 205 189 214 196 Q 213 204 205 205 Q 197 204 196 196 Z" fill="#6b3a22" className="ol-thin" />
+      <ellipse cx="201" cy="194.5" rx="3.5" ry="1.8" fill="rgb(255 255 255 / 0.45)" />
+      <path d="M205 205 V212" stroke="#6b3a22" strokeWidth="2.2" strokeLinecap="round" />
+      <path data-part="smile" d="M182 216 Q 205 238 228 216" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+      <Mouth id="sasquatch" x={205} y={217} w={17} h={28} fill="#5a1a24" line={INK} />
     </Placed>
   );
 }

@@ -382,7 +382,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
-| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien or a black or brown bear playing along (see below) |
+| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear or a sasquatch playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -402,7 +402,7 @@ spectrum under the title does the same.
 
 <a id="raccoons"></a>
 The last visualizer is a critter who plays along with the music. You pick **who** plays and **what** they
-play, and any critter can play any act: 6 critters × 8 acts. A rocker shark, a DJ bear and a country grey
+play, and any critter can play any act: 7 critters × 8 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
 alien are all possible.
 
 <img src="screenshots/critters.png" alt="Every critter in every act in the Neon synth skin: rows are the raccoon, shark, alien, grey alien, black bear and brown bear; columns are DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth and Accordion" width="100%">
@@ -414,6 +414,7 @@ alien are all possible.
 | **Alien** | Slim and green, with big black eyes and glowing antennae that pulse with the bass |
 | **Gray alien** | The classic grey: a big bulb head tapering to a pointed chin, huge black eyes and a slim body |
 | **Black bear** / **Brown bear** | Round ears and a pale muzzle, in black or brown fur |
+| **Sasquatch** | The biggest critter: shaggy brown fur, a bare tan face and huge bare feet |
 
 | Act | Scene and outfit | While the music plays |
 |---|---|---|
@@ -485,11 +486,12 @@ defaults.
 (keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
 Playback → Now Playing visualizer**: the **Critters** cards show each critter in your current act, and the
 **Act** cards show your current critter in each act. Picking either also switches Now Playing to the
-critter. Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
+critter. The **Boy** / **Girl** switch above the cards picks the look for every critter: girls get eyelashes
+and a bow in your skin's accent colour, worn on top of any hat or headphones. Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
-**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown),
+**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, sasquatch shaggy brown),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
 Some groups of skins give them a whole outfit:
 

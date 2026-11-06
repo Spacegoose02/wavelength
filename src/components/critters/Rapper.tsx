@@ -87,10 +87,11 @@ export function Rapper({ species, still }: ActProps) {
       />
 
       {/* mic hand (left of picture), hype hand (right) */}
-      <Arm part="arm-l" d="M138 268 Q 124 242 164 226" hand={[164, 230]}>
-        <path d="M168 228 L 156 252" stroke="#1a1a1e" strokeWidth="9" strokeLinecap="round" />
-        <circle cx="176" cy="216" r="11" fill="#c9c9d1" />
-        <path d="M168 212 H184 M167 217 H185 M169 222 H183" stroke="#8a8a93" strokeWidth="1.2" />
+      {/* held low beside the chin, tipped up at the mouth, so it doesn't hide the face */}
+      <Arm part="arm-l" d="M138 268 Q 120 270 146 256" hand={[146, 258]}>
+        <path d="M150 256 L 140 278" stroke="#1a1a1e" strokeWidth="9" strokeLinecap="round" />
+        <circle cx="157" cy="245" r="10" fill="#c9c9d1" className="ol-thin" />
+        <path d="M150 241 H164 M149 246 H165 M151 251 H163" stroke="#8a8a93" strokeWidth="1.2" />
       </Arm>
       <Arm part="arm-r" d="M262 268 Q 300 256 302 222" hand={[302, 218]} />
     </CritterFrame>
