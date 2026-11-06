@@ -433,6 +433,9 @@ export interface HubServerStatus {
   data: { dir: string; dbBytes: number; disk: { free: number; total: number } | null };
   music: { dir: string; exists: boolean; writable: boolean; disk: { free: number; total: number } | null } | null;
   ytdlp: string | null;
+  /** older Hubs don't send these */
+  load?: { cpus: number; loadAvg: number[]; memory: { total: number; free: number; hub: number }; eventLoopMs: { p99: number; max: number } };
+  index?: { songs: number; listedAt: number | null; lyrics: number };
   counts: { users: number; admins: number; kids: number; devices: number; activeToday: number; pendingRequests: number; services: number; flags: number; ratedAlbums: number };
 }
 

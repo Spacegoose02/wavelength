@@ -23,6 +23,28 @@ function Disk({ d }: { d: { free: number; total: number } | null }) {
 const errText = (e: unknown) => String((e as Error).message ?? e);
 
 /** Admin: the ntfy server the Hub sends push notifications through (hub/src/push.ts). */
+/**
+ * How hard the Hub's machine is working (GET /api/admin/server `load`). "Answer delay" is how long the Hub's main
+ * thread was stuck since the last look: anything over about 100 ms makes every device wait for the Hub.
+ */
+function ServerLoad({ load, index }: { load: NonNullable<HubServerStatus['load']>; index: HubServerStatus['index'] }) {
+  const [one] = load.loadAvg;
+  const busy = load.cpus ? one / load.cpus : 0;
+  const used = load.memory.total - load.memory.free;
+  const slow = load.eventLoopMs.p99 > 100;
+  return (
+    <section>
+      <h2>Load</h2>
+      <div className="server-grid">
+        <div><span className="muted">CPU</span><b className={busy > 0.9 ? 'kid-blocked' : ''}>{Math.round(busy * 100)}% of {load.cpus} core{load.cpus === 1 ? '' : 's'} (last minute)</b></div>
+        <div><span className="muted">Memory</span><b>{gb(used)} of {gb(load.memory.total)} used · Hub {gb(load.memory.hub)}</b></div>
+        <div><span className="muted">Answer delay</span><b className={slow ? 'kid-blocked' : ''}>{load.eventLoopMs.p99} ms typical worst, {load.eventLoopMs.max} ms worst{slow ? ' — the Hub is busy; check sound-alike analysis and other containers' : ''}</b></div>
+        {index && <div><span className="muted">Library copy</span><b>{index.listedAt ? `${index.songs.toLocaleString()} songs, listed ${since(index.listedAt)} ago` : 'Not listed yet (needs the Library updates login)'} · {index.lyrics.toLocaleString()} songs' lyrics</b></div>}
+      </div>
+    </section>
+  );
+}
+
 function PushNotifications() {
   const [s, setS] = useState<{ server: string; hasToken: boolean } | null>();
   const [form, setForm] = useState({ server: '', token: '' });
@@ -507,6 +529,7 @@ export function ServerTab() {
           {rows.map(([k, v]) => <div key={k}><span className="muted">{k}</span><b>{v}</b></div>)}
         </div>
       </section>
+      {s.load && <ServerLoad load={s.load} index={s.index} />}
       <section>
         <h2>Storage</h2>
         <div className="server-grid">

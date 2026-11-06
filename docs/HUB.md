@@ -863,6 +863,17 @@ own server to keep them in the house. The person's topic list is kept in `hub_se
 - In the app, the device token and server logins are kept in the OS keychain (Windows Credential Manager,
   Android Keystore), not in the app's own storage. A Wavelength opened in a browser keeps them in the browser.
 
+## Load
+
+Settings → Server shows how hard the Hub's machine is working (`load` in `GET /api/admin/server`): CPU over the last
+minute against the number of cores, memory used (and the Hub's own share), the **answer delay** (how long the
+Hub's main thread was stuck since the page last looked, p99 and worst; over about 100 ms every device waits for the
+Hub), and how many songs and lyrics the Hub keeps a copy of.
+
+Sound-alike analysis runs in its own worker thread (`hub/src/sonic/thread.ts`), so the first analysis of a big
+library no longer slows every other request. If the delay is still high, look at the other containers on the same
+machine (Kokoro, Ollama, Navidrome scans).
+
 ## Backups
 
 **Settings → Server → Download backup** (admins) saves a copy of the database. Keep `secret.key` from the
