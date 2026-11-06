@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process';
 import { setPriority } from 'node:os';
+import { Worker } from 'node:worker_threads';
 import type { Db } from '../db.ts';
 import { getFeatures } from '../features.ts';
 import { getScanSettings, navidrome } from '../library.ts';
 import { libraryFile } from '../tags.ts';
-import { analyse, SR } from './analyse.ts';
+import { analyse, SR, type SonicFeatures } from './analyse.ts';
 import { SonicIndex } from './index.ts';
 
 /**
@@ -31,6 +32,48 @@ export interface SonicStatus {
   current: string | null;
   lastListAt: number | null;
   lastError: string | null;
+}
+
+/**
+ * analyse() in a worker thread (thread.ts), so the Hub keeps answering while it works. One thread, started on first
+ * use and kept; if it can't start (an unusual Node build), analysis runs here as before.
+ */
+let thread: Worker | null | undefined;
+let nextId = 0;
+const waiting = new Map<number, { resolve: (f: SonicFeatures) => void; reject: (e: Error) => void }>();
+
+function analyseOff(samples: Float32Array): Promise<SonicFeatures> {
+  if (thread === undefined) {
+    try {
+      thread = new Worker(new URL('./thread.ts', import.meta.url));
+      thread.on('message', (m: { id: number; features?: SonicFeatures; error?: string }) => {
+        const w = waiting.get(m.id);
+        waiting.delete(m.id);
+        if (!waiting.size) thread?.unref();
+        if (m.features) w?.resolve(m.features);
+        else w?.reject(new Error(m.error ?? 'analysis failed'));
+      });
+      const fail = (e: unknown) => {
+        for (const w of waiting.values()) w.reject(e instanceof Error ? e : new Error(String(e)));
+        waiting.clear();
+        thread = undefined; // started again for the next song
+      };
+      thread.on('error', fail);
+      thread.on('exit', (code) => code !== 0 && fail(new Error(`analysis thread stopped (${code})`)));
+      // held open only while a song is being analysed (ref below), so it never keeps the Hub from exiting
+      thread.unref();
+    } catch {
+      thread = null;
+    }
+  }
+  if (!thread) return Promise.resolve(analyse(samples));
+  const id = ++nextId;
+  const t = thread;
+  return new Promise((resolve, reject) => {
+    waiting.set(id, { resolve, reject });
+    t.ref();
+    t.postMessage({ id, samples }, [samples.buffer as ArrayBuffer]);
+  });
 }
 
 /** Decode a stretch of a file to mono floats at SR. */
@@ -69,6 +112,8 @@ export class SonicWorker {
   private lastError: string | null = null;
   /** for tests */
   decodeFn = decode;
+  /** for tests; a worker thread otherwise */
+  analyseFn: (samples: Float32Array) => Promise<SonicFeatures> = analyseOff;
 
   constructor(db: Db, key: Buffer, musicDir: string, navidromeDir: string) {
     this.db = db;
@@ -150,7 +195,7 @@ export class SonicWorker {
       const offset = row.duration > 90 ? Math.round(row.duration * 0.3) : 0;
       const samples = await this.decodeFn(file, offset, SECONDS);
       if (samples.length < SR * 5) throw new Error('too short to analyse');
-      const f = analyse(samples);
+      const f = await this.analyseFn(samples);
       this.db.prepare('UPDATE sonic_songs SET features = ?, error = NULL, analysed_at = ? WHERE id = ?').run(JSON.stringify({ ...f, offset }), Date.now(), row.id);
     } catch (e) {
       this.db.prepare('UPDATE sonic_songs SET error = ?, analysed_at = ? WHERE id = ?').run(String((e as Error).message ?? e).slice(0, 300), Date.now(), row.id);
