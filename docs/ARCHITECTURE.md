@@ -71,6 +71,14 @@ under it.
 **merge** functions: albums/artists from several servers collapse by a normalised
 `artist|title` key (`norm()`), keeping every copy in `refs`. The first source in Settings order wins.
 
+### The app–Hub contract (`hub/src/api/`)
+
+The shapes the Hub sends and the app reads live once, in `hub/src/api/*.ts`: types only, with no imports and no
+code, so the Hub uses them in its routes and the app `import type`s them (`src/sources/hub.ts`) without pulling any
+Hub code into the app. A change to a shape there is a type error on both sides. Older routes still have hand-written
+copies in `src/sources/hub.ts`; move each to `hub/src/api/` when you next change it. Start with `api/library.ts`
+(the library index, search).
+
 ## 2. The Rust layer (`src-tauri/src`)
 
 Small on purpose. The UI does almost everything; Rust only does what a WebView can't.

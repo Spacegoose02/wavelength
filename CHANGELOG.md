@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased
+- **Search forgives typos** (with a Hub). "kendirck", "beyonse", "acdc" and "gods plan" find Kendrick Lamar,
+  Beyoncé, AC/DC and God's Plan, words are found by their start ("kend lam"), and the artists you play come first.
+  When a word only matched with a typo, Search says *Showing results for …*. The Hub searches its copy of the
+  Navidrome library in one go instead of each device asking Navidrome (`docs/HUB.md#search`).
+- **Search by lyrics** (with a Hub). Type a line you remember ("started from the bottom") and Search lists the songs
+  with it under *In the lyrics*, with the line.
+- **Lyrics are shared through the Hub.** Lyrics one device found show up on the others straight away, and LRCLIB is
+  asked once per song for the whole house (`docs/HUB.md#lyrics`).
+- **The Hub stays quick during sound-alike analysis.** Measuring each song used to hold up every other Hub request
+  for half a second to two seconds at a time, for hours during the first analysis. It now runs in its own thread.
+- **Server load** in Settings → Server (Hub admins): CPU, memory, how long requests wait for the Hub, and how many
+  songs and lyrics the Hub keeps (`docs/HUB.md#load`).
+- **Recent searches.** The Search page shows your last few searches until you type, with **Clear**.
 - **Less lag with Now Playing open.** The player bar no longer animates behind the full-screen Now Playing, the
   screen no longer redraws everything (the critter's whole drawing included) each time the clock ticks, and the
   critter and visualizers slow to 20 frames a second while paused. In a test with the CPU slowed to phone speed,

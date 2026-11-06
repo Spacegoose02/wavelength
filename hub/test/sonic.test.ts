@@ -77,3 +77,23 @@ test('analyses library songs and finds ones that sound alike, journeys and featu
   assert.equal(st.body.analysed, 5);
   assert.match(st.body.blocked, /Navidrome admin login/);
 });
+
+test('analysis runs off the main thread, so the Hub keeps answering', async () => {
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { openDb } = await import('../src/db.ts');
+  const { SonicWorker } = await import('../src/sonic/worker.ts');
+  const dir = mkdtempSync(join(tmpdir(), 'wl-sonic-thread-'));
+  writeFileSync(join(dir, 'a.flac'), '');
+  const db = openDb(':memory:');
+  db.prepare("INSERT INTO sonic_songs (id, path, title, artist, album, duration) VALUES ('a', 'a.flac', 'T', 'A', 'X', 200)").run();
+  const worker = new SonicWorker(db, Buffer.alloc(32), dir, dir);
+  worker.decodeFn = async () => song(120, 60, [261.63, 329.63, 392]);
+  let ticks = 0;
+  const timer = setInterval(() => ticks++, 5);
+  await worker.analyseOne({ id: 'a', path: 'a.flac', duration: 200 });
+  clearInterval(timer);
+  assert.ok(ticks >= 10, `the main thread was blocked (${ticks} ticks)`);
+  assert.equal((db.prepare("SELECT features IS NOT NULL AS ok FROM sonic_songs WHERE id = 'a'").get() as { ok: number }).ok, 1);
+});

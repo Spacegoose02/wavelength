@@ -247,6 +247,27 @@ async function lyricsOvh(queries: LyricsQuery[]): Promise<Lyrics | undefined> {
   return undefined;
 }
 
+/**
+ * The house's shared copy on the Hub (hub/src/lyricsCache.ts), set up by lib/sharedLyrics.ts once a Hub is signed in:
+ * lyrics another device already found come from there in one call, and what this device finds goes back to it.
+ * Kept out of this file so the lookup itself doesn't depend on the Hub.
+ */
+export interface SharedLyrics {
+  get(key: string): Promise<Lyrics | null | undefined>;
+  put(key: string, artist: string, title: string, lyrics: Lyrics): void;
+}
+let shared: SharedLyrics | undefined;
+export function setSharedLyrics(s: SharedLyrics | undefined) {
+  shared = s;
+}
+
+/** The Hub's key for a song's lyrics: its cleaned-up artist and title, and its length to 10 s (synced times differ by take). */
+export function sharedKey(t: Pick<Track, 'title' | 'artist' | 'duration'> & { trackNumber?: number }): string | undefined {
+  const [q] = lyricQueries(t);
+  if (!q) return undefined;
+  return `${norm(q.artist)}|${norm(q.title)}|${t.duration ? Math.round(t.duration / 10) : ''}`;
+}
+
 /** A source that can give lyrics itself (Navidrome). */
 export interface LyricsSource {
   getLyrics?(track: Track): Promise<Lyrics | undefined>;
@@ -259,8 +280,22 @@ const cache = new Map<string, Promise<Lyrics | undefined>>();
  * had them, so the caller can say so and the miss isn't cached.
  */
 async function lookup(t: Track, source?: LyricsSource): Promise<Lyrics | undefined> {
+  const key = shared ? sharedKey(t) : undefined;
+  const share = (ly: Lyrics) => {
+    if (key && (ly.lines.length || ly.instrumental)) shared?.put(key, t.artist, t.title, ly);
+    return ly;
+  };
   const own = await source?.getLyrics?.(t).catch(() => undefined);
-  if (own?.lines.length || own?.instrumental) return own;
+  // the server's own go to the Hub too, so the house can search their words
+  if (own?.lines.length || own?.instrumental) return share(own);
+  const fromHub = key ? await shared?.get(key).catch(() => undefined) : undefined;
+  if (fromHub) return fromHub;
+  const found = await search(t);
+  return found && share(found);
+}
+
+/** LRCLIB, else lyrics.ovh. */
+async function search(t: Track): Promise<Lyrics | undefined> {
   if (NO_VOCALS.test(t.title)) return INSTRUMENTAL('LRCLIB');
   const queries = lyricQueries(t);
   let failed: unknown;

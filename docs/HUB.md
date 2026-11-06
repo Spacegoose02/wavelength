@@ -595,6 +595,39 @@ three ways:
   (artists they play), their Release Radar follows, and Deezer's related artists of their 10 most played artists
   (the Made for you lookups, cached a day), with a reason for each.
 
+## Search
+
+With the Navidrome admin login set under Library updates, the app's Search page asks the Hub instead of searching
+Navidrome song by song (`hub/src/librarySearch.ts`, `GET /api/library/search`). It uses the same in-memory list of
+every song as Discover's library check, indexed by every word of each title, artist and album, and:
+
+- **forgives typos** (one letter off from 4 letters, two from 8, letters swapped: "kendirck", "beyonse") and finds
+  words by their start ("kend lam"); when a word only matched with a typo, the answer has `didYouMean` and the app
+  shows *Showing results for …*,
+- ignores case, accents, punctuation, "&" vs "and" and apostrophes, and finds names run together ("acdc", "gods plan"),
+- puts the exact title first, then artists the person searching played in the last year (`plays` table).
+
+Albums and artists are put together from the matching songs. The app uses the answer only when the Hub's Navidrome
+is one of its own servers (as for Discover); other servers (Plex, Audiobookshelf, a second Navidrome) and the radio
+directory are still searched by the app at the same time. With an older Hub, or before the first listing, the app
+searches as before. Recent searches are kept on each device.
+
+A search of three words or more also looks through the **lyrics** the house has found (below) and lists matching
+songs from the library under *In the lyrics*, with the line that matched (kid profiles see it masked).
+
+## Lyrics
+
+The apps still find lyrics themselves (Navidrome's own, then LRCLIB, then lyrics.ovh: `src/lib/lyrics.ts`), but
+share them through the Hub (`hub/src/lyricsCache.ts`, tables `lyrics_cache` and `lyrics_fts`):
+
+- Before asking LRCLIB, an app asks `GET /api/lyrics?key=` with the song's key (cleaned-up artist and title and its
+  length to 10 seconds, since synced times differ between takes). Another device's find comes back in one call.
+- What an app finds (including Navidrome's own lyrics) it sends with `PUT /api/lyrics`, so LRCLIB is asked once per
+  song for the whole house. Kept 180 days, then looked up again. At most 400 lines of 500 characters.
+- The words are indexed with SQLite FTS5 for search by lyrics.
+
+An older Hub answers 404 and the app stops asking until it restarts.
+
 ## Sound-alike analysis
 
 Off until an admin turns on **Sound-alike analysis** in Settings → Features. Then the Hub lists the Navidrome
@@ -762,6 +795,9 @@ with a 4xx status.
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
+| `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |
+| `GET /api/lyrics?key=` | signed in | `{ lyrics }`: what an app in the house found for that song, or null (`hub/src/api/lyrics.ts`) |
+| `PUT /api/lyrics` | signed in | `{ key, artist, title, lyrics }`: keep lyrics for everyone; 400 when `lyrics` isn't the app's shape |
 | `POST /api/discover/match` | signed in | `{ songs: [{ title, artist }] }` (up to 300) → `{ ready, server, total, songs }`: the Hub's Navidrome song for each (Subsonic fields `id, title, artist, album, albumId, duration, track, discNumber, coverArt, explicitStatus`) or null. `ready: false` without a Navidrome scan login (every song null) |
 | `POST /api/discover/positions` | signed in | `{ chart, songs }` (songs in rank order, up to 300; `chart` names it, e.g. `billboard:all`, `ihHitsNow`, `mix:pop:<charts>`) → keeps today's snapshot and answers `{ since, moves: [{ prev, weeks }] }`: rank on the snapshot from `since` (null = wasn't on it) and weeks in a row. `since` is null on a chart's first day |
 | `POST /api/discover/foryou` | signed in | `{ songs }` (up to 300) → `{ basis, scores: [{ score, because? }] }`: how close each song is to what you play (0 = not at all) and why ("You play Drake", "You follow SZA", "Like Drake"); `basis` is how many plays it went on |
@@ -826,6 +862,17 @@ own server to keep them in the house. The person's topic list is kept in `hub_se
 - Only allow a pairing you just started yourself: the confirmation page names the device for that reason.
 - In the app, the device token and server logins are kept in the OS keychain (Windows Credential Manager,
   Android Keystore), not in the app's own storage. A Wavelength opened in a browser keeps them in the browser.
+
+## Load
+
+Settings → Server shows how hard the Hub's machine is working (`load` in `GET /api/admin/server`): CPU over the last
+minute against the number of cores, memory used (and the Hub's own share), the **answer delay** (how long the
+Hub's main thread was stuck since the page last looked, p99 and worst; over about 100 ms every device waits for the
+Hub), and how many songs and lyrics the Hub keeps a copy of.
+
+Sound-alike analysis runs in its own worker thread (`hub/src/sonic/thread.ts`), so the first analysis of a big
+library no longer slows every other request. If the delay is still high, look at the other containers on the same
+machine (Kokoro, Ollama, Navidrome scans).
 
 ## Backups
 

@@ -43,6 +43,9 @@ import { shareRoutes } from './routes/shares.ts';
 import { webFetchRoutes } from './routes/webfetch.ts';
 import { radioRoutes } from './routes/radio.ts';
 import { discoverRoutes } from './routes/discover.ts';
+import { searchRoutes } from './routes/search.ts';
+import { lyricsRoutes } from './routes/lyrics.ts';
+import { LyricsCache } from './lyricsCache.ts';
 import { ChartCache } from './discover.ts';
 import { ChartHistory } from './chartHistory.ts';
 import { LibraryIndex } from './libraryIndex.ts';
@@ -89,6 +92,8 @@ export interface Ctx {
   chartHistory: ChartHistory;
   /** Every Navidrome song, kept to match Discover's charts against in one go (libraryIndex.ts). */
   libraryIndex: LibraryIndex;
+  /** Lyrics the house's apps found, shared and searchable (lyricsCache.ts). */
+  lyrics: LyricsCache;
   /** Deezer related artists and top songs (mixes.ts), for Made for you and Discover's For you. */
   mixLookups: MixLookups;
   /** Release Radar: followed artists and their new releases, looked up in the background (radar.ts). */
@@ -140,6 +145,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.station = new Station(db, ctx.dj, ctx.mixes, opts.stationChart);
   ctx.videos = new Videos(opts.videoSearch ?? ((q, n) => ctx.ytdlp.search(q, n)));
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
+  ctx.lyrics = new LyricsCache(db);
   ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => ctx.library.status().lastScanAt);
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
   if (opts.watchLibrary ?? true) ctx.library.start();
@@ -236,6 +242,8 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   webFetchRoutes(app, ctx);
   radioRoutes(app, ctx);
   discoverRoutes(app, ctx);
+  searchRoutes(app, ctx);
+  lyricsRoutes(app, ctx);
   radarRoutes(app, ctx);
   scrobbleRoutes(app, ctx);
   pushRoutes(app, ctx);

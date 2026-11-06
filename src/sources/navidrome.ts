@@ -110,6 +110,16 @@ export class NavidromeSource implements MusicSource {
     return this.track(s);
   }
 
+  /** The Hub's search answer (hub/src/api/library.ts), in Subsonic's fields, as this server's results. */
+  fromSubsonicSearch(r: { songs: object[]; albums: object[]; artists: { id: string }[] }): Partial<SearchResults> {
+    return {
+      // an artist the Hub only knows by name can't be opened here
+      artists: r.artists.filter((a) => !a.id.startsWith('name:')).map(this.artist),
+      albums: r.albums.map(this.album),
+      tracks: r.songs.map(this.track),
+    };
+  }
+
   /** OpenSubsonic `getLyricsBySongId` (Navidrome 0.53+): lyrics from tags or a .lrc file. Synced preferred. */
   async getLyrics(t: Track): Promise<Lyrics | undefined> {
     if (t.kind !== 'track') return undefined;

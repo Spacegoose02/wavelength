@@ -590,6 +590,19 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     PRIMARY KEY (service_id, family_id)
   );
   `,
+  `
+  -- Lyrics the house's apps found (LRCLIB, lyrics.ovh, Navidrome), so each song is looked up once for everyone,
+  -- and the words can be searched (lyrics_fts.words: the lines without apostrophes, so "its" finds "it's").
+  -- See lyricsCache.ts. key = the app's "artist|title|length" (src/lib/lyrics.ts).
+  CREATE TABLE lyrics_cache (
+    key    TEXT PRIMARY KEY,
+    artist TEXT NOT NULL,
+    title  TEXT NOT NULL,
+    body   TEXT NOT NULL,                 -- JSON: the app's Lyrics (hub/src/api/lyrics.ts)
+    at     INTEGER NOT NULL
+  );
+  CREATE VIRTUAL TABLE lyrics_fts USING fts5(key UNINDEXED, artist UNINDEXED, title UNINDEXED, lines UNINDEXED, words, tokenize = 'unicode61 remove_diacritics 2');
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
