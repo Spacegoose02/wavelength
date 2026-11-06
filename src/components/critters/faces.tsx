@@ -109,10 +109,10 @@ function Lashes({ l, r, s = 1 }: { l: [number, number]; r: [number, number]; s?:
 }
 
 /** A bow at `x`,`y` on the head skeleton (species `fit.bow`, drawn by `Head` over any hat), tilted `rot` degrees, in the skin's accent. */
-export function Bow({ x, y, rot = -20, s = 1 }: { x: number; y: number; rot?: number; s?: number }) {
+export function Bow({ x, y, rot = -20, s = 1, alt }: { x: number; y: number; rot?: number; s?: number; alt?: boolean }) {
   if (!useContext(GirlContext)) return null;
   return (
-    <g className="girl-bow" transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
+    <g className={alt ? 'girl-bow bow-alt' : 'girl-bow'} transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
       <path className="bow ol-thin" d="M0 0 C -10 -16, -32 -18, -32 0 C -32 18, -10 16, 0 0 Z M0 0 C 10 -16, 32 -18, 32 0 C 32 18, 10 16, 0 0 Z" />
       <path d="M0 0 C -10 -16, -32 -18, -32 0 C -32 18, -10 16, 0 0 Z M0 0 C 10 -16, 32 -18, 32 0 C 32 18, 10 16, 0 0 Z" fill="url(#critter-vinyl)" />
       <path d="M-22 -4 Q -14 0 -6 -2 M22 -4 Q 14 0 6 -2" fill="none" stroke="rgb(0 0 0 / 0.25)" strokeWidth="2" strokeLinecap="round" />

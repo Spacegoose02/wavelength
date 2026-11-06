@@ -4,7 +4,9 @@
 - **The Rapper's mic no longer hides the face,** and the Theremin's hands line up with it again. The mic is held
   low beside the chin, and the pitch antenna moved out past the head, with the hands on the antenna and over the loop.
 - **Girl critters.** A **Boy** / **Girl** switch in **Settings → Playback → Critters** gives every critter
-  eyelashes and a bow in your skin's accent colour, worn on top of any hat (`docs/USER-GUIDE.md#critters`).
+  eyelashes and a bow in your skin's accent colour in place of the act's hat (the beanie stays, with the bow on it)
+  (`docs/USER-GUIDE.md#critters`).
+- **The Rapper's cap is gone.** The rapper plays bare-headed now, for boys and girls alike.
 - **The artist link on an album page always works.** It used to do nothing when the album's artist id wasn't
   one in the library's artist list. It now finds the artist by name too, else opens the artist on that server by
   its id, else their Deezer releases.

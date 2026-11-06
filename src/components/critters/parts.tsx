@@ -69,17 +69,34 @@ export function Shadow({ cx, cy, rx, ry = 6 }: { cx: number; cy: number; rx: num
  * and the vinyl shading.
  */
 export function Body({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
-  const { torso, Top, Skin, chin } = species.figure;
+  const { torso, Top, Skin, chin, shoulders } = species.figure;
+  const girl = useContext(GirlContext);
   return (
     <g data-part="body">
       {Top ? <Top /> : <path className="top ol" d={torso} />}
       <g clipPath="url(#critter-torso)">
         {Skin && <Skin />}
+        {girl && <Bust shoulders={shoulders} />}
         {children}
         <ellipse className="chin-shadow" cx="200" cy={chin[0]} rx={chin[1]} ry="16" filter="url(#critter-blur)" />
         <path d={torso} fill="url(#critter-vinyl)" />
       </g>
       <path d={torso} fill="none" className="ol" />
+    </g>
+  );
+}
+
+/** The girl look on the top: a soft fold under each side of the chest, between the shoulders. */
+function Bust({ shoulders: [[lx, y], [rx]] }: { shoulders: [number, number][] }) {
+  const half = (rx - lx) / 2;
+  const r = half * 0.42;
+  const cy = y + 6;
+  const fold = (cx: number) => `M${(cx - r).toFixed(1)} ${cy} Q ${cx.toFixed(1)} ${(cy + r * 1.1).toFixed(1)} ${(cx + r).toFixed(1)} ${cy}`;
+  const at = [200 - half * 0.5, 200 + half * 0.5];
+  return (
+    <g className="bust">
+      {at.map((cx) => <ellipse key={cx} cx={cx} cy={cy - r * 0.15} rx={r * 0.8} ry={r * 0.5} fill="rgb(255 255 255 / 0.18)" />)}
+      <path d={at.map(fold).join(' ')} fill="none" stroke="rgb(0 0 0 / 0.38)" strokeWidth="2.4" strokeLinecap="round" />
     </g>
   );
 }
@@ -231,9 +248,10 @@ export function Brows({ l, className, stroke, width = 4 }: { l: string; classNam
  * anything that goes over the outfit (`over`, e.g. the DJ's headphones) and the holiday hats. Hats,
  * headphones and hoods are sized for the usual head and refitted with the species' `fit`; glasses are
  * stretched to cover bigger eyes. Give own headwear `className="own-hat"` and own glasses
- * `className="own-eyewear"` so outfits that replace them can hide them.
+ * `className="own-eyewear"` so outfits that replace them can hide them. Girls wear a bow instead of the act's
+ * hat, unless `girlHat` (the beanie) keeps it, when the bow goes on the hat in another colour.
  */
-export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; hat?: ReactNode; eyewear?: ReactNode; over?: ReactNode }) {
+export function Head({ species, hat, eyewear, over, girlHat }: { species: SpeciesInfo; hat?: ReactNode; eyewear?: ReactNode; over?: ReactNode; girlHat?: boolean }) {
   const { Face, fit = {} } = species;
   const girl = useContext(GirlContext);
   const w = fit.w ?? 1;
@@ -249,7 +267,8 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
       <Face />
 
       <g transform={onEyes}>{eyewear}</g>
-      <g transform={onTop}>{hat}</g>
+      {/* hidden rather than left out, so the rig still finds the hat's parts (`adjust`) */}
+      <g transform={onTop} display={girl && hat && !girlHat ? 'none' : undefined}>{hat}</g>
 
       {/* skin-group outfits: hidden unless <html data-skin-group> matches (styles.css) */}
       <g className="outfit outfit-nuclear" transform={narrow(w)}>
@@ -317,7 +336,7 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
         <path d="M240 58 C 226 44, 226 28, 240 32 C 254 28, 254 44, 240 58 Z" fill="#ff5c8a" />
       </g>
       </g>
-      {girl && fit.bow && <Bow x={fit.bow[0]} y={fit.bow[1]} rot={fit.bow[2]} s={0.85} />}
+      {girl && fit.bow && <Bow x={fit.bow[0]} y={fit.bow[1]} rot={fit.bow[2]} s={hat && girlHat ? 0.85 : 1} alt={!!(hat && girlHat)} />}
       </g>
     </g>
   );

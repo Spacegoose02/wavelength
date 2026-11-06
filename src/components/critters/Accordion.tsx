@@ -77,6 +77,7 @@ export function Accordion({ species, still }: ActProps) {
 
       <Head
         species={species}
+        girlHat
         hat={
           <g data-part="adjust" className="own-hat">
             <path className="beanie" d="M134 132 Q 134 72 200 70 Q 266 72 266 132 Z" />

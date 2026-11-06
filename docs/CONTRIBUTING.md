@@ -129,7 +129,8 @@ those parts so the pivot lands on the figure's own shoulder, tail root or foot.
      and different CSS variables on its `.species-<id>`; give each its own gradient ids (`Bear` takes an `id`).
   7. The girl look: put `<Lashes l={[x, y]} r={[x, y]} />` inside the `eyes` group (each eye's outer-top
      corner; they blink with the eyes) and set `fit.bow` (`[x, y, rotation]` on the skeleton, the upper left of
-     the head). `Head` draws the bow over any hat, in `--accent`. Both show only inside `GirlContext`, which
+     the head). `Head` hides the act's `hat` for girls and draws the bow in `--accent`;
+     pass `girlHat` to keep the hat (the Accordion's beanie), and the bow goes on it in `--viz-high`. Both show only inside `GirlContext`, which
      `Critter` provides from the `critterLook` setting.
   8. Check it in every act, as a boy and a girl, singing as well as still, (they all show it), and add a row to the critter table in the
      [user guide](USER-GUIDE.md#critters).

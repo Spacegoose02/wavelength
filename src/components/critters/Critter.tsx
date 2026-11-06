@@ -31,7 +31,7 @@ export interface ActInfo {
 export const ACTS: ActInfo[] = [
   { id: 'dj', label: 'DJ', blurb: 'Scratches records behind two decks', Scene: DJ },
   { id: 'country', label: 'Country', blurb: 'Cowboy hat, banjo, taps a boot on the porch', Scene: Country },
-  { id: 'rapper', label: 'Rapper', blurb: 'Backwards cap and chain, raps into the mic', Scene: Rapper },
+  { id: 'rapper', label: 'Rapper', blurb: 'Gold chain and a mic, raps between the speakers', Scene: Rapper },
   { id: 'rocker', label: 'Rocker', blurb: 'Leather jacket, flying-V, headbangs in front of the amps', Scene: Rocker },
   { id: 'drums', label: 'Drummer', blurb: 'Sailor tee, drum kit and bubbles, under the sea', Scene: Drums },
   { id: 'theremin', label: 'Theremin', blurb: 'Space-age tunic, plays a theremin on the moon under a UFO', Scene: Theremin },

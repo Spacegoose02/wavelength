@@ -31,7 +31,7 @@ describe('critter species and looks', () => {
       const girl = draw(true, sp);
       expect(boy, sp.id).not.toMatch(/class="(lashes|girl-bow)[ "]/);
       expect(girl, sp.id).toMatch(/class="lashes[ "]/);
-      expect(girl, sp.id).toContain('class="girl-bow"');
+      expect(girl, sp.id).toMatch(/class="girl-bow[ "]/);
     }
   });
 });
