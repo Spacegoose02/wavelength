@@ -1126,6 +1126,17 @@ house make Blends with me** first, since a Blend shows a little of what they pla
 other and with their own kids; kids only with their parents. A Hub admin can turn mixes and Blend off in
 **Settings → Features**.
 
+## Accessibility
+
+- **Screen readers.** Buttons that only show an icon have names (Play, Next, Repeat…), the seek bar reads out
+  "1:02 of 3:45", and the volume reads as a percentage.
+- **Keyboard.** Tab moves through everything, with a visible outline. On a song, **Shift+F10** (or the menu key)
+  opens the song menu: arrows move through it, Enter picks, Esc closes it and puts you back on the song.
+- **Less motion.** **Settings → Themes → Motion**: *Like my device* (the default) follows your system's
+  reduce-motion setting; *Less motion* stops the scrolling song name and other animations, and the critters and
+  visualizers draw a couple of still frames a second instead of moving; *Full motion* always animates. It follows
+  you to your other devices with a Hub.
+
 ## Don't play this
 
 Some songs you never want picked for you. Open a song's menu (right-click it, or press and hold on a phone) and

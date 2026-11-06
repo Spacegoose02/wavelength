@@ -104,3 +104,34 @@ test('the shuffle button goes off, Shuffle, Smart Shuffle, off', async ({ page }
   await btn.click();
   await expect(btn).not.toHaveClass(/\bon\b/);
 });
+
+test('the song menu works from the keyboard', async ({ page }) => {
+  const t = { id: 't1', sourceId: 'x', kind: 'track', title: 'Song 1', artist: 'Some Band', album: 'An Album', duration: 200 };
+  await page.addInitScript((tracks) => {
+    localStorage.setItem('tonearm.library', JSON.stringify({ state: { playlists: [{ id: 'p1', name: 'Test', tracks, createdAt: 0, updatedAt: 0 }], history: [] }, version: 0 }));
+  }, [t]);
+  await page.goto('/');
+  await page.locator('.side-item', { hasText: 'Test' }).dispatchEvent('click');
+  const play = page.locator('.track-row .track-num').first();
+  await play.focus();
+  await page.keyboard.press('Shift+F10');
+  const menu = page.getByRole('menu', { name: 'Song menu: Song 1' });
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('.menu-item').first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(menu.locator('.menu-item').nth(1)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(play).toBeFocused();
+});
+
+test('Less motion stops animations', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav.sidebar button.nav', { hasText: 'Settings' }).click();
+  await page.getByLabel('Search settings').fill('reduce motion');
+  await page.locator('.settings-found .menu-item', { hasText: 'Motion' }).click();
+  await page.getByRole('radio', { name: 'Less motion' }).click();
+  await expect(page.locator('html')).toHaveClass(/reduce-motion/);
+  await page.getByRole('radio', { name: 'Full motion' }).click();
+  await expect(page.locator('html')).not.toHaveClass(/reduce-motion/);
+});

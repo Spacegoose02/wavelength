@@ -13,7 +13,7 @@ import { cleanTune, type MouthTune } from '../player/voice';
  * timestamps) and sent when the Hub is reachable again. Server logins come from the Hub separately
  * (hubServices.ts), and playlists and play history from librarySync.ts.
  */
-const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'critter', 'act', 'critterLook', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'discoverHidden', 'versions', 'playback', 'smartPlaylists', 'playlistFolders', 'pinnedPlaylists', 'dontPlay', 'smartShuffle', 'shareListening', 'mouthTune', 'mouthOffsets', 'djVoice'] as const;
+const SYNCED = ['skin', 'seasonal', 'randomDaily', 'eq', 'npScene', 'critter', 'act', 'critterLook', 'stations', 'hiddenStations', 'stationOrder', 'discoverCharts', 'discoverHidden', 'versions', 'playback', 'smartPlaylists', 'playlistFolders', 'pinnedPlaylists', 'dontPlay', 'smartShuffle', 'shareListening', 'motion', 'mouthTune', 'mouthOffsets', 'djVoice'] as const;
 type SyncedKey = (typeof SYNCED)[number];
 const prefKey = (k: SyncedKey) => `settings.${k}`;
 

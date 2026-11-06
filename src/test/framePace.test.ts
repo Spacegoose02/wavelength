@@ -28,3 +28,14 @@ describe('createPacer', () => {
     expect(pace(33.3, true)).toBeGreaterThan(0);
   });
 });
+
+describe('reduce motion', () => {
+  it('draws two calm frames a second, playing or not, with the clock barely moving', () => {
+    const pace = createPacer(20, () => true);
+    pace(0, true);
+    expect(pace(16, true)).toBe(0);
+    expect(pace(400, true)).toBe(0);
+    expect(pace(500, true)).toBeCloseTo(1 / 60);
+    expect(pace(700, false)).toBe(0);
+  });
+});

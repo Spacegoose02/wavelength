@@ -7,6 +7,7 @@ import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 import type { SmartPlaylist } from '../lib/smartPlaylists';
 import type { DontPlay } from '../../hub/src/api/dontPlay';
+import type { MotionPref } from '../lib/motion';
 import { cleanTune, DEFAULT_TUNE, type MouthTune } from '../player/voice';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
@@ -170,6 +171,9 @@ interface SettingsState {
   /** "Don't play this" (lib/dontPlay.ts): left out of radio, mixes, DJ mode and Smart Shuffle; synced. */
   dontPlay: DontPlay;
   setDontPlay(d: DontPlay): void;
+  /** Reduce motion (lib/motion.ts): follow the system, always, or never. Synced. */
+  motion: MotionPref;
+  setMotion(m: MotionPref): void;
   /** Smart Shuffle (lib/smartShuffle.ts): shuffle with songs you might like mixed in. */
   smartShuffle: boolean;
   setSmartShuffle(on: boolean): void;
@@ -323,6 +327,8 @@ export const useSettings = create<SettingsState>()(
       setVersions: (versions) => set({ versions }),
       dontPlay: { artists: [], songs: [] },
       setDontPlay: (dontPlay) => set({ dontPlay }),
+      motion: 'system',
+      setMotion: (motion) => set({ motion }),
       smartShuffle: false,
       setSmartShuffle: (smartShuffle) => set({ smartShuffle }),
       playlistFolders: {},

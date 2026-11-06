@@ -74,7 +74,7 @@ export function PlayerBar() {
         {canDesktop && <button type="button" className="tbtn small" onClick={() => void toggleMiniPlayer()} title="Mini player"><IconMini /></button>}
         <button className={`tbtn small ${ui.queueOpen ? 'on' : ''}`} onClick={ui.toggleQueue} title="Queue"><IconQueue /></button>
         <IconVolume className="vol-icon" />
-        <input className="vol" type="range" min={0} max={1} step={0.01} value={p.volume} onChange={(e) => p.setVolume(Number(e.target.value))}
+        <input className="vol" type="range" min={0} max={1} step={0.01} value={p.volume} aria-label="Volume" aria-valuetext={`${Math.round(p.volume * 100)}%`} onChange={(e) => p.setVolume(Number(e.target.value))}
           style={{ ['--pct' as string]: `${p.volume * 100}%` }} />
       </div>
       <DjStationPanel />

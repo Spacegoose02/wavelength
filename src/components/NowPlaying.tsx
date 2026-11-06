@@ -107,10 +107,10 @@ export function NowPlaying() {
           {!live && <Seek className="seek big" remaining />}
           <div className="transport big">
             <ShuffleButton />
-            <button className="tbtn" onClick={p.prev}><IconPrev /></button>
-            <button className="tbtn play" onClick={p.toggle}>{p.playing ? <IconPause /> : <IconPlay />}</button>
-            <button className="tbtn" onClick={p.next}><IconNext /></button>
-            <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat}><IconRepeat /></button>
+            <button className="tbtn" onClick={p.prev} aria-label="Previous"><IconPrev /></button>
+            <button className="tbtn play" onClick={p.toggle} aria-label={p.playing ? 'Pause' : 'Play'}>{p.playing ? <IconPause /> : <IconPlay />}</button>
+            <button className="tbtn" onClick={p.next} aria-label="Next"><IconNext /></button>
+            <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat} aria-label={`Repeat: ${p.repeat}`}><IconRepeat /></button>
           </div>
           {showLyrics && t.kind === 'track' && <><SingControls /><LyricsPanel track={t} /></>}
           {!(showLyrics && t.kind === 'track') && <UpNext />}

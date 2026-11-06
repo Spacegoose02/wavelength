@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Accessibility.** Names for icon-only buttons and the seek and volume sliders, the song menu from the keyboard
+  (Shift+F10, arrows, Esc), and **Settings → Themes → Motion** to calm animations, critters and visualizers
+  (`docs/USER-GUIDE.md#accessibility`).
 - **Translate lyrics.** With the AI DJ set up, the lyrics can show a translation under each line, or the lines in
   Latin letters for Japanese, Korean, Chinese and other scripts. Made once per song for the whole house
   (`docs/USER-GUIDE.md#translate-lyrics`).

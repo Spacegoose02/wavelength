@@ -1,4 +1,5 @@
 import { DesktopSettings } from '../components/DesktopSettings';
+import { MotionSettings } from '../components/MotionSettings';
 import { DontPlaySettings } from '../components/DontPlaySettings';
 import { useEffect, useState } from 'react';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
@@ -635,6 +636,7 @@ const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string }[] = [
   { tab: 'account', heading: 'Devices', also: 'listening now house activity share what i play privacy remote control' },
   { tab: 'account', heading: 'Home Assistant', also: 'home assistant smart home automation hass token' },
   { tab: 'sources', heading: 'Sources', also: 'servers navidrome plex audiobookshelf login add server' },
+  { tab: 'themes', heading: 'Motion', also: 'reduce motion animation accessibility vestibular calm still' },
   { tab: 'playback', heading: 'Now Playing visualizer', also: 'scene critter act boy girl' },
   { tab: 'playback', heading: 'Critter mouths', also: 'mouth tuner singing' },
   { tab: 'playback', heading: 'Volume levelling and crossfade', also: 'replaygain loudness crossfade gapless automix' },
@@ -834,7 +836,12 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <DownloadsTab />
         </>
       )}
-      {tab === 'themes' && <ThemesTab />}
+      {tab === 'themes' && (
+        <>
+          <ThemesTab />
+          <MotionSettings />
+        </>
+      )}
       {tab === 'discover' && <DiscoverCharts />}
       {tab === 'updates' && <UpdatesTab />}
     </div>

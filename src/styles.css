@@ -2149,3 +2149,8 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 /* lyrics translation (components/Lyrics.tsx) */
 .lyrics-tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
 .lyric .lyric-extra { display: block; font-size: 0.75em; opacity: 0.75; font-weight: 400; margin-top: 2px; }
+
+/* Reduce motion (lib/motion.ts) */
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+}

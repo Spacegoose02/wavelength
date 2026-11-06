@@ -79,6 +79,21 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
   const toggleArtist = () =>
     setDontPlay({ ...dontPlay, artists: artistOff ? dontPlay.artists.filter((a) => !isArtistBlocked({ artists: [a], songs: [] }, t.artist)) : [...dontPlay.artists, primaryArtist(t.artist)] });
 
+  // keyboard: the first item takes focus, arrows move, Esc (TrackMenuHost) closes and focus goes back
+  useEffect(() => {
+    const back = document.activeElement as HTMLElement | null;
+    ref.current?.querySelector<HTMLElement>('.menu-item')?.focus();
+    return () => back?.focus?.();
+  }, []);
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const items = [...(ref.current?.querySelectorAll<HTMLElement>('.menu-item:not(:disabled)') ?? [])];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[next]?.focus();
+  };
+
   // keep it on screen: open up or left when there's no room below or to the right
   useLayoutEffect(() => {
     const r = ref.current?.getBoundingClientRect();
@@ -106,7 +121,7 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
   };
 
   return (
-    <div ref={ref} className="menu track-menu" role="menu" style={pos} onMouseDown={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
+    <div ref={ref} className="menu track-menu" role="menu" aria-label={`Song menu: ${t.title}`} style={pos} onKeyDown={onKeyDown} onMouseDown={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
       <div className="menu-hint track-menu-title">{t.title}{t.artist ? ` · ${t.artist}` : ''}</div>
       <button type="button" className="menu-item" onClick={run(() => (list ? p.playTracks(list, index ?? 0) : p.playTracks([t])))}>Play</button>
       <button type="button" className="menu-item" onClick={run(() => p.playNext([t]))}>Play next</button>
