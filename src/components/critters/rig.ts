@@ -54,7 +54,7 @@ export interface RigOptions {
  *   note, the `eyes` squint on high notes and blink now and then on a beat. Species details: `whisker-l` /
  *   `whisker-r` twitch and `snarl` shows on accents, `ear-l` / `ear-r` flick, `[data-shine]` eye shines widen
  *   on loud notes and `[data-voice-glow]` antennae brighten with a high voice.
- * - Paused, the eyes blink, the critter yawns and now and then lifts `adjust` (headphones, hat, cap, hair or
+ * - Paused, the eyes blink, the critter yawns and now and then lifts `adjust` (headphones, hat, hair or
  *   beanie) as if setting it straight.
  * - `tail` wags, `spot` (the backlight) breathes with the bass, `[data-glow]` parts (neon and laser
  *   outfits) pulse with the bass.

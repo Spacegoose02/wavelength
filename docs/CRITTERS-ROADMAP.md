@@ -105,6 +105,13 @@ the asset work and a risk on low-end phones and the iOS WebView.
   `--viz-*`, with fixed colours kept for materials (denim, leather, chrome, gold).
 - Holiday hats and skin outfits refitted as each body type lands.
 
+## Girl critters (November 2026)
+
+- A Boy / Girl switch (`critterLook`, synced): girls get lashes and a bow in the skin's accent in
+  place of the act's hat (the beanie stays, with the bow on it). The Rapper's backwards cap came off for everyone.
+- A sasquatch (seventh species) was drawn and then put on hold. Its face and figure are in git history (commit
+  f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
+
 ## Phase 5: stage lighting
 
 - Per-act rim light on the lit side of each silhouette; Country sunset and lantern flicker with dust motes,

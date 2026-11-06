@@ -5,6 +5,17 @@
   screen no longer redraws everything (the critter's whole drawing included) each time the clock ticks, and the
   critter and visualizers slow to 20 frames a second while paused. In a test with the CPU slowed to phone speed,
   Now Playing with a critter went from 64% to 49% of the main thread while playing and from 51% to 21% paused.
+- **The Rapper's mic no longer hides the face,** and the Theremin's hands line up with it again. The mic is held
+  low beside the chin, and the pitch antenna moved out past the head, with the hands on the antenna and over the loop.
+- **Girl critters.** A **Boy** / **Girl** switch in **Settings → Playback → Critters** gives every critter
+  eyelashes and a bow in your skin's accent colour in place of the act's hat (the beanie stays, with the bow on it)
+  (`docs/USER-GUIDE.md#critters`).
+- **The Rapper's cap is gone.** The rapper plays bare-headed now, for boys and girls alike.
+- **No crash when a feature is switched on or off.** Home's Jump back in, Share, Sounds like this, the smart
+  playlist editor and Radio's station rows could crash their page ("Rendered more hooks than during the previous
+  render") when an admin changed a feature switch or the Hub connected while the page was open.
+- **Developers:** `npm run lint` (Biome, for the app and the Hub) and `npm run e2e` (Playwright smoke tests of the
+  browser build) now run on every pull request (`docs/DEVELOPMENT.md#tests-and-checks`).
 - **The artist link on an album page always works.** It used to do nothing when the album's artist id wasn't
   one in the library's artist list. It now finds the artist by name too, else opens the artist on that server by
   its id, else their Deezer releases.

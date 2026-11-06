@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { Mouth } from './parts';
 
 /**
@@ -87,6 +87,40 @@ function Pair({ l, mid, stroke, width = 4 }: { l: string; mid: number; stroke: s
 
 const INK = '#24170f';
 
+/** Draw the girl version: lashes on the eyes, and a bow on the head (`Head`). */
+export const GirlContext = createContext(false);
+
+/**
+ * Three lashes fanning up and out from each eye's outer top corner (`l`, `r`, in the face's art frame), drawn
+ * inside the `eyes` group so they blink with the lids.
+ */
+function Lashes({ l, r, s = 1 }: { l: [number, number]; r: [number, number]; s?: number }) {
+  if (!useContext(GirlContext)) return null;
+  const fan = ([x, y]: [number, number], side: number) =>
+    [[0, 0, -1, -0.45], [7, -6, -0.75, -1], [15, -9, -0.3, -1.15]]
+      .map(([bx, by, dx, dy]) => {
+        const x0 = x - side * bx * s;
+        const y0 = y + by * s;
+        const len = 10 * s;
+        return `M${x0.toFixed(1)} ${y0.toFixed(1)} q ${(side * dx * len * 0.4).toFixed(1)} ${(dy * len * 0.7).toFixed(1)} ${(side * dx * len).toFixed(1)} ${(dy * len).toFixed(1)}`;
+      })
+      .join(' ');
+  return <path className="lashes" d={`${fan(l, 1)} ${fan(r, -1)}`} fill="none" strokeWidth={3 * s} strokeLinecap="round" />;
+}
+
+/** A bow at `x`,`y` on the head skeleton (species `fit.bow`, drawn by `Head` over any hat), tilted `rot` degrees, in the skin's accent. */
+export function Bow({ x, y, rot = -20, s = 1, alt }: { x: number; y: number; rot?: number; s?: number; alt?: boolean }) {
+  if (!useContext(GirlContext)) return null;
+  return (
+    <g className={alt ? 'girl-bow bow-alt' : 'girl-bow'} transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
+      <path className="bow ol-thin" d="M0 0 C -10 -16, -32 -18, -32 0 C -32 18, -10 16, 0 0 Z M0 0 C 10 -16, 32 -18, 32 0 C 32 18, 10 16, 0 0 Z" />
+      <path d="M0 0 C -10 -16, -32 -18, -32 0 C -32 18, -10 16, 0 0 Z M0 0 C 10 -16, 32 -18, 32 0 C 32 18, 10 16, 0 0 Z" fill="url(#critter-vinyl)" />
+      <path d="M-22 -4 Q -14 0 -6 -2 M22 -4 Q 14 0 6 -2" fill="none" stroke="rgb(0 0 0 / 0.25)" strokeWidth="2" strokeLinecap="round" />
+      <ellipse className="bow-knot ol-thin" cx="0" cy="0" rx="7" ry="8" />
+    </g>
+  );
+}
+
 export function RaccoonFace() {
   return (
     <Placed cx={204} cy={168} s={0.84}>
@@ -127,6 +161,7 @@ export function RaccoonFace() {
       <g data-part="eyes">
         <Eye cx={170} cy={180} r={17} iris="#1b2340" />
         <Eye cx={240} cy={180} r={17} iris="#1b2340" k={0.88} />
+        <Lashes l={[156, 168]} r={[253, 168]} />
       </g>
       <Pair l="M150 152 Q 164 144 184 150" mid={205} stroke="#2b2b33" />
       {/* whiskers twitch on accents (rig) */}
@@ -170,6 +205,7 @@ export function SharkFace() {
       <g data-part="eyes">
         <Eye cx={168} cy={164} r={16} iris="#24476a" />
         <Eye cx={242} cy={164} r={16} iris="#24476a" k={0.88} />
+        <Lashes l={[155, 153]} r={[254, 153]} />
       </g>
       <Pair l="M148 136 Q 164 128 184 136" mid={205} stroke="#2c4458" width={4.5} />
       <circle cx="196" cy="190" r="2.2" fill="#2c4458" />
@@ -209,6 +245,7 @@ export function AlienFace() {
         <circle cx="152" cy="178" r="3" fill="#fff" />
         <ellipse data-shine="" cx="248" cy="156" rx="8" ry="6" fill="#fff" />
         <circle cx="262" cy="176" r="2.6" fill="#fff" />
+        <Lashes l={[134, 150]} r={[276, 148]} s={1.1} />
       </g>
       <Pair l="M138 132 Q 158 120 184 128" mid={205} stroke="#4a8a34" />
       <circle cx="198" cy="206" r="2.2" fill="#3c6e2a" />
@@ -240,6 +277,7 @@ export function GreyFace() {
         <circle cx="146" cy="174" r="3.2" fill="#fff" />
         <ellipse data-shine="" cx="250" cy="146" rx="9" ry="6.5" fill="#fff" />
         <circle cx="264" cy="172" r="2.8" fill="#fff" />
+        <Lashes l={[123, 142]} r={[285, 140]} s={1.1} />
       </g>
       {/* brow ridges: they lift and tilt like brows (rig) */}
       <Pair l="M128 124 Q 156 108 188 120" mid={205} stroke="#6f7a84" width={3.5} />
@@ -281,6 +319,7 @@ function Bear({ id }: { id: string }) {
       <g data-part="eyes">
         <Eye cx={166} cy={172} r={16.5} iris="#4a2a16" />
         <Eye cx={246} cy={172} r={16.5} iris="#4a2a16" k={0.88} />
+        <Lashes l={[153, 161]} r={[258, 161]} />
       </g>
       <Pair l="M148 148 Q 162 140 180 146" mid={206} stroke={`url(#${muzzle})`} width={5} />
       <path d="M190 196 Q 208 186 226 196 Q 224 210 208 214 Q 192 210 190 196 Z" fill="#17120f" className="ol-thin" />
@@ -295,3 +334,4 @@ function Bear({ id }: { id: string }) {
 
 export const BlackBearFace = () => <Bear id="bear-black" />;
 export const BrownBearFace = () => <Bear id="bear-brown" />;
+

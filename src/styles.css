@@ -1562,6 +1562,13 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .limb-outline { stroke: #24170f; }
 .critter .foot { fill: var(--skin-dark); }
 .critter .hover-glow { fill: #8af6ff; opacity: 0.35; }
+/* the girl versions (faces.tsx): lashes, and a bow in the skin's accent */
+.critter .lashes { stroke: #24170f; }
+.critter .bow { fill: var(--accent); }
+.critter .bow-knot { fill: color-mix(in srgb, var(--accent) 70%, #000); }
+/* on the beanie (also --accent) the bow takes the pom's colour */
+.critter .bow-alt .bow { fill: var(--viz-high); }
+.critter .bow-alt .bow-knot { fill: color-mix(in srgb, var(--viz-high) 70%, #000); }
 .critter.species-shark .sleeve { stroke: var(--skin); }
 .critter .sleeve { stroke: var(--accent); }
 .critter .strings { stroke: var(--accent-ink, #fff); }
@@ -1601,11 +1608,6 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .chain { stroke: #e8c15a; }
 .critter .medallion { fill: #f5cf5a; stroke: #b8901e; stroke-width: 2; }
 .critter .medallion-mark { fill: #a57c14; }
-.critter .cap { fill: var(--viz-high); }
-.critter .cap-brim { fill: var(--viz-mid); }
-.critter .cap-logo { fill: var(--accent); }
-.critter .cap-gap { fill: rgb(0 0 0 / 0.45); }
-.critter .cap-strap { stroke: var(--viz-mid); }
 /* rocker */
 .critter .amp { fill: #141417; stroke: #2e2e34; stroke-width: 2; }
 .critter .amp-logo { fill: var(--viz-high); }

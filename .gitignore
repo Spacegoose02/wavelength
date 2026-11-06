@@ -12,3 +12,5 @@ src-tauri/gen/android/app/tauri.properties
 src-tauri/gen/android/app/tauri.build.gradle.kts
 # signing secrets — never commit
 *.keystore
+test-results/
+playwright-report/

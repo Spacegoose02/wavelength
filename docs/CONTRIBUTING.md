@@ -130,7 +130,12 @@ those parts so the pivot lands on the figure's own shoulder, tail root or foot.
      face colours beside the others. Face colours stay fixed on every skin.
   6. A colour variant (like the black and brown bears) is another `SPECIES` entry with the same face drawing
      and different CSS variables on its `.species-<id>`; give each its own gradient ids (`Bear` takes an `id`).
-  7. Check it in every act, singing as well as still, (they all show it), and add a row to the critter table in the
+  7. The girl look: put `<Lashes l={[x, y]} r={[x, y]} />` inside the `eyes` group (each eye's outer-top
+     corner; they blink with the eyes) and set `fit.bow` (`[x, y, rotation]` on the skeleton, the upper left of
+     the head). `Head` hides the act's `hat` for girls and draws the bow in `--accent`;
+     pass `girlHat` to keep the hat (the Accordion's beanie), and the bow goes on it in `--viz-high`. Both show only inside `GirlContext`, which
+     `Critter` provides from the `critterLook` setting.
+  8. Check it in every act, as a boy and a girl, singing as well as still, (they all show it), and add a row to the critter table in the
      [user guide](USER-GUIDE.md#critters).
 - **An act:** copy the nearest one (`Drums.tsx`, say) to `components/critters/MyAct.tsx`, then:
   1. Take `ActProps` (`{ species, still }`) and wrap the scene in `CritterFrame` with `kind="myact"` (the
