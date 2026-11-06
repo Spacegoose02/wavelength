@@ -1000,6 +1000,7 @@ export class HubClient {
   joinParty = (id: string) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/join`, {});
   leaveParty = (id: string) => this.call('POST', `/api/together/${encodeURIComponent(id)}/leave`, {});
   setParty = (id: string, b: { guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('PATCH', `/api/together/${encodeURIComponent(id)}`, b);
+  connectHomeAssistant = () => this.call<{ token: string; url: string; deviceId: number }>('POST', '/api/me/homeassistant', {});
   partyJam = (id: string, on: boolean) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/jam`, { on });
   partyState = (id: string, s: Omit<HubParty['state'], 'at'>) => this.call('PUT', `/api/together/${encodeURIComponent(id)}/state`, s);
   partyRequest = (id: string, r: { action: HubPartyRequest['action']; tracks?: Track[]; value?: number; index?: number }) => this.call('POST', `/api/together/${encodeURIComponent(id)}/request`, r);

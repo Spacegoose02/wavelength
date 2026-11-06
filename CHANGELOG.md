@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Home Assistant.** See what your devices are playing and control them from Home Assistant, with a token from
+  Settings → Account → Home Assistant and the setup in `docs/HOME-ASSISTANT.md`.
 - **Guest Jam.** In a listening party, **Make a guest link**: friends scan the QR code, search your library in their
   phone's browser and add songs to your queue, no app or account (`docs/USER-GUIDE.md#guest-jam`).
 - **Don't play this.** From any song's menu, keep a song or a whole artist out of song radio, Sounds like this,

@@ -2134,3 +2134,4 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .mini-bar > div { height: 100%; background: var(--accent); }
 
 .jam-row .hub-qr { margin: 6px 0; }
+.ha-token { display: block; word-break: break-all; padding: 8px; margin: 4px 0 8px; border-radius: 8px; background: color-mix(in srgb, var(--text) 8%, transparent); user-select: all; }

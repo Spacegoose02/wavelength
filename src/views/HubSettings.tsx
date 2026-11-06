@@ -228,6 +228,43 @@ function RemoteSetting() {
   );
 }
 
+/** Home Assistant (docs/HOME-ASSISTANT.md): a token of its own, shown once, revoked from the devices list. */
+function HomeAssistantSetting() {
+  const [made, setMade] = useState<{ token: string; url: string }>();
+  const [err, setErr] = useState('');
+  const connect = async () => {
+    setErr('');
+    try {
+      setMade(await hubClient()!.connectHomeAssistant());
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+  return (
+    <div className="editor">
+      <h3>Home Assistant</h3>
+      <p className="muted small">
+        Show what your devices are playing in Home Assistant and control them from it: pause the music when the doorbell rings, turn it down at
+        bedtime, or put play/pause on a dashboard. Make a token, then paste it into Home Assistant (the guide in docs/HOME-ASSISTANT.md has the
+        setup to copy). Remove it any time under your devices, where it shows as "Home Assistant".
+      </p>
+      {made ? (
+        <>
+          <p className="small">Hub address: <code>{made.url}</code></p>
+          <p className="small">Token (shown only now):</p>
+          <code className="ha-token">{made.token}</code>
+          <div className="row gap">
+            <button type="button" className="btn small" onClick={() => void navigator.clipboard?.writeText(made.token).catch(() => undefined)}>Copy token</button>
+          </div>
+        </>
+      ) : (
+        <button type="button" className="btn small" onClick={() => void connect()}>Make a Home Assistant token</button>
+      )}
+      {err && <div className="errors">{err}</div>}
+    </div>
+  );
+}
+
 /** System notifications for Inbox news (lib/notify.ts). */
 function NotifySetting() {
   const on = useSettings((s) => s.notifications);
@@ -584,6 +621,7 @@ function SignedIn() {
       </div>
 
       <RemoteSetting />
+      {user.role !== 'kid' && <HomeAssistantSetting />}
       <NotifySetting />
       <ScrobbleSetting />
 

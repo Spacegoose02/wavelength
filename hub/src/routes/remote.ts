@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
-import { HttpError, signedIn } from '../http.ts';
+import { audit } from '../audit.ts';
+import { createDevice } from '../devices.ts';
+import { clientIp, HttpError, signedIn } from '../http.ts';
 
 /**
  * Remote control and handoff (docs/USERS-AND-ADMIN.md §7.1): a person's signed-in devices see each other,
@@ -8,7 +10,14 @@ import { HttpError, signedIn } from '../http.ts';
  * queue from here" to move playback from one device to another. Devices wait for commands with a long
  * poll (GET /api/me/remote/wait) and report their state with PUT /api/me/remote/state. Only a person's own
  * devices can control each other. Everything is in memory; nothing is stored.
+ *
+ * Home Assistant (docs/HOME-ASSISTANT.md) gets a token of its own, a device with the `homeassistant` platform,
+ * from POST /api/me/homeassistant. With it, Home Assistant lists the person's players (GET /api/ha/players) and
+ * sends them the same commands (POST /api/ha/players/:id). It never shows up as a player itself.
  */
+
+export const HA_PLATFORM = 'homeassistant';
+const HA_ACTIONS = ['toggle', 'play', 'pause', 'next', 'prev', 'seek', 'volume'] as const;
 
 const ONLINE_MS = 45_000; // a device that hasn't waited or reported for this long is gone
 const MAX_WAIT_MS = 25_000;
@@ -40,7 +49,7 @@ function readQueue(v: unknown): unknown[] {
   return v.filter((t) => t && typeof t === 'object' && JSON.stringify(t).length <= 16 * 1024);
 }
 
-export function remoteRoutes(app: FastifyInstance, _ctx: Ctx) {
+export function remoteRoutes(app: FastifyInstance, { db, config }: Ctx) {
   const live = new Map<number, Live>(); // by device
   let nextId = 1;
   // let waiting devices go when the Hub shuts down, instead of holding it open
@@ -50,6 +59,7 @@ export function remoteRoutes(app: FastifyInstance, _ctx: Ctx) {
 
   const touch = (req: Parameters<typeof signedIn>[0]) => {
     const { user, device } = signedIn(req);
+    if (device.platform === HA_PLATFORM) throw new HttpError(403, 'Home Assistant uses /api/ha');
     let d = live.get(device.id);
     if (!d) live.set(device.id, (d = { userId: user.id, deviceId: device.id, name: device.name, platform: device.platform, seen: 0, commands: [] }));
     d.seen = Date.now();
@@ -128,6 +138,75 @@ export function remoteRoutes(app: FastifyInstance, _ctx: Ctx) {
       })
       .sort((a, b) => Number(b.current) - Number(a.current) || a.name.localeCompare(b.name));
     return { devices };
+  });
+
+  /** A song by name only, for Home Assistant: links to songs carry the player's server login. */
+  const named = (t: unknown) => {
+    const x = (t ?? {}) as Record<string, unknown>;
+    const s = (k: string) => (typeof x[k] === 'string' ? (x[k] as string).slice(0, 300) : undefined);
+    return { title: s('title'), artist: s('artist'), album: s('album') };
+  };
+
+  /** Turns Home Assistant on for this person: a token of its own (shown once), revoked from the devices list. */
+  app.post('/api/me/homeassistant', async (req) => {
+    const { user } = signedIn(req);
+    if (user.role === 'kid') throw new HttpError(403, 'Kid profiles can’t connect Home Assistant');
+    const { device, token } = createDevice(db, user.id, 'Home Assistant', HA_PLATFORM);
+    audit(db, { actorId: user.id, action: 'homeassistant.connected', target: String(device.id), ip: clientIp(req) });
+    return { token, url: config.publicUrl, deviceId: device.id };
+  });
+
+  /** This person's players, flat for Home Assistant templates. `state`: playing, paused or idle. */
+  const haPlayers = (userId: number) => {
+    sweep();
+    return [...live.values()]
+      .filter((d) => d.userId === userId && online(d) && d.platform !== HA_PLATFORM)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((d) => {
+        const s = d.state;
+        const t = s && s.index >= 0 ? s.queue[s.index] : undefined;
+        const position = s ? Math.min(s.position + (s.playing ? (Date.now() - s.at) / 1000 : 0), s.duration || Infinity) : 0;
+        return {
+          id: d.deviceId,
+          name: d.name,
+          platform: d.platform,
+          state: !t ? 'idle' : s?.playing ? 'playing' : 'paused',
+          ...named(t),
+          position: Math.round(position),
+          duration: Math.round(s?.duration ?? 0),
+          volume: s?.volume ?? 1,
+          queued: s ? Math.max(0, s.queue.length - s.index - 1) : 0,
+        };
+      });
+  };
+
+  app.get('/api/ha/players', async (req) => {
+    const players = haPlayers(signedIn(req).user.id);
+    return { players, playing: players.filter((p) => p.state === 'playing').length };
+  });
+
+  /** One player by name (any case), for one Home Assistant sensor; `{ state: 'off', name }` while it isn't open. */
+  app.get<{ Querystring: { name?: string } }>('/api/ha/player', async (req) => {
+    const name = String(req.query.name ?? '').trim().toLowerCase();
+    const p = haPlayers(signedIn(req).user.id).find((x) => x.name.toLowerCase() === name);
+    return p ?? { state: 'off', name: req.query.name ?? '' };
+  });
+
+  /** Home Assistant sends a player a command: `{ action: toggle/play/pause/next/prev/seek/volume, value? }`. */
+  app.post<{ Params: { id: string } }>('/api/ha/players/:id', async (req) => {
+    const { user, device } = signedIn(req);
+    const target = live.get(Number(req.params.id));
+    if (!target || target.userId !== user.id || !online(target) || target.platform === HA_PLATFORM) throw new HttpError(404, "That player isn't online");
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const action = b.action as (typeof HA_ACTIONS)[number];
+    if (!(HA_ACTIONS as readonly string[]).includes(action)) throw new HttpError(400, `action must be one of ${HA_ACTIONS.join(', ')}`);
+    const cmd: Command = { id: nextId++, action, from: device.name, at: Date.now() };
+    if (action === 'seek') cmd.value = num(b.value, 0, 24 * 3600);
+    // Home Assistant's volume is 0–1; 0–100 is taken as a percentage
+    if (action === 'volume') cmd.value = Number(b.value) > 1 ? num(Number(b.value) / 100, 0, 1, 1) : num(b.value, 0, 1, 1);
+    target.commands = [...target.commands, cmd].slice(-50);
+    target.wake?.();
+    return { ok: true };
   });
 
   app.post('/api/me/remote/command', { bodyLimit: 4 * 1024 * 1024 }, async (req) => {

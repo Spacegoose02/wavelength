@@ -721,6 +721,7 @@ with a 4xx status.
 | `PUT /api/together/:id/state` | host | `{ queue, index, position, duration, playing }`, which guests follow |
 | `POST /api/together/:id/request` | member | `{ action: add/playNext/next/prev/toggle/seek/jump, tracks?, value?, index? }`, applied by the host's device |
 | `GET /api/together/:id/wait?version=` | member | waits (up to 25 s) for a newer version; the host also gets requests. `{ party: null }` once it's over |
+| `POST /api/me/homeassistant`, `GET /api/ha/players`, `POST /api/ha/players/:id` | signed in | Home Assistant: its own token, your players by name, commands to them ([HOME-ASSISTANT.md](HOME-ASSISTANT.md)) |
 | `POST /api/together/:id/jam` | host, not kids | `{ on }`: turns the Guest Jam link on (a new code each time) or off; the host's party view carries `jam` (the link, or `null`) |
 | `GET /jam/:code` | anyone | the Guest Jam page; `404` once the link is off or the party ended |
 | `GET /api/jam/:code`, `…/search?q=` | anyone with the link | what's playing and the next 10, by name only / up to 25 songs from the library index (explicit ones left out while a kid is in the party) |
