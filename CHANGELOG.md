@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.25.2
 - **Theme outfits fit the critters better.** The Nuclear respirator covers every mouth and sits below the green
   alien's eyes; the Retro shades and Laser visor are big enough for the aliens and bears; the Neon glow spans the
   aliens' heads; the cowboy hat sits down over every head instead of clipping; and the Editor palettes' glasses are gone.
