@@ -163,6 +163,11 @@ interface SettingsState {
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';
   setVersions(v: SettingsState['versions']): void;
+  /** Wavelength playlists in folders (playlist id → folder name) and pinned to the top of the sidebar; synced. */
+  playlistFolders: Record<string, string>;
+  pinnedPlaylists: string[];
+  setPlaylistFolder(id: string, folder: string | undefined): void;
+  togglePinnedPlaylist(id: string): void;
   /** Playlists → Smart playlists (lib/smartPlaylists.ts): the rules, synced. */
   smartPlaylists: SmartPlaylist[];
   saveSmartPlaylist(p: SmartPlaylist): void;
@@ -301,6 +306,18 @@ export const useSettings = create<SettingsState>()(
       setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',
       setVersions: (versions) => set({ versions }),
+      playlistFolders: {},
+      pinnedPlaylists: [],
+      setPlaylistFolder: (id, folder) =>
+        set((st) => {
+          const next = { ...st.playlistFolders };
+          const name = folder?.trim();
+          if (name) next[id] = name.slice(0, 60);
+          else delete next[id];
+          return { playlistFolders: next };
+        }),
+      togglePinnedPlaylist: (id) =>
+        set((st) => ({ pinnedPlaylists: st.pinnedPlaylists.includes(id) ? st.pinnedPlaylists.filter((x) => x !== id) : [id, ...st.pinnedPlaylists] })),
       smartPlaylists: [],
       saveSmartPlaylist: (p) => set((st) => ({ smartPlaylists: st.smartPlaylists.some((x) => x.id === p.id) ? st.smartPlaylists.map((x) => (x.id === p.id ? p : x)) : [...st.smartPlaylists, p] })),
       removeSmartPlaylist: (id) => set((st) => ({ smartPlaylists: st.smartPlaylists.filter((x) => x.id !== id) })),

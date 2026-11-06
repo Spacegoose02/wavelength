@@ -244,6 +244,38 @@ New releases.
 
 ---
 
+## The song menu
+
+Right-click any song in a list (on a phone or tablet, press and hold) for everything you can do with it in one
+place: **Play**, **Play next**, **Add to queue**, **Add to playlist…**, **Song radio**, **Sounds like this** (with
+sound-alike analysis on the Hub), **Go to artist**, **Go to album**, **Share** and **Copy song name**. Esc or a click
+outside closes it.
+
+## The sidebar
+
+Pages are grouped: Home, Search and the AI DJ at the top, then **Your library** (Recently added, Albums, Artists,
+Favorites, Downloaded, History, Audiobooks, Podcasts), **Explore** (Discover, Radio, SUB/WAVE), and Downloads,
+Inbox and Settings. Click a section's heading to fold it; it stays folded on this device, and the page you're on
+still shows.
+
+## Playlist folders and pins
+
+On a Wavelength playlist's page, **Move to folder** puts it in a folder (type a new name or pick one), and **Pin**
+puts it at the top of the sidebar and the Playlists page. Folders fold open in the sidebar. The Playlists page sorts by
+**Recently changed**, **Name** or **Most songs**. With a Hub, folders and pins follow you to every device.
+
+## Now Playing buttons
+
+Now Playing shows **Add to playlist**, **Lyrics**, **Cast** and **DJ mode**. **More** shows the rest (Song radio,
+Sounds like this, Sing, Video, Credits, Listen together, Devices, EQ, Sleep), and stays open next time if you leave it
+open. A running sleep timer or Sing mode always shows.
+
+## Finding a setting
+
+Type in **Search settings…** at the top of Settings ("crossfade", "kokoro", "backup") and pick the section to
+jump to it. Personal tabs come first; the Hub's own settings (My family, Users, Server, AI DJ, Features) follow
+under **Hub admin**, for admins and family managers.
+
 ## Getting to the song, artist and album from Now Playing and song lists
 
 In **Now Playing**, the album name above the song, the song title and the artist under it are links:

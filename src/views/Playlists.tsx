@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { folderNames, groupPlaylists, type PlaylistSort } from '../lib/playlistFolders';
 import { matchAll } from '../lib/match';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, type ServerPlaylist, type Track } from '../sources/types';
@@ -44,6 +45,44 @@ function shuffleAndPlay(tracks: Track[]) {
   usePlayer.getState().playTracks(tracks, Math.floor(Math.random() * tracks.length));
 }
 
+const SORT_KEY = 'tonearm.playlistSort';
+
+/** Pin a Wavelength playlist to the top of the sidebar and the Playlists page. */
+function PinButton({ id }: { id: string }) {
+  const on = useSettings((s) => s.pinnedPlaylists.includes(id));
+  const toggle = useSettings((s) => s.togglePinnedPlaylist);
+  return <button className={`btn ${on ? 'on' : ''}`} onClick={() => toggle(id)}>{on ? 'Unpin' : 'Pin'}</button>;
+}
+
+/** Put a Wavelength playlist in a folder (an existing one or a new name), or take it out. */
+function FolderButton({ id }: { id: string }) {
+  const folder = useSettings((s) => s.playlistFolders[id]);
+  const all = useSettings((s) => s.playlistFolders);
+  const setFolder = useSettings((s) => s.setPlaylistFolder);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const names = folderNames(all).filter((n) => n !== folder);
+  const pick = (f: string | undefined) => {
+    setFolder(id, f);
+    setOpen(false);
+    setName('');
+  };
+  return (
+    <div className="menu-wrap">
+      <button className="btn" onClick={() => setOpen(!open)}>{folder ? `Folder: ${folder}` : 'Move to folder'}</button>
+      {open && (
+        <div className="menu" style={{ left: 0, right: 'auto' }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) pick(name); }}>
+            <input autoFocus placeholder="New folder…" value={name} onChange={(e) => setName(e.target.value)} />
+          </form>
+          {names.map((n) => <button type="button" key={n} className="menu-item" onClick={() => pick(n)}>{n}</button>)}
+          {folder && <button type="button" className="menu-item" onClick={() => pick(undefined)}>Take out of “{folder}”</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Playlists() {
   const { playlists, createPlaylist } = useLibrary();
   const server = useServerPlaylists();
@@ -52,6 +91,23 @@ export function Playlists() {
   const [name, setName] = useState('');
   const [q, setQ] = useState('');
   const signedIn = useHub((s) => !!s.token);
+  const folders = useSettings((s) => s.playlistFolders);
+  const pinned = useSettings((s) => s.pinnedPlaylists);
+  const [sort, setSort] = useState<PlaylistSort>(() => {
+    try {
+      return (localStorage.getItem(SORT_KEY) as PlaylistSort) || 'recent';
+    } catch {
+      return 'recent';
+    }
+  });
+  const pickSort = (v: PlaylistSort) => {
+    setSort(v);
+    try {
+      localStorage.setItem(SORT_KEY, v);
+    } catch {
+      /* private mode */
+    }
+  };
 
   useEffect(() => {
     server.load();
@@ -96,15 +152,38 @@ export function Playlists() {
         {!playlists.length ? (
           <p className="muted">Use <b>+ Playlist</b> on any track, album, episode or station.</p>
         ) : (
-          <Grid>
-            {local.map(({ p, song }) => (
-              <button key={p.id} className="card" onClick={() => go({ view: 'playlist', id: p.id })}>
-                <PlaylistCover p={p} />
-                <div className="card-title">{p.name}</div>
-                <div className="card-sub"><SourceDots sourceIds={p.tracks.map((t) => t.sourceId)} /><span>{song ? `Has ${song.title} · ${song.artist}` : `${p.tracks.length} items`}</span></div>
-              </button>
-            ))}
-          </Grid>
+          <>
+            <div className="chips playlist-sort">
+              {([['recent', 'Recently changed'], ['name', 'Name'], ['size', 'Most songs']] as const).map(([v, label]) => (
+                <button key={v} className={`chip ${sort === v ? 'on' : ''}`} onClick={() => pickSort(v)}>{label}</button>
+              ))}
+            </div>
+            {(() => {
+              const songOf = new Map(local.map((x) => [x.p.id, x.song]));
+              const g = groupPlaylists(local.map((x) => x.p), folders, pinned, sort);
+              const card = (p: (typeof playlists)[number]) => {
+                const song = songOf.get(p.id);
+                return (
+                  <button key={p.id} className="card" onClick={() => go({ view: 'playlist', id: p.id })}>
+                    <PlaylistCover p={p} />
+                    <div className="card-title">{pinned.includes(p.id) ? '● ' : ''}{p.name}</div>
+                    <div className="card-sub"><SourceDots sourceIds={p.tracks.map((t) => t.sourceId)} /><span>{song ? `Has ${song.title} · ${song.artist}` : `${p.tracks.length} items`}</span></div>
+                  </button>
+                );
+              };
+              return (
+                <>
+                  {(g.pinned.length > 0 || g.loose.length > 0) && <Grid>{[...g.pinned, ...g.loose].map(card)}</Grid>}
+                  {g.folders.map((f) => (
+                    <div key={f.name} className="playlist-folder">
+                      <h3 className="dz-section">{f.name} <small className="muted">{f.playlists.length}</small></h3>
+                      <Grid>{f.playlists.map(card)}</Grid>
+                    </div>
+                  ))}
+                </>
+              );
+            })()}
+          </>
         )}
       </section>}
 
@@ -207,6 +286,8 @@ export function PlaylistView({ id }: { id: string }) {
             <AddToHousehold tracks={p.tracks} />
             <DownloadButton id={`playlist:local:${p.id}`} kind="playlist" name={p.name} cover={picked ?? p.tracks.find((t) => t.coverUrl)?.coverUrl} tracks={p.tracks} />
             <PlaylistCoverButton coverKey={wavelengthCoverKey(p.id)} name={p.name} tracks={p.tracks} auto="mosaic" />
+            <PinButton id={p.id} />
+            <FolderButton id={p.id} />
             <button className="btn ghost" onClick={() => {
               if (confirm(`Delete "${p.name}"?`)) {
                 deletePlaylist(p.id);

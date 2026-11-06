@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **One menu for every song.** Right-click a song (press and hold on a phone) for Play next, Add to queue, Add to
+  playlist, Song radio, Sounds like this, Go to artist or album, Share and Copy song name
+  (`docs/USER-GUIDE.md#the-song-menu`).
+- **A tidier sidebar.** Pages are grouped under **Your library** and **Explore**, and each section folds.
+- **Playlist folders and pins.** Put Wavelength playlists in folders, pin favorites to the top, and sort the Playlists
+  page by recently changed, name or size. Synced with a Hub (`docs/USER-GUIDE.md#playlist-folders-and-pins`).
+- **Calmer Now Playing.** Add to playlist, Lyrics, Cast and DJ mode up front, everything else under **More**.
+- **Settings search, and Hub settings set apart.** Find any setting by name; the Hub admin tabs come after your own.
 - **Search forgives typos** (with a Hub). "kendirck", "beyonse", "acdc" and "gods plan" find Kendrick Lamar,
   Beyoncé, AC/DC and God's Plan, words are found by their start ("kend lam"), and the artists you play come first.
   When a word only matched with a typo, Search says *Showing results for …*. The Hub searches its copy of the
