@@ -83,7 +83,7 @@ genre names cover it).
 ## Add a critter, an act or an outfit
 
 The critters live in `components/critters/`. A critter on screen is a **species** (raccoon, shark, alien,
-grey alien, black or brown bear, sasquatch) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
+grey alien, black or brown bear) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
 Accordion), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
 for how the pieces fit.
 
@@ -111,7 +111,7 @@ those parts so the pivot lands on the figure's own shoulder, tail root or foot.
      notes), `data-voice-glow` on antennae (brighten with a high voice). Put brows outside the `eyes` group so
      blinks don't squash them. Features that stick out (fins, antennae) go in the face too; hats are drawn over
      them. The style frames in `docs/critters/` are the reference drawings.
-  2. Give it a body: use one of the `FIGURES` in `bodies.tsx` (raccoon, bear, shark, alien, grey, sasquatch) or add one in
+  2. Give it a body: use one of the `FIGURES` in `bodies.tsx` (raccoon, bear, shark, alien, grey) or add one in
      the same style (outlined with `.ol`, shaded with `url(#critter-vinyl)` over a flat class colour, no rim
      light). `Under` draws the legs in the act's `legs` class and the feet in its `shoe` class (bare feet when
      there's none), with the right foot inside `<Pivot from={[236, 362]} … part="boot">` and a tail inside

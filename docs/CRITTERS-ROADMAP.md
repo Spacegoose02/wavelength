@@ -105,11 +105,11 @@ the asset work and a risk on low-end phones and the iOS WebView.
   `--viz-*`, with fixed colours kept for materials (denim, leather, chrome, gold).
 - Holiday hats and skin outfits refitted as each body type lands.
 
-## Girls and the sasquatch (November 2026)
+## Girl critters (November 2026)
 
 - A Boy / Girl switch (`critterLook`, synced): girls get lashes and a bow in the skin's accent, drawn over any hat.
-- A seventh species, the sasquatch: shaggy, the biggest figure, bare face and huge bare feet. Its outfits come
-  with the phase 4 fitting like the others.
+- A sasquatch (seventh species) was drawn and then put on hold. Its face and figure are in git history (commit
+  f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 
 ## Phase 5: stage lighting
 

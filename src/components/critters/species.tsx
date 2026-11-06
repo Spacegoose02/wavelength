@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Species } from '../../store/settings';
 import { FIGURES, type Figure } from './bodies';
-import { AlienFace, BlackBearFace, BrownBearFace, GreyFace, RaccoonFace, SasquatchFace, SharkFace } from './faces';
+import { AlienFace, BlackBearFace, BrownBearFace, GreyFace, RaccoonFace, SharkFace } from './faces';
 
 /**
  * Who plays: each species is a face (faces.tsx, drawn on the shared skeleton, see parts.tsx) and a figure
@@ -51,5 +51,4 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'grey', noun: 'gray alien', label: 'Gray alien', Face: GreyFace, figure: FIGURES.grey, fit: { w: 0.94, lift: -12, eyes: [1.2, 1.5], eyeY: 174, bow: [155, 112, -26] } },
   { id: 'bear-black', noun: 'black bear', label: 'Black bear', Face: BlackBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.12, 1.15], bow: [170, 118, -20] } },
   { id: 'bear-brown', noun: 'brown bear', label: 'Brown bear', Face: BrownBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.12, 1.15], bow: [170, 118, -20] } },
-  { id: 'sasquatch', noun: 'sasquatch', label: 'Sasquatch', Face: SasquatchFace, figure: FIGURES.sasquatch, fit: { eyeY: 170, eyes: [1.05, 1.05], bow: [162, 121, -22] } },
 ];

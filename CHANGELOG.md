@@ -3,9 +3,8 @@
 ## Unreleased
 - **The Rapper's mic no longer hides the face,** and the Theremin's hands line up with it again. The mic is held
   low beside the chin, and the pitch antenna moved out past the head, with the hands on the antenna and over the loop.
-- **Girl critters and a sasquatch.** A **Boy** / **Girl** switch in **Settings → Playback → Critters** gives
-  every critter eyelashes and a bow in your skin's accent colour, worn on top of any hat. And there's a seventh
-  critter: a big shaggy sasquatch with huge bare feet, who can play any act (`docs/USER-GUIDE.md#critters`).
+- **Girl critters.** A **Boy** / **Girl** switch in **Settings → Playback → Critters** gives every critter
+  eyelashes and a bow in your skin's accent colour, worn on top of any hat (`docs/USER-GUIDE.md#critters`).
 - **The artist link on an album page always works.** It used to do nothing when the album's artist id wasn't
   one in the library's artist list. It now finds the artist by name too, else opens the artist on that server by
   its id, else their Deezer releases.

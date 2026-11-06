@@ -17,11 +17,6 @@ describe('critterFromOldPick', () => {
 });
 
 describe('critter species and looks', () => {
-  it('lists the sasquatch as a species', async () => {
-    const { SPECIES } = await import('../components/critters/species');
-    expect(SPECIES.find((s) => s.id === 'sasquatch')?.label).toBe('Sasquatch');
-  });
-
   it('adds lashes and a bow only for the girl look, on every species', async () => {
     const { createElement: h } = await import('react');
     const { renderToStaticMarkup } = await import('react-dom/server');
