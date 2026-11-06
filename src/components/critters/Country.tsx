@@ -71,10 +71,11 @@ export function Country({ species, still }: ActProps) {
         species={species}
         hat={
           <g data-part="adjust" className="own-hat">
-            <path className="cowboy" d="M150 118 Q 148 78 172 72 Q 186 70 200 82 Q 214 70 228 72 Q 252 78 250 118 Z" />
+            {/* the crown sits down over the whole top of the head, the brim across the forehead */}
+            <path className="cowboy ol" d="M128 132 Q 128 78 168 70 Q 186 68 200 82 Q 214 68 232 70 Q 272 78 272 132 Z" />
             <path className="cowboy-dark" d="M196 84 Q 200 100 204 84" fill="none" strokeWidth="3" />
-            <rect className="hat-band" x="150" y="104" width="100" height="10" />
-            <path className="cowboy" d="M92 116 Q 120 132 200 114 Q 280 132 308 116 Q 312 132 286 136 Q 200 124 114 136 Q 88 132 92 116 Z" />
+            <rect className="hat-band" x="129" y="114" width="142" height="12" />
+            <path className="cowboy ol" d="M78 128 Q 118 148 200 130 Q 282 148 322 128 Q 328 146 296 152 Q 200 140 104 152 Q 72 146 78 128 Z" />
           </g>
         }
       />
