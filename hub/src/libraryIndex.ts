@@ -1,6 +1,8 @@
 import type { Db } from './db.ts';
 import { getScanSettings, navidrome } from './library.ts';
 import { normName, primaryArtist } from './radar.ts';
+import type { IndexedSong } from './api/library.ts';
+import { SearchIndex, type SearchOptions, type SearchResult } from './librarySearch.ts';
 
 /**
  * "Is this chart song in the library?" for Discover, answered by the Hub in one go
@@ -18,19 +20,8 @@ import { normName, primaryArtist } from './radar.ts';
 const LIST_EVERY = 60 * 60_000;
 const PAGE = 500;
 
-/** The Subsonic song fields an app needs to play and show it. */
-export interface IndexedSong {
-  id: string;
-  title: string;
-  artist: string;
-  album?: string;
-  albumId?: string;
-  duration?: number;
-  track?: number;
-  discNumber?: number;
-  coverArt?: string;
-  explicitStatus?: string;
-}
+/** The Subsonic song fields an app needs to play and show it (the app–Hub contract, api/library.ts). */
+export type { IndexedSong };
 
 export interface IndexStatus {
   /** false: no scan login, or the first listing hasn't finished (the app checks songs itself) */
@@ -56,6 +47,7 @@ export class LibraryIndex {
   private songs: IndexedSong[] = [];
   private byTitle = new Map<string, IndexedSong[]>();
   private byPrefix = new Map<string, IndexedSong[]>();
+  private searchIndex = new SearchIndex([]);
   private server: string | null = null;
   private listedAt: number | null = null;
   private error: string | null = null;
@@ -100,6 +92,7 @@ export class LibraryIndex {
     this.songs = [];
     this.byTitle.clear();
     this.byPrefix.clear();
+    this.searchIndex = new SearchIndex([]);
     this.server = null;
     this.listedAt = null;
   }
@@ -119,8 +112,10 @@ export class LibraryIndex {
             id: String(x.id),
             title: x.title,
             artist: typeof x.artist === 'string' ? x.artist : '',
+            ...(x.artistId != null && { artistId: String(x.artistId) }),
             ...(typeof x.album === 'string' && { album: x.album }),
             ...(x.albumId != null && { albumId: String(x.albumId) }),
+            ...(typeof x.year === 'number' && x.year > 0 && { year: x.year }),
             ...(typeof x.duration === 'number' && { duration: x.duration }),
             ...(typeof x.track === 'number' && { track: x.track }),
             ...(typeof x.discNumber === 'number' && { discNumber: x.discNumber }),
@@ -143,9 +138,15 @@ export class LibraryIndex {
       push(this.byTitle, t, x);
       push(this.byPrefix, t.slice(0, PREFIX), x);
     }
+    this.searchIndex = new SearchIndex(songs);
     this.server = s.url.replace(/\/+$/, '');
     this.listedAt = this.now();
     this.error = null;
+  }
+
+  /** Songs, albums and artists for the Search page (librarySearch.ts). Call ensure() first. */
+  search(q: string, opts?: SearchOptions): SearchResult {
+    return this.searchIndex.search(q, opts);
   }
 
   /** The library's copy of each song, or null. */

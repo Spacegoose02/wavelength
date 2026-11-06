@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { forgetSearches, hubSearch, recentSearches, rememberSearch } from '../lib/hubSearch';
 import { mergeAlbums, mergeArtists, sourceFor } from '../sources/registry';
 import { radioBrowser, stationToTrack } from '../sources/radio';
 import type { SearchResults } from '../sources/types';
@@ -16,6 +17,8 @@ export function Search({ initial }: { initial?: string }) {
   const [q, setQ] = useState(initial ?? '');
   const [res, setRes] = useState<SearchResults>(EMPTY);
   const [busy, setBusy] = useState(false);
+  const [didYouMean, setDidYouMean] = useState<string>();
+  const [recent, setRecent] = useState(recentSearches);
   const go = useUi((s) => s.go);
   const playTracks = usePlayer((s) => s.playTracks);
 
@@ -28,20 +31,34 @@ export function Search({ initial }: { initial?: string }) {
     let alive = true;
     const h = window.setTimeout(async () => {
       setBusy(true);
+      setDidYouMean(undefined);
+      const sources = enabledSources();
+      // The Hub answers for its own Navidrome (typo-tolerant, ranked by your plays); every other server and the
+      // radio directory are asked at the same time. The Navidrome the Hub covers isn't asked again.
+      const viaHub = hubSearch(q, sources);
+      const ask = (cfg: (typeof sources)[number]) => sourceFor(cfg).search?.(q).catch(() => ({})) ?? Promise.resolve({});
       const parts = await Promise.all([
-        ...enabledSources().map((cfg) => sourceFor(cfg).search?.(q).catch(() => ({})) ?? Promise.resolve({})),
+        ...sources.filter((c) => c.kind !== 'navidrome').map(ask),
+        viaHub.then(async (h) => {
+          const left = sources.filter((c) => c.kind === 'navidrome' && c.id !== h?.sourceId);
+          return [h?.results ?? {}, ...(await Promise.all(left.map(ask)))];
+        }),
         radioBrowser.search(q).then((stations) => ({ stations: stations.slice(0, 12) })).catch(() => ({})),
       ]);
       if (!alive) return;
-      const all = parts as Partial<SearchResults>[];
-      setRes({
+      const all = parts.flat() as Partial<SearchResults>[];
+      const hub = await viaHub;
+      const next: SearchResults = {
         artists: mergeArtists(all.map((p) => p.artists ?? [])),
         albums: mergeAlbums(all.map((p) => p.albums ?? [])),
         tracks: all.flatMap((p) => p.tracks ?? []).slice(0, 80),
         books: all.flatMap((p) => p.books ?? []),
         podcasts: all.flatMap((p) => p.podcasts ?? []),
         stations: all.flatMap((p) => p.stations ?? []),
-      });
+      };
+      setRes(next);
+      setDidYouMean(hub?.didYouMean);
+      if (next.artists.length || next.albums.length || next.tracks.length) setRecent(rememberSearch(q));
       setBusy(false);
     }, 300);
     return () => {
@@ -57,6 +74,15 @@ export function Search({ initial }: { initial?: string }) {
         <input autoFocus className="search-big" placeholder="Search artists, albums, tracks, audiobooks, stations…" value={q} onChange={(e) => setQ(e.target.value)} />
         {busy && <Spinner />}
       </header>
+      {!q.trim() && recent.length > 0 && (
+        <section className="recent-searches">
+          <h2>Recent searches <button className="link" onClick={() => { forgetSearches(); setRecent([]); }}>Clear</button></h2>
+          <div className="shelf">{recent.map((r) => <button key={r} className="chip" onClick={() => setQ(r)}>{r}</button>)}</div>
+        </section>
+      )}
+      {didYouMean && didYouMean !== q.trim().toLowerCase() && (
+        <p className="muted did-you-mean">Showing results for <button className="link" onClick={() => setQ(didYouMean)}>{didYouMean}</button></p>
+      )}
       {nothing && <Empty title="Nothing found">Not in your library? Try the Downloads tab to grab it with deemix.</Empty>}
       {res.artists.length > 0 && (
         <section>

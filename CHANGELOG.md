@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Search forgives typos** (with a Hub). "kendirck", "beyonse", "acdc" and "gods plan" find Kendrick Lamar,
+  Beyoncé, AC/DC and God's Plan, words are found by their start ("kend lam"), and the artists you play come first.
+  When a word only matched with a typo, Search says *Showing results for …*. The Hub searches its copy of the
+  Navidrome library in one go instead of each device asking Navidrome (`docs/HUB.md#search`).
+- **Recent searches.** The Search page shows your last few searches until you type, with **Clear**.
 - **Less lag with Now Playing open.** The player bar no longer animates behind the full-screen Now Playing, the
   screen no longer redraws everything (the critter's whole drawing included) each time the clock ticks, and the
   critter and visualizers slow to 20 frames a second while paused. In a test with the CPU slowed to phone speed,

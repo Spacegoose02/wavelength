@@ -1,6 +1,7 @@
 import { http, trimSlash } from '../lib/http';
 import type { DeemixItem } from '../lib/deemixQueue';
 import type { Track } from './types';
+import type { IndexedSong, LibrarySearchResponse } from '../../hub/src/api/library';
 
 /**
  * The Wavelength Hub API (hub/, docs/HUB.md). The Hub owns accounts, roles and admin-only rules;
@@ -584,18 +585,7 @@ export interface HubRadar {
 }
 
 /** A Navidrome song the Hub matched to a chart song (hub/src/libraryIndex.ts): Subsonic's own fields. */
-export interface HubLibrarySong {
-  id: string;
-  title: string;
-  artist: string;
-  album?: string;
-  albumId?: string;
-  duration?: number;
-  track?: number;
-  discNumber?: number;
-  coverArt?: string;
-  explicitStatus?: string;
-}
+export type HubLibrarySong = IndexedSong;
 
 /** How a chart song moved (hub/src/chartHistory.ts): rank in the snapshot from about a week ago, weeks in a row. */
 export interface HubChartMove {
@@ -792,6 +782,8 @@ export class HubClient {
   sonicJourney = (from: { artist: string; title: string }, to: { id: string }, steps = 20) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/journey?${new URLSearchParams({ fromArtist: from.artist, fromTitle: from.title, to: to.id, steps: String(steps) })}`);
   sonicSearch = (q: string) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/search?q=${encodeURIComponent(q)}`);
   sonicLookup = (songs: { id?: string; artist?: string; title?: string }[]) => this.call<{ features: (HubSonicFeatures | null)[] }>('POST', '/api/sonic/lookup', { songs });
+  /** Search the Hub's copy of its Navidrome library (hub/src/routes/search.ts): typo-tolerant, ranked by your plays. */
+  librarySearch = (q: string) => this.call<LibrarySearchResponse>('GET', `/api/library/search?q=${encodeURIComponent(q)}`);
   /** Discover (hub/src/routes/discover.ts): chart songs the Hub's Navidrome has, movement, and For you. */
   discoverMatch = (songs: { title: string; artist: string }[]) =>
     this.call<{ ready: boolean; server: string | null; total: number; songs: (HubLibrarySong | null)[] }>('POST', '/api/discover/match', { songs });

@@ -43,6 +43,7 @@ import { shareRoutes } from './routes/shares.ts';
 import { webFetchRoutes } from './routes/webfetch.ts';
 import { radioRoutes } from './routes/radio.ts';
 import { discoverRoutes } from './routes/discover.ts';
+import { searchRoutes } from './routes/search.ts';
 import { ChartCache } from './discover.ts';
 import { ChartHistory } from './chartHistory.ts';
 import { LibraryIndex } from './libraryIndex.ts';
@@ -236,6 +237,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   webFetchRoutes(app, ctx);
   radioRoutes(app, ctx);
   discoverRoutes(app, ctx);
+  searchRoutes(app, ctx);
   radarRoutes(app, ctx);
   scrobbleRoutes(app, ctx);
   pushRoutes(app, ctx);
