@@ -1,3 +1,4 @@
+import { withoutDontPlay } from './dontPlay';
 import type { HubSonicFeatures, HubSonicHit } from '../sources/hub';
 import type { Track } from '../sources/types';
 import { hubClient } from '../store/hub';
@@ -29,14 +30,14 @@ export async function soundsLike(t: Pick<Track, 'artist' | 'title' | 'id'>): Pro
   const c = hubClient();
   if (!c) throw new Error('Sounds like this needs a Wavelength Hub');
   const r = await c.sonicSimilar({ artist: t.artist, title: t.title }, 60);
-  return hitsToTracks(r.songs);
+  return withoutDontPlay(await hitsToTracks(r.songs));
 }
 
 export async function journey(from: Pick<Track, 'artist' | 'title'>, to: HubSonicHit, steps = 20): Promise<Track[]> {
   const c = hubClient();
   if (!c) throw new Error('Sonic journeys need a Wavelength Hub');
   const r = await c.sonicJourney(from, to, steps);
-  return hitsToTracks(r.songs);
+  return withoutDontPlay(await hitsToTracks(r.songs));
 }
 
 const cache = new Map<string, HubSonicFeatures | null>();

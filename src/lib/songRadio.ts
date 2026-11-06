@@ -1,3 +1,4 @@
+import { withoutDontPlay } from './dontPlay';
 import { sameNameArtists } from './artistMatch';
 import { getJson, qs } from './http';
 import { findInLibrary, pool, primaryArtist } from './match';
@@ -65,5 +66,6 @@ export async function songRadio(seed: { artist: string; title?: string; track?: 
   });
   const ids2 = new Set<string>();
   const list = hits.filter((t): t is Track => !!t && !ids2.has(t.id) && !!ids2.add(t.id)).slice(0, MAX);
-  return seed.track ? [seed.track, ...list.filter((t) => t.id !== seed.track!.id)] : list;
+  const picked = withoutDontPlay(list);
+  return seed.track ? [seed.track, ...picked.filter((t) => t.id !== seed.track!.id)] : picked;
 }

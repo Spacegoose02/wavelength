@@ -6,6 +6,7 @@ import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 import type { SmartPlaylist } from '../lib/smartPlaylists';
+import type { DontPlay } from '../../hub/src/api/dontPlay';
 import { cleanTune, DEFAULT_TUNE, type MouthTune } from '../player/voice';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
@@ -163,6 +164,12 @@ interface SettingsState {
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';
   setVersions(v: SettingsState['versions']): void;
+  /** "Don't play this" (lib/dontPlay.ts): left out of radio, mixes, DJ mode and Smart Shuffle; synced. */
+  dontPlay: DontPlay;
+  setDontPlay(d: DontPlay): void;
+  /** Smart Shuffle (lib/smartShuffle.ts): shuffle with songs you might like mixed in. */
+  smartShuffle: boolean;
+  setSmartShuffle(on: boolean): void;
   /** Wavelength playlists in folders (playlist id → folder name) and pinned to the top of the sidebar; synced. */
   playlistFolders: Record<string, string>;
   pinnedPlaylists: string[];
@@ -306,6 +313,10 @@ export const useSettings = create<SettingsState>()(
       setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',
       setVersions: (versions) => set({ versions }),
+      dontPlay: { artists: [], songs: [] },
+      setDontPlay: (dontPlay) => set({ dontPlay }),
+      smartShuffle: false,
+      setSmartShuffle: (smartShuffle) => set({ smartShuffle }),
       playlistFolders: {},
       pinnedPlaylists: [],
       setPlaylistFolder: (id, folder) =>

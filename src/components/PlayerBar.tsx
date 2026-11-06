@@ -1,3 +1,5 @@
+import { useSettings } from '../store/settings';
+import { ShuffleButton } from './ShuffleButton';
 import { trackArt, useArtworkList } from '../lib/artwork';
 import { useUi } from '../store/ui';
 import { Cover } from './common';
@@ -7,12 +9,13 @@ import { CastButton } from './CastButton';
 import { DjModeButton, DjStationPanel } from './DjStation';
 import { TogetherButton } from './Together';
 import { EqButton } from './Equalizer';
-import { IconNext, IconPause, IconPlay, IconPrev, IconQueue, IconRepeat, IconShuffle, IconVolume } from './Icons';
+import { IconNext, IconPause, IconPlay, IconPrev, IconQueue, IconRepeat, IconVolume } from './Icons';
 import { Visualizer } from './Visualizer';
 
 /** Bottom deck: Plexamp layout with a Winamp LCD in the middle. */
 export function PlayerBar() {
   const p = usePlayerControls();
+  const smart = useSettings((s) => s.smartShuffle);
   const ui = useUi();
   // Now Playing covers the whole window: nothing down here needs to animate under it
   const covered = ui.nowPlayingOpen;
@@ -41,7 +44,7 @@ export function PlayerBar() {
             <div className="lcd-marquee"><span>{marquee}&nbsp;&nbsp;&nbsp;***&nbsp;&nbsp;&nbsp;{marquee}&nbsp;&nbsp;&nbsp;***&nbsp;&nbsp;&nbsp;</span></div>
             <div className="lcd-flags">
               <span className={p.playing ? 'on' : ''}>PLAY</span>
-              <span className={p.shuffle ? 'on' : ''}>SHUF</span>
+              <span className={p.shuffle ? 'on' : ''}>{p.shuffle && smart ? 'SMRT' : 'SHUF'}</span>
               <span className={p.repeat !== 'off' ? 'on' : ''}>{p.repeat === 'one' ? 'REP1' : 'REP'}</span>
               {p.error && <span className="err" title={p.error}>ERR</span>}
               {!p.error && p.noSignal && <span className="on" title="No signal: playing saved songs">OFFL</span>}
@@ -50,7 +53,7 @@ export function PlayerBar() {
           <Visualizer className="lcd-viz" bars={19} mode="classic" off={covered} />
         </div>
         <div className="transport">
-          <button className={`tbtn small ${p.shuffle ? 'on' : ''}`} onClick={p.toggleShuffle} title="Shuffle"><IconShuffle /></button>
+          <ShuffleButton />
           <button className="tbtn" onClick={p.prev} title="Previous"><IconPrev /></button>
           <button className="tbtn play" onClick={p.toggle} title="Play/Pause">{p.playing ? <IconPause /> : <IconPlay />}</button>
           <button className="tbtn" onClick={p.next} title="Next"><IconNext /></button>

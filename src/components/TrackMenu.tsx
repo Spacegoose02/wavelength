@@ -1,13 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
+import { isArtistBlocked, isSongBlocked } from '../lib/dontPlay';
 import { useFeature } from '../lib/features';
 import { shareOfTracks } from '../lib/inbox';
 import { sonicOn, soundsLike } from '../lib/sonic';
+import { primaryArtist } from '../lib/match';
 import { songRadio } from '../lib/songRadio';
 import { albumOfTrack, artistOfTrack } from '../lib/trackLinks';
 import type { Track } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { useHub } from '../store/hub';
+import { useSettings } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
 import { AddToPlaylist } from './AddToPlaylist';
@@ -67,6 +70,14 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
   const album = t.album ? albumOfTrack(t, albums) : undefined;
   const artist = artistOfTrack(t, artists, album);
   const song = t.kind === 'track';
+  const dontPlay = useSettings((s) => s.dontPlay);
+  const setDontPlay = useSettings((s) => s.setDontPlay);
+  const songOff = isSongBlocked(dontPlay, t);
+  const artistOff = !!t.artist && isArtistBlocked(dontPlay, t.artist);
+  const toggleSong = () =>
+    setDontPlay({ ...dontPlay, songs: songOff ? dontPlay.songs.filter((s) => !isSongBlocked({ artists: [], songs: [s] }, t)) : [...dontPlay.songs, { artist: t.artist, title: t.title }] });
+  const toggleArtist = () =>
+    setDontPlay({ ...dontPlay, artists: artistOff ? dontPlay.artists.filter((a) => !isArtistBlocked({ artists: [a], songs: [] }, t.artist)) : [...dontPlay.artists, primaryArtist(t.artist)] });
 
   // keep it on screen: open up or left when there's no room below or to the right
   useLayoutEffect(() => {
@@ -115,6 +126,18 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
       {album && <button type="button" className="menu-item" onClick={run(() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } }))}>Go to album</button>}
       <div className="menu-sep" />
       {song && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="menu-item" />}
+      {song && (
+        <>
+          <button type="button" className="menu-item" title="Keep it out of radio, mixes, DJ mode and Smart Shuffle. You can still play it yourself." onClick={run(toggleSong)}>
+            {songOff ? 'Play this song again' : "Don't play this song"}
+          </button>
+          {t.artist && (
+            <button type="button" className="menu-item" onClick={run(toggleArtist)}>
+              {artistOff ? `Play ${primaryArtist(t.artist)} again` : `Don't play ${primaryArtist(t.artist)}`}
+            </button>
+          )}
+        </>
+      )}
       <button type="button" className="menu-item" onClick={run(() => void navigator.clipboard?.writeText(`${t.artist} – ${t.title}`).catch(() => undefined))}>Copy song name</button>
       {msg && <div className="menu-hint">{msg}</div>}
     </div>

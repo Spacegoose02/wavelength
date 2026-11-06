@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { allowedBy, dontPlayOf } from '../dontPlay.ts';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { featureOn, requireFeature } from '../features.ts';
@@ -70,7 +71,10 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
   app.post('/api/dj/station', async (req) => {
     const user = listener(req);
     requireFeature(db, 'djMode', user);
-    return { ...(await station.next(user, req.body)), ...allowance(user.id) };
+    const seg = await station.next(user, req.body);
+    // nothing the person said "Don't play" to (dontPlay.ts)
+    const ok = allowedBy(dontPlayOf(db, user.id));
+    return { ...seg, ...(Array.isArray(seg.songs) && { songs: seg.songs.filter(ok) }), ...allowance(user.id) };
   });
 
   /** The talking DJ's voices: `{ engine, voices, default, error? }`. `engine: 'device'` = each device reads it. */

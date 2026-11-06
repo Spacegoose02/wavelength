@@ -1,4 +1,5 @@
 import type { Db } from './db.ts';
+import { allowedBy, dontPlayOf } from './dontPlay.ts';
 import { deezer, normName, primaryArtist, sameNameArtist } from './radar.ts';
 
 /**
@@ -306,7 +307,10 @@ export class Mixes {
 
   async get(userId: number, kid: boolean, fresh = false): Promise<{ mixes: Mix[]; builtAt: number }> {
     const row = this.db.prepare('SELECT day, mixes, built_at FROM mixes WHERE user_id = ?').get(userId) as { day: string; mixes: string; built_at: number } | undefined;
-    if (row && row.day === today(this.now()) && !fresh) return { mixes: JSON.parse(row.mixes), builtAt: row.built_at };
+    // "Don't play this" applies to today's mixes too, so a song marked this morning is gone at once
+    const ok = allowedBy(dontPlayOf(this.db, userId));
+    const clean = (mixes: Mix[]) => mixes.map((m) => ({ ...m, songs: m.songs.filter(ok) }));
+    if (row && row.day === today(this.now()) && !fresh) return { mixes: clean(JSON.parse(row.mixes)), builtAt: row.built_at };
     let p = this.building.get(userId);
     if (!p) {
       p = buildMixes(this.db, userId, kid, this.look, this.now()).finally(() => this.building.delete(userId));
@@ -316,7 +320,7 @@ export class Mixes {
     const at = this.now();
     this.db.prepare('INSERT INTO mixes (user_id, day, mixes, built_at) VALUES (?, ?, ?, ?) ON CONFLICT (user_id) DO UPDATE SET day = excluded.day, mixes = excluded.mixes, built_at = excluded.built_at')
       .run(userId, today(at), JSON.stringify(mixes), at);
-    return { mixes, builtAt: at };
+    return { mixes: clean(mixes), builtAt: at };
   }
 
   /** A Blend of these people's listening (all of them opted in; checked by the route). */

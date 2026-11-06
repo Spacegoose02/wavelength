@@ -2114,3 +2114,10 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .dj-station-pill { position: fixed; right: 16px; bottom: 112px; z-index: 60; display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--panel); border: 1px solid var(--accent); box-shadow: 0 6px 20px rgb(0 0 0 / 0.4); font-weight: 600; font-size: 13px; }
 .dj-station-pill .trash-panda { width: 30px; height: 30px; }
 .dj-station-pill.inline { position: static; margin: 6px 10px; box-shadow: none; }
+
+.dont-play-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.dont-play-list li { display: flex; align-items: center; gap: 8px; }
+.dont-play-list li button { margin-left: auto; }
+
+.shuffle-btn.smart sup { font-size: 9px; margin-left: 1px; }
+.smart-pick { color: var(--accent); font-size: 0.85em; }
