@@ -26,7 +26,9 @@ export function ShareButton({ what, label = 'Share', className = 'btn' }: { what
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
 
-  const publicOn = useFeature('publicShares') && !useIsKid();
+  const publicShares = useFeature('publicShares');
+  const kid = useIsKid();
+  const publicOn = publicShares && !kid;
   if (!can) return null;
 
   /** A link anyone can open in a browser (hub/src/publicLinks.ts), copied to the clipboard. */

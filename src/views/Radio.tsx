@@ -102,8 +102,8 @@ export function Radio() {
   const isOn = (s: Station) => current?.id === `radio:${s.id}`;
   const isSaved = (s: Station) => saved.some((x) => x.id === s.id);
 
-  const Row = ({ s }: { s: Station }) => (
-    <div className={`station-row ${isOn(s) ? 'active' : ''}`} onDoubleClick={() => play(s)}>
+  const row = (s: Station) => (
+    <div key={s.id} className={`station-row ${isOn(s) ? 'active' : ''}`} onDoubleClick={() => play(s)}>
       <button className="track-num" onClick={() => play(s)}><Cover src={s.favicon} alt={s.name} className="tiny" /><IconPlay className="hover-play" /></button>
       <div className="track-main">
         <div className="track-title">{s.name}</div>
@@ -178,7 +178,7 @@ export function Radio() {
         <h2>Favorites</h2>
         {saved.length ? saved.map((s, i) => (
           <div key={s.id} className="station-fav">
-            <Row s={s} />
+            row(s)
             {saved.length > 1 && (
               <span className="station-move">
                 <button className="icon-btn" title="Move up" disabled={i === 0} onClick={() => moveStation(s.id, -1)}>▲</button>
@@ -199,19 +199,19 @@ export function Radio() {
         </form>
       </section>
 
-      {!q.trim() && <StationsForYou Row={Row} />}
+      {!q.trim() && <StationsForYou row={row} />}
 
       <section>
         <h2>Directory {busy && <Spinner />}</h2>
         <input className="filter wide" placeholder="Search 50,000+ stations by name…" value={q} onChange={(e) => setQ(e.target.value)} />
-        {results.map((s) => <Row key={s.id} s={s} />)}
+        {results.map(row)}
       </section>
     </div>
   );
 }
 
 /** Stations in the genres you have the most music in (lib/radioPicks.ts). Hidden without a Navidrome server. */
-function StationsForYou({ Row }: { Row: (p: { s: Station }) => ReactElement }) {
+function StationsForYou({ row }: { row: (s: Station) => ReactElement }) {
   const [picks, setPicks] = useState<{ genre: string; stations: Station[] }[]>();
   useEffect(() => {
     let alive = true;
@@ -227,7 +227,7 @@ function StationsForYou({ Row }: { Row: (p: { s: Station }) => ReactElement }) {
       {picks.map((g) => (
         <div key={g.genre}>
           <h3 className="dz-section">{g.genre}</h3>
-          {g.stations.map((s) => <Row key={s.id} s={s} />)}
+          {g.stations.map(row)}
         </div>
       ))}
     </section>

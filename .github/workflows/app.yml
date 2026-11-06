@@ -5,10 +5,10 @@ name: App
 
 on:
   pull_request:
-    paths: ['src/**', 'src-tauri/**', 'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts', '.github/workflows/app.yml']
+    paths: ['src/**', 'src-tauri/**', 'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts', 'biome.json', 'hub/src/**', 'hub/test/**', '.github/workflows/app.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'src-tauri/**', 'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts', '.github/workflows/app.yml']
+    paths: ['src/**', 'src-tauri/**', 'index.html', 'package.json', 'package-lock.json', 'tsconfig.json', 'vite.config.ts', 'biome.json', 'hub/src/**', 'hub/test/**', '.github/workflows/app.yml']
   # Weekly, so a newly published advisory shows up even when nothing changed
   schedule:
     - cron: '17 6 * * 1'
@@ -28,10 +28,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # Biome (biome.json): hook-order and other bug-class rules for the app and the Hub
+      - run: npm run lint
       - run: npm test
       - run: npx vite build
       # Only what ships in the app; dev-server tooling is covered by Dependabot
       - run: npm audit --omit=dev --audit-level=moderate
+      # End-to-end smoke test of the browser build (e2e/, playwright.config.ts)
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --trace off
 
   rust:
     runs-on: ubuntu-latest

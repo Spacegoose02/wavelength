@@ -123,9 +123,26 @@ npx tauri android dev      # needs a device with USB debugging, or an emulator
 | Fix Android-only behaviour | `src-tauri/gen/android/app/src/main/…` (Kotlin + manifest) |
 | Add a native capability | `src-tauri/src/*.rs`, register in `lib.rs` |
 
+## Tests and checks
+
+Run these before pushing; the App workflow (`.github/workflows/app.yml`) runs the same on every pull request.
+
+| Command | What it checks |
+|---|---|
+| `npm run typecheck` | TypeScript, strict mode |
+| `npm run lint` | [Biome](https://biomejs.dev) lint rules (`biome.json`) for the app **and** the Hub. Errors fail CI; warnings (for now only missing hook dependencies) are shown but don't |
+| `npm test` | Vitest unit tests in `src/test/` |
+| `npm run e2e` | Builds the browser version and runs the Playwright smoke tests in `e2e/` (every sidebar page opens without a crash, phone layout). Uses the Chromium Playwright installs (`npx playwright install chromium` the first time) |
+| `cd hub && npm test` | The Hub's `node:test` suite in `hub/test/` |
+
+**Why Biome and not ESLint?** `typescript-eslint` doesn't support TypeScript 7 yet, and Biome doesn't need the
+TypeScript compiler. The most important rule is `useHookAtTopLevel`: a hook called after `&&` or `||`
+(`useFeature('x') && useHub(…)`) runs on some renders and not others, which crashes React when the first value
+changes. Call each hook on its own line and combine the results.
+
 ## Code style
 
-- TypeScript strict mode; `npx tsc` must be clean before committing.
+- TypeScript strict mode; `npx tsc` must be clean before committing, and `npm run lint` must have no errors.
 - **Zustand selectors must return something stable.** `useSettings((s) => s.sources.filter(…))` makes a new
   array every render, which zustand 5 treats as a change and loops forever. Wrap it in `useShallow`
   (`zustand/react/shallow`), select the raw value and derive it with `useMemo`, or return a primitive.
