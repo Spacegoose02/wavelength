@@ -5,6 +5,7 @@ import { engine } from '../player/engine';
 import { getJson } from '../lib/http';
 import { parseNowPlaying, parseNowPlayingCover, streamTitle } from '../sources/radio';
 import { sourceFor } from '../sources/registry';
+import { deezerLookup, previewExpired } from '../sources/charts';
 import type { Track } from '../sources/types';
 import { useSettings } from './settings';
 import { useLibrary } from './library';
@@ -313,6 +314,16 @@ export function reloadCurrent(startAt: number, play: boolean) {
   });
 }
 
+/**
+ * A 30s Deezer clip whose signed link has run out (Discover charts, the Weekly Mix and Release Radar keep links for
+ * hours or days): ask Deezer for a fresh one, so it plays instead of failing with "Playback failed".
+ */
+async function freshPreview(t: Track): Promise<{ track: Track; startAt?: number }> {
+  if (t.sourceId !== 'preview' || !t.streamUrl || !previewExpired(t.streamUrl)) return { track: t };
+  const found = await deezerLookup({ title: t.title, artist: t.artist ?? '' }).catch(() => ({}) as { preview?: string });
+  return { track: found.preview ? { ...t, streamUrl: found.preview } : t };
+}
+
 async function loadCurrent(startAt = 0) {
   const t = usePlayer.getState().current();
   if (!t) return;
@@ -350,7 +361,7 @@ async function loadCurrent(startAt = 0) {
     if (!startAt && resumeAt?.key === trackKey(t)) startAt = resumeAt.at;
     resumeAt = undefined;
     // Refresh tokens / open listening sessions (podcast episodes, saved Navidrome tracks…)
-    const prepared = (await sourceOf(t)?.prepare?.(t)) ?? { track: t };
+    const prepared = (await sourceOf(t)?.prepare?.(t)) ?? (await freshPreview(t));
     if (token !== loadSeq) return;
     const ready = prepared.track;
     if (ready !== t) {
@@ -505,7 +516,7 @@ async function prepareAhead(cur: Track) {
       }
       return;
     }
-    const ready = ((await sourceOf(next)?.prepare?.(next)) ?? { track: next }).track;
+    const ready = ((await sourceOf(next)?.prepare?.(next)) ?? (await freshPreview(next))).track;
     if (!ready.streamUrl || usePlayer.getState().queue[i!] !== next) return;
     if (ready !== next) usePlayer.setState((s) => ({ queue: s.queue.map((q, j) => (j === i ? ready : q)) }));
     engine.preload(ready.streamUrl);
