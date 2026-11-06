@@ -299,7 +299,7 @@ export function Brows({ l, className, stroke, width = 4 }: { l: string; classNam
  * `className="own-eyewear"` so outfits that replace them can hide them. Girls wear a bow instead of the act's
  * hat, unless `girlHat` (the beanie) keeps it, when the bow goes on the hat in another colour.
  */
-export function Head({ species, hat, eyewear, over, girlHat }: { species: SpeciesInfo; hat?: ReactNode; eyewear?: ReactNode; over?: ReactNode; girlHat?: boolean }) {
+export function Head({ species, hat, eyewear, over, girlHat, hidesEars }: { species: SpeciesInfo; hat?: ReactNode; eyewear?: ReactNode; over?: ReactNode; girlHat?: boolean; hidesEars?: boolean }) {
   const { Face, fit = {} } = species;
   const girl = useContext(GirlContext);
   const w = fit.w ?? 1;
@@ -312,7 +312,10 @@ export function Head({ species, hat, eyewear, over, girlHat }: { species: Specie
   return (
     <g data-part="head">
       <g transform={`translate(200 ${y}) scale(${s}) translate(-200 -178)`}>
-      <Face />
+      {/* a hat that sits down over the head (the cowboy hat) hides the ears while it's worn */}
+      <g className={hidesEars && hat && (!girl || girlHat) ? 'under-hat' : undefined}>
+        <Face />
+      </g>
 
       <g transform={onEyes}>{eyewear}</g>
       {/* hidden rather than left out, so the rig still finds the hat's parts (`adjust`) */}

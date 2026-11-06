@@ -1604,6 +1604,9 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .skirt-trim { stroke: #fff; }
 .critter .tunic-trim { stroke: color-mix(in srgb, var(--accent) 55%, #fff); }
 .critter .knit-trim { stroke: rgb(0 0 0 / 0.22); }
+.critter .under-hat :is([data-part='ear-l'], [data-part='ear-r']) { display: none; }
+/* holiday hats and the hazmat hood replace the act's hat: the ears come back */
+:root:is([data-skin-group='holidays'], [data-skin-group='nuclear']) .critter .under-hat :is([data-part='ear-l'], [data-part='ear-r']) { display: inline; }
 .critter .bow-alt .bow { fill: var(--viz-high); }
 .critter .bow-alt .bow-knot { fill: color-mix(in srgb, var(--viz-high) 70%, #000); }
 .critter.species-shark .sleeve { stroke: var(--skin); }

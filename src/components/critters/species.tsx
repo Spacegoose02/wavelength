@@ -47,10 +47,10 @@ export interface HeadFit {
 
 /** In picker order. To add a species: a face (faces.tsx) and a figure (bodies.tsx), an entry below, its id in `Species`, colours in styles.css. */
 export const SPECIES: SpeciesInfo[] = [
-  { id: 'raccoon', noun: 'raccoon', label: 'Raccoon', Face: RaccoonFace, figure: FIGURES.raccoon, fit: { eyeY: 186, eyes: [1.1, 1.15], bow: [161, 118, -24] } },
+  { id: 'raccoon', noun: 'raccoon', label: 'Raccoon', Face: RaccoonFace, figure: FIGURES.raccoon, fit: { eyeY: 186, eyes: [1.1, 1.15], mask: 8, bow: [161, 118, -24] } },
   { id: 'shark', noun: 'shark', label: 'Shark', Face: SharkFace, figure: FIGURES.shark, fit: { eyeY: 170, eyes: [1.1, 1.1], bow: [150, 131, -28] } },
   { id: 'alien', noun: 'alien', label: 'Alien', Face: AlienFace, figure: FIGURES.alien, fit: { w: 1.08, eyes: [1.3, 1.5], eyeY: 176, mask: 12, bow: [159, 121, -24] } },
-  { id: 'grey', noun: 'gray alien', label: 'Gray alien', Face: GreyFace, figure: FIGURES.grey, fit: { w: 1.08, lift: -12, eyes: [1.42, 1.6], eyeY: 174, mask: 4, bow: [155, 112, -26] } },
+  { id: 'grey', noun: 'gray alien', label: 'Gray alien', Face: GreyFace, figure: FIGURES.grey, fit: { w: 1.08, lift: -12, eyes: [1.42, 1.6], eyeY: 174, mask: 14, bow: [155, 112, -26] } },
   { id: 'bear-black', noun: 'black bear', label: 'Black bear', Face: BlackBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.24, 1.22], bow: [170, 118, -20] } },
   { id: 'bear-brown', noun: 'brown bear', label: 'Brown bear', Face: BrownBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.24, 1.22], bow: [170, 118, -20] } },
 ];
