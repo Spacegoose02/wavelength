@@ -1,14 +1,30 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-	"files": { "includes": ["src/**", "hub/src/**", "hub/test/**", "!**/*.css"] },
-	"formatter": { "enabled": false },
-	"assist": { "enabled": false },
+	"files": {
+		"includes": [
+			"src/**",
+			"hub/src/**",
+			"hub/test/**",
+			"e2e/**",
+			"!**/*.css"
+		]
+	},
+	"formatter": {
+		"enabled": false
+	},
+	"assist": {
+		"enabled": false
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"preset": "recommended",
 			"a11y": "off",
-			"style": { "noNonNullAssertion": "off", "useTemplate": "off", "useExponentiationOperator": "off" },
+			"style": {
+				"noNonNullAssertion": "off",
+				"useTemplate": "off",
+				"useExponentiationOperator": "off"
+			},
 			"complexity": {
 				"noCommaOperator": "off",
 				"useOptionalChain": "off",
@@ -27,12 +43,29 @@
 				"noShadowRestrictedNames": "off",
 				"noNonNullAssertedOptionalChain": "off"
 			},
-			"security": { "noDangerouslySetInnerHtml": "off" },
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
 			"correctness": {
 				"useExhaustiveDependencies": "warn",
 				"noComponentHookFactories": "off",
 				"useJsxKeyInIterable": "off"
 			}
+		},
+		"domains": {
+			"playwright": "none"
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": [
+				"e2e/**"
+			],
+			"linter": {
+				"domains": {
+					"playwright": "recommended"
+				}
+			}
+		}
+	]
 }
