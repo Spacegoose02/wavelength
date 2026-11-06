@@ -793,6 +793,7 @@ export class HubClient {
   /** The house's shared lyrics (hub/src/routes/lyrics.ts). */
   lyricsGet = (key: string) => this.call<LyricsCacheResponse>('GET', `/api/lyrics?key=${encodeURIComponent(key)}`);
   lyricsPut = (body: LyricsCachePut) => this.call<{ ok: true }>('PUT', '/api/lyrics', body);
+  translateLyrics = (b: { key: string; lines: string[]; mode: 'translate' | 'romanize'; to: string }) => this.call<{ lines: string[]; cached: boolean }>('POST', '/api/lyrics/translate', b);
   librarySearch = (q: string) => this.call<LibrarySearchResponse>('GET', `/api/library/search?q=${encodeURIComponent(q)}`);
   /** Discover (hub/src/routes/discover.ts): chart songs the Hub's Navidrome has, movement, and For you. */
   discoverMatch = (songs: { title: string; artist: string }[]) =>

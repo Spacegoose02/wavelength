@@ -217,6 +217,42 @@ export class DjAgent {
     return { text };
   }
 
+  /** Lyrics translations, shared by the house: by `mode|language|lyrics key`, the most recent 500. */
+  private translations = new Map<string, string[]>();
+
+  /**
+   * Lyrics translation and romanization (docs/USER-GUIDE.md "Translate lyrics"): each line of a song's lyrics in
+   * another language, or written in Latin letters, through the AI DJ's model (or Ollama). One call per song and
+   * language for the whole house: the answer is kept, so the next person who asks gets it free.
+   */
+  async translateLyrics(user: User, b: unknown): Promise<{ lines: string[]; cached: boolean }> {
+    const o = (b ?? {}) as Record<string, unknown>;
+    const key = typeof o.key === 'string' ? o.key.slice(0, 400) : '';
+    const mode = o.mode === 'romanize' ? 'romanize' : 'translate';
+    const to = typeof o.to === 'string' ? o.to.replace(/[^\p{L} ()-]/gu, '').trim().slice(0, 40) : '';
+    const lines = Array.isArray(o.lines) ? o.lines.map((l) => (typeof l === 'string' ? l.replace(/\s+/g, ' ').trim().slice(0, 300) : '')) : [];
+    if (!key || !lines.length || lines.length > 300) throw new HttpError(400, 'Send { key, lines, mode, to }');
+    if (mode === 'translate' && !to) throw new HttpError(400, 'Which language?');
+    const ck = `${mode}|${to.toLowerCase()}|${key}`;
+    const hit = this.translations.get(ck);
+    if (hit && hit.length === lines.length) return { lines: hit, cached: true };
+    checkBudget(this.db, user.id);
+    const system = [
+      mode === 'romanize'
+        ? 'You romanize song lyrics: write each line in Latin letters as it is pronounced (Hepburn for Japanese, Revised Romanization for Korean, Pinyin with tone marks for Mandarin, standard transliteration otherwise). Lines already in Latin letters stay as they are.'
+        : `You translate song lyrics into ${to}. Keep the meaning and tone of each line; natural, not word for word. Lines already in ${to} stay as they are.`,
+      'Answer with only a JSON array of strings, one for each input line, in the same order and the same number of items. An empty input line stays empty.',
+      user.role === 'kid' ? 'The reader is a child: translate faithfully but do not add anything.' : '',
+    ].filter(Boolean).join(' ');
+    const ask = JSON.stringify(lines);
+    const text = await this.oneShot(user, system, ask, Math.min(16_000, 400 + lines.join('').length * 3));
+    const out = parseLines(text, lines.length);
+    if (!out) throw new HttpError(502, 'The translation came back in pieces. Try again');
+    this.translations.set(ck, out);
+    if (this.translations.size > 500) this.translations.delete(this.translations.keys().next().value!);
+    return { lines: out, cached: false };
+  }
+
   /**
    * One short call without tools (the talking DJ, DJ mode's segments): low effort, counted against this person's
    * allowance. Returns the text of the answer. Check the budget before calling.
@@ -405,3 +441,16 @@ export function usageSummary(db: Db, from: number) {
   return { byUser, byModel, byDay };
 }
 
+/** The JSON array of `n` strings in a model's answer (it may wrap it in a code block), or undefined. */
+export function parseLines(text: string, n: number): string[] | undefined {
+  const start = text.indexOf('[');
+  const end = text.lastIndexOf(']');
+  if (start < 0 || end < start) return undefined;
+  try {
+    const v = JSON.parse(text.slice(start, end + 1)) as unknown;
+    if (!Array.isArray(v) || v.length !== n) return undefined;
+    return v.map((x) => (typeof x === 'string' ? x.slice(0, 600) : String(x ?? '')));
+  } catch {
+    return undefined;
+  }
+}

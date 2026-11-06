@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Translate lyrics.** With the AI DJ set up, the lyrics can show a translation under each line, or the lines in
+  Latin letters for Japanese, Korean, Chinese and other scripts. Made once per song for the whole house
+  (`docs/USER-GUIDE.md#translate-lyrics`).
 - **Listening now.** The sidebar shows what the others in the house are playing, with Play and (for a party) Join.
   Turn it off for yourself in Settings → Account; kids are hidden unless they turn it on, and then only their
   grown-ups see them (`docs/USER-GUIDE.md#whos-listening`).

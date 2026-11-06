@@ -8,7 +8,7 @@ import { useHub } from '../store/hub';
 
 export type FeatureKey =
   | 'homeMixes' | 'blend' | 'smartOffline' | 'sonic' | 'automix' | 'cast' | 'djVoice' | 'djWeb' | 'djMode' | 'artistInfo' | 'tourDates'
-  | 'singMode' | 'musicVideos' | 'publicShares' | 'discordStatus' | 'mouthTuner' | 'exclusiveAudio';
+  | 'singMode' | 'musicVideos' | 'publicShares' | 'discordStatus' | 'mouthTuner' | 'exclusiveAudio' | 'lyricsTranslate';
 
 export interface FeatureInfo {
   key: FeatureKey;
@@ -36,6 +36,7 @@ export const FEATURE_INFO: FeatureInfo[] = [
   { key: 'publicShares', label: 'Share links for anyone', help: 'Links to a song, album or playlist that people without an account can open in a browser.', standalone: false },
   { key: 'discordStatus', label: 'Discord status', help: 'Shows “Listening to …” on Discord from the Windows app (each person still turns it on).', standalone: true },
   { key: 'mouthTuner', label: 'Critter mouth tuner', help: 'Lets people tune how the critters’ mouths follow the singing. Off puts everyone back on the defaults.', standalone: true },
+  { key: 'lyricsTranslate', label: 'Translate lyrics', help: 'Translate a song’s lyrics, or write them in Latin letters (Japanese, Korean, Chinese…), with the AI DJ’s key, or Ollama for free. One call per song and language for the whole house; counted toward the AI DJ limits.', standalone: false },
   { key: 'exclusiveAudio', label: 'Bit-perfect output (Windows)', help: 'Plays files at their own sample rate and bit depth straight to the sound card (WASAPI exclusive). People turn it on in Settings → Playback; the equalizer and visualizers are off while it’s in use.', standalone: true },
 ];
 

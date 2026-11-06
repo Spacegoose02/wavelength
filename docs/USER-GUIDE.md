@@ -679,6 +679,19 @@ length (a live take, say), you get its words without the karaoke timing.
 > [critters](#critters) look up the playing song's lyrics too (same cache) while their scene is on screen,
 > to know when someone is singing (`src/lib/singAlong.ts`).
 
+### Translate lyrics
+
+With a Hub whose AI DJ is set up, the lyrics have two buttons at the top:
+
+- **In English** (your device's language) puts a translation under each line. It follows the song like the lyrics do.
+- **In Latin letters** (only for lyrics written in another script: Japanese, Korean, Chinese, Russian, Arabic…)
+  writes each line the way it's pronounced, so you can sing along.
+
+Press the button again to hide it. The translation comes from the AI DJ's model (or Ollama, for free, when the Hub
+uses it), so it may not be exact. It's made once per song and language for the whole house: the next person who
+asks gets it straight away, without another call. Each call counts toward your AI DJ allowance. A Hub admin can
+turn it off in **Settings → Features → Translate lyrics**.
+
 ### Sing mode
 
 **Sing** next to **Lyrics** in Now Playing turns the singer down and opens the lyrics, karaoke style. The slider

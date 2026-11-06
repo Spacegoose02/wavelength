@@ -2145,3 +2145,7 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .house-song { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .house-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
 .house-dot.on { background: var(--accent); }
+
+/* lyrics translation (components/Lyrics.tsx) */
+.lyrics-tools { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.lyric .lyric-extra { display: block; font-size: 0.75em; opacity: 0.75; font-weight: 400; margin-top: 2px; }
