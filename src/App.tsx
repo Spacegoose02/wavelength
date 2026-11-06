@@ -49,6 +49,7 @@ import { startUpdateChecks } from './lib/updates';
 import { UpdateBanner } from './components/Updates';
 import { Spinner } from './components/common';
 import { TrackMenuHost } from './components/TrackMenu';
+import { groupPlaylists } from './lib/playlistFolders';
 
 /** A page loaded the first time it's opened, so startup only parses what Home needs (slow TV boxes notice). */
 // `any`: each page has its own props, which lazy() keeps from M[K]
@@ -174,7 +175,16 @@ const nowPlayingCrashed = (retry: () => void, error: Error) => (
 
 function SidebarPlaylists({ route }: { route: Route }) {
   const playlists = useLibrary((s) => s.playlists);
+  const folders = useSettings((s) => s.playlistFolders);
+  const pinned = useSettings((s) => s.pinnedPlaylists);
   const go = useUi((s) => s.go);
+  const [open, setOpen] = useState<string[]>([]);
+  const g = groupPlaylists(playlists, folders, pinned, 'made');
+  const item = (p: (typeof playlists)[number]) => (
+    <button key={p.id} className={`side-item ${route.view === 'playlist' && route.id === p.id ? 'on' : ''}`} onClick={() => go({ view: 'playlist', id: p.id })}>
+      {pinned.includes(p.id) && <span className="side-pin" title="Pinned">●</span>}{p.name}
+    </button>
+  );
   return (
     <div className="side-playlists">
       <div className="side-head">
@@ -185,11 +195,22 @@ function SidebarPlaylists({ route }: { route: Route }) {
         }}><IconPlus /></button>
       </div>
       <div className="side-list">
-        {playlists.map((p) => (
-          <button key={p.id} className={`side-item ${route.view === 'playlist' && route.id === p.id ? 'on' : ''}`} onClick={() => go({ view: 'playlist', id: p.id })}>
-            {p.name}
-          </button>
-        ))}
+        {g.pinned.map(item)}
+        {g.folders.map((f) => {
+          // a folder opens by itself when you're on one of its playlists
+          const here = route.view === 'playlist' && f.playlists.some((p) => p.id === route.id);
+          const isOpen = open.includes(f.name) || here;
+          return (
+            <div key={f.name} className="side-folder">
+              <button type="button" className="side-item side-folder-head" aria-expanded={isOpen}
+                onClick={() => setOpen(open.includes(f.name) ? open.filter((x) => x !== f.name) : [...open, f.name])}>
+                <span className="nav-fold">{isOpen ? '▾' : '▸'}</span> {f.name} <small className="muted">{f.playlists.length}</small>
+              </button>
+              {isOpen && <div className="side-folder-items">{f.playlists.map(item)}</div>}
+            </div>
+          );
+        })}
+        {g.loose.map(item)}
       </div>
     </div>
   );

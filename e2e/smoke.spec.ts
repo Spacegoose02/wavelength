@@ -57,3 +57,18 @@ test('settings search opens the right tab', async ({ page }) => {
   await expect(page.locator('.tabs button.on')).toHaveText('Playback');
   await expect(page.locator('h2', { hasText: 'Volume levelling and crossfade' })).toBeVisible();
 });
+
+test('a playlist moved into a folder shows under it in the sidebar', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('tonearm.library', JSON.stringify({ state: { playlists: [{ id: 'p1', name: 'Leg day', tracks: [], createdAt: 0, updatedAt: 0 }], history: [] }, version: 0 }));
+  });
+  await page.goto('/');
+  await page.locator('.side-item', { hasText: 'Leg day' }).dispatchEvent('click');
+  await page.getByRole('button', { name: 'Move to folder' }).click();
+  await page.getByPlaceholder('New folder…').fill('Gym');
+  await page.getByPlaceholder('New folder…').press('Enter');
+  await expect(page.getByRole('button', { name: 'Folder: Gym' })).toBeVisible();
+  await expect(page.locator('.side-folder-head', { hasText: 'Gym' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Pin', exact: true }).click();
+  await expect(page.locator('.side-list > .side-item', { hasText: 'Leg day' })).toHaveCount(1);
+});
