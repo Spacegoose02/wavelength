@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
 import { swell, windUp } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -68,6 +68,9 @@ export function Rocker({ species, still }: ActProps) {
       <Head species={species} />
 
 
+      <Arm part="arm-l" d="M138 268 Q 146 302 178 314" hand={[180, 314]} handLater />
+      <Arm part="arm-r" d="M262 268 Q 258 312 296 266" hand={[296, 266]} handLater />
+
       {/* flying-V, neck up to the right */}
       <g data-part="guitar">
         <g transform="translate(178 318) rotate(-24)">
@@ -86,8 +89,9 @@ export function Rocker({ species, still }: ActProps) {
         </g>
       </g>
 
-      <Arm part="arm-l" d="M138 268 Q 146 302 178 314" hand={[180, 314]} />
-      <Arm part="arm-r" d="M262 268 Q 288 288 294 270" hand={[296, 266]} />
+      {/* hands in front of the flying-V, arms behind it */}
+      <ArmHand part="arm-l" d="M138 268 Q 146 302 178 314" hand={[180, 314]} />
+      <ArmHand part="arm-r" d="M262 268 Q 258 312 296 266" hand={[296, 266]} />
     </CritterFrame>
   );
 }

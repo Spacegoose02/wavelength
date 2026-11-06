@@ -47,13 +47,16 @@ export interface LegsStyle {
 export const SpeciesContext = createContext<SpeciesInfo | null>(null);
 export const useSpecies = () => useContext(SpeciesContext)!;
 
-/** Shift a group so that the old pivot `from` lands on `to`; draw the contents as if at `from`. */
-export function Pivot({ from, to, part, children }: { from: [number, number]; to: [number, number]; part: string; children: ReactNode }) {
+/**
+ * Shift a group so that the old pivot `from` lands on `to`; draw the contents as if at `from`. The inner group is
+ * the moving `part`, or with `follow` a copy that the rig keeps moving with that part (`ArmHand`).
+ */
+export function Pivot({ from, to, part, follow, children }: { from: [number, number]; to: [number, number]; part?: string; follow?: string; children: ReactNode }) {
   const dx = to[0] - from[0];
   const dy = to[1] - from[1];
   return (
     <g transform={dx || dy ? `translate(${dx} ${dy})` : undefined}>
-      <g data-part={part}>
+      <g data-part={part} data-follow={follow}>
         <g transform={dx || dy ? `translate(${-dx} ${-dy})` : undefined}>{children}</g>
       </g>
     </g>
