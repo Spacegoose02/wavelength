@@ -2,6 +2,7 @@ import { http, trimSlash } from '../lib/http';
 import type { DeemixItem } from '../lib/deemixQueue';
 import type { Track } from './types';
 import type { IndexedSong, LibrarySearchResponse } from '../../hub/src/api/library';
+import type { LyricsCacheResponse, LyricsCachePut } from '../../hub/src/api/lyrics';
 
 /**
  * The Wavelength Hub API (hub/, docs/HUB.md). The Hub owns accounts, roles and admin-only rules;
@@ -783,6 +784,9 @@ export class HubClient {
   sonicSearch = (q: string) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/search?q=${encodeURIComponent(q)}`);
   sonicLookup = (songs: { id?: string; artist?: string; title?: string }[]) => this.call<{ features: (HubSonicFeatures | null)[] }>('POST', '/api/sonic/lookup', { songs });
   /** Search the Hub's copy of its Navidrome library (hub/src/routes/search.ts): typo-tolerant, ranked by your plays. */
+  /** The house's shared lyrics (hub/src/routes/lyrics.ts). */
+  lyricsGet = (key: string) => this.call<LyricsCacheResponse>('GET', `/api/lyrics?key=${encodeURIComponent(key)}`);
+  lyricsPut = (body: LyricsCachePut) => this.call<{ ok: true }>('PUT', '/api/lyrics', body);
   librarySearch = (q: string) => this.call<LibrarySearchResponse>('GET', `/api/library/search?q=${encodeURIComponent(q)}`);
   /** Discover (hub/src/routes/discover.ts): chart songs the Hub's Navidrome has, movement, and For you. */
   discoverMatch = (songs: { title: string; artist: string }[]) =>

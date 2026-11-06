@@ -48,6 +48,8 @@ export interface LibrarySearchResponse {
   songs: IndexedSong[];
   albums: IndexedAlbum[];
   artists: IndexedArtist[];
+  /** songs in the library whose words contain the search (3+ words), with the line that matched */
+  lyrics?: { song: IndexedSong; line: string }[];
   /** a closer spelling when the words matched nothing exactly ("Did you mean Beyoncé?") */
   didYouMean?: string;
 }

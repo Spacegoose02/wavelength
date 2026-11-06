@@ -14,7 +14,7 @@ vi.mock('../lib/http', () => ({
   }),
 }));
 
-const { artistVariants, cleanArtist, cleanTitle, lyricQueries, lyricsFor } = await import('../lib/lyrics');
+const { artistVariants, cleanArtist, cleanTitle, lyricQueries, lyricsFor, setSharedLyrics, sharedKey } = await import('../lib/lyrics');
 
 let n = 0;
 const track = (title: string, artist: string, duration = 200, album = 'Album') =>
@@ -156,5 +156,37 @@ describe('LRCLIB lookup', () => {
     replies.set('/search?', [{ trackName: 'Song', duration: 200, plainLyrics: 'Back' }]);
     await new Promise((r) => setTimeout(r));
     expect((await lyricsFor(t))?.lines[0].text).toBe('Back');
+  });
+});
+
+describe('shared lyrics on the Hub', () => {
+  test('the key ignores version notes and keeps the length to 10 s', () => {
+    expect(sharedKey({ title: "God's Plan (Explicit)", artist: 'Drake', duration: 199 })).toBe('drake|godsplan|20');
+    expect(sharedKey({ title: 'Song', artist: 'Band' })).toBe('band|song|');
+  });
+
+  test('lyrics another device found come from the Hub, without asking LRCLIB', async () => {
+    const hub = { lines: [{ time: 1, text: 'From the Hub' }], synced: true, source: 'LRCLIB' };
+    const put = vi.fn();
+    setSharedLyrics({ get: async () => hub, put });
+    try {
+      expect(await lyricsFor(track('Song', 'Band'))).toEqual(hub);
+      expect(asked).toEqual([]);
+      expect(put).not.toHaveBeenCalled();
+    } finally {
+      setSharedLyrics(undefined);
+    }
+  });
+
+  test('what this device finds goes to the Hub', async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, syncedLyrics: synced }]);
+    const put = vi.fn();
+    setSharedLyrics({ get: async () => null, put });
+    try {
+      const ly = await lyricsFor(track('Song', 'Band'));
+      expect(put).toHaveBeenCalledWith('band|song|20', 'Band', 'Song', ly);
+    } finally {
+      setSharedLyrics(undefined);
+    }
   });
 });

@@ -15,7 +15,7 @@ function playsByArtist(ctx: Ctx, userId: number): Map<string, number> {
 
 /**
  * Search (docs/HUB.md "Search"): the library index's typo-tolerant search over the Hub's Navidrome, ranked by
- * what the person searching plays. `ready: false` until the Hub has a scan login and has listed the library once;
+ * what the person searching plays, plus songs whose lyrics have the words. `ready: false` until the Hub has a scan login and has listed the library once;
  * the app then searches its servers itself, as before.
  */
 export function searchRoutes(app: FastifyInstance, ctx: Ctx) {
@@ -25,6 +25,11 @@ export function searchRoutes(app: FastifyInstance, ctx: Ctx) {
     const ready = await ctx.libraryIndex.ensure();
     const { server } = ctx.libraryIndex.status();
     if (!ready || q.length < 2) return { ready, server, songs: [], albums: [], artists: [] };
-    return { ready, server, ...ctx.libraryIndex.search(q, { plays: playsByArtist(ctx, auth.user.id) }) };
+    const found = ctx.libraryIndex.search(q, { plays: playsByArtist(ctx, auth.user.id) });
+    // "search by lyrics": words the house's apps found (lyricsCache.ts), for songs this library has
+    const hits = ctx.lyrics.search(q);
+    const songs = ctx.libraryIndex.match(hits);
+    const lyrics = hits.flatMap((h, i) => (songs[i] ? [{ song: songs[i], line: h.line }] : []));
+    return { ready, server, ...found, ...(lyrics.length && { lyrics }) };
   });
 }

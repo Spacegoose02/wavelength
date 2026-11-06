@@ -87,3 +87,27 @@ test('GET /api/library/search answers from the Hub’s copy of the library', asy
   assert.deepEqual((await json(app, 'GET', '/api/library/search?q=x', { token: tokens.member })).body.songs, []);
   assert.equal((await json(app, 'GET', '/api/library/search?q=drake')).status, 401);
 });
+
+test('lyrics are shared through the Hub and searchable', async () => {
+  const { app, tokens } = await seeded();
+  const lyrics = { lines: [{ time: 1, text: 'Started from the bottom now we here' }, { time: 5, text: 'Now my whole team here' }], synced: true, source: 'LRCLIB' };
+  assert.deepEqual((await json(app, 'GET', '/api/lyrics?key=drake|startedfromthebottom|17', { token: tokens.member })).body, { lyrics: null });
+  const put = await json(app, 'PUT', '/api/lyrics', { token: tokens.kid, body: { key: 'drake|startedfromthebottom|17', artist: 'Drake', title: 'Started From the Bottom', lyrics } });
+  assert.equal(put.status, 200);
+  assert.deepEqual((await json(app, 'GET', '/api/lyrics?key=drake|startedfromthebottom|17', { token: tokens.admin })).body.lyrics, lyrics);
+  // nonsense is refused
+  assert.equal((await json(app, 'PUT', '/api/lyrics', { token: tokens.member, body: { key: 'x', artist: 'a', title: 't', lyrics: { lines: 'no' } } })).status, 400);
+  assert.equal((await json(app, 'GET', '/api/lyrics?key=x')).status, 401);
+});
+
+test('lyrics search finds the phrase and the line it is in', async () => {
+  const { openDb } = await import('../src/db.ts');
+  const { LyricsCache } = await import('../src/lyricsCache.ts');
+  const cache = new LyricsCache(openDb(':memory:'));
+  cache.put('a', 'Drake', 'Started From the Bottom', { lines: [{ text: 'Started from the bottom now we’re here' }, { text: 'Now my whole team here' }], synced: false, source: 'LRCLIB' });
+  cache.put('b', 'Adele', 'Hello', { lines: [{ text: "Hello, it's me" }], synced: false, source: 'LRCLIB' });
+  assert.deepEqual(cache.search('from the bottom'), [{ artist: 'Drake', title: 'Started From the Bottom', line: 'Started from the bottom now we’re here' }]);
+  assert.deepEqual(cache.search('hello its me').map((h) => h.title), ['Hello']);
+  assert.deepEqual(cache.search('the bottom'), []);
+  assert.equal(cache.count(), 2);
+});

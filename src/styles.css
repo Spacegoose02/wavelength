@@ -480,6 +480,10 @@ input[type='range']:hover::-webkit-slider-thumb { opacity: 1; }
 .recent-searches h2 .link { font-size: 12.5px; margin-left: 8px; }
 .did-you-mean { margin: 0 0 12px; }
 .did-you-mean .link { font-size: inherit; }
+.lyric-hit { display: flex; gap: 12px; align-items: center; width: 100%; padding: 8px 10px; border-radius: var(--radius); background: none; border: 0; color: inherit; text-align: left; cursor: pointer; }
+.lyric-hit:hover { background: var(--panel); }
+.lyric-hit-main { display: flex; flex-direction: column; min-width: 0; }
+.lyric-hit-line { color: var(--muted); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .yt-thumb { width: 72px; height: 40px; border-radius: 6px; overflow: hidden; background: var(--panel-2); flex: none; }
 .yt-thumb img { width: 100%; height: 100%; object-fit: cover; }
 code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }

@@ -1,6 +1,6 @@
 import type { NavidromeSource } from '../sources/navidrome';
 import { sourceFor } from '../sources/registry';
-import type { SearchResults, SourceConfig } from '../sources/types';
+import type { SearchResults, SourceConfig, Track } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { sameNavidrome } from './discoverMatch';
 
@@ -13,7 +13,7 @@ import { sameNavidrome } from './discoverMatch';
 export async function hubSearch(
   q: string,
   sources: SourceConfig[],
-): Promise<{ sourceId: string; results: Partial<SearchResults>; didYouMean?: string } | undefined> {
+): Promise<{ sourceId: string; results: Partial<SearchResults>; didYouMean?: string; lyrics?: { track: Track; line: string }[] } | undefined> {
   const hub = hubClient();
   if (!hub || !sources.some((s) => s.kind === 'navidrome')) return undefined;
   try {
@@ -21,7 +21,12 @@ export async function hubSearch(
     const src = r.ready && r.server ? sameNavidrome(r.server, sources) : undefined;
     if (!src) return undefined;
     const nd = sourceFor(src) as NavidromeSource;
-    return { sourceId: src.id, results: nd.fromSubsonicSearch(r), ...(r.didYouMean && { didYouMean: r.didYouMean }) };
+    return {
+      sourceId: src.id,
+      results: nd.fromSubsonicSearch(r),
+      ...(r.didYouMean && { didYouMean: r.didYouMean }),
+      ...(r.lyrics?.length && { lyrics: r.lyrics.map((l) => ({ track: nd.fromSubsonic({ ...l.song }), line: l.line })) }),
+    };
   } catch {
     return undefined;
   }

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useIsKid } from '../lib/kids';
+import { maskForKids } from '../lib/lyrics';
 import { forgetSearches, hubSearch, recentSearches, rememberSearch } from '../lib/hubSearch';
 import { mergeAlbums, mergeArtists, sourceFor } from '../sources/registry';
 import { radioBrowser, stationToTrack } from '../sources/radio';
-import type { SearchResults } from '../sources/types';
+import type { SearchResults, Track } from '../sources/types';
 import { enabledSources } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
@@ -18,13 +20,16 @@ export function Search({ initial }: { initial?: string }) {
   const [res, setRes] = useState<SearchResults>(EMPTY);
   const [busy, setBusy] = useState(false);
   const [didYouMean, setDidYouMean] = useState<string>();
+  const [lyricHits, setLyricHits] = useState<{ track: Track; line: string }[]>([]);
   const [recent, setRecent] = useState(recentSearches);
   const go = useUi((s) => s.go);
   const playTracks = usePlayer((s) => s.playTracks);
+  const kid = useIsKid();
 
   useEffect(() => {
     if (q.trim().length < 2) {
       setRes(EMPTY);
+      setLyricHits([]);
       setBusy(false); // a search still running for the old text is dropped
       return;
     }
@@ -32,6 +37,7 @@ export function Search({ initial }: { initial?: string }) {
     const h = window.setTimeout(async () => {
       setBusy(true);
       setDidYouMean(undefined);
+      setLyricHits([]);
       const sources = enabledSources();
       // The Hub answers for its own Navidrome (typo-tolerant, ranked by your plays); every other server and the
       // radio directory are asked at the same time. The Navidrome the Hub covers isn't asked again.
@@ -58,6 +64,7 @@ export function Search({ initial }: { initial?: string }) {
       };
       setRes(next);
       setDidYouMean(hub?.didYouMean);
+      setLyricHits(hub?.lyrics ?? []);
       if (next.artists.length || next.albums.length || next.tracks.length) setRecent(rememberSearch(q));
       setBusy(false);
     }, 300);
@@ -67,7 +74,7 @@ export function Search({ initial }: { initial?: string }) {
     };
   }, [q]);
 
-  const nothing = !busy && q.length >= 2 && Object.values(res).every((l) => !l.length);
+  const nothing = !busy && q.length >= 2 && Object.values(res).every((l) => !l.length) && !lyricHits.length;
   return (
     <div className="page">
       <header className="page-head">
@@ -102,6 +109,20 @@ export function Search({ initial }: { initial?: string }) {
         <section>
           <h2>Tracks</h2>
           <TrackList tracks={res.tracks} showAlbum showCover />
+        </section>
+      )}
+      {lyricHits.length > 0 && (
+        <section>
+          <h2>In the lyrics</h2>
+          {lyricHits.map((h) => (
+            <button key={`${h.track.sourceId}:${h.track.id}`} className="lyric-hit" onClick={() => playTracks([h.track])}>
+              <Cover src={h.track.coverUrl} alt={h.track.album ?? h.track.title} className="tiny" />
+              <span className="lyric-hit-main">
+                <span className="track-title">{h.track.title} <span className="muted">· {h.track.artist}</span></span>
+                <span className="lyric-hit-line">“{kid ? maskForKids(h.line) : h.line}”</span>
+              </span>
+            </button>
+          ))}
         </section>
       )}
       {res.books.length > 0 && (
