@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Song previews play again.** In Discover, a preview button no longer greys out because Deezer was busy or a
+  lookup hiccuped: lookups are paced under Deezer's limit, wait it out when it's hit, and a failed one can be
+  clicked again. A clip link that has run out (charts, the Weekly Mix and Release Radar keep them for hours) is
+  swapped for a fresh one when it plays, instead of failing.
 
 ## 0.25.1
 - **Girl critters get their own outfits.** Each act has a skirt or dress for the girls: a cowgirl denim fringe

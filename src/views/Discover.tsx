@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHubRuns } from '../lib/hubServices';
 import { primaryArtist } from '../lib/match';
-import { CHART_COLORS, CHART_LABELS, CHART_SHORT, GENRES, chartKey, deezerLookup, getChart, getMix, songKey, sourcesFor, type ChartEntry, type ChartSource, type Genre } from '../sources/charts';
+import { CHART_COLORS, CHART_LABELS, CHART_SHORT, GENRES, chartKey, deezerLookup, getChart, previewExpired, getMix, songKey, sourcesFor, type ChartEntry, type ChartSource, type Genre } from '../sources/charts';
 import { norm } from '../sources/registry';
 import type { Artist, Track } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -31,6 +31,8 @@ type Row = ChartEntry & {
   lib?: Track | null;
   /** false = looked it up, Deezer has no clip */
   hasPreview?: boolean;
+  /** Deezer couldn't be asked for the clip just now (offline, rate limited): the button stays, to try again */
+  previewError?: string;
   /** For you: why it's here */
   because?: string;
 };
@@ -190,15 +192,27 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
   const nowPlayingId = usePlayer((s) => s.queue[s.index]?.id);
   const playing = usePlayer((s) => s.playing);
 
-  /** Play (or stop) the 30s Deezer clip for a song you don't own yet. */
+  /**
+   * Play (or stop) the 30s Deezer clip for a song you don't own yet. A clip link kept with the chart runs out after
+   * a while (previewExpired), so that one is looked up again; a lookup that failed leaves the button to try again.
+   */
   const preview = async (i: number) => {
     const r = rows![i];
-    const found = r.preview ? undefined : await deezerLookup(r);
-    const url = r.preview ?? found?.preview;
-    const explicit = r.explicit ?? found?.explicit;
-    if (!url) return patch(i, { hasPreview: false, explicit });
-    patch(i, { preview: url, hasPreview: true, explicit });
-    if (nowPlayingId === `preview:${url}`) return usePlayer.getState().toggle();
+    if (r.preview && nowPlayingId === `preview:${r.preview}`) return usePlayer.getState().toggle();
+    let url = r.preview && !previewExpired(r.preview) ? r.preview : undefined;
+    let explicit = r.explicit;
+    if (!url) {
+      let found: Awaited<ReturnType<typeof deezerLookup>>;
+      try {
+        found = await deezerLookup(r);
+      } catch (e) {
+        return patch(i, { previewError: String((e as Error).message ?? e) });
+      }
+      url = found.preview;
+      explicit ??= found.explicit;
+    }
+    if (!url) return patch(i, { hasPreview: false, explicit, previewError: undefined });
+    patch(i, { preview: url, hasPreview: true, explicit, previewError: undefined });
     playTracks([previewTrack({ ...r, explicit }, url)]);
   };
 
@@ -340,7 +354,7 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
                 {r.lib === null && (
                   <button className={`icon-btn preview-btn ${r.preview && nowPlayingId === `preview:${r.preview}` ? 'on' : ''}`}
                     disabled={r.hasPreview === false}
-                    title={r.hasPreview === false ? 'No preview available' : 'Play a 30-second preview'}
+                    title={r.hasPreview === false ? 'No preview available' : r.previewError ? `${r.previewError} (click to try again)` : 'Play a 30-second preview'}
                     onClick={(e) => { e.stopPropagation(); preview(i); }}>
                     {r.preview && nowPlayingId === `preview:${r.preview}` && playing ? <IconPause /> : <IconPlay />}
                   </button>

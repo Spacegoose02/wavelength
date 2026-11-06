@@ -56,6 +56,8 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | Old songs in a genre chart | Source stopped updating (Deezer genre charts, several Billboard genre pages) | Freshness guard drops stale charts; if one slips through, check its date and remove it from `BY_GENRE` |
 | A genre shows different charts than expected | It was customised in Settings → Discover (genre chip has a •) | **Reset to defaults** for that genre |
 | Deezer artist/album page says "no such artist/album" | Deezer removed or merged the id | Search again; Deezer answers 200 with `{ error }` for dead ids |
+| Discover preview buttons grey out ("No preview available") for songs Deezer does have | Older versions read Deezer's rate limit (`200 {"error": "Quota limit exceeded"}`) or a network blip as "no clip", and took the first hit by the artist even when it had no clip | Update. Lookups are paced, wait out the rate limit, and a failed one leaves the button to try again (its tooltip says why) |
+| A preview fails with "Playback failed (code 4)" | Deezer's clip links are signed and run out; the charts, the Weekly Mix and Release Radar keep them for hours or days | Update: an expired link is swapped for a fresh one when it plays (`previewExpired()` in `charts.ts`, `freshPreview()` in `store/player.ts`) |
 | "Skipped: Apple Music timed out / 504" | Apple's RSS service is down | Nothing to do; Mix uses the rest |
 | "Skipped: 403 … rss.applemarketingtools.com" | Apple moved the feed to `rss.marketingtools.apple.com`; an older app or Hub refuses the redirect | Update both the app and the Hub |
 | A chart shows 0 rows / "layout changed" | Site HTML changed (Billboard, RadioWave scrapers) | Update the parser in `charts.ts`; test against the live page |

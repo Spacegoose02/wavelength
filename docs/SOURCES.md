@@ -94,7 +94,12 @@ source fails (Deezer's `200 {"error": "Quota limit exceeded"}` counts as a failu
 Hub older than this, it fetches directly as before. On top of that the app keeps each chart for 30 minutes
 (**Refresh** skips that) and keeps the last copy that loaded, shown with a note when fetching again fails.
 
-Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others).
+Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others). Lookups
+are paced (one starts every 120 ms, under Deezer's 50 per 5 s), wait out `Quota limit exceeded` and try again, and
+throw when Deezer couldn't be asked, so only a real "not on Deezer" greys a button out. Among hits by the right
+artist the same title wins, then one with a clip. Clip links are signed (`hdnea=exp=<unix>`) and run out, so a
+kept one past its time is looked up again: by Discover before playing, and by the player for any `preview` track
+(`freshPreview()` in `src/store/player.ts`).
 
 **Around the charts** (`src/views/Discover.tsx`): `songKey()` names a song the same on every chart (main artist
 plus title without brackets); `getMix` merges on it, and Not interested (`discoverHidden`) and Get all missing
