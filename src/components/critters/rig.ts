@@ -4,6 +4,7 @@ import { createSingingReader, currentTune, singingReading } from '../../player/s
 import type { Viseme } from '../../player/visemes';
 import { createTempo, type Tempo } from '../../player/tempo';
 import { usePlayer } from '../../store/player';
+import { createPacer } from '../../lib/framePace';
 import { OPEN_AT, createFace } from './face';
 import { createFlourish, swell } from './flourish';
 
@@ -102,10 +103,14 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
     let nextYawn = 6;
     let nextAdjust = 11;
     let singing = 0;
+    const pace = createPacer();
 
-    const loop = () => {
+    const loop = (now = performance.now()) => {
       if (!still) raf = requestAnimationFrame(loop);
-      t += 1 / 60;
+      // paused, the critter only blinks, yawns and sways: a slower frame rate is plenty (lib/framePace.ts)
+      const dt = pace(now, usePlayer.getState().playing);
+      if (!dt) return;
+      t += dt;
       const a = read(t);
       const idle = !a.playing;
 

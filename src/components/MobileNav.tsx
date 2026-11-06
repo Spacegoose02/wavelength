@@ -1,10 +1,10 @@
 import { trackArt, useArtworkList } from '../lib/artwork';
 import type { ReactNode } from 'react';
-import { usePlayer } from '../store/player';
 import { useUi, type Route } from '../store/ui';
 import { useLibrary } from '../store/library';
 import { isMobileApp } from '../lib/platform';
 import { Cover } from './common';
+import { MiniProgress, usePlayerControls } from './PlayerClock';
 import { DjModeBar, DjModeButton, DjStationPanel } from './DjStation';
 import {
   IconAlbum, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
@@ -27,7 +27,7 @@ const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route[
 /** Phone layout: mini player + bottom tab bar (replaces the sidebar and desktop deck). */
 export function MobileNav() {
   const { route, go, setNowPlaying } = useUi();
-  const p = usePlayer();
+  const p = usePlayerControls();
   const t = p.current();
   useArtworkList();
   const art = p.liveCover ?? trackArt(t);
@@ -39,7 +39,7 @@ export function MobileNav() {
       {!t && <DjModeBar />}
       {t && (
         <div className="mini-player" onClick={() => setNowPlaying(true)}>
-          <div className="mini-progress"><i style={{ width: live ? '100%' : `${(p.position / (p.duration || 1)) * 100}%` }} /></div>
+          <MiniProgress live={live} />
           <Cover key={art} src={art} alt={t.title} className="tiny" />
           <div className="track-main">
             <div className="track-title">{live ? p.liveTitle ?? t.title : t.title}</div>

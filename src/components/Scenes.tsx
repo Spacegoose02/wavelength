@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createAudioReader } from '../player/analysis';
 import { useSettings, type NpScene } from '../store/settings';
+import { usePlayer } from '../store/player';
+import { createCssVars, createPacer } from '../lib/framePace';
 import { Cover } from './common';
 import { Critter, critterLabel, nextAct, nextSpecies } from './critters/Critter';
 import { MouthTuner } from './MouthTuner';
@@ -212,9 +214,13 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
     const read = createAudioReader();
     let t = 0;
     let raf = 0;
+    const pace = createPacer();
+    const cssVar = createCssVars(canvas);
 
-    const loop = () => {
+    const loop = (now = performance.now()) => {
       raf = requestAnimationFrame(loop);
+      const dt = pace(now, usePlayer.getState().playing);
+      if (!dt) return;
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -223,11 +229,10 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
         canvas.height = Math.round(h * dpr);
       }
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      t += 1 / 60;
+      t += dt;
       const { freq, wave, bass, mid, treble, beat } = read(t);
 
-      const css = getComputedStyle(canvas);
-      const v = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+      const v = (name: string, fallback: string) => cssVar(name, fallback, now);
       DRAW[scene](g, {
         w,
         h,

@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Less lag with Now Playing open.** The player bar no longer animates behind the full-screen Now Playing, the
+  screen no longer redraws everything (the critter's whole drawing included) each time the clock ticks, and the
+  critter and visualizers slow to 20 frames a second while paused. In a test with the CPU slowed to phone speed,
+  Now Playing with a critter went from 64% to 49% of the main thread while playing and from 51% to 21% paused.
 - **The Rapper's mic no longer hides the face,** and the Theremin's hands line up with it again. The mic is held
   low beside the chin, and the pitch antenna moved out past the head, with the hands on the antenna and over the loop.
 - **Girl critters.** A **Boy** / **Girl** switch in **Settings → Playback → Critters** gives every critter

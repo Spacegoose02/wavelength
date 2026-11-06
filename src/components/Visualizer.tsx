@@ -1,18 +1,22 @@
 import { useEffect, useRef } from 'react';
 import { engine } from '../player/engine';
 import { usePlayer } from '../store/player';
+import { createCssVars, createPacer } from '../lib/framePace';
 
 interface Props {
   bars?: number;
   /** 'classic' = Winamp segmented bars with falling peaks; 'smooth' = soft Plexamp-ish bars. */
   mode?: 'classic' | 'smooth';
   className?: string;
+  /** covered by something (Now Playing over the deck): don't draw at all */
+  off?: boolean;
 }
 
-export function Visualizer({ bars = 32, mode = 'classic', className }: Props) {
+export function Visualizer({ bars = 32, mode = 'classic', className, off = false }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    if (off) return;
     const canvas = ref.current!;
     const g = canvas.getContext('2d')!;
     const peaks = new Float32Array(bars);
@@ -20,9 +24,14 @@ export function Visualizer({ bars = 32, mode = 'classic', className }: Props) {
     let data = new Uint8Array(256);
     let raf = 0;
     let t = 0;
+    const pace = createPacer();
+    const cssVar = createCssVars(canvas);
 
-    const draw = () => {
+    const draw = (now = performance.now()) => {
       raf = requestAnimationFrame(draw);
+      const playing = usePlayer.getState().playing;
+      const dt = pace(now, playing);
+      if (!dt) return;
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -34,17 +43,15 @@ export function Visualizer({ bars = 32, mode = 'classic', className }: Props) {
       g.clearRect(0, 0, w, h);
 
       const analyser = engine.analyser();
-      const playing = usePlayer.getState().playing;
-      t += 0.03;
+      t += dt * 1.8; // 0.03 a frame at 60 Hz
       if (analyser && playing) {
         if (data.length !== analyser.frequencyBinCount) data = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(data);
       }
 
-      const styles = getComputedStyle(canvas);
-      const c1 = styles.getPropertyValue('--viz-low').trim() || '#00e000';
-      const c2 = styles.getPropertyValue('--viz-mid').trim() || '#e0e000';
-      const c3 = styles.getPropertyValue('--viz-high').trim() || '#ff3020';
+      const c1 = cssVar('--viz-low', '#00e000', now);
+      const c2 = cssVar('--viz-mid', '#e0e000', now);
+      const c3 = cssVar('--viz-high', '#ff3020', now);
       const grad = g.createLinearGradient(0, h, 0, 0);
       grad.addColorStop(0, c1);
       grad.addColorStop(0.6, c2);
@@ -72,7 +79,7 @@ export function Visualizer({ bars = 32, mode = 'classic', className }: Props) {
         g.fillStyle = grad;
         if (mode === 'classic') {
           for (let y = h; y > h - bh; y -= 3) g.fillRect(x, y - 2, bw, 2);
-          g.fillStyle = styles.getPropertyValue('--viz-peak').trim() || '#c0c0c0';
+          g.fillStyle = cssVar('--viz-peak', '#c0c0c0', now);
           g.fillRect(x, h - peaks[i] - 2, bw, 1.5);
         } else {
           const r = Math.min(bw / 2, 4);
@@ -84,7 +91,7 @@ export function Visualizer({ bars = 32, mode = 'classic', className }: Props) {
     };
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [bars, mode]);
+  }, [bars, mode, off]);
 
   return <canvas ref={ref} className={className} />;
 }

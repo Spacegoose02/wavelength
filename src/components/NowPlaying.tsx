@@ -1,7 +1,7 @@
 import { SoundsLikeButton } from './SoundsLikeButton';
 import { trackArt, useArtworkList } from '../lib/artwork';
-import { usePlayer } from '../store/player';
-import { Cover, fmtTime } from './common';
+import { Cover } from './common';
+import { Seek, usePlayerControls } from './PlayerClock';
 import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat, IconShuffle } from './Icons';
 import { Visualizer } from './Visualizer';
 import { NowPlayingStage } from './Scenes';
@@ -28,7 +28,7 @@ import type { Track } from '../sources/types';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
 export function NowPlaying() {
-  const p = usePlayer();
+  const p = usePlayerControls();
   const [showLyrics, setShowLyrics] = useState(false);
   const close = () => window.history.back(); // pops the entry setNowPlaying(true) pushed
   const t = p.current();
@@ -80,14 +80,7 @@ export function NowPlaying() {
             <DjModeButton />
           </div>
           <Visualizer className="np-viz" bars={48} mode="smooth" />
-          {!live && (
-            <div className="seek big">
-              <span>{fmtTime(p.position)}</span>
-              <input type="range" min={0} max={p.duration || 1} step={0.5} value={p.position}
-                onChange={(e) => p.seek(Number(e.target.value))} style={{ ['--pct' as string]: `${(p.position / (p.duration || 1)) * 100}%` }} />
-              <span>-{fmtTime(Math.max(0, p.duration - p.position))}</span>
-            </div>
-          )}
+          {!live && <Seek className="seek big" remaining />}
           <div className="transport big">
             <button className={`tbtn small ${p.shuffle ? 'on' : ''}`} onClick={p.toggleShuffle}><IconShuffle /></button>
             <button className="tbtn" onClick={p.prev}><IconPrev /></button>
@@ -120,7 +113,7 @@ function savedOpen(): boolean {
  * whole queue, and a tap plays a song. In DJ mode the last row says the DJ adds more when these run out.
  */
 function UpNext() {
-  const p = usePlayer();
+  const p = usePlayerControls();
   const station = { on: useStation((s) => s.on), busy: useStation((s) => s.busy) };
   const [open, setOpen] = useState(savedOpen);
   const [tab, setTab] = useState<'next' | 'back'>('next');
@@ -178,7 +171,7 @@ function UpNextRow({ track: q, onPlay }: { track: Track; onPlay(): void }) {
 }
 
 export function QueuePanel() {
-  const p = usePlayer();
+  const p = usePlayerControls();
   return (
     <aside className="queue">
       <div className="queue-head">
