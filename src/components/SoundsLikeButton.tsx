@@ -11,7 +11,9 @@ import { usePlayer } from '../store/player';
  * "Journey to…" (a path of songs from this one to another, each a little closer to it).
  */
 export function SoundsLikeButton({ track, className = 'chip' }: { track: Track; className?: string }) {
-  const on = useFeature('sonic') && useHub((s) => !!s.token);
+  const sonicOn = useFeature('sonic');
+  const hasHub = useHub((s) => !!s.token);
+  const on = sonicOn && hasHub;
   const [msg, setMsg] = useState<string>();
   const [picking, setPicking] = useState(false);
   const [q, setQ] = useState('');

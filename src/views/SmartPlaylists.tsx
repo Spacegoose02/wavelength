@@ -69,7 +69,9 @@ export function SmartPlaylists() {
 
 function SmartEditor({ initial, onDone }: { initial: SmartPlaylist; onDone: () => void }) {
   const [p, setP] = useState(initial);
-  const sonic = useFeature('sonic') && useHub((st) => !!st.token);
+  const sonicOn = useFeature('sonic');
+  const hasHub = useHub((st) => !!st.token);
+  const sonic = sonicOn && hasHub;
   const [genres, setGenres] = useState(initial.genres.join(', '));
   const num = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
   const save = () => {

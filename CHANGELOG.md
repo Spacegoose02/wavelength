@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **No crash when a feature is switched on or off.** Home's Jump back in, Share, Sounds like this, the smart
+  playlist editor and Radio's station rows could crash their page ("Rendered more hooks than during the previous
+  render") when an admin changed a feature switch or the Hub connected while the page was open.
+- **Developers:** `npm run lint` (Biome, for the app and the Hub) and `npm run e2e` (Playwright smoke tests of the
+  browser build) now run on every pull request (`docs/DEVELOPMENT.md#tests-and-checks`).
 - **The artist link on an album page always works.** It used to do nothing when the album's artist id wasn't
   one in the library's artist list. It now finds the artist by name too, else opens the artist on that server by
   its id, else their Deezer releases.

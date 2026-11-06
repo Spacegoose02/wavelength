@@ -1,0 +1,38 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"files": { "includes": ["src/**", "hub/src/**", "hub/test/**", "!**/*.css"] },
+	"formatter": { "enabled": false },
+	"assist": { "enabled": false },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"a11y": "off",
+			"style": { "noNonNullAssertion": "off", "useTemplate": "off", "useExponentiationOperator": "off" },
+			"complexity": {
+				"noCommaOperator": "off",
+				"useOptionalChain": "off",
+				"noUselessFragments": "off",
+				"useLiteralKeys": "off",
+				"noUselessUndefinedInitialization": "off"
+			},
+			"suspicious": {
+				"noExplicitAny": "off",
+				"noArrayIndexKey": "off",
+				"noAssignInExpressions": "off",
+				"useIterableCallbackReturn": "off",
+				"noImplicitAnyLet": "off",
+				"noConfusingVoidType": "off",
+				"noFocusedTests": "off",
+				"noShadowRestrictedNames": "off",
+				"noNonNullAssertedOptionalChain": "off"
+			},
+			"security": { "noDangerouslySetInnerHtml": "off" },
+			"correctness": {
+				"useExhaustiveDependencies": "warn",
+				"noComponentHookFactories": "off",
+				"useJsxKeyInIterable": "off"
+			}
+		}
+	}
+}
