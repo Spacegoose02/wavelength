@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **The artist link on an album page always works.** It used to do nothing when the album's artist id wasn't
+  one in the library's artist list. It now finds the artist by name too, else opens the artist on that server by
+  its id, else their Deezer releases.
+- **Track numbers in song titles.** Titles like "04 - God's Plan", left by renaming tools that copy the file name
+  into the title tag, show as "God's Plan" and lyrics are looked up without the number, so more songs get synced
+  lyrics. **Library care → Numbered titles** (Hub admins) finds them across the library and fixes the files, and
+  **Edit tags** can fix one album (`docs/USER-GUIDE.md#library-care`).
 
 ## 0.24.6
 - **Music keeps playing through dead zones.** Lose signal for 10 or 15 minutes (a tunnel, the countryside, a car

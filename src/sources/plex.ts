@@ -1,4 +1,5 @@
 import { http, qs, trimSlash } from '../lib/http';
+import { withoutTrackNumber } from '../lib/trackTitles';
 import type { Album, Artist, MusicSource, SearchResults, ServerPlaylist, SourceConfig, Track } from './types';
 
 function clientId() {
@@ -89,7 +90,7 @@ export class PlexSource implements MusicSource {
       id: String(m.ratingKey),
       sourceId: this.config.id,
       kind: 'track',
-      title: m.title,
+      title: withoutTrackNumber(m.title ?? '', m.index),
       artist: m.originalTitle ?? m.grandparentTitle ?? 'Unknown artist',
       album: m.parentTitle,
       albumId: m.parentRatingKey ? String(m.parentRatingKey) : undefined,

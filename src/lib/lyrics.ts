@@ -9,6 +9,7 @@
  */
 import { getJson, qs } from './http';
 import type { Track } from '../sources/types';
+import { looseWithoutTrackNumber, withoutTrackNumber } from './trackTitles';
 
 export interface LyricLine {
   /** seconds; undefined for plain (unsynced) lyrics */
@@ -132,10 +133,12 @@ const UNKNOWN = /^(unknown( artist)?|various artists|n\/a|-)?$/i;
 /**
  * The artist + title pairs to look a song up by, best first. Besides the tags as they are (cleaned), a title like
  * "Adele - Hello" from a YouTube download is also read as artist "Adele", title "Hello", first when the
- * artist tag is missing or names the same artist (or its channel).
+ * artist tag is missing or names the same artist (or its channel). A track number written in front of the
+ * title ("04 - Hello") is left out.
  */
-export function lyricQueries(t: Pick<Track, 'title' | 'artist'>): LyricsQuery[] {
-  const title = cleanTitle(t.title);
+export function lyricQueries(t: Pick<Track, 'title' | 'artist'> & { trackNumber?: number }): LyricsQuery[] {
+  // "04 - Song" from a renaming tool: the number isn't part of the name (lib/trackTitles.ts)
+  const title = cleanTitle(t.trackNumber ? withoutTrackNumber(t.title, t.trackNumber) : looseWithoutTrackNumber(t.title));
   const artist = cleanArtist(t.artist);
   const out: LyricsQuery[] = UNKNOWN.test(artist) ? [] : artistVariants(artist).map((a) => ({ artist: a, title }));
   const split = /^(.+?)\s+[-–—|]\s+(.+)$/.exec(title);

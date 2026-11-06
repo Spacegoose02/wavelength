@@ -1,4 +1,5 @@
 import SparkMD5 from 'spark-md5';
+import { withoutTrackNumber } from '../lib/trackTitles';
 import { getJson, http, qs, trimSlash } from '../lib/http';
 import type { SongFacts } from '../lib/smartPlaylists';
 import type { Lyrics } from '../lib/lyrics';
@@ -90,7 +91,7 @@ export class NavidromeSource implements MusicSource {
     id: s.id,
     sourceId: this.config.id,
     kind: 'track',
-    title: s.title,
+    title: withoutTrackNumber(s.title ?? '', s.track),
     artist: s.artist ?? 'Unknown artist',
     album: s.album,
     albumId: s.albumId,
