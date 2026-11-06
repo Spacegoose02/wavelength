@@ -1258,6 +1258,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .eq-pop { position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 60; width: min(560px, calc(100vw - 32px)); padding: 16px; border-radius: var(--radius-lg); background: var(--panel); color: var(--text); border: 1px solid var(--line); box-shadow: 0 20px 60px rgb(0 0 0 / 0.5); }
 .np-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .np-actions .eq-pop { left: 0; right: auto; bottom: auto; top: calc(100% + 8px); }
+.np-actions-more { margin-top: -4px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 @media (max-width: 760px) {
   .eq-pop, .np-actions .eq-pop { position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; max-height: 80vh; overflow-y: auto; }
   .eq .eq-band input[type='range'] { height: 110px; }

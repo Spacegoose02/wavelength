@@ -21,6 +21,8 @@ import { LyricsPanel } from './Lyrics';
 import { SingButton, SingControls } from './SingButton';
 import { VideoButton } from './VideoButton';
 import { useState } from 'react';
+import { useSleep } from '../lib/sleep';
+import { useSing } from '../lib/singMode';
 import { useCatalog } from '../store/catalog';
 import { useUi } from '../store/ui';
 import { albumOfTrack, artistOfTrack } from '../lib/trackLinks';
@@ -30,6 +32,18 @@ import type { Track } from '../sources/types';
 export function NowPlaying() {
   const p = usePlayerControls();
   const [showLyrics, setShowLyrics] = useState(false);
+  const [more, setMore] = useState(savedMore);
+  // a running sleep timer or Sing mode stays in sight even with More folded
+  const sleeping = useSleep((s) => !!s.endsAt || s.endOfTrack);
+  const singing = useSing((s) => s.on);
+  const toggleMore = () => {
+    setMore(!more);
+    try {
+      localStorage.setItem(MORE_KEY, more ? '0' : '1');
+    } catch {
+      /* no storage */
+    }
+  };
   const close = () => window.history.back(); // pops the entry setNowPlaying(true) pushed
   const t = p.current();
   const albums = useCatalog((s) => s.albums);
@@ -61,24 +75,32 @@ export function NowPlaying() {
             : live ? t.title : t.artist}</div>
           {p.error && <div className="np-error" role="status">{p.error}</div>}
           {!p.error && p.noSignal && <div className="np-note muted small" role="status">No signal · playing songs saved on this device until it's back</div>}
+          {/* the actions people use most, then the rest behind More (remembered on this device) */}
           <div className="np-actions">
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} label="Add to playlist" />}
-            <EqButton className="chip" />
-            <DevicesButton className="chip" />
-            <CastButton className="chip" />
-            <CreditsButton track={t} />
-            <TogetherButton className="chip" />
+            {t.kind === 'track' && <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>}
             {live && <RadioGetButton text={p.liveTitle} />}
-            {t.kind === 'track' && t.sourceId !== 'preview' && <SongRadioButton artist={t.artist} track={t} className="chip" />}
-            {t.kind === 'track' && t.sourceId !== 'preview' && <SoundsLikeButton track={t} />}
-            {t.kind === 'track' && <>
-              <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>
-              <SingButton onOn={() => setShowLyrics(true)} />
-              <VideoButton track={t} />
-            </>}
-            <SleepButton />
+            <CastButton className="chip" />
             <DjModeButton />
+            {singing && t.kind === 'track' && <SingButton onOn={() => setShowLyrics(true)} />}
+            {sleeping && <SleepButton />}
+            <button type="button" className={`chip np-more ${more ? 'on' : ''}`} aria-expanded={more} onClick={toggleMore}>{more ? 'Less' : 'More'}</button>
           </div>
+          {more && (
+            <div className="np-actions np-actions-more">
+              {t.kind === 'track' && t.sourceId !== 'preview' && <SongRadioButton artist={t.artist} track={t} className="chip" />}
+              {t.kind === 'track' && t.sourceId !== 'preview' && <SoundsLikeButton track={t} />}
+              {t.kind === 'track' && <>
+                {!singing && <SingButton onOn={() => setShowLyrics(true)} />}
+                <VideoButton track={t} />
+              </>}
+              <CreditsButton track={t} />
+              <TogetherButton className="chip" />
+              <DevicesButton className="chip" />
+              <EqButton className="chip" />
+              {!sleeping && <SleepButton />}
+            </div>
+          )}
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && <Seek className="seek big" remaining />}
           <div className="transport big">
@@ -94,6 +116,15 @@ export function NowPlaying() {
       </div>
     </div>
   );
+}
+
+const MORE_KEY = 'tonearm.npMore';
+function savedMore(): boolean {
+  try {
+    return localStorage.getItem(MORE_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 const UP_NEXT_KEY = 'tonearm.npUpNext';
