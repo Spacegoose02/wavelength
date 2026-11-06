@@ -221,10 +221,34 @@ const alien = (headY: number, neck: [top: number, bottom: number, width: number]
   ),
 });
 
+/**
+ * Sasquatch: the biggest of them, a broad top over thick shaggy legs and huge bare feet (no shoes fit), with
+ * long heavy arms.
+ */
+const sasquatch: Figure = {
+  head: [184, 0.86],
+  torso: 'M168 254 Q 200 246 232 254 Q 262 262 266 292 Q 270 320 262 336 Q 200 348 138 336 Q 130 320 134 292 Q 138 262 168 254 Z',
+  shoulders: [[142, 276], [258, 276]],
+  arm: 26,
+  paw: 14,
+  reach: 72,
+  chin: [254, 52],
+  Under: () => (
+    <>
+      <Shaded d="M158 326 Q 150 346 156 364 L 162 358 L 168 366 L 176 358 L 184 366 L 192 358 L 198 364 Q 202 344 202 330 Z" className="bare" />
+      <Shaded d="M198 330 Q 198 344 202 364 L 208 358 L 216 366 L 224 358 L 232 366 L 238 358 L 244 364 Q 250 346 242 326 Z" className="bare" />
+      <Foot at={[176, 370]} rx={28} ry={10} />
+      <Foot at={[226, 370]} rx={28} ry={10} right />
+      <path d="M156 374 v -5 M164 375 v -6 M172 375 v -6 M234 375 v -6 M242 375 v -6 M250 374 v -5" stroke="rgb(0 0 0 / 0.35)" strokeWidth="1.6" strokeLinecap="round" />
+    </>
+  ),
+};
+
 export const FIGURES = {
   raccoon,
   bear,
   shark,
   alien: alien(202, [226, 262, 30]),
   grey: alien(186, [226, 254, 12]),
+  sasquatch,
 } satisfies Record<string, Figure>;

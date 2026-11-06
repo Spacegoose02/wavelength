@@ -1,6 +1,7 @@
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, useContext, type ReactNode } from 'react';
 import type { Viseme } from '../../player/visemes';
 import { Pivot, SpeciesContext, useSpecies, type LegsStyle } from './bodies';
+import { Bow, GirlContext } from './faces';
 import type { SpeciesInfo } from './species';
 
 /**
@@ -234,6 +235,7 @@ export function Brows({ l, className, stroke, width = 4 }: { l: string; classNam
  */
 export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; hat?: ReactNode; eyewear?: ReactNode; over?: ReactNode }) {
   const { Face, fit = {} } = species;
+  const girl = useContext(GirlContext);
   const w = fit.w ?? 1;
   const lift = fit.lift ?? 0;
   const [ex, ey] = fit.eyes ?? [1, 1];
@@ -315,6 +317,7 @@ export function Head({ species, hat, eyewear, over }: { species: SpeciesInfo; ha
         <path d="M240 58 C 226 44, 226 28, 240 32 C 254 28, 254 44, 240 58 Z" fill="#ff5c8a" />
       </g>
       </g>
+      {girl && fit.bow && <Bow x={fit.bow[0]} y={fit.bow[1]} rot={fit.bow[2]} s={0.85} />}
       </g>
     </g>
   );

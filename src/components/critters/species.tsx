@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Species } from '../../store/settings';
 import { FIGURES, type Figure } from './bodies';
-import { AlienFace, BlackBearFace, BrownBearFace, GreyFace, RaccoonFace, SharkFace } from './faces';
+import { AlienFace, BlackBearFace, BrownBearFace, GreyFace, RaccoonFace, SasquatchFace, SharkFace } from './faces';
 
 /**
  * Who plays: each species is a face (faces.tsx, drawn on the shared skeleton, see parts.tsx) and a figure
@@ -39,14 +39,17 @@ export interface HeadFit {
   eyes?: [number, number];
   /** where the eyes are, for glasses, shades and visors (drawn for eyes on y 166) */
   eyeY?: number;
+  /** where the girl version's bow sits on the head: x, y and tilt */
+  bow?: [number, number, number];
 }
 
 /** In picker order. To add a species: a face (faces.tsx) and a figure (bodies.tsx), an entry below, its id in `Species`, colours in styles.css. */
 export const SPECIES: SpeciesInfo[] = [
-  { id: 'raccoon', noun: 'raccoon', label: 'Raccoon', Face: RaccoonFace, figure: FIGURES.raccoon, fit: { eyeY: 186, eyes: [1.1, 1.15] } },
-  { id: 'shark', noun: 'shark', label: 'Shark', Face: SharkFace, figure: FIGURES.shark, fit: { eyeY: 170, eyes: [1.1, 1.1] } },
-  { id: 'alien', noun: 'alien', label: 'Alien', Face: AlienFace, figure: FIGURES.alien, fit: { w: 0.88, eyes: [1.04, 1.4], eyeY: 176 } },
-  { id: 'grey', noun: 'gray alien', label: 'Gray alien', Face: GreyFace, figure: FIGURES.grey, fit: { w: 0.94, lift: -12, eyes: [1.2, 1.5], eyeY: 174 } },
-  { id: 'bear-black', noun: 'black bear', label: 'Black bear', Face: BlackBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.12, 1.15] } },
-  { id: 'bear-brown', noun: 'brown bear', label: 'Brown bear', Face: BrownBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.12, 1.15] } },
+  { id: 'raccoon', noun: 'raccoon', label: 'Raccoon', Face: RaccoonFace, figure: FIGURES.raccoon, fit: { eyeY: 186, eyes: [1.1, 1.15], bow: [161, 118, -24] } },
+  { id: 'shark', noun: 'shark', label: 'Shark', Face: SharkFace, figure: FIGURES.shark, fit: { eyeY: 170, eyes: [1.1, 1.1], bow: [150, 131, -28] } },
+  { id: 'alien', noun: 'alien', label: 'Alien', Face: AlienFace, figure: FIGURES.alien, fit: { w: 0.88, eyes: [1.04, 1.4], eyeY: 176, bow: [159, 121, -24] } },
+  { id: 'grey', noun: 'gray alien', label: 'Gray alien', Face: GreyFace, figure: FIGURES.grey, fit: { w: 0.94, lift: -12, eyes: [1.2, 1.5], eyeY: 174, bow: [155, 112, -26] } },
+  { id: 'bear-black', noun: 'black bear', label: 'Black bear', Face: BlackBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.12, 1.15], bow: [170, 118, -20] } },
+  { id: 'bear-brown', noun: 'brown bear', label: 'Brown bear', Face: BrownBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.12, 1.15], bow: [170, 118, -20] } },
+  { id: 'sasquatch', noun: 'sasquatch', label: 'Sasquatch', Face: SasquatchFace, figure: FIGURES.sasquatch, fit: { eyeY: 170, eyes: [1.05, 1.05], bow: [162, 121, -22] } },
 ];
