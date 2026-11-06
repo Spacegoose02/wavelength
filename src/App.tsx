@@ -48,6 +48,7 @@ import { activeSkin } from './lib/seasons';
 import { startUpdateChecks } from './lib/updates';
 import { UpdateBanner } from './components/Updates';
 import { Spinner } from './components/common';
+import { TrackMenuHost } from './components/TrackMenu';
 
 /** A page loaded the first time it's opened, so startup only parses what Home needs (slow TV boxes notice). */
 // `any`: each page has its own props, which lazy() keeps from M[K]
@@ -67,25 +68,49 @@ const Inbox = page(() => import('./views/Inbox'), 'Inbox');
 const Settings = page(() => import('./views/Settings'), 'Settings');
 const DJ = page(() => import('./views/DJ'), 'DJ');
 
-const NAV: { view: Route['view']; label: string; icon: ReactNode }[] = [
-  { view: 'home', label: 'Home', icon: <IconHome /> },
-  { view: 'search', label: 'Search', icon: <IconSearch /> },
-  { view: 'dj', label: 'AI DJ', icon: <IconDj /> },
-  { view: 'discover', label: 'Discover', icon: <IconCompass /> },
-  { view: 'recent', label: 'Recently added', icon: <IconSparkle /> },
-  { view: 'albums', label: 'Albums', icon: <IconAlbum /> },
-  { view: 'artists', label: 'Artists', icon: <IconArtist /> },
-  { view: 'favorites', label: 'Favorites', icon: <IconHeart /> },
-  { view: 'offline', label: 'Downloaded', icon: <IconDownload /> },
-  { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave /> },
-  { view: 'radio', label: 'Radio', icon: <IconRadio /> },
-  { view: 'history', label: 'History', icon: <IconHistory /> },
-  { view: 'books', label: 'Audiobooks', icon: <IconBook /> },
-  { view: 'podcasts', label: 'Podcasts', icon: <IconPodcast /> },
-  { view: 'downloads', label: 'Downloads', icon: <IconDownload /> },
-  { view: 'inbox', label: 'Inbox', icon: <IconInbox /> },
-  { view: 'settings', label: 'Settings', icon: <IconSettings /> },
+type NavGroup = 'main' | 'library' | 'discover' | 'you';
+const NAV: { view: Route['view']; label: string; icon: ReactNode; group: NavGroup }[] = [
+  { view: 'home', label: 'Home', icon: <IconHome />, group: 'main' },
+  { view: 'search', label: 'Search', icon: <IconSearch />, group: 'main' },
+  { view: 'dj', label: 'AI DJ', icon: <IconDj />, group: 'main' },
+  { view: 'recent', label: 'Recently added', icon: <IconSparkle />, group: 'library' },
+  { view: 'albums', label: 'Albums', icon: <IconAlbum />, group: 'library' },
+  { view: 'artists', label: 'Artists', icon: <IconArtist />, group: 'library' },
+  { view: 'favorites', label: 'Favorites', icon: <IconHeart />, group: 'library' },
+  { view: 'offline', label: 'Downloaded', icon: <IconDownload />, group: 'library' },
+  { view: 'history', label: 'History', icon: <IconHistory />, group: 'library' },
+  { view: 'books', label: 'Audiobooks', icon: <IconBook />, group: 'library' },
+  { view: 'podcasts', label: 'Podcasts', icon: <IconPodcast />, group: 'library' },
+  { view: 'discover', label: 'Discover', icon: <IconCompass />, group: 'discover' },
+  { view: 'radio', label: 'Radio', icon: <IconRadio />, group: 'discover' },
+  { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave />, group: 'discover' },
+  { view: 'downloads', label: 'Downloads', icon: <IconDownload />, group: 'you' },
+  { view: 'inbox', label: 'Inbox', icon: <IconInbox />, group: 'you' },
+  { view: 'settings', label: 'Settings', icon: <IconSettings />, group: 'you' },
 ];
+/** Sidebar section headings; the main group has none. Each section folds, remembered on this device. */
+const GROUP_LABELS: Partial<Record<NavGroup, string>> = { library: 'Your library', discover: 'Explore' };
+const FOLDED_KEY = 'tonearm.navFolded';
+function useFoldedGroups() {
+  const [folded, setFolded] = useState<NavGroup[]>(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(FOLDED_KEY) ?? '[]');
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  });
+  const toggle = (g: NavGroup) => {
+    const next = folded.includes(g) ? folded.filter((x) => x !== g) : [...folded, g];
+    setFolded(next);
+    try {
+      localStorage.setItem(FOLDED_KEY, JSON.stringify(next));
+    } catch {
+      // private mode
+    }
+  };
+  return { folded, toggle };
+}
 
 function View({ route }: { route: Route }) {
   switch (route.view) {
@@ -247,6 +272,7 @@ export default function App() {
   const kid = useIsKid();
   const badge = useInbox(inboxBadge);
   const dj = useDjAvailable();
+  const { folded, toggle } = useFoldedGroups();
   const tabRoot = ['home', 'discover', 'search', 'subwave', 'library'].includes(route.view);
 
   return (
@@ -255,12 +281,28 @@ export default function App() {
         <nav className="sidebar">
           <div className="brand"><span className="brand-mark" />Wavelength</div>
           <ProfileButton />
-          {NAV.filter((n) => (n.view !== 'inbox' || hubOn) && (n.view !== 'dj' || dj) && (!kid || KID_VIEWS[n.view])).map((n) => (
-            <button key={n.view} className={`nav ${route.view === n.view ? 'on' : ''}`} onClick={() => go({ view: n.view } as Route)}>
-              {n.icon}<span>{kid ? KID_VIEWS[n.view] : n.label}</span>
-              {n.view === 'inbox' && badge > 0 && <span className="badge">{badge}</span>}
-            </button>
-          ))}
+          {(['main', 'library', 'discover', 'you'] as NavGroup[]).map((g) => {
+            const items = NAV.filter((n) => n.group === g && (n.view !== 'inbox' || hubOn) && (n.view !== 'dj' || dj) && (!kid || KID_VIEWS[n.view]));
+            if (!items.length) return null;
+            const label = kid ? undefined : GROUP_LABELS[g];
+            // a folded section still shows the page you're on
+            const shown = label && folded.includes(g) ? items.filter((n) => route.view === n.view) : items;
+            return (
+              <div key={g} className={`nav-group nav-${g}`}>
+                {label && (
+                  <button type="button" className="nav-group-head" aria-expanded={!folded.includes(g)} onClick={() => toggle(g)}>
+                    {label}<span className="nav-fold">{folded.includes(g) ? '▸' : '▾'}</span>
+                  </button>
+                )}
+                {shown.map((n) => (
+                  <button key={n.view} className={`nav ${route.view === n.view ? 'on' : ''}`} onClick={() => go({ view: n.view } as Route)}>
+                    {n.icon}<span>{kid ? KID_VIEWS[n.view] : n.label}</span>
+                    {n.view === 'inbox' && badge > 0 && <span className="badge">{badge}</span>}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
           <SidebarPlaylists route={route} />
         </nav>
       )}
@@ -276,6 +318,7 @@ export default function App() {
       {queueOpen && <ErrorBoundary fallback={partCrashed('The queue')}><QueuePanel /></ErrorBoundary>}
       <ErrorBoundary fallback={partCrashed('The player')}>{phone ? <MobileNav /> : <PlayerBar />}</ErrorBoundary>
       {nowPlayingOpen && <ErrorBoundary fallback={nowPlayingCrashed}><NowPlaying /></ErrorBoundary>}
+      <TrackMenuHost />
       <KidLockScreen />
       <KidSignedOutScreen />
       <WebSignIn />

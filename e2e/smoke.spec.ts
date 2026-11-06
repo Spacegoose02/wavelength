@@ -23,3 +23,28 @@ test('phone width shows the tab bar', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('nav.sidebar')).toBeHidden();
 });
+
+test('right-clicking a song opens its menu, and Play next queues it', async ({ page }) => {
+  const t = (n: number) => ({ id: `t${n}`, sourceId: 'x', kind: 'track', title: `Song ${n}`, artist: 'Some Band', album: 'An Album', duration: 200 });
+  await page.addInitScript((tracks) => {
+    localStorage.setItem('tonearm.library', JSON.stringify({ state: { playlists: [{ id: 'p1', name: 'Test', tracks, createdAt: 0, updatedAt: 0 }], history: [] }, version: 0 }));
+  }, [t(1), t(2)]);
+  await page.goto('/');
+  await page.locator('.side-item', { hasText: 'Test' }).dispatchEvent('click');
+  await page.locator('.track-row').nth(1).click({ button: 'right' });
+  const menu = page.locator('.track-menu');
+  await expect(menu).toBeVisible();
+  await expect(menu).toContainText('Song 2');
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+});
+
+test('sidebar sections fold and stay folded', async ({ page }) => {
+  await page.goto('/');
+  const head = page.locator('.nav-group-head', { hasText: 'Your library' });
+  await expect(page.locator('nav.sidebar button.nav', { hasText: 'Albums' })).toBeVisible();
+  await head.click();
+  await expect(page.locator('nav.sidebar button.nav', { hasText: 'Albums' })).toBeHidden();
+  await page.reload();
+  await expect(page.locator('nav.sidebar button.nav', { hasText: 'Albums' })).toBeHidden();
+});

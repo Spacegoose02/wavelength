@@ -14,6 +14,7 @@ import { ShareButton } from './ShareButton';
 import { shareOfTracks } from '../lib/inbox';
 import { albumOfTrack, artistOfTrack, focusIndex } from '../lib/trackLinks';
 import { useCatalog } from '../store/catalog';
+import { openTrackMenu } from './TrackMenu';
 import { useUi } from '../store/ui';
 
 export function fmtTime(s?: number) {
@@ -155,6 +156,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
         <div key={`${i}:${t.sourceId}:${t.id}`} ref={i === focusIdx ? focusRef : undefined}
           className={`track-row ${current?.id === t.id && current.sourceId === t.sourceId ? 'active' : ''} ${openRow === i ? 'open' : ''} ${i === focusIdx ? 'focus' : ''}`}
           onDoubleClick={() => playTracks(tracks, i)}
+          onContextMenu={(e) => openTrackMenu(e, t, tracks, i)}
           // phones: tap the row to play; the ⋯ button reveals the actions
           onClick={phone ? (e) => !(e.target as HTMLElement).closest('button, .menu') && playTracks(tracks, i) : undefined}>
           <button className="track-num" onClick={() => playTracks(tracks, i)} title="Play">
