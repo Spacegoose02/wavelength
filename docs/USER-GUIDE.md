@@ -879,7 +879,7 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
 
 ## Library care
 
-**Albums → Library care** (on a phone, Library → Library care) has two lists, and a third for Hub admins:
+**Albums → Library care** (on a phone, Library → Library care) has two lists, and two more for Hub admins:
 
 - **Duplicates:** albums your server has more than once, counting editions like "Deluxe" or "25th Anniversary"
   as the same album, with the most complete copy first. Explicit and clean versions don't count, nor does the
@@ -895,6 +895,26 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
   is the song's own track number, so "7 Rings" and "99 Problems" are left alone. Wavelength already shows and
   looks up these songs without the number before you fix them, and an album's **Edit tags** page has a
   **Take track numbers out of titles** button for one album.
+- **Unmatched songs** (Hub admins): songs whose tags keep Navidrome from filing them under the right artist or
+  album. **Find unmatched songs** reads every album's tags through the Hub and lists each song with what's wrong:
+  - **Joined artists:** several artists in one tag with a semicolon and no space, like "Lil Wayne;Drake".
+    Navidrome only splits on "; " (with the space), " / ", " feat. " and " ft. ", so it shows "Lil Wayne;Drake"
+    as one artist. **Split joined artists** fixes every one at once by writing "Lil Wayne; Drake"; **Split
+    artists** on a song fixes just that one.
+  - **Maybe joined:** a comma or slash with no space around it ("Lil Wayne,Drake", "Lil Wayne/Drake"). These
+    aren't changed by themselves, because "AC/DC" is one band; fix the ones that are wrong with **Edit tags**.
+  - **No artist**, **No album artist**, **No album**, **No title**, **No genre**, **No year**, **No track number**
+    (Navidrome's "[Unknown Artist]" and "[Unknown Album]" count as missing).
+
+  Click the filter chips to see only songs with those problems (two chips show songs that have both), and type in
+  the search box to narrow by title, artist, album, genre or file name. Tick songs (or **Tick all shown**) to set
+  the Artist, Album artist, Album, Genre or Year on all of them at once, with your library's names suggested as you
+  type. **Edit tags** on a song opens its title, artist, album artist, album, genre, year, track and disc in place.
+  Every save can be undone with **Undo** right there or later under **Settings → Server → Tag edits**, and
+  Navidrome shows the new tags after its rescan a minute later.
+
+  New downloads have their joined artists split by the Hub before Navidrome scans them, so "Lil Wayne;Drake"
+  shows up as Lil Wayne and Drake straight away. The tick box at the top of the tab turns that off.
 
 ## Selecting several albums or artists
 
@@ -1670,7 +1690,8 @@ that will change is listed first, by album; untick an album to leave it alone. *
 Some taggers join several artists into one credit with a semicolon, so the library shows an artist like
 "Lil Baby;Jeremih". Open that artist's **Edit artist**: it finds the songs with that credit (even when they're on
 someone else's album) and starts **Change to** as the first artist, with buttons for "Lil Baby", "Lil Baby feat.
-Jeremih" and "Lil Baby & Jeremih".
+Jeremih" and "Lil Baby & Jeremih". To split joined credits across the whole library instead, use **Library care →
+Unmatched songs** (see [Library care](#library-care)).
 To merge several artists at once, or to merge albums, use **Select → Merge** on Albums or Artists (see
 [Merging albums and artists](#merging-albums-and-artists-admins)).
 

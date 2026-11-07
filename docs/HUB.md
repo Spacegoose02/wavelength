@@ -382,6 +382,31 @@ edits) puts them back; Navidrome rescans afterwards. **Keep** leaves an album as
 
 It needs what the tag editor needs: the music read-write at `/music` and a Navidrome admin login on the Hub.
 
+## Joined artist credits
+
+Navidrome splits a single Artist or Album artist tag into several artists only on its own separators: `" / "`,
+`" feat. "`, `" feat "`, `" ft. "`, `" ft "` and `"; "` (`resources/mappings.yaml` in Navidrome). A semicolon with no
+space after it, which many taggers and downloaders write ("Lil Wayne;Drake"), isn't one of them, so Navidrome lists
+"Lil Wayne;Drake" as one artist with no albums. `tidyCredit()` in `hub/src/credits.ts` rewrites any semicolon, with
+any spacing (the full-width "；" too), to `"; "`: "Lil Wayne;Drake" → "Lil Wayne; Drake", "A ; B;C" → "A; B; C".
+Empty parts ("Drake;") are dropped. Nothing else is changed: commas and slashes are left, since "Tyler, The Creator"
+and "AC/DC" are one artist.
+
+**New downloads.** Like genres, `hub/src/routes/credits.ts` adds a `Library.onNewMusic` step: music files changed
+since it last looked (`credits.since` in `hub_settings`) get their Artist and Album artist tidied before Navidrome
+scans them. Files an admin edited by hand since are left alone. The change is one save in the undo log ("Artist
+credits of new downloads"), audited as `credits.tidied`. On by default; `PUT /api/admin/credits { auto: false }`
+(the tick box on Library care → Unmatched songs) turns it off, kept in `hub_settings` as `credits`.
+
+**The library already there** is fixed from the app: **Library care → Unmatched songs** (`src/views/UnmatchedSongs.tsx`,
+`src/lib/songIssues.ts`, same rule) reads every Navidrome album's tags with `GET /api/admin/tags/albums`, lists the
+songs with joined credits or missing tags, and saves fixes through `PUT /api/admin/tags`, so they show under **Tag
+edits** and can be undone.
+
+The places that pick the main artist out of a credit (`primaryArtist()` in `hub/src/radar.ts`, `hub/src/kidSafe.ts`
+and `src/lib/match.ts`, `creditedArtists()` in `hub/src/forYou.ts`) split on `;` with or without spaces and on
+`" / "` too, so "Lil Wayne;Drake" and "Lil Wayne; Drake" both read as Lil Wayne.
+
 ## Following deemix downloads
 
 deemix only keeps a list of downloads; it never says one is stuck. The Hub reads that list
@@ -824,6 +849,7 @@ with a 4xx status.
 | `GET /api/admin/tags/albums?ids=a,b` | `library.edit` | up to 200 Navidrome albums' files and tags at once, each with `albumId` (for Edit artist) → `{ songs, missing }` |
 | `GET /api/admin/tags/values` | `library.edit` | `{ artists, genres }`: names in Navidrome and in recent edits, for suggestions |
 | `GET /api/admin/genres`, `PUT /api/admin/genres` | `library.edit` | genre rules: `{ auto, rules: [{ from, to }], defaults, kept, genres }`; `PUT` takes `{ auto?, rules? }` (`rules: null` = the defaults) |
+| `GET /api/admin/credits`, `PUT /api/admin/credits` | `library.edit` | joined artist credits: `{ auto }`, whether new downloads' "A;B" credits become "A; B" before the scan |
 | `GET /api/admin/genres/review` | `library.edit` | `{ albums: [{ id, name, artist, songs, current, proposed }], unknown: [{ genre, albums, examples }], total, kept, genres }` |
 | `POST /api/admin/genres/apply` | `library.edit` | `{ albums: [{ id, genre }] }` (up to 500) sets the genre in every song, as one undoable save → `{ batch, label, changed, failed, missing }` |
 | `POST /api/admin/genres/keep` | `library.edit` | `{ ids, keep? }`: leave albums out of the review (`keep: false` puts them back) |

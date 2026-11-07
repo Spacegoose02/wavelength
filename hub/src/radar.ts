@@ -109,7 +109,7 @@ export function normName(s = '') {
 }
 
 /** "Drake Featuring Future & Lil Baby" → "Drake", like the app's primaryArtist() (src/lib/match.ts). */
-export const primaryArtist = (s: string) => s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|,\s*/i)[0].trim();
+export const primaryArtist = (s: string) => s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|\s*[,;；]\s*|\s+\/\s+/i)[0].trim();
 
 export async function deezer(path: string): Promise<any> {
   const r = await fetchAllowed(DZ + path);

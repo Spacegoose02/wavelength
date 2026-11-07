@@ -27,7 +27,7 @@ export function norm(s = '') {
 export const cleanTitle = (s = '') =>
   norm(s.replace(/^\d{1,3}\s*[-.]\s+/, '').replace(/\s*[([](feat|ft|with|remaster|remastered|live|explicit|clean|edited|censored|radio edit|\d{4} remaster)[^)\]]*[)\]]/gi, ''));
 /** "Drake Featuring Future" → "Drake". */
-export const primaryArtist = (s = '') => s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|,\s*/i)[0].trim();
+export const primaryArtist = (s = '') => s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|\s*[,;；]\s*|\s+\/\s+/i)[0].trim();
 
 const tagOf = (s?: string) => (s ?? '').trim().toLowerCase();
 

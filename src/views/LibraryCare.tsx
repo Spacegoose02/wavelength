@@ -10,10 +10,14 @@ import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { Cover, Spinner } from '../components/common';
 import { ReleaseCards } from '../components/ReleaseRadar';
+import { UnmatchedSongs } from './UnmatchedSongs';
 
-/** Library → Library care: duplicates and missing albums (lib/libraryCare.ts), and numbered song titles (lib/trackTitles.ts). */
+/**
+ * Library → Library care: duplicates and missing albums (lib/libraryCare.ts), and for Hub admins numbered song titles
+ * (lib/trackTitles.ts) and unmatched songs (lib/songIssues.ts, views/UnmatchedSongs.tsx).
+ */
 export function LibraryCare() {
-  const [tab, setTab] = useState<'duplicates' | 'missing' | 'numbered'>('duplicates');
+  const [tab, setTab] = useState<'duplicates' | 'missing' | 'numbered' | 'unmatched'>('duplicates');
   const canEdit = useCan('library.edit');
   return (
     <div className="page">
@@ -23,9 +27,10 @@ export function LibraryCare() {
           <button className={`chip ${tab === 'duplicates' ? 'on' : ''}`} onClick={() => setTab('duplicates')}>Duplicates</button>
           <button className={`chip ${tab === 'missing' ? 'on' : ''}`} onClick={() => setTab('missing')}>Missing albums</button>
           {canEdit && <button className={`chip ${tab === 'numbered' ? 'on' : ''}`} onClick={() => setTab('numbered')}>Numbered titles</button>}
+          {canEdit && <button className={`chip ${tab === 'unmatched' ? 'on' : ''}`} onClick={() => setTab('unmatched')}>Unmatched songs</button>}
         </span>
       </header>
-      {tab === 'duplicates' ? <Duplicates /> : tab === 'missing' ? <Missing /> : <NumberedTitles />}
+      {tab === 'duplicates' ? <Duplicates /> : tab === 'missing' ? <Missing /> : tab === 'numbered' ? <NumberedTitles /> : <UnmatchedSongs />}
     </div>
   );
 }

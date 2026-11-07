@@ -988,6 +988,9 @@ export class HubClient {
   applyGenres = (albums: { id: string; genre: string }[]) =>
     this.call<{ batch: string | null; label: string; changed: string[]; failed: { path: string; error: string }[]; missing: string[] }>('POST', '/api/admin/genres/apply', { albums });
   keepGenres = (ids: string[], keep = true) => this.call<HubGenreSettings>('POST', '/api/admin/genres/keep', { ids, keep });
+  /** Joined artist credits (hub/src/credits.ts): whether new downloads' "A;B" credits become "A; B". */
+  creditSettings = () => this.call<{ auto: boolean }>('GET', '/api/admin/credits');
+  saveCreditSettings = (auto: boolean) => this.call<{ auto: boolean }>('PUT', '/api/admin/credits', { auto });
   undoTags = (batch: string) => this.call<{ undone: number; failed: { path: string; error: string }[] }>('POST', `/api/admin/tags/undo/${encodeURIComponent(batch)}`);
   importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });
   // remote control and handoff between this person's devices (lib/remote.ts)

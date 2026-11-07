@@ -2164,3 +2164,7 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
   animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important;
 }
+
+/* Library care → Unmatched songs (views/UnmatchedSongs.tsx) */
+.unmatched-row { display: flex; flex-direction: column; gap: 6px; }
+.unmatched-row .chips.inline .chip { cursor: default; font-size: 11.5px; }
