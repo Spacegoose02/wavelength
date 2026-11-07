@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from '../components/common';
 import { forgetTagValues, TagLists, tagList } from '../components/TagLists';
+import { pool } from '../lib/match';
 import { navidromeRefs } from '../lib/merge';
 import { creditFix, filterUnmatched, ISSUE_LABELS, ISSUES, issueCounts, songIssues, unmatchedSongs, type SongIssue, type UnmatchedSong } from '../lib/songIssues';
+import { PART, saveInParts } from '../lib/tagSave';
 import type { HubTagKey, HubTags } from '../sources/hub';
 import type { Album } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -16,10 +18,12 @@ import { useUi } from '../store/ui';
  * tags in place. Every Save goes through the Hub's tag editor, so Settings → Server → Tag edits can undo it.
  */
 
-/** Albums read from the Hub at a time (it takes up to 200). */
-const SCAN_BATCH = 100;
-/** Files written per Save (the Hub takes up to 5000). */
-const SAVE_BATCH = 1000;
+/**
+ * Albums read per request, and requests at once. The Hub opens every file to read its tags, so small requests
+ * (each well inside a proxy's time limit) a few at a time, not 100 albums in one long request.
+ */
+const SCAN_BATCH = 25;
+const SCAN_AT_ONCE = 3;
 /** Rows shown before "Show more". */
 const PAGE = 200;
 
@@ -75,16 +79,21 @@ export function UnmatchedSongs() {
     const found: UnmatchedSong[] = [];
     const errors: string[] = [];
     let total = 0;
-    for (let i = 0; i < ids.length; i += SCAN_BATCH) {
-      setProgress(`Read ${i} of ${ids.length} albums…`);
+    const parts: string[][] = [];
+    for (let i = 0; i < ids.length; i += SCAN_BATCH) parts.push(ids.slice(i, i + SCAN_BATCH));
+    let read = 0;
+    setProgress(`Read 0 of ${ids.length} albums…`);
+    await pool(parts, SCAN_AT_ONCE, async (part) => {
       try {
-        const r = await c.tagAlbums(ids.slice(i, i + SCAN_BATCH));
+        const r = await c.tagAlbums(part);
         total += r.songs.length;
         found.push(...unmatchedSongs(r.songs));
       } catch (e) {
         errors.push(errText(e));
       }
-    }
+      read += part.length;
+      setProgress(`Read ${read} of ${ids.length} albums…`);
+    });
     setProgress(undefined);
     setScanned(total);
     setSongs(found);
@@ -105,17 +114,11 @@ export function UnmatchedSongs() {
   const save = async (label: string, changes: { path: string; tags: HubTags }[]) => {
     if (!c || !changes.length) return;
     setBusy(true);
-    const batches: string[] = [];
-    const done = new Set<string>();
-    const failed: string[] = [];
     try {
-      for (let i = 0; i < changes.length; i += SAVE_BATCH) {
-        if (changes.length > SAVE_BATCH) setMsg(`Saving ${i} of ${changes.length}…`);
-        const r = await c.saveTags(label, changes.slice(i, i + SAVE_BATCH));
-        if (r.batch) batches.push(r.batch);
-        for (const p of r.changed) done.add(p);
-        failed.push(...r.failed.map((x) => x.error));
-      }
+      const r = await saveInParts(c, label, changes, (d, t) => t > PART && setMsg(`Saving ${d} of ${t}…`));
+      const batches = r.batches;
+      const done = new Set(r.changed);
+      const failed = r.failed.map((x) => x.error);
       const byPath = new Map(changes.map((x) => [x.path, x.tags]));
       setSongs((cur) => cur?.flatMap((s) => {
         const t = byPath.get(s.path);
@@ -127,7 +130,7 @@ export function UnmatchedSongs() {
       setTicked(new Set());
       setUndo(batches);
       forgetTagValues();
-      setMsg(`Saved ${plural(done.size, 'song')}${failed.length ? `; ${failed.length} failed: ${failed[0]}` : ''}. Navidrome rescans in a minute to show them.`);
+      setMsg(`Saved ${plural(done.size, 'song')}${failed.length ? `; ${failed.length} failed: ${failed[0]}` : ''}${r.error ? `, then the Hub stopped answering (${r.error}); save again to carry on` : ''}. Navidrome rescans in a minute to show them.`);
     } catch (e) {
       setMsg(errText(e));
     } finally {

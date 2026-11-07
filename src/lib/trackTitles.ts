@@ -3,7 +3,8 @@
  * Some tagging and renaming tools copy the file name ("04 - God's Plan.mp3") into the title tag, which breaks
  * lyrics lookups, matching against Deezer and charts, and looks wrong everywhere. The sources show these titles
  * without the number (sources/navidrome.ts, sources/plex.ts), lyrics look them up without it (lib/lyrics.ts),
- * and Library care → Numbered titles writes the clean title back into the files (views/LibraryCare.tsx).
+ * and Library care → Numbered titles writes the clean title back into the files (views/LibraryCare.tsx). The Hub
+ * finds those with a copy of numberedTitle() (hub/src/trackTitles.ts): keep the two in step.
  *
  * A leading number is only taken for a track number when it can't be part of the name: it has a leading zero
  * ("04"), or it is the song's own track number. Without a separator ("04 God's Plan") it must have the leading
@@ -45,6 +46,9 @@ export function looseWithoutTrackNumber(title: string): string {
 export interface TitleFix {
   path: string;
   albumId?: string;
+  /** the album's artist and name, when the Hub found it (GET /api/admin/tags/numbered) */
+  artist?: string;
+  album?: string;
   from: string;
   to: string;
 }

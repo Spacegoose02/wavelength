@@ -170,6 +170,8 @@ export interface HubService {
 export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' | 'disc' | 'year' | 'genre';
 export type HubTags = Partial<Record<HubTagKey, string>>;
 export interface HubTagSong { id: string; path: string; tags: HubTags }
+/** A song whose title starts with its track number, and the title to write instead (GET /api/admin/tags/numbered). */
+export interface TitleFixRow { path: string; albumId: string; artist: string; album: string; from: string; to: string }
 export interface HubTagMatch {
   source: 'Deezer' | 'MusicBrainz';
   id: string;
@@ -972,7 +974,10 @@ export class HubClient {
   myHistory = () => this.call<{ history: { playedAt: number; track: Track }[] }>('GET', '/api/me/history');
   tagAlbum = (albumId: string) => this.call<{ songs: HubTagSong[] }>('GET', `/api/admin/tags/album/${encodeURIComponent(albumId)}`);
   tagMatches = (artist: string, album: string) => this.call<{ candidates: HubTagMatch[] }>('GET', `/api/admin/tags/match?${new URLSearchParams({ artist, album })}`);
-  saveTags = (label: string, changes: { path: string; tags: HubTags }[]) => this.call<{ batch: string | null; changed: string[]; failed: { path: string; error: string }[] }>('PUT', '/api/admin/tags', { label, changes });
+  /** One Save; pass the same `batch` id with each part of a big one so it stays one Save (lib/tagSave.ts). */
+  saveTags = (label: string, changes: { path: string; tags: HubTags }[], batch?: string) => this.call<{ batch: string | null; changed: string[]; failed: { path: string; error: string }[] }>('PUT', '/api/admin/tags', { label, changes, ...(batch && { batch }) });
+  /** Library care → Numbered titles, a page of Navidrome's songs at a time (no files read). 404 on an older Hub. */
+  numberedTitles = (offset: number, limit: number) => this.call<{ fixes: TitleFixRow[]; scanned: number; total: number }>('GET', `/api/admin/tags/numbered?${new URLSearchParams({ offset: String(offset), limit: String(limit) })}`);
   /** Several albums' songs (Navidrome album ids), each with `albumId`; `missing` = files the Hub can't find. */
   tagAlbums = (albumIds: string[]) => this.call<{ songs: (HubTagSong & { albumId: string })[]; missing: string[] }>('GET', `/api/admin/tags/albums?ids=${albumIds.map(encodeURIComponent).join(',')}`);
   tagValues = () => this.call<{ artists: string[]; genres: string[] }>('GET', '/api/admin/tags/values');

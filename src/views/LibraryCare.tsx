@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { findDuplicates, missingAlbums } from '../lib/libraryCare';
 import { navidromeRefs } from '../lib/merge';
+import { saveInParts } from '../lib/tagSave';
 import { titleFixes, type TitleFix } from '../lib/trackTitles';
+import { HubError } from '../sources/hub';
 import type { Release } from '../sources/releaseRadar';
 import type { Album } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -128,19 +130,20 @@ function Missing() {
   );
 }
 
-/** Albums read from the Hub at a time (it takes up to 200). */
-const SCAN_BATCH = 100;
-/** Files written per Save (the Hub takes up to 5000). */
-const SAVE_BATCH = 1000;
+/** Songs looked at per request (the Hub takes up to 5000; it only reads Navidrome's list, no files). */
+const SCAN_PAGE = 2000;
+/** Albums read per request on a Hub too old to list numbered titles itself (it takes up to 200). */
+const OLD_SCAN_BATCH = 25;
 
 /**
  * Song titles with their track number in front ("04 - God's Plan"), as some renaming tools leave them: found
- * by reading every Navidrome album's tags through the Hub, and fixed by writing the title without the number
- * back into the files. Each Save can be undone under Settings → Server → Tag edits.
+ * in Navidrome's own list of songs by the Hub (`GET /api/admin/tags/numbered`, a page at a time, so a big library
+ * takes seconds and no album needs opening), and fixed by writing the title without the number back into the
+ * files, a few songs per request (lib/tagSave.ts). The whole fix is one Save that Settings → Server → Tag edits
+ * can undo.
  */
 function NumberedTitles() {
   const albums = useCatalog((s) => s.albums);
-  const loaded = useCatalog((s) => s.loaded);
   const [fixes, setFixes] = useState<TitleFix[]>();
   const [progress, setProgress] = useState<string>();
   const [done, setDone] = useState<string>();
@@ -153,46 +156,56 @@ function NumberedTitles() {
     return m;
   }, [albums]);
 
-  const scan = async () => {
-    if (!c) return;
+  /** An older Hub: read every album's files, as before. */
+  const scanAlbums = async (found: TitleFix[], errors: string[]) => {
     const ids = [...byId.keys()];
-    setFixes(undefined);
-    setDone(undefined);
-    const found: TitleFix[] = [];
-    const errors: string[] = [];
-    for (let i = 0; i < ids.length; i += SCAN_BATCH) {
+    for (let i = 0; i < ids.length; i += OLD_SCAN_BATCH) {
       setProgress(`Read ${i} of ${ids.length} albums…`);
       try {
-        const r = await c.tagAlbums(ids.slice(i, i + SCAN_BATCH));
+        const r = await c!.tagAlbums(ids.slice(i, i + OLD_SCAN_BATCH));
         found.push(...titleFixes(r.songs));
       } catch (e) {
         errors.push(String((e as Error).message ?? e));
       }
     }
+  };
+
+  const scan = async () => {
+    if (!c) return;
+    setFixes(undefined);
+    setDone(undefined);
+    setProgress('Looking through your songs…');
+    const found: TitleFix[] = [];
+    const errors: string[] = [];
+    try {
+      for (let offset = 0; ; offset += SCAN_PAGE) {
+        const r = await c.numberedTitles(offset, SCAN_PAGE);
+        found.push(...r.fixes);
+        setProgress(`Looked through ${Math.min(offset + r.scanned, r.total)} of ${r.total} songs…`);
+        if (r.scanned < SCAN_PAGE || offset + r.scanned >= r.total) break;
+      }
+    } catch (e) {
+      if (e instanceof HubError && e.status === 404 && !found.length) await scanAlbums(found, errors);
+      else errors.push(String((e as Error).message ?? e));
+    }
     setProgress(undefined);
     setFixes(found);
-    if (errors.length) setDone(`Some albums couldn't be read: ${errors[0]}`);
+    if (errors.length) setDone(`Not every song could be checked: ${errors[0]}`);
   };
 
   const fix = async () => {
     if (!c || !fixes?.length) return;
     setBusy(true);
-    let changed = 0;
-    const failed: string[] = [];
-    try {
-      for (let i = 0; i < fixes.length; i += SAVE_BATCH) {
-        setDone(`Saving ${i} of ${fixes.length}…`);
-        const r = await c.saveTags('Track numbers taken out of titles', fixes.slice(i, i + SAVE_BATCH).map((f) => ({ path: f.path, tags: { title: f.to } })));
-        changed += r.changed.length;
-        failed.push(...r.failed.map((x) => x.error));
-      }
-      setFixes([]);
-      setDone(`Fixed ${changed} title${changed === 1 ? '' : 's'}${failed.length ? `; ${failed.length} failed: ${failed[0]}` : ''}. Navidrome rescans in a minute to show them. Settings → Server → Tag edits can undo this.`);
-    } catch (e) {
-      setDone(String((e as Error).message ?? e));
-    } finally {
-      setBusy(false);
-    }
+    const r = await saveInParts(c, 'Track numbers taken out of titles', fixes.map((f) => ({ path: f.path, tags: { title: f.to } })), (d, t) => setDone(`Fixed ${d} of ${t}…`));
+    const changed = new Set(r.changed);
+    // what's left to fix: the songs not written yet (the Hub skips one whose title is already clean)
+    const failedPaths = new Set(r.failed.map((f) => f.path));
+    setFixes(r.error ? fixes.filter((f) => !changed.has(f.path)) : fixes.filter((f) => failedPaths.has(f.path)));
+    const n = `${changed.size} title${changed.size === 1 ? '' : 's'}`;
+    setDone(r.error
+      ? `Fixed ${n}, then the Hub stopped answering (${r.error}). Fix again to carry on; titles that are already clean are skipped.`
+      : `Fixed ${n}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. Navidrome rescans in a minute to show them. Settings → Server → Tag edits can undo this.`);
+    setBusy(false);
   };
 
   const groups = useMemo(() => {
@@ -202,7 +215,6 @@ function NumberedTitles() {
   }, [fixes]);
 
   if (!c) return <p className="muted">Sign in to your Hub to fix song titles in your files.</p>;
-  if (!loaded) return <Spinner />;
   if (!fixes) {
     return (
       <>
@@ -212,7 +224,7 @@ function NumberedTitles() {
           without the number; fixing them writes the clean title into the files on your server.
         </p>
         {progress ? <div className="row gap muted small"><Spinner /> {progress}</div>
-          : <button className="btn primary" disabled={!byId.size} onClick={() => void scan()}>Find numbered titles ({byId.size} albums)</button>}
+          : <button className="btn primary" onClick={() => void scan()}>Find numbered titles</button>}
       </>
     );
   }
@@ -231,7 +243,7 @@ function NumberedTitles() {
             const a = byId.get(id);
             return (
               <section key={id} className="dup-group">
-                <h3>{a ? <button className="link" onClick={() => useUi.getState().go({ view: 'album', album: a })}>{a.artist} · {a.title}</button> : 'Other songs'}</h3>
+                <h3>{a ? <button className="link" onClick={() => useUi.getState().go({ view: 'album', album: a })}>{a.artist} · {a.title}</button> : list[0].album ? `${list[0].artist} · ${list[0].album}` : 'Other songs'}</h3>
                 {list.map((f) => (
                   <div key={f.path} className="small" title={f.path}><span className="muted">{f.from}</span> → {f.to}</div>
                 ))}

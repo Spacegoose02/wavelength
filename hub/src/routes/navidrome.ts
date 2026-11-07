@@ -30,6 +30,29 @@ export async function navidromeAdmin(url: string, username: string, password: st
       const list = (await r.json().catch(() => [])) as any[];
       return (Array.isArray(list) ? list : []).filter((x) => x && (x.albumId ?? x.album_id ?? albumId) === albumId);
     },
+    /**
+     * One page of every song in the library (`start` to `end`, sorted by album), with its file path, and how many
+     * songs there are in all. Navidrome's own copy of the tags, so no file is opened.
+     */
+    async songs(start: number, end: number): Promise<{ songs: { id: string; path: string; title: string; trackNumber: number; albumId: string; album: string; artist: string; albumArtist: string }[]; total: number }> {
+      const r = await call(`/api/song?${new URLSearchParams({ _start: String(start), _end: String(end), _sort: 'album', _order: 'ASC' })}`, {
+        headers: { 'x-nd-authorization': `Bearer ${session.token}` },
+      });
+      if (!r.ok) throw new HttpError(502, `Navidrome couldn't list the songs (${r.status})`);
+      const list = (await r.json().catch(() => [])) as any[];
+      const songs = (Array.isArray(list) ? list : []).filter((x) => x?.id && typeof x.title === 'string').map((x) => ({
+        id: String(x.id),
+        path: String(x.path ?? ''),
+        title: String(x.title),
+        trackNumber: Number(x.trackNumber ?? 0) || 0,
+        albumId: String(x.albumId ?? x.album_id ?? ''),
+        album: String(x.album ?? ''),
+        artist: String(x.artist ?? ''),
+        albumArtist: String(x.albumArtist ?? x.album_artist ?? ''),
+      }));
+      const total = Number(r.headers.get('x-total-count'));
+      return { songs, total: Number.isFinite(total) && total > 0 ? total : start + songs.length };
+    },
     /** Every album with its genres (for the genre review). */
     async albums(): Promise<{ id: string; name: string; artist: string; genres: string[]; songs: number }[]> {
       const r = await call(`/api/album?${new URLSearchParams({ _start: '0', _end: '50000', _sort: 'name', _order: 'ASC' })}`, {

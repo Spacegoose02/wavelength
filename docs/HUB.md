@@ -401,7 +401,15 @@ credits of new downloads"), audited as `credits.tidied`. On by default; `PUT /ap
 **The library already there** is fixed from the app: **Library care → Unmatched songs** (`src/views/UnmatchedSongs.tsx`,
 `src/lib/songIssues.ts`, same rule) reads every Navidrome album's tags with `GET /api/admin/tags/albums`, lists the
 songs with joined credits or missing tags, and saves fixes through `PUT /api/admin/tags`, so they show under **Tag
-edits** and can be undone.
+edits** and can be undone. It reads 25 albums per request, three requests at once.
+
+**Big saves go in parts.** `saveTagChanges()` rewrites each file with ffmpeg (a full copy of the file), four at a
+time. A Save of 1000 songs in one request ran for minutes, long enough for a reverse proxy to answer "504" while the
+Hub carried on, so the app couldn't tell how far it got. The app (`src/lib/tagSave.ts`) now sends 25 songs per
+request with the same `batch` id, retries a failed part once (writing the same tags again is a no-op), and stops
+with a count if it fails twice. Library care → Numbered titles finds its songs from Navidrome's song list
+(`GET /api/admin/tags/numbered`, `hub/src/trackTitles.ts`, the app's rule from `src/lib/trackTitles.ts`) instead of
+reading every file; the Save still reads each file before writing it, so a title that is already clean is skipped.
 
 The places that pick the main artist out of a credit (`primaryArtist()` in `hub/src/radar.ts`, `hub/src/kidSafe.ts`
 and `src/lib/match.ts`, `creditedArtists()` in `hub/src/forYou.ts`) split on `;` with or without spaces and on
@@ -844,7 +852,8 @@ with a 4xx status.
 | `GET /api/radar/suggestions[?fresh=1]`, `POST /api/radar/suggestions/:id/hide` | signed in | artists you might like (`{ id, name, picture, fans, because, plays? }`) / never suggest this one again |
 | `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
-| `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }] }` writes tags (only those given) → `{ batch, changed, failed }` |
+| `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }], batch? }` writes tags (only those given), four files at a time → `{ batch, changed, failed }`. Pass the same 16-hex `batch` with each part of a big Save to keep it one Save (`src/lib/tagSave.ts` sends 25 songs per part) |
+| `GET /api/admin/tags/numbered?offset=&limit=` | `library.edit` | Library care → Numbered titles: one page (`limit` ≤ 5000, default 2000) of Navidrome's songs → `{ fixes: [{ path, albumId, artist, album, from, to }], scanned, total }`. Reads Navidrome's list only, no files |
 | `GET /api/admin/tags/history`, `POST /api/admin/tags/undo/:batch` | `library.edit` | saved edits / put a save's files back |
 | `GET /api/admin/tags/albums?ids=a,b` | `library.edit` | up to 200 Navidrome albums' files and tags at once, each with `albumId` (for Edit artist) → `{ songs, missing }` |
 | `GET /api/admin/tags/values` | `library.edit` | `{ artists, genres }`: names in Navidrome and in recent edits, for suggestions |
