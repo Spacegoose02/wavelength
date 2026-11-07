@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- **"Fix 1550 titles" no longer ends in a 504.** Library care sent a big fix as one request of up to 1000 songs.
+  The Hub rewrites each file, so that ran for minutes and the proxy in front of the Hub gave up with "504 error"
+  (the Hub kept writing, but the app never heard how far it got). Fixes are now sent 25 songs at a time with a
+  running count, the Hub writes four files at once, a part that fails is tried once more, and all the parts stay
+  one Save under Tag edits. If the Hub stops answering, the songs already fixed drop off the list and Fix carries
+  on from there. "Split joined artists" and other big saves in Unmatched songs work the same way.
+- **Numbered titles finds songs in seconds.** Instead of opening every album's files through the Hub, it reads
+  Navidrome's own list of songs (`GET /api/admin/tags/numbered`), so it no longer waits on every album being read.
+  An older Hub falls back to reading albums, in smaller requests.
+- **Unmatched songs reads albums in smaller requests, three at once**, so a big library doesn't time out either.
 
 ## 0.26.0
 - **"Lil Wayne;Drake" splits into two artists.** Navidrome only splits artists on "; " with a space, so a credit

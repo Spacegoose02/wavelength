@@ -889,14 +889,17 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
   don't have, with preview and **Get** / **Request**. Live albums, compilations and remix albums are left out.
 - **Numbered titles** (Hub admins): songs whose title has the track number in front, like "04 - God's Plan".
   Some renaming and tagging tools copy the file name into the title tag, and then lyrics and Deezer can't find
-  the song. **Find numbered titles** reads every album's tags through the Hub and lists what it would change;
-  **Fix** writes the title without the number back into the files. Each fix can be undone under
-  **Settings → Server → Tag edits**. A number only counts as a track number when it has a leading zero ("04") or
+  the song. **Find numbered titles** asks the Hub to look through Navidrome's list of every song (a few seconds,
+  even for a big library, and you don't need to open any albums first) and lists what it would change; **Fix**
+  writes the title without the number back into the files, a few songs at a time with a running count. If the
+  Hub stops answering partway, the songs already fixed drop off the list and **Fix** again carries on. The whole
+  fix is one entry under **Settings → Server → Tag edits**, which can undo it. A number only counts as a track number when it has a leading zero ("04") or
   is the song's own track number, so "7 Rings" and "99 Problems" are left alone. Wavelength already shows and
   looks up these songs without the number before you fix them, and an album's **Edit tags** page has a
   **Take track numbers out of titles** button for one album.
 - **Unmatched songs** (Hub admins): songs whose tags keep Navidrome from filing them under the right artist or
-  album. **Find unmatched songs** reads every album's tags through the Hub and lists each song with what's wrong:
+  album. **Find unmatched songs** reads every album's tags through the Hub (a few albums per request, three
+  requests at once) and lists each song with what's wrong:
   - **Joined artists:** several artists in one tag with a semicolon and no space, like "Lil Wayne;Drake".
     Navidrome only splits on "; " (with the space), " / ", " feat. " and " ft. ", so it shows "Lil Wayne;Drake"
     as one artist. **Split joined artists** fixes every one at once by writing "Lil Wayne; Drake"; **Split
