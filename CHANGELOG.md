@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.26.0
 - **"Lil Wayne;Drake" splits into two artists.** Navidrome only splits artists on "; " with a space, so a credit
   written "Lil Wayne;Drake" showed up as one artist. The Hub now writes it as "Lil Wayne; Drake" in new downloads
   before Navidrome scans them, and Wavelength reads both spellings (and " / ") the same when it picks the main
