@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.26.1
 - **"Fix 1550 titles" no longer ends in a 504.** Library care sent a big fix as one request of up to 1000 songs.
   The Hub rewrites each file, so that ran for minutes and the proxy in front of the Hub gave up with "504 error"
   (the Hub kept writing, but the app never heard how far it got). Fixes are now sent 25 songs at a time with a
