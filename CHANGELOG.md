@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- **"Lil Wayne;Drake" splits into two artists.** Navidrome only splits artists on "; " with a space, so a credit
+  written "Lil Wayne;Drake" showed up as one artist. The Hub now writes it as "Lil Wayne; Drake" in new downloads
+  before Navidrome scans them, and Wavelength reads both spellings (and " / ") the same when it picks the main
+  artist for charts, Release Radar, For You and kid-safe checks.
+- **Library care → Unmatched songs** (Hub admins). Lists the songs whose tags keep Navidrome from filing them
+  right: joined artists, "maybe joined" ones like "Lil Wayne,Drake", and songs with no artist, album artist, album,
+  title, genre, year or track number. Filter by problem and search, split every joined credit in one click, set a
+  tag on many ticked songs at once, or edit one song's tags in place. Everything can be undone under Tag edits
+  (`docs/USER-GUIDE.md#library-care`).
 
 ## 0.25.2
 - **Theme outfits fit the critters better.** The Nuclear respirator covers every mouth and sits below the green

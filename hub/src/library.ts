@@ -144,7 +144,7 @@ export class Library {
   private tidying?: Promise<void>;
   /**
    * Run on new downloads in the music folder before Navidrome scans them: genres.ts tidies their genres,
-   * cleanDownloads.ts marks clean versions.
+   * credits.ts their joined artist credits ("A;B" → "A; B"), cleanDownloads.ts marks clean versions.
    */
   onNewMusic: (() => Promise<void>)[] = [];
 

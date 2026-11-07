@@ -79,6 +79,15 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | Merged the wrong way round | The first one ticked is the target | **Settings → Server → Tag edits → Undo**, then tick the right one first |
 | "The Hub can't find …'s files in its music folder" | The Hub's music folder isn't the one Navidrome reads, or is read-only | See the tag editor's setup in `docs/HUB.md` (`WAVELENGTH_MUSIC_DIR`, `WAVELENGTH_NAVIDROME_MUSIC_DIR`) |
 
+## Artist credits and unmatched songs
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| An artist shows as "Lil Wayne;Drake" instead of Lil Wayne and Drake | Navidrome splits artists on "; " with a space, not on ";" alone | **Library care → Unmatched songs → Split joined artists**. New downloads are fixed by the Hub before the scan unless the tick box there is off |
+| "Lil Wayne,Drake" or "Lil Wayne/Drake" isn't split | Commas and slashes can be part of a name ("AC/DC"), so they're only listed as **Maybe joined** | Filter **Maybe joined**, tick the wrong ones and set the Artist, or **Edit tags** one by one. Write "Lil Wayne; Drake" so Navidrome splits it |
+| **Unmatched songs** isn't in Library care | It's for Hub admins (`library.edit`) | Sign in to the Hub as an admin |
+| Fixed songs still look the same | Navidrome shows new tags after its rescan, about a minute later | Wait for the rescan, then **Check again** |
+
 ## In-app updates
 
 | Symptom | Cause | Fix |

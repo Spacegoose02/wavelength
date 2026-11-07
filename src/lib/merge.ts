@@ -40,7 +40,7 @@ export function renameArtist(value: string | undefined, from: string, to: string
  * which Navidrome then lists as one artist like "Lil Baby;Jeremih"), or null when it's one name. "AC/DC" stays one.
  */
 export function splitCredit(name: string): string[] | null {
-  const parts = name.split(/\s*;\s*|\s+\/\s+/).map((s) => s.trim()).filter(Boolean);
+  const parts = name.split(/\s*[;；]\s*|\s+\/\s+/).map((s) => s.trim()).filter(Boolean);
   return parts.length > 1 ? parts : null;
 }
 

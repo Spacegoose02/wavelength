@@ -6,7 +6,7 @@ export const cleanTitle = (s: string) =>
   norm(s.replace(/^\d{1,3}\s*[-.]\s+/, '').replace(/\s*[([](feat|ft|with|remaster|remastered|live|explicit|clean|edited|censored|radio edit|\d{4} remaster)[^)\]]*[)\]]/gi, ''));
 
 /** "Drake Featuring Future & Lil Baby" → "Drake" — charts list features in the artist field. */
-export const primaryArtist = (s: string) => s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|,\s*/i)[0].trim();
+export const primaryArtist = (s: string) => s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|\s*[,;；]\s*|\s+\/\s+/i)[0].trim();
 
 /** Find the same song in a library (title + artist match), returning the playable track. */
 export async function findTrackOnSource(src: MusicSource, t: { title: string; artist: string }): Promise<Track | undefined> {

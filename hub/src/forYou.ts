@@ -26,7 +26,7 @@ export interface ForYouScore {
 
 /** Every artist credited on a chart line: "Drake Featuring Future & Lil Baby" → Drake, Future, Lil Baby. */
 export function creditedArtists(s: string): string[] {
-  return s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|,\s*/i).map((a) => a.trim()).filter(Boolean);
+  return s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|\s*[,;；]\s*|\s+\/\s+/i).map((a) => a.trim()).filter(Boolean);
 }
 const key = (a: string) => normName(primaryArtist(a));
 

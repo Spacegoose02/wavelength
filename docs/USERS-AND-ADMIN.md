@@ -430,7 +430,10 @@ Tag editor (`hub/src/tags.ts`, `hub/src/routes/tags.ts`, `src/views/TagEditor.ts
 the files' tags with ffprobe / ffmpeg, matches albums on Deezer and MusicBrainz, keeps an undo log and
 rescans Navidrome afterwards. Genres (`hub/src/genres.ts`, `hub/src/routes/genres.ts`,
 `src/views/GenreReview.tsx`) builds on it: rules that turn genre variants into one genre, applied to new downloads
-before the scan and, from a review under Settings → Server → Genres, to the rest of the library.
+before the scan and, from a review under Settings → Server → Genres, to the rest of the library. Joined artist
+credits (`hub/src/credits.ts`, `hub/src/routes/credits.ts`) do the same for "Lil Wayne;Drake" → "Lil Wayne; Drake",
+which Navidrome splits; Library care → Unmatched songs (`src/views/UnmatchedSongs.tsx`) lists songs with joined
+credits or missing tags for admins to filter and fix.
 
 Tag editor with MusicBrainz/Deezer match, undo log; playlist import from
 Spotify/Deezer/YouTube Music/CSV/M3U with "request missing". **Cards closed:** tag editor,

@@ -33,6 +33,7 @@ import { importRoutes } from './routes/imports.ts';
 import { inviteRoutes } from './routes/invites.ts';
 import { tagRoutes } from './routes/tags.ts';
 import { genreRoutes } from './routes/genres.ts';
+import { creditRoutes } from './routes/credits.ts';
 import { flagRoutes } from './routes/flags.ts';
 import { kidRoutes } from './routes/kids.ts';
 import { proxyRoutes } from './routes/proxy.ts';
@@ -240,6 +241,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   importRoutes(app, ctx);
   tagRoutes(app, ctx);
   genreRoutes(app, ctx);
+  creditRoutes(app, ctx);
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
   radioRoutes(app, ctx);
