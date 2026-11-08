@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Fixed: "Wrong username or password" on Navidrome through the Hub.** With **Send everyone through the Hub** on,
+  a device's Navidrome source points at the Hub (`<hub>/nd/<id>`) and signs in with a login the Hub made for that
+  device (`<name>~<device id>`). Settings → Sources still showed editable login fields, so typing your own
+  Navidrome login there broke it. A Hub Navidrome source now shows no login fields and a fixed address, and the
+  relay's error says what the address is when it gets a plain Navidrome login.
 
 ## 0.27.0
 - **Audiobooks and podcasts: sorting, speed, skip and chapters.** Audiobooks sort by recently added, recently

@@ -235,6 +235,11 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
   Wavelength would. The Hub must be able to reach the Navidrome address.
   Navidrome gzips bigger replies and the Hub's fetch unzips them, so the relay passes them on unzipped and
   without Navidrome's `content-length` (that's the zipped size; passing it on cut replies short).
+  In Settings → Sources a Navidrome source from the Hub shows no login fields and its address can't be changed:
+  the Hub's login comes back on every sync, and a person's own Navidrome login typed over the relay one is
+  refused. The relay says so in its error ("…use the login the Hub gave this device, not your Navidrome one")
+  when the username has no `~<device id>`. To use your own Navidrome login on a device again, an admin turns
+  **Send everyone through the Hub** off.
 
 - **Logins that never leave the Hub:** the SUB/WAVE admin user and password and the deemix ARL aren't sent
   to any device, admins' included. The app sends those calls to the Hub (`/api/admin/subwave/…`,

@@ -96,6 +96,11 @@ test('kids reach Navidrome through the Hub, with their real login kept there', a
 
   const bad = await rest('ping', {}, { username: kit.secrets.username, password: 'guess' });
   assert.equal(bad.json()['subsonic-response'].error.code, 40);
+  assert.equal(bad.json()['subsonic-response'].error.message, 'Wrong username or password');
+  // their own Navidrome login typed over the relay one: refused, and told what this address is
+  const own = (await rest('ping', {}, { username: 'kit', password: 'kit-real-pw' })).json()['subsonic-response'];
+  assert.equal(own.error.code, 40);
+  assert.match(own.error.message, /through your Hub/);
 
   // audio streams through, Range and all
   const ok = await rest('stream', { id: 's1' }, kit.secrets, { range: 'bytes=0-3' });
