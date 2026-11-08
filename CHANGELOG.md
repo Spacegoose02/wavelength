@@ -8,6 +8,10 @@
   **Scan now**. `GET /api/admin/catalog`, `POST /api/admin/catalog/scan` and **Settings → Server → Music catalog**.
   Sound-alike analysis now takes the library index's Navidrome listing instead of listing Navidrome itself. Navidrome
   still streams (#204).
+- **A moose critter.** The seventh species: a dark brown moose with a big droopy muzzle, a fur bell under the chin,
+  long ears and wide palmate antlers, on long legs with pale stockings and cloven hooves. It plays all eight acts as a
+  boy or a girl. The antlers sit behind the head, so the cowboy hat, the beanie, the headphones and the holiday hats
+  go on between them; the hazmat hood hides them (`MooseFace` in `faces.tsx`, `FIGURES.moose` in `bodies.tsx`, #206).
 
 ## 0.28.0
 - **Browse by genre and decade.** A new **Browse** page shows a tile for every decade and every genre in the library,

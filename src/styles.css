@@ -1590,6 +1590,11 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .species-grey { --skin: #a9b4bc; --skin-dark: #7f8c95; }
 .species-bear-black { --bear-fur: #2f2924; --bear-fur-hi: #5a4e46; --bear-fur-lo: #1a1613; --bear-fur-dark: #1c1916; --bear-muzzle: #b48f66; --bear-muzzle-hi: #dcb68c; --bear-muzzle-lo: #a8825a; --skin: var(--bear-fur); --skin-dark: var(--bear-fur-dark); --belly: var(--bear-muzzle); }
 .species-bear-brown { --bear-fur: #7a4e2d; --bear-fur-hi: #b07a4e; --bear-fur-lo: #4c2f19; --bear-fur-dark: #5e3b20; --bear-muzzle: #d6ad7c; --bear-muzzle-hi: #f0d2a4; --bear-muzzle-lo: #c79b68; --skin: var(--bear-fur); --skin-dark: var(--bear-fur-dark); --belly: var(--bear-muzzle); }
+.species-moose { --skin: #5e3d25; --skin-dark: #2e1d10; --belly: #9a7656; }
+.critter .moose-stocking { fill: #b9a68e; }
+.critter .hoof { fill: #2a221c; }
+/* the moose's antlers stick out either side of every hat, but not through the hazmat hood */
+:root[data-skin-group='nuclear'] .critter .moose-antlers { display: none; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }
