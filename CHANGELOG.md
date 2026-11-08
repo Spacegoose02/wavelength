@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.29.0
+- **The Hub's own music catalog (phase 1 of replacing Navidrome).** The Hub walks the music folder and keeps one row
+  per file in `catalog_songs` (migration 30, `hub/src/catalog.ts`): tags, length, bit rate, format, MusicBrainz ids
+  and the matching Navidrome ids, by path. Only new or changed files are read with ffprobe; a walk that finds less
+  than half the known files removes nothing. Scans 30 s after start, hourly, after every Navidrome scan and on
+  **Scan now**. `GET /api/admin/catalog`, `POST /api/admin/catalog/scan` and **Settings → Server → Music catalog**.
+  Sound-alike analysis now takes the library index's Navidrome listing instead of listing Navidrome itself. Navidrome
+  still streams (#204).
+
 ## 0.28.0
 - **Browse by genre and decade.** A new **Browse** page shows a tile for every decade and every genre in the library,
   with sub-genres on each genre. Open one for its artists and albums, narrow it with sub-genre and decade chips, and
