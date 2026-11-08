@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { setPriority } from 'node:os';
 import { Worker } from 'node:worker_threads';
-import type { Db } from '../db.ts';
+import { tx, type Db } from '../db.ts';
 import { getFeatures } from '../features.ts';
 import { getScanSettings, navidrome } from '../library.ts';
 import { libraryFile } from '../tags.ts';
@@ -9,8 +9,9 @@ import { analyse, SR, type SonicFeatures } from './analyse.ts';
 import { SonicIndex } from './index.ts';
 
 /**
- * Sound-alike analysis (Settings → Features → Sound-alike analysis, off by default). While it's on, the Hub lists
- * the Navidrome library (with the scan login, docs/HUB.md "Library updates") every hour, and analyses each song it
+ * Sound-alike analysis (Settings → Features → Sound-alike analysis, off by default). While it's on, the Hub takes
+ * the Navidrome library's songs from the library index (one listing with the scan login, docs/HUB.md "Library
+ * updates") every hour, and analyses each song it
  * hasn't yet, one at a time at low priority: ffmpeg decodes 60 seconds from about a third of the way in, and
  * sonic/analyse.ts measures it. Roughly 1–2 seconds a song on a NAS, so a 20 000-song library takes most of a
  * night the first time. Needs the music folder mapped into the Hub (WAVELENGTH_MUSIC_DIR), like the tag editor.
@@ -110,6 +111,8 @@ export class SonicWorker {
   private current: string | null = null;
   private lastListAt: number | null = null;
   private lastError: string | null = null;
+  /** Navidrome's songs from the library index (libraryIndex.ts `navidromeSongs`), set by app.ts; null lists here. */
+  listSongs: () => Promise<{ id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }[] | null> = async () => null;
   /** for tests */
   decodeFn = decode;
   /** for tests; a worker thread otherwise */
@@ -168,15 +171,21 @@ export class SonicWorker {
         features = CASE WHEN sonic_songs.path = excluded.path THEN sonic_songs.features ELSE NULL END,
         error = CASE WHEN sonic_songs.path = excluded.path THEN sonic_songs.error ELSE NULL END,
         path = excluded.path`);
-    for (let offset = 0; offset < 500_000; offset += 500) {
-      const r = await navidrome(s, 'search3', { query: '', songCount: '500', songOffset: String(offset), artistCount: '0', albumCount: '0' });
-      const songs = (r?.searchResult3?.song ?? []) as { id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }[];
-      for (const x of songs) {
-        if (!x.id || !x.path) continue;
-        seen.add(String(x.id));
-        upsert.run(String(x.id), x.path, x.title ?? '', x.artist ?? '', x.album ?? '', Math.round(x.duration ?? 0));
+    const add = (x: { id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }) => {
+      if (!x.id || !x.path) return;
+      seen.add(String(x.id));
+      upsert.run(String(x.id), x.path, x.title ?? '', x.artist ?? '', x.album ?? '', Math.round(x.duration ?? 0));
+    };
+    // the library index's listing when there is one (one listing of Navidrome for the whole Hub)
+    const listed = await this.listSongs();
+    if (listed) tx(this.db, () => listed.forEach(add));
+    else {
+      for (let offset = 0; offset < 500_000; offset += 500) {
+        const r = await navidrome(s, 'search3', { query: '', songCount: '500', songOffset: String(offset), artistCount: '0', albumCount: '0' });
+        const songs = (r?.searchResult3?.song ?? []) as { id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }[];
+        songs.forEach(add);
+        if (songs.length < 500) break;
       }
-      if (songs.length < 500) break;
     }
     if (seen.size) {
       const ids = (this.db.prepare('SELECT id FROM sonic_songs').all() as { id: string }[]).map((r) => r.id).filter((id) => !seen.has(id));

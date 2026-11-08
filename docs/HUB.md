@@ -654,6 +654,35 @@ three ways:
   (artists they play), their Release Radar follows, and Deezer's related artists of their 10 most played artists
   (the Made for you lookups, cached a day), with a reason for each.
 
+## Music catalog
+
+The first step of the Hub becoming the household's music server instead of Navidrome (plan and phases:
+`reviews/wavelength-own-music-server-2026-11-08.md` in the project files). The Hub reads the music folder itself
+(`hub/src/catalog.ts`, table `catalog_songs`, migration 30) and keeps one row per music file: title, artist, album,
+album artist, track and disc, year, genre as tagged, explicit / clean (`ITUNESADVISORY`), length, bit rate, format,
+MusicBrainz ids, and which Navidrome song it is. **Nothing devices play changes yet:** Navidrome still scans, streams
+and hands out ids.
+
+- **Scanning.** A scan walks the folder and only stats files; a file is read with ffprobe (four at a time, lowest CPU
+  priority) when it is new or its size or change time moved. The first scan of 26,000 songs takes roughly 15 to 35
+  minutes on a NAS; after that a scan takes seconds plus whatever changed. It runs 30 seconds after the Hub starts,
+  every hour, after every Navidrome scan (so after downloads, tag edits and deletes), and on **Scan now**.
+- **Skipped:** hidden folders (`.wavelength-trash` …) and folders with a `.ndignore`, like Navidrome. Files ffprobe
+  can't read are kept with the reason and listed.
+- **An empty-looking folder drops nothing.** When a scan finds less than half the files the catalog has (a share
+  that isn't mounted), nothing is removed and the scan says so.
+- **Matching to Navidrome** is by path: Navidrome's song paths (absolute under `WAVELENGTH_NAVIDROME_MUSIC_DIR`, or
+  relative to its library) are mapped onto the music folder, and `nd_id`, `nd_album_id` and `nd_artist_id` are saved.
+  Files Navidrome doesn't list stay unmatched.
+- **One listing of Navidrome.** The library index (Search, Discover's library check, Guest Jam) used to list Navidrome
+  every hour, and sound-alike analysis listed it again on its own. Now the library index lists it once
+  (`LibraryIndex.navidromeSongs()`), and the catalog's matching and sound-alike analysis both take that copy.
+- **Settings → Server → Music catalog** shows songs, albums, artists and hours, how many match Navidrome, formats,
+  top genres, files missing tags, and files that couldn't be read.
+
+Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
+under Library updates; without it the catalog still scans.
+
 ## Search
 
 With the Navidrome admin login set under Library updates, the app's Search page asks the Hub instead of searching
@@ -861,6 +890,8 @@ with a 4xx status.
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
+| `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
+| `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |
 | `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |
 | `POST /api/lyrics/translate` | signed in, `lyricsTranslate` on, the AI DJ allowed | `{ key, lines, mode: translate\|romanize, to }` → `{ lines, cached, …allowance }`: one line out for each line in, through the AI DJ's quick model; kept in memory for the house (500 songs) |
 | `GET /api/lyrics?key=` | signed in | `{ lyrics }`: what an app in the house found for that song, or null (`hub/src/api/lyrics.ts`) |

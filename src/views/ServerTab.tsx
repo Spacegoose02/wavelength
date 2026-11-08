@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { HubError, type HubAdminService, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit, type HubTrashAlbum } from '../sources/hub';
+import { HubError, type HubAdminService, type HubCatalogStatus, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit, type HubTrashAlbum } from '../sources/hub';
 import { hubClient } from '../store/hub';
 import { GenreReview } from './GenreReview';
 
@@ -292,6 +292,75 @@ function LibraryScan() {
 }
 
 /**
+ * Music catalog (hub/src/catalog.ts): the Hub reads the music folder itself, the first step of it becoming the
+ * music server. Shows how far a scan got and what it found; nothing here changes what devices play. Hidden on a
+ * Hub that hasn't got it yet.
+ */
+function MusicCatalog() {
+  const c = hubClient();
+  const [st, setSt] = useState<HubCatalogStatus>();
+  const [msg, setMsg] = useState('');
+  const load = () => c?.catalog().then(setSt).catch(() => undefined);
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!st?.scanning) return;
+    const t = setTimeout(load, 3000);
+    return () => clearTimeout(t);
+  }, [st]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!st) return null;
+  const n = (x: number) => x.toLocaleString();
+  const scan = async () => {
+    setMsg('');
+    try {
+      setSt(await c!.scanCatalog());
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    }
+  };
+  const p = st.progress;
+  const sum = st.summary;
+  return (
+    <section>
+      <h2>Music catalog</h2>
+      <p className="muted small">
+        The Hub reads your music folder itself and keeps its own list of every song, with its tags. It's the first step of
+        the Hub becoming your music server. For now Navidrome still plays everything; this list is matched to Navidrome's
+        songs so the two can be compared. The Hub looks for changes every hour and after every Navidrome scan.
+      </p>
+      {st.blocked ? <p className="errors small">{st.blocked}</p> : (
+        <>
+          <div className="server-grid">
+            <div><span className="muted">Songs</span><b>{n(st.files)} files · {n(sum.albums)} albums · {n(sum.artists)} artists · {n(Math.round(sum.hours))} hours</b></div>
+            {st.navidromeSongs > 0 && <div><span className="muted">Matched to Navidrome</span><b>{n(st.linked)} of Navidrome's {n(st.navidromeSongs)} songs{sum.unlinked ? ` · ${n(sum.unlinked)} files Navidrome doesn't list` : ''}</b></div>}
+            {sum.formats.length > 0 && <div><span className="muted">Formats</span><b>{sum.formats.map((f) => `${f.codec} ${n(f.files)}`).join(' · ')}</b></div>}
+            {sum.untagged > 0 && <div><span className="muted">Missing tags</span><b>{n(sum.untagged)} files have no title, artist or album</b></div>}
+            {sum.genres.length > 0 && <div><span className="muted">Top genres</span><b>{sum.genres.slice(0, 8).map((g) => g.genre).join(' · ')}</b></div>}
+          </div>
+          <div className="row gap wrap">
+            <button className="btn" disabled={st.scanning} onClick={scan}>{st.scanning ? 'Scanning…' : 'Scan now'}</button>
+            <span className="muted small">
+              {p ? (p.step === 'walking' ? `Looking through folders · ${n(p.done)} files found` : `Reading ${n(p.done)} of ${n(p.total)} new or changed files`)
+                : st.lastScanAt ? `Last scan ${since(st.lastScanAt)} ago, took ${Math.max(1, Math.round((st.lastScanMs ?? 0) / 1000))} s${st.lastChanges ? ` (${n(st.lastChanges.added)} new, ${n(st.lastChanges.changed)} changed, ${n(st.lastChanges.removed)} removed)` : ''}.`
+                : 'No scan since the Hub started.'}
+            </span>
+            {msg && <span className="errors small">{msg}</span>}
+          </div>
+          {st.lastError && <p className="kid-blocked small">{st.lastError}</p>}
+          {sum.failed.length > 0 && (
+            <details className="small">
+              <summary>{n(st.failed)} files couldn't be read</summary>
+              <ul>{sum.failed.map((f) => <li key={f.path}><code>{f.path}</code>: {f.error}</li>)}</ul>
+            </details>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/**
  * Containers (hub/src/routes/docker.ts): start, stop or restart the household's services and read their
  * logs, when the Hub is set up with a Docker socket proxy. Only the containers named in its settings show.
  */
@@ -557,6 +626,7 @@ export function ServerTab() {
       <Containers />
       <NavidromeAccounts />
       <LibraryScan />
+      <MusicCatalog />
       <GenreReview />
       <TagEdits />
       <DeletedAlbums />

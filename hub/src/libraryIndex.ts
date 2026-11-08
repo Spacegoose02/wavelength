@@ -45,6 +45,8 @@ export class LibraryIndex {
   private scannedAt: () => number | null;
   private now: () => number;
   private songs: IndexedSong[] = [];
+  /** Navidrome's path for each song id (not sent to apps; the catalog and sound-alike analysis use it). */
+  private paths = new Map<string, string>();
   private byTitle = new Map<string, IndexedSong[]>();
   private byPrefix = new Map<string, IndexedSong[]>();
   private searchIndex = new SearchIndex([]);
@@ -90,6 +92,7 @@ export class LibraryIndex {
 
   private reset() {
     this.songs = [];
+    this.paths = new Map();
     this.byTitle.clear();
     this.byPrefix.clear();
     this.searchIndex = new SearchIndex([]);
@@ -102,12 +105,14 @@ export class LibraryIndex {
     const s = getScanSettings(this.db, this.key);
     if (!s) return this.reset();
     const songs: IndexedSong[] = [];
+    const paths = new Map<string, string>();
     try {
       for (let offset = 0; offset < 1_000_000; offset += PAGE) {
         const r = await this.call(s, 'search3', { query: '', songCount: String(PAGE), songOffset: String(offset), artistCount: '0', albumCount: '0' });
         const page = (r?.searchResult3?.song ?? []) as Record<string, unknown>[];
         for (const x of page) {
           if (!x.id || typeof x.title !== 'string') continue;
+          if (typeof x.path === 'string' && x.path) paths.set(String(x.id), x.path);
           songs.push({
             id: String(x.id),
             title: x.title,
@@ -130,6 +135,7 @@ export class LibraryIndex {
       throw e;
     }
     this.songs = songs;
+    this.paths = paths;
     this.byTitle = new Map();
     this.byPrefix = new Map();
     for (const x of songs) {
@@ -143,6 +149,16 @@ export class LibraryIndex {
     this.server = s.url.replace(/\/+$/, '');
     this.listedAt = this.now();
     this.error = null;
+  }
+
+  /**
+   * Every Navidrome song with its path, listed first if needed. The one listing of Navidrome the Hub makes: the
+   * music catalog (catalog.ts) links files to songs with it and sound-alike analysis (sonic/worker.ts) picks its
+   * songs from it. null when there's no scan login or Navidrome couldn't be listed.
+   */
+  async navidromeSongs(): Promise<(IndexedSong & { path?: string })[] | null> {
+    if (!(await this.ensure())) return null;
+    return this.songs.map((x) => ({ ...x, path: this.paths.get(x.id) }));
   }
 
   /** Songs, albums and artists for the Search page (librarySearch.ts). Call ensure() first. */
