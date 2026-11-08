@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **Lyrics follow the song more often.** When Navidrome (a file's lyrics tag) or the Hub's shared copy only has the
+  words without times, LRCLIB is asked for a synced version of the same song, which is used instead (and replaces
+  the Hub's copy), so the line being sung lights up. **Wrong lyrics?** also offers **Use with times** on an entry of
+  another length, for when its times fit well enough; **Lyrics timing** in Tune mouth can shift them.
+
 ## 0.32.0
 - **An owl and a T. rex.** The thirteenth and fourteenth critters, drawn cute. The owlet is drawn like a sticker: a round
   brown head with two short pointed tufts, a big cream face, huge round dark eyes with big shines, a little yellow

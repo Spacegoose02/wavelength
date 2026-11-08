@@ -746,7 +746,13 @@ artist, a free-text search) and takes an entry with words over one marked instru
 "(2011 Remaster)", "- Radio Edit" or "(feat. …)" are left off when searching. When the only match is a different
 length (a live take, say), you get its words without the karaoke timing. An entry only counts when its artist is
 one of the song's and its name is the song's (an entry for "Zoo York" isn't taken for "Zoo"); one with the same name
-but a much different length (over a minute and over a third off) is taken to be another song.
+but a much different length (over a minute and over a third off) is taken to be another song. When Navidrome or the
+Hub only has the words without times, LRCLIB is still asked for a synced version, which wins.
+
+**Why don't the lyrics follow the song?** They only light up line by line when they're synced. A song shows plain
+lyrics when nobody has synced ones, or when the only synced entry is for a recording of another length (more than
+10 s off: a radio edit, an album version with a longer intro), since its times wouldn't line up. **Wrong lyrics?**
+shows each entry's length; **Use with times** keeps an entry's times anyway.
 
 ### Wrong lyrics
 
@@ -755,7 +761,8 @@ when none were found). You get:
 
 - **Other LRCLIB entries** for the song, the likeliest first, each with its artist, album, length (and how far off
   the song's it is), whether it's synced, and its first lines. Tap one to see more of it, then **Use**. An entry of
-  a different length gives its words without the karaoke timing, since the times wouldn't line up.
+  a different length gives its words without the karaoke timing, since the times wouldn't line up; **Use with
+  times** keeps them anyway (shift them with **Lyrics timing** in Tune mouth if they run early or late).
 - **A search box** to look LRCLIB up with your own words, for a song tagged in a way the lookup didn't expect.
 - **Paste lyrics**: plain lines, or LRC (`[01:23.45]A line`) to get the karaoke highlight.
 - **This song has no lyrics**, to hide wrong ones when nobody has the right ones.
