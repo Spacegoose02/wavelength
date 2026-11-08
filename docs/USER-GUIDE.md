@@ -722,6 +722,68 @@ one at discord.com/developers/applications (**New Application**, call it *Wavele
 **Now Playing → Sleep** stops playback after 15, 30 or 45 minutes, 1 hour, 1½ hours, or at the end of the
 current song (or audiobook file). Timed sleeps fade out over the last 20 seconds. The chip shows the time left;
 tap it again to change it or **Turn off**. The timer belongs to this device and is forgotten on restart.
+With an audiobook or podcast that has chapters, **End of this chapter** stops when the chapter playing ends.
+
+## Wake-up alarm
+
+**Settings → Playback → Wake-up alarm** wakes you with music. Pick the time, the days (none means once), and what
+plays: your liked songs, where you left off, DJ mode, the daylist or another mix, a playlist or a radio station. It
+starts quiet and comes up to your volume over the **Fade in** time. A banner offers **Snooze** (9 minutes),
+**I'm up** (keep the music) and **Stop**. If what you picked has nothing to play, it plays your liked songs.
+
+- **Android:** the phone wakes Wavelength for it even when it's closed and the phone is locked, and shows an alarm
+  icon in the status bar. It's set again after the phone restarts. If Android says exact alarms aren't allowed,
+  turn on **Alarms & reminders** for Wavelength in Android's app settings.
+- **Computers:** Wavelength has to be running (it can wait in the tray) and the computer awake.
+
+The alarm belongs to this device.
+
+> **Developer notes.** `lib/alarm.ts` (schedule, fire, fade-in, snooze), `lib/alarmTime.ts` (next time, pure,
+> tested in `test/alarm.test.ts`). Android: `AlarmBridge.kt` sets an `AlarmManager.setAlarmClock` alarm whose
+> PendingIntent opens `MainActivity` over the lock screen; MainActivity sends `alarm` through `MediaBridge` and the
+> page runs `alarmDue()`. `AlarmBootReceiver` restores it after a reboot. The page also checks every 15 s, and
+> `firedFor` makes sure it goes off once.
+
+## Pick up where you left off
+
+Close Wavelength (or let Android close it in the background) and the next time it opens, the queue, the song and
+the spot in it are back, paused. Press play to carry on; nothing loads until you do. Audiobooks reopen on
+Audiobookshelf at the spot it has saved, which may be further on if you listened on another device. It's kept per
+device and per profile for 30 days. Turn it off in **Settings → Playback → Pick up where you left off**.
+
+> **Developer notes.** `lib/resume.ts` saves `{ queue, index, at }` to `localStorage` on every change of song and
+> every 10 s while playing (stream links that the server regenerates, and listening sessions, are left out:
+> `lib/resumeQueue.ts`). `restoreQueue()` in `store/player.ts` puts it back and holds a `pendingResume` that
+> `toggle()` runs.
+
+## Streaming quality
+
+**Settings → Playback → Streaming quality** sets how big songs from Navidrome are, separately **On Wi-Fi** and
+**On mobile data**: **Original** (the file as it is; FLAC is about 35 MB a song), **High** (320 kbps), **Normal**
+(160 kbps) or **Data saver** (96 kbps). Navidrome converts each song as it plays, to Opus (MP3 on a Mac or iPhone).
+Downloads, bit-perfect output and speakers always get the original. Android tells Wavelength when it's on mobile
+data; computers count as Wi-Fi. Plex streams are always the original.
+
+## Audiobooks and podcasts
+
+**Audiobooks** sorts by **Recently added** (the default), **Recently played**, **Title**, **Author**, **Series**,
+**Newest published**, **Longest** or **Shortest**, and the chips show **All**, **Not started**, **In progress** or
+**Finished**. The filter box also finds a series or narrator. **Continue listening** shows the book you're in first.
+
+**Podcasts** sorts shows by **New episodes** (the default: shows with the latest episode first), **Recently added**,
+**Recently played**, **Title**, **Author** or **Most episodes**. A show's episodes sort **Newest**, **Oldest**
+(handy for a show you listen to from the start; **Play** then plays on in that order), **Unplayed first**,
+**Shortest** or **Longest**. Each choice is remembered on this device.
+
+While a book or episode plays, Now Playing and the player bar swap shuffle and repeat for **−15** and **+30**
+(seconds back and on, across a book's files too), and add:
+
+- **Speed** (0.75× to 3×, voices keep their pitch), remembered for each book and each show. A book or show you
+  haven't set starts at the last speed you picked.
+- **Chapters** from Audiobookshelf, with the one playing marked; tap one to go there.
+- **Sleep**, with **End of this chapter**.
+
+The lock screen's and headphones' skip buttons jump 15 and 30 seconds too.
 
 ## Volume levelling, gapless and crossfade
 
@@ -1135,6 +1197,7 @@ With a [Wavelength Hub](HUB.md), **Home** opens on what's made for you:
 | **Discover Weekly** | Best-known songs by artists like your favourites that you haven't played yet. Changes every Monday |
 | **Forgotten favorites** | Songs you played a lot but not for three months |
 | **Time Capsule** | Your most played songs from one to three years ago |
+| **daylist** | What you play at this time of day, changing every few hours: late night, early morning, morning, afternoon, evening and night, with weekends apart from weekdays. Named after it, like "daylist: chill Saturday night" (the mood comes from [sound-alike analysis](#sounds-like-this-and-sonic-journeys) when it's on). Comes first on Home |
 
 A mix only shows songs your library has: the Hub suggests, and Wavelength finds each one on your Navidrome or Plex
 server. So Discover Weekly gets better as you add music, and a mix that finds nothing tells you so. Open a mix to

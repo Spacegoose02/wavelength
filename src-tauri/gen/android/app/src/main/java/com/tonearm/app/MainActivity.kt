@@ -1,6 +1,7 @@
 package com.tonearm.app
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -34,6 +35,29 @@ class MainActivity : TauriActivity() {
       WindowInsetsCompat.CONSUMED
     }
     requestLocalNetworkAccess()
+    alarmPending = isAlarm(intent)
+    if (alarmPending) showOverLockScreen()
+  }
+
+  /** The wake-up alarm opened us (AlarmBridge.kt). The page hears "alarm" once it's listening. */
+  private var alarmPending = false
+
+  private fun isAlarm(i: Intent?) = i?.getBooleanExtra(AlarmBridge.EXTRA, false) == true
+
+  private fun showOverLockScreen() {
+    if (Build.VERSION.SDK_INT >= 27) {
+      setShowWhenLocked(true)
+      setTurnScreenOn(true)
+    }
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    if (isAlarm(intent)) {
+      intent.removeExtra(AlarmBridge.EXTRA)
+      showOverLockScreen()
+      if (webView != null) MediaBridge.send("alarm") else alarmPending = true
+    }
   }
 
   /** Hook up the native media session (steering wheel / Bluetooth / lock screen controls) and in-app updates. */
@@ -41,6 +65,10 @@ class MainActivity : TauriActivity() {
     this.webView = webView
     MediaBridge.attach(this, webView)
     UpdateBridge.attach(this, webView)
+    if (alarmPending) {
+      alarmPending = false
+      MediaBridge.send("alarm")
+    }
     MediaBridge.onKeepAwakeChanged = { keep ->
       host?.refresh()
       // already in the background: apply the change now instead of at the next pause / resume

@@ -1,6 +1,8 @@
 import { canDesktop, toggleMiniPlayer } from '../lib/desktop';
 import { useSettings } from '../store/settings';
 import { ShuffleButton } from './ShuffleButton';
+import { SkipButton } from './SpokenControls';
+import { isSpoken } from '../lib/spoken';
 import { trackArt, useArtworkList } from '../lib/artwork';
 import { useUi } from '../store/ui';
 import { Cover } from './common';
@@ -54,13 +56,16 @@ export function PlayerBar() {
           <Visualizer className="lcd-viz" bars={19} mode="classic" off={covered} />
         </div>
         <div className="transport">
-          <ShuffleButton />
+          {/* audiobooks and podcasts: 15 s back and 30 s on in place of shuffle and repeat */}
+          {isSpoken(t) ? <SkipButton back /> : <ShuffleButton />}
           <button className="tbtn" onClick={p.prev} title="Previous"><IconPrev /></button>
           <button className="tbtn play" onClick={p.toggle} title="Play/Pause">{p.playing ? <IconPause /> : <IconPlay />}</button>
           <button className="tbtn" onClick={p.next} title="Next"><IconNext /></button>
-          <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat} title={`Repeat: ${p.repeat}`}>
-            <IconRepeat />{p.repeat === 'one' && <sup>1</sup>}
-          </button>
+          {isSpoken(t) ? <SkipButton /> : (
+            <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat} title={`Repeat: ${p.repeat}`}>
+              <IconRepeat />{p.repeat === 'one' && <sup>1</sup>}
+            </button>
+          )}
         </div>
         <Seek live={live} disabled={!t} />
       </div>

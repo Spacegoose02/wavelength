@@ -38,7 +38,8 @@ export const useHifi = create<HifiState>()(
 );
 
 /** Navidrome sends the original file only when asked (a player's transcoding setting may say otherwise). */
-const original = (url: string) => (/\/rest\/stream(\.view)?\?/.test(url) && !/[?&]format=/.test(url) ? `${url}&format=raw` : url);
+const original = (url: string) =>
+  /\/rest\/stream(\.view)?\?/.test(url) ? `${url.replace(/&(format|maxBitRate)=[^&]*/g, '')}&format=raw` : url;
 
 const output: RemoteOutput = {
   load: (url, startAt) =>

@@ -200,6 +200,7 @@ export function DjAdminTab() {
       </section>
 
       {s.voice && <VoiceSection c={c} data={data} voice={s.voice} save={save} setErr={setErr} setNote={setNote} />}
+      {s.voice && <ListenSection data={data} voice={s.voice} save={save} />}
 
       <section>
         <h2>Spending</h2>
@@ -363,6 +364,57 @@ function VoiceSection({ c, data, voice: v, save, setErr, setNote }: {
           <p className="muted small">
             Get a key at platform.openai.com → API keys. A line is about 150 characters, so each one costs about
             {' '}{money((150 * v.openaiPrice) / 1e6)}; it counts toward the AI DJ limits above. The key never leaves the Hub.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Who understands spoken requests to the DJ (hub/src/dj/voice.ts transcribe, src/lib/voiceInput.ts). */
+function ListenSection({ data, voice: v, save }: {
+  data: HubDjAdmin;
+  voice: HubDjVoiceSettings;
+  save: (b: { voice?: Partial<HubDjVoiceSettings> }, done?: string) => Promise<void>;
+}) {
+  const engine = v.listen ?? 'device';
+  return (
+    <section id="voice-requests">
+      <h2>Voice requests</h2>
+      <p className="muted small">
+        A microphone in the DJ chat and DJ mode lets people ask out loud. Some devices understand speech by themselves (Chrome,
+        Edge and Safari, but not the Android app); Whisper or OpenAI on the Hub works on every device.
+      </p>
+      <div className="editor">
+        <div className="editor-grid">
+          <label>Understood by
+            <select value={engine} onChange={(e) => save({ voice: { listen: e.target.value as HubDjVoiceSettings['listen'] } })}>
+              <option value="device">Each device’s own speech recognition (free, where there is one)</option>
+              <option value="whisper">Whisper on your Hub (free, private)</option>
+              <option value="openai">OpenAI (paid, about $0.003 a minute)</option>
+            </select>
+          </label>
+          {engine === 'whisper' && (
+            <>
+              <label>Whisper’s address
+                <input defaultValue={v.whisperUrl} placeholder="http://whisper:8000" onBlur={(e) => e.target.value.trim() !== v.whisperUrl && save({ voice: { whisperUrl: e.target.value.trim() } })} />
+              </label>
+              <label>Model
+                <input defaultValue={v.whisperModel} placeholder="Systran/faster-whisper-small" onBlur={(e) => e.target.value.trim() !== v.whisperModel && save({ voice: { whisperModel: e.target.value.trim() } })} />
+              </label>
+            </>
+          )}
+        </div>
+        {engine === 'whisper' && (
+          <p className="muted small">
+            Whisper runs in its own container next to the Hub (speaches: ghcr.io/speaches-ai/speaches, port 8000), so nothing
+            leaves your server. A request takes a second or two on a normal CPU. See docs/AI-DJ.md → Ask out loud.
+          </p>
+        )}
+        {engine === 'openai' && (
+          <p className="muted small">
+            Uses the OpenAI key from the voice settings above{data.openaiKey?.set ? '' : ' (none saved yet: pick OpenAI as the voice for a moment to paste one)'}.
+            A 5-second request costs a fraction of a cent and counts toward the AI DJ limits.
           </p>
         )}
       </div>

@@ -1,3 +1,4 @@
+import { MicButton } from '../components/MicButton';
 import { useEffect, useRef, useState } from 'react';
 import { djTurn, finish, lastPlaylist, toolLabel } from '../lib/dj';
 import { HubError, type HubDjChat, type HubDjEntry, type HubDjStatus, type HubDjTurn } from '../sources/hub';
@@ -180,6 +181,7 @@ export function DJ() {
         <form className="dj-input" onSubmit={(e) => { e.preventDefault(); send(); }}>
           <textarea rows={2} value={draft} placeholder="Ask the DJ…" onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} />
+          <MicButton className="btn" disabled={!!busy} onText={(t) => void send(t)} />
           <button className="btn primary" type="submit" disabled={!!busy || !draft.trim()}>Send</button>
         </form>
       )}

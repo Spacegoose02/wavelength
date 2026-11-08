@@ -135,3 +135,17 @@ test('Less motion stops animations', async ({ page }) => {
   await page.getByRole('radio', { name: 'Full motion' }).click();
   await expect(page.locator('html')).not.toHaveClass(/reduce-motion/);
 });
+
+test('Playback settings show streaming quality, resume and the wake-up alarm', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('nav.sidebar button.nav', { hasText: 'Settings' }).click();
+  await page.getByLabel('Search settings').fill('alarm');
+  await page.locator('.settings-found .menu-item', { hasText: 'Wake-up alarm' }).click();
+  await expect(page.locator('h2', { hasText: 'Streaming quality' })).toBeVisible();
+  await expect(page.locator('h2', { hasText: 'Pick up where you left off' })).toBeVisible();
+  const alarm = page.locator('#alarm');
+  await alarm.getByTitle('Saturday').click();
+  await expect(alarm.locator('small', { hasText: 'Mon, Tue, Wed, Thu, Fri, Sat' })).toBeVisible();
+  await page.getByRole('group', { name: 'On mobile data' }).getByRole('button', { name: 'Data saver' }).click();
+  await expect(page.getByText('On mobile data: 96 kbps')).toBeVisible();
+});

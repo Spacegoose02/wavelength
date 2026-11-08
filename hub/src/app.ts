@@ -144,6 +144,15 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     videos: undefined as unknown as Videos,
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.mixes = new Mixes(db, ctx.mixLookups);
+  ctx.mixes.mood = (song) => {
+    try {
+      const id = typeof song.track?.id === 'string' ? song.track.id : undefined;
+      const i = ctx.sonic.index.find({ id, artist: song.artist, title: song.title });
+      return i === undefined ? undefined : ctx.sonic.index.hit(i).mood;
+    } catch {
+      return undefined;
+    }
+  };
   ctx.station = new Station(db, ctx.dj, ctx.mixes, opts.stationChart);
   ctx.videos = new Videos(opts.videoSearch ?? ((q, n) => ctx.ytdlp.search(q, n)));
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
@@ -172,6 +181,8 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
 
   // database backups, for restore (routes/server.ts); the route sets how big
   app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
+  // spoken requests to the DJ (routes/dj.ts /api/dj/listen)
+  app.addContentTypeParser(/^audio\//, { parseAs: 'buffer', bodyLimit: 3_000_000 }, (_req, body, done) => done(null, body));
 
   // HTML forms post url-encoded bodies
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string', bodyLimit: 16 * 1024 }, (_req, body, done) => {

@@ -16,6 +16,8 @@ import { TogetherButton } from './Together';
 import { RadioGetButton } from './RadioGetButton';
 import { SongRadioButton } from './SongRadioButton';
 import { SleepButton } from './SleepButton';
+import { ChaptersButton, SkipButton, SpeedButton } from './SpokenControls';
+import { isSpoken } from '../lib/spoken';
 import { DjModeButton } from './DjStation';
 import { useStation } from '../lib/djStation';
 import { TrashPanda, DJ_NAME } from './TrashPanda';
@@ -66,7 +68,7 @@ export function NowPlaying() {
         <NowPlayingStage art={art} alt={t.title} />
         <div className="np-side">
           {/* the album, song and artist open their library pages (and close Now Playing) */}
-          <div className="np-kicker">{live ? 'Live radio' : t.kind === 'book' ? 'Audiobook' : album
+          <div className="np-kicker">{live ? 'Live radio' : t.kind === 'book' ? 'Audiobook' : t.kind === 'episode' ? 'Podcast' : album
             ? <button className="np-link" title="Go to album" onClick={() => go({ view: 'album', album })}>{t.album}</button>
             : t.album}</div>
           <h1 className="np-title">{album && !live
@@ -82,10 +84,11 @@ export function NowPlaying() {
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} label="Add to playlist" />}
             {t.kind === 'track' && <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>}
             {live && <RadioGetButton text={p.liveTitle} />}
+            {isSpoken(t) && <><SpeedButton track={t} /><ChaptersButton track={t} /><SleepButton /></>}
             <CastButton className="chip" />
             <DjModeButton />
             {singing && t.kind === 'track' && <SingButton onOn={() => setShowLyrics(true)} />}
-            {sleeping && <SleepButton />}
+            {sleeping && !isSpoken(t) && <SleepButton />}
             <button type="button" className={`chip np-more ${more ? 'on' : ''}`} aria-expanded={more} onClick={toggleMore}>{more ? 'Less' : 'More'}</button>
           </div>
           {more && (
@@ -100,17 +103,17 @@ export function NowPlaying() {
               <TogetherButton className="chip" />
               <DevicesButton className="chip" />
               <EqButton className="chip" />
-              {!sleeping && <SleepButton />}
+              {!sleeping && !isSpoken(t) && <SleepButton />}
             </div>
           )}
           <Visualizer className="np-viz" bars={48} mode="smooth" />
           {!live && <Seek className="seek big" remaining />}
           <div className="transport big">
-            <ShuffleButton />
+            {isSpoken(t) ? <SkipButton back /> : <ShuffleButton />}
             <button className="tbtn" onClick={p.prev} aria-label="Previous"><IconPrev /></button>
             <button className="tbtn play" onClick={p.toggle} aria-label={p.playing ? 'Pause' : 'Play'}>{p.playing ? <IconPause /> : <IconPlay />}</button>
             <button className="tbtn" onClick={p.next} aria-label="Next"><IconNext /></button>
-            <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat} aria-label={`Repeat: ${p.repeat}`}><IconRepeat /></button>
+            {isSpoken(t) ? <SkipButton /> : <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat} aria-label={`Repeat: ${p.repeat}`}><IconRepeat /></button>}
           </div>
           {showLyrics && t.kind === 'track' && <><SingControls /><LyricsPanel track={t} /></>}
           {!(showLyrics && t.kind === 'track') && <UpNext />}

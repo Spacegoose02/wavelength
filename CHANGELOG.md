@@ -1,6 +1,22 @@
 # Changelog
 
 ## Unreleased
+- **Audiobooks and podcasts: sorting, speed, skip and chapters.** Audiobooks sort by recently added, recently
+  played, title, author, series, published or length, with Not started / In progress / Finished chips. Podcasts sort
+  by new episodes, recently added, recently played, title, author or most episodes, and a show's episodes by newest,
+  oldest, unplayed first or length. Now Playing gets a speed picker (remembered per book and per show), −15 / +30
+  buttons, a chapter list, and a sleep timer for the end of the chapter (`lib/shelfSort.ts`, `lib/spoken.ts`).
+- **Pick up where you left off.** The queue and the spot in the song come back, paused, after the app restarts
+  (`lib/resume.ts`).
+- **Streaming quality.** Separate Original / High / Normal / Data saver settings for Wi-Fi and mobile data; Navidrome
+  converts on the fly (`lib/streamQuality.ts`).
+- **daylist.** A Made for you mix for this time of day, named after it ("daylist: chill Saturday night"). The app
+  sends its time zone with `GET /api/mixes?tz=`; older apps get no daylist (`hub/src/mixes.ts`).
+- **Wake-up alarm.** Settings → Playback. On Android an alarm clock alarm opens the app over the lock screen
+  (`AlarmBridge.kt`, new permissions: exact alarms, boot completed); on computers the app must be running.
+- **Ask the DJ out loud.** A microphone in the DJ chat and DJ mode, using the device's speech recognition or, set
+  under Settings → AI DJ → Voice requests, Whisper or OpenAI through `POST /api/dj/listen`. Adds the microphone
+  permission on Android and the usage text on Mac and iOS.
 - **Home Assistant can hand playback off between your devices.** `POST /api/ha/players/:id/handoff` with
   `{ "to": "Kitchen" }` moves the queue, song and spot to the other device and pauses this one, like "play this
   queue from here" in Devices. Handy from a dashboard button or a macro pad.

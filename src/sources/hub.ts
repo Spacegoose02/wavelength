@@ -303,7 +303,7 @@ export interface HubMix {
   id: string;
   name: string;
   description: string;
-  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend';
+  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend' | 'daylist';
   songs: HubMixSong[];
 }
 
@@ -721,6 +721,10 @@ export interface HubDjVoiceSettings {
   openaiModel: string;
   openaiVoice: string;
   openaiPrice: number;
+  /** Who understands spoken requests (hub/src/dj/voice.ts transcribe). */
+  listen?: 'device' | 'whisper' | 'openai';
+  whisperUrl?: string;
+  whisperModel?: string;
 }
 export interface HubDjAdmin {
   settings: HubDjSettings;
@@ -783,7 +787,8 @@ export class HubClient {
   }
 
   me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean>; shared?: { discordAppId?: string | null } }>('GET', '/api/me');
-  mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes${fresh ? '?fresh=1' : ''}`);
+  /** With the device's time zone, so the Hub can add the daylist for this time of day. */
+  mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes?tz=${new Date().getTimezoneOffset()}${fresh ? '&fresh=1' : ''}`);
   blendPeople = () => this.call<{ optedIn: boolean; people: { id: number; displayName: string; optedIn: boolean }[] }>('GET', '/api/blend/people');
   setBlendOptIn = (on: boolean) => this.call<{ optedIn: boolean }>('PUT', '/api/blend/optin', { on });
   blend = (ids: number[]) => this.call<{ mix: HubMix }>('GET', `/api/blend?with=${ids.join(',')}`);
@@ -1085,6 +1090,17 @@ export class HubClient {
   djVoice = () => this.call<HubDjVoiceInfo>('GET', '/api/dj/voice');
   /** An MP3 of `text` in the Hub's voice. */
   djSpeak = (b: { text: string; voice?: string; speed?: number; style?: string }) => this.blob('/api/dj/speak', b);
+  /** How spoken requests are understood (lib/voiceInput.ts): the device's own recognition, or Whisper / OpenAI on the Hub. */
+  djListenEngine = () => this.call<{ engine: 'device' | 'whisper' | 'openai' }>('GET', '/api/dj/listen');
+  /** A recorded request → its words. */
+  async djListen(audio: Blob, seconds: number): Promise<string> {
+    const headers: Record<string, string> = { 'content-type': audio.type || 'audio/webm' };
+    if (this.token) headers.authorization = `Bearer ${this.token}`;
+    const res = await http(`${this.url}/api/dj/listen?seconds=${Math.round(seconds)}`, { method: 'POST', headers, body: await audio.arrayBuffer() });
+    const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+    if (!res.ok) throw new HubError(res.status, data.error || `${res.status} ${res.statusText || 'error'}`, false);
+    return data.text ?? '';
+  }
   djAdminVoice = () => this.call<HubDjVoiceInfo>('GET', '/api/admin/dj/voice');
   testDjVoice = (b: { voice?: string; text?: string }) => this.blob('/api/admin/dj/voice/test', b);
   djAdmin = () => this.call<HubDjAdmin>('GET', '/api/admin/dj');

@@ -1,6 +1,10 @@
 import { BlendView, MixView } from './views/Mix';
 import { startSmartOffline } from './lib/smartOffline';
 import { startDeadZone } from './lib/deadZone';
+import './lib/spoken';
+import { startResume } from './lib/resume';
+import { startAlarm } from './lib/alarm';
+import { AlarmBanner } from './components/AlarmSettings';
 import { startDjVoice } from './lib/djVoice';
 import { startDjStation } from './lib/djStation';
 import { startSingMode } from './lib/singMode';
@@ -255,6 +259,8 @@ export default function App() {
     startTogether();
     startSmartOffline();
     startDeadZone();
+    startResume();
+    startAlarm();
     startDjVoice();
     startDjStation();
     startSingMode();
@@ -335,6 +341,7 @@ export default function App() {
       )}
       <main className="main">
         <UpdateBanner />
+        <AlarmBanner />
         {history.length > 0 && (!phone || !tabRoot) && <button className="back" onClick={() => window.history.back()} title="Back (Alt+←)"><IconBack /></button>}
         <ErrorBoundary key={JSON.stringify(route).slice(0, 200)} onReset={() => go({ view: 'home' })}>
           <Suspense fallback={<Spinner />}>

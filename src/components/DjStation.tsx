@@ -1,3 +1,4 @@
+import { MicButton } from './MicButton';
 import { useEffect, useState } from 'react';
 import { pickStation, SEGMENT_LABELS, startStation, stopStation, useStation } from '../lib/djStation';
 import { useSettings } from '../store/settings';
@@ -121,6 +122,7 @@ export function DjStationPanel({ sheet = false }: { sheet?: boolean }) {
       {s.on && s.missing.length > 0 && <MissingSongs songs={s.missing} title={s.title} />}
       <form className="dj-station-ask" onSubmit={(e) => { e.preventDefault(); send(); }}>
         <input value={ask} maxLength={300} placeholder="Tell the DJ what you want: “90s house”, “chill for cooking”…" onChange={(e) => setAsk(e.target.value)} disabled={s.busy} />
+        <MicButton disabled={s.busy} onText={(t) => void startStation({ ask: t })} />
         <button className="btn small" disabled={s.busy || !ask.trim()}>Go</button>
       </form>
       <label className="check small">
