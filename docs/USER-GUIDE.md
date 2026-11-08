@@ -508,6 +508,9 @@ alien are all possible.
 | **Theremin** | Space-age tunic with a belt and planet badge, on the moon under a hovering UFO | One hand rises over the volume loop with the bass, the other moves toward the pitch antenna with the highs, glowing sound waves pour off the antenna, the UFO lights chase on the beat |
 | **Synth** | Turtleneck, a synth on an X stand in a crop circle, under a saucer's tractor beam | The keys light up with the music, one hand hops on the beat, the other glides along the keys with the highs, the beam brightens with the bass |
 | **Accordion** | A beanie with a pom-pom and a sweater, by a campfire in the pines | The bellows pump faster with the bass and puff out on the beat, the campfire flares with the bass, fireflies blink with the highs |
+| **Driver** | A flat driving cap, a white racing tee and a scarf, at the wheel of a little open-top car coming down a long road at sunset | Swerves one way every two beats with the wheel turning under one hand, bounces on its springs with the bass, the free hand taps the wheel, waves, raises the roof or drums the door (a new move every bar), the road rushes by faster as the band gets louder, the headlights pulse on the beat and the scarf flaps in the wind |
+
+<img src="screenshots/critter-drive.png" alt="Every critter in the Driver act in the Outrun skin, boys on the top row and girls below: each sits up in a pink open-top car with round headlights and a grinning grille, a driving cap (or a bow) on its head and a scarf at its neck, on a road at sunset" width="100%">
 
 **They sing along.** Every critter's mouth opens when someone sings (or raps) and closes when they stop.
 It listens for the lead voice the way you would: sound in the voice range that sits in the centre of the
@@ -572,7 +575,7 @@ critter. The **Boy** / **Girl** switch above the cards picks the look for every 
 and a bow in your skin's accent colour instead of the act's hat. The accordion player keeps her beanie and wears
 the bow on it in another colour, and the DJ keeps her headphones. Girls wear their own outfit in each act: a
 cowgirl denim fringe skirt, a pleated mini (Rapper), a pink tutu (Rocker), a sailor dress (Drummer), a space dress
-(Theremin) and dresses for the DJ, synth and accordion. Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
+(Theremin) and dresses for the DJ, synth and accordion (the driver sits in the car, so only the bow and the top show). Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
@@ -615,12 +618,12 @@ All the critters behave the same way around the music:
   each act does its flourish, at most once every 12 seconds: the country critter spins the banjo and tips the hat,
   the DJ double-scratches with a hand in the air, the rapper throws the hype hand high, the rocker does a
   windmill strum, the drummer plays a fill into the crash, the theremin player swoops up the antenna, the synth
-  player runs a glissando down the keys, and the accordion player gives the bellows one long stretch.
+  player runs a glissando down the keys, the accordion player gives the bellows one long stretch, and the driver hops the car off the road with a hand in the air.
 - Everyone casts a soft shadow on the floor, and so do the stands, amps, speakers and drum kit.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ the
   headphones, the country act tips the hat, the
-  accordion player pulls the beanie straight). The rapper lowers the mic, the drummer rests the sticks, the
-  theremin hands drop, the synth hands rest on the keys and the bellows breathe slowly.
+  accordion player pulls the beanie straight, the driver the cap). The rapper lowers the mic, the drummer rests the sticks, the
+  theremin hands drop, the synth hands rest on the keys, the bellows breathe slowly and the car stops, ticking over at the roadside.
 - **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.
 
 > **Developer notes.** `src/components/critters/`. Unlike the other scenes the critters are inline SVG, not
@@ -630,7 +633,7 @@ All the critters behave the same way around the music:
 > - A critter is a **species** (who) playing an **act** (what). `species.tsx` has `SPECIES`: each is a
 >   `Face` (and maybe a `Tail`), plus skin colours in CSS (`--skin`, `--skin-dark` on `.species-<id>`) for
 >   hands and bare arms. `Critter.tsx` has `ACTS`: each act component (`DJ.tsx`, `Country.tsx`,
->   `Rapper.tsx`, `Rocker.tsx`, `Drums.tsx`, `Theremin.tsx`, `Synth.tsx`, `Accordion.tsx`) draws the
+>   `Rapper.tsx`, `Rocker.tsx`, `Drums.tsx`, `Theremin.tsx`, `Synth.tsx`, `Accordion.tsx`, `Drive.tsx`) draws the
 >   scene, clothes, headwear, instrument and hands, and puts `species.Face` in `Head` and `species.Tail`
 >   behind the body. So every species can play every act with no per-pair drawing.
 > - The picks are `critter` (`Species`) and `act` (`Act`) in the settings store, both synced to the Hub.
