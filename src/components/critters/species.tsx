@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Species } from '../../store/settings';
 import { FIGURES, type Figure } from './bodies';
-import { AlienFace, BlackBearFace, BrownBearFace, ElephantFace, GreyFace, LionFace, MooseFace, PandaFace, RaccoonFace, SharkFace, TigerFace, TurtleFace } from './faces';
+import { AlienFace, BlackBearFace, BrownBearFace, ElephantFace, GreyFace, LionFace, MooseFace, OwlFace, PandaFace, RaccoonFace, SharkFace, TigerFace, TrexFace, TurtleFace } from './faces';
 
 /**
  * Who plays: each species is a face (faces.tsx, drawn on the shared skeleton, see parts.tsx) and a figure
@@ -59,4 +59,6 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'tiger', noun: 'tiger', label: 'Tiger', Face: TigerFace, figure: FIGURES.tiger, fit: { eyeY: 176, eyes: [1.28, 1.2], mask: 10, bow: [170, 116, -20] } },
   { id: 'lion', noun: 'lion', label: 'Lion', Face: LionFace, figure: FIGURES.lion, fit: { eyeY: 174, eyes: [1.28, 1.2], mask: 10, bow: [170, 116, -20] } },
   { id: 'panda', noun: 'panda', label: 'Panda', Face: PandaFace, figure: FIGURES.panda, fit: { eyeY: 176, eyes: [1.36, 1.2], mask: 10, bow: [166, 114, -20] } },
+  { id: 'owl', noun: 'owl', label: 'Owl', Face: OwlFace, figure: FIGURES.owl, fit: { eyeY: 178, eyes: [1.42, 1.32], mask: 14, bow: [166, 116, -20] } },
+  { id: 'trex', noun: 'T. rex', label: 'T. rex', Face: TrexFace, figure: FIGURES.trex, fit: { eyeY: 166, eyes: [1.3, 1.22], mask: 16, bow: [168, 114, -20] } },
 ];

@@ -134,6 +134,14 @@ the asset work and a risk on low-end phones and the iOS WebView.
   hat and hazmat hood hide them. The eye patches are drawn outside the `eyes` group so blinks don't squash them,
   and the girl's lashes are pale (`.species-panda .lashes`) so they show on the black. `FIGURES.panda` is a chubby
   top on short black legs with pale toe pads and a little white puff of a tail.
+- An owl and a T. rex (November 2026), drawn cute and kept clear of famous cartoon ones (no snowy post owl,
+  spectacles or mortarboard; no purple dinosaur). The owl's ear tufts are `ear-l` / `ear-r` like the bears' ears,
+  so the rig wiggles them and the cowboy hat hides them. Two optional `Figure` fields shape the arms (`Arm` in
+  parts.tsx): `hand: 'wing'` bars the owl's bare sleeves like feathers (`.wing-bars`, `.species-owl .sleeve`) and
+  fans a feathered tip under the hand, and the T. rex's `fore` makes the forearm thinner than the upper arm, so
+  the short arm reads as bending at a little elbow, with `hand: 'claws'` adding two claws. Its shoulders sit high
+  and close on the chest, but its `reach` is the usual, so its hands still land on every instrument. The T. rex
+  tail sweeps along the ground to the right behind the legs, with little plates (`.dino-plate`).
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

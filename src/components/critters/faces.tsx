@@ -691,3 +691,111 @@ export function PandaFace() {
     </Placed>
   );
 }
+
+/** The owl's left ear tuft (the right is its mirror): a soft pointed tuft of feathers leaning out. */
+const OWL_TUFT = 'M128 140 C 118 116, 112 92, 118 70 C 132 80, 150 94, 160 106 C 154 96, 154 88, 156 82 C 168 94, 176 108, 180 124 Z';
+
+/**
+ * An owlet's face, drawn cute and kept clear of famous cartoon owls (no snowy-white post owl, no spectacles,
+ * no mortarboard): a round brown head with two pointy feather tufts (`ear-l` / `ear-r`, so the rig wiggles them
+ * and the cowboy hat hides them), a pale heart of a facial disc round huge amber eyes, a little orange hooked
+ * beak with the singing mouth under it, rosy cheeks and a few feather marks on the crown. The wings are its
+ * arms (`FIGURES.owl`, `.species-owl .sleeve`).
+ */
+export function OwlFace() {
+  return (
+    <Placed cx={206} cy={174} s={0.84}>
+      <defs>
+        <Shade id="ow-fur" hi="#c99a6a" mid="#9c6b43" lo="#5e3d22" />
+        <Shade id="ow-disc" hi="#fffaf0" mid="#f6e7c8" lo="#d9c19a" />
+        <Shade id="ow-beak" hi="#ffd27a" lo="#d9822a" />
+      </defs>
+      <g data-part="ear-l">
+        <path d={OWL_TUFT} fill="url(#ow-fur)" className="ol" />
+        <path d="M134 126 C 128 108, 126 94, 128 84" fill="none" stroke="#5e3d22" strokeWidth="2.5" strokeLinecap="round" opacity="0.6" />
+      </g>
+      <g data-part="ear-r">
+        <g transform="translate(412 0) scale(-1 1)">
+          <path d={OWL_TUFT} fill="url(#ow-fur)" className="ol" />
+          <path d="M134 126 C 128 108, 126 94, 128 84" fill="none" stroke="#5e3d22" strokeWidth="2.5" strokeLinecap="round" opacity="0.6" />
+        </g>
+      </g>
+      <HeadShape id="owl" fill="url(#ow-fur)" d="M206 94 C 270 94, 306 132, 306 178 C 306 226, 266 258, 206 258 C 146 258, 106 226, 106 178 C 106 132, 142 94, 206 94 Z">
+        {/* feather marks on the crown */}
+        <path d="M180 112 l 5 6 l 5 -6 M202 106 l 4 6 l 4 -6 M224 112 l 5 6 l 5 -6 M190 126 l 4 5 l 4 -5 M214 126 l 4 5 l 4 -5" fill="none" stroke="#5e3d22" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+        {/* the facial disc: two pale rounds meeting over the beak, like a heart */}
+        <path d="M206 150 C 194 128, 120 124, 114 176 C 110 222, 164 244, 206 228 C 248 244, 302 222, 298 176 C 292 124, 218 128, 206 150 Z" fill="url(#ow-disc)" />
+        <path d="M206 150 C 194 128, 120 124, 114 176 C 110 222, 164 244, 206 228 C 248 244, 302 222, 298 176 C 292 124, 218 128, 206 150 Z" fill="none" stroke="#b98a5a" strokeWidth="2.5" strokeDasharray="1 6" strokeLinecap="round" />
+        <ellipse cx="174" cy="112" rx="34" ry="11" fill="rgb(255 255 255 / 0.2)" transform="rotate(-14 174 112)" />
+      </HeadShape>
+      {/* rosy cheeks */}
+      <ellipse cx="136" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.55" />
+      <ellipse cx="276" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.55" />
+      <g data-part="eyes">
+        <circle cx="164" cy="178" r="27" fill="#e7a63a" opacity="0.35" />
+        <circle cx="248" cy="178" r="27" fill="#e7a63a" opacity="0.35" />
+        <Eye cx={164} cy={178} r={22} iris="#e09a22" />
+        <Eye cx={248} cy={178} r={22} iris="#e09a22" k={0.9} />
+        <Lashes l={[146, 164]} r={[266, 164]} />
+      </g>
+      <Pair l="M140 140 Q 156 132 176 138" mid={206} stroke="#5e3d22" width={4.5} />
+      {/* a little hooked beak, with the closed smile and the singing mouth under its tip */}
+      <path data-part="smile" d="M194 224 Q 206 232 218 224" fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
+      <Mouth id="owl" x={206} y={220} w={11} h={22} fill="#5a1a24" line={INK} teeth="none" />
+      <path d="M192 196 Q 206 188 220 196 Q 218 212 206 224 Q 194 212 192 196 Z" fill="url(#ow-beak)" className="ol-thin" />
+      <path d="M198 196 Q 206 192 213 196" fill="none" stroke="rgb(255 255 255 / 0.55)" strokeWidth="2" strokeLinecap="round" />
+    </Placed>
+  );
+}
+
+/**
+ * A baby T. rex's face, drawn cute and kept clear of famous cartoon dinosaurs (not purple, no spots on a long
+ * neck, no roar): a round green head that widens into a big soft snout, a pale yellow chin, darker green
+ * freckles on the crown, big friendly eyes under little brow ridges, two nostrils, rosy cheeks and a wide grin
+ * with two tiny teeth peeking down. No ears, so hats sit on the plain round head; the short clawed arms, big
+ * feet and tail are on the figure (`FIGURES.trex`).
+ */
+export function TrexFace() {
+  return (
+    <Placed cx={206} cy={176} s={0.84}>
+      <defs>
+        <Shade id="tx-skin" hi="#b6e58c" mid="#7cc25a" lo="#457f30" />
+        <Shade id="tx-chin" hi="#fffbe0" lo="#ead98e" />
+      </defs>
+      <HeadShape id="trex" fill="url(#tx-skin)" d="M206 92 C 262 92, 296 124, 298 166 C 300 190, 314 208, 310 230 C 304 258, 260 266, 206 266 C 152 266, 108 258, 102 230 C 98 208, 112 190, 114 166 C 116 124, 150 92, 206 92 Z">
+        {/* the pale chin under the grin */}
+        <path d="M112 236 Q 206 222 300 236 Q 290 268 206 270 Q 122 268 112 236 Z" fill="url(#tx-chin)" />
+        {/* freckles on the crown */}
+        <g fill="#4f8c38" opacity="0.7">
+          <circle cx="182" cy="110" r="5" />
+          <circle cx="206" cy="104" r="4" />
+          <circle cx="230" cy="110" r="5" />
+          <circle cx="194" cy="122" r="2.8" />
+          <circle cx="218" cy="122" r="2.8" />
+          <circle cx="126" cy="194" r="3.4" />
+          <circle cx="286" cy="194" r="3.4" />
+        </g>
+        <ellipse cx="174" cy="114" rx="36" ry="12" fill="rgb(255 255 255 / 0.22)" transform="rotate(-14 174 114)" />
+      </HeadShape>
+      {/* rosy cheeks */}
+      <ellipse cx="136" cy="212" rx="15" ry="9" fill="#ff8f9c" opacity="0.5" />
+      <ellipse cx="276" cy="212" rx="15" ry="9" fill="#ff8f9c" opacity="0.5" />
+      <g data-part="eyes">
+        <Eye cx={166} cy={162} r={20} iris="#8a5a1c" />
+        <Eye cx={246} cy={162} r={20} iris="#8a5a1c" k={0.9} />
+        <Lashes l={[149, 150]} r={[262, 150]} />
+      </g>
+      {/* little brow ridges */}
+      <Pair l="M144 132 Q 160 122 180 130" mid={206} stroke="#3f7a2c" width={6} />
+      {/* nostrils on the snout */}
+      <ellipse cx="192" cy="198" rx="4" ry="2.6" fill="#2f5e22" transform="rotate(-18 192 198)" />
+      <ellipse cx="220" cy="198" rx="4" ry="2.6" fill="#2f5e22" transform="rotate(18 220 198)" />
+      {/* a wide grin with two tiny teeth peeking down at the corners */}
+      <g data-part="smile">
+        <path d="M150 220 Q 206 254 262 220 M146 215 Q 148 222 155 224 M266 215 Q 264 222 257 224" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+        <path d="M170 231 L 176 241 L 181 234 Z M231 234 L 236 241 L 242 231 Z" fill="#fff" className="ol-thin" />
+      </g>
+      <Mouth id="trex" x={206} y={224} w={24} h={32} fill="#5a1a24" line={INK} />
+    </Placed>
+  );
+}
