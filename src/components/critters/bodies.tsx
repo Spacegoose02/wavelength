@@ -227,10 +227,68 @@ const alien = (headY: number, neck: [top: number, bottom: number, width: number]
   ),
 });
 
+
+/** A cloven hoof: two dark toes with a notch between them. */
+function Hoof({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const hoof = (
+    <g>
+      <path d={`M${x - 15} ${y + 6} Q ${x - 15} ${y - 7} ${x - 2} ${y - 7} L ${x - 1} ${y + 6} Z M${x + 15} ${y + 6} Q ${x + 15} ${y - 7} ${x + 2} ${y - 7} L ${x + 1} ${y + 6} Z`} className="hoof ol-thin" />
+      <path d={`M${x - 12} ${y - 3} Q ${x - 8} ${y - 6} ${x - 4} ${y - 5}`} stroke="rgb(255 255 255 / 0.25)" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{hoof}</Pivot> : hoof;
+}
+
+/**
+ * Moose: a deep chest with the shoulders standing high (the hump), long legs with pale "stockings" below the
+ * knee and cloven hooves (or the act's shoes), and a tiny tail tucked behind. The antlers are on the face.
+ */
+const moose: Figure = {
+  head: [186, 0.84],
+  torso: 'M172 252 Q 200 244 228 252 Q 250 256 254 282 Q 256 306 248 320 Q 200 330 152 320 Q 144 306 146 282 Q 150 256 172 252 Z',
+  shoulders: [[156, 272], [244, 272]],
+  arm: 22,
+  paw: 12,
+  reach: 66,
+  waist: [310, 48, 28],
+  chin: [252, 46],
+  Under: ({ legs, shoe }) => {
+    const bare = legs === 'bare';
+    return (
+      <>
+        <Pivot from={[268, 292]} to={[236, 304]} part="tail">
+          <path d="M228 300 Q 250 298 252 312 Q 244 318 230 312 Z" className="bare ol-thin" />
+        </Pivot>
+        <Shaded d={tube([180, 314], [176, 336], [176, 358], 22, 16)} className={legs} />
+        <Shaded d={tube([220, 314], [224, 336], [224, 358], 22, 16)} className={legs} />
+        {bare && (
+          <>
+            <path d={tube([176, 340], [176, 350], [176, 358], 17, 16)} className="moose-stocking" />
+            <path d={tube([224, 340], [224, 350], [224, 358], 17, 16)} className="moose-stocking" />
+          </>
+        )}
+        {shoe ? (
+          <>
+            <Foot at={[174, 364]} rx={18} ry={9} shoe={shoe} />
+            <Foot at={[226, 364]} rx={18} ry={9} shoe={shoe} right />
+          </>
+        ) : (
+          <>
+            <Hoof at={[176, 364]} />
+            <Hoof at={[224, 364]} right />
+          </>
+        )}
+      </>
+    );
+  },
+};
+
 export const FIGURES = {
   raccoon,
   bear,
   shark,
   alien: alien(202, [226, 262, 30]),
   grey: alien(186, [226, 254, 12]),
+  moose,
 } satisfies Record<string, Figure>;

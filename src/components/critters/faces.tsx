@@ -335,3 +335,64 @@ function Bear({ id }: { id: string }) {
 export const BlackBearFace = () => <Bear id="bear-black" />;
 export const BrownBearFace = () => <Bear id="bear-brown" />;
 
+
+/**
+ * One palmate antler (the left; the right is its mirror): a short beam out from the crown into a broad flat
+ * palm with rounded tines along its top edge and a little brow tine forward. Drawn behind the head, so a hat
+ * or a beanie covers the beams and only the palms show either side of it, and headphones sit between them.
+ */
+const ANTLER =
+  'M154 112 C 136 112, 120 112, 106 108 C 84 104, 60 98, 44 84 Q 34 74 36 64 Q 42 63 46 68 Q 44 57 48 50 Q 53 49 56 56 Q 56 46 62 42 Q 67 41 69 49 Q 70 42 76 39 Q 82 40 81 49 Q 85 43 91 43 Q 96 45 93 54 Q 98 50 104 51 Q 109 55 103 63 C 99 74, 103 85, 114 90 C 128 94, 142 96, 156 98 Z';
+
+export function MooseFace() {
+  return (
+    <Placed cx={206} cy={172} s={0.84}>
+      <defs>
+        <Shade id="ms-fur" hi="#8a6242" mid="#5e3d25" lo="#3a2414" />
+        <Shade id="ms-muzzle" hi="#a88464" mid="#7d5a3e" lo="#57391f" />
+        <Shade id="ms-antler" hi="#f4e6c4" mid="#dcc597" lo="#ab8f5e" />
+      </defs>
+      {/* antlers: hidden under the hazmat hood (styles.css), shown with every act's hat */}
+      <g className="moose-antlers">
+        <path d={ANTLER} fill="url(#ms-antler)" className="ol" />
+        <path d="M114 100 Q 86 98 58 84 M78 92 Q 74 74 80 58 M96 94 Q 92 78 98 64" fill="none" stroke="rgb(120 90 50 / 0.35)" strokeWidth="2.5" strokeLinecap="round" />
+        <g transform="translate(412 0) scale(-1 1)">
+          <path d={ANTLER} fill="url(#ms-antler)" className="ol" />
+          <path d="M114 100 Q 86 98 58 84 M78 92 Q 74 74 80 58 M96 94 Q 92 78 98 64" fill="none" stroke="rgb(120 90 50 / 0.35)" strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+      </g>
+      {/* long ears out to the sides, under the antlers; they droop and flick (rig) */}
+      <g data-part="ear-l">
+        <g transform="rotate(-28 116 138)">
+          <ellipse cx="116" cy="138" rx="34" ry="14" fill="url(#ms-fur)" className="ol" />
+          <ellipse cx="112" cy="139" rx="22" ry="7" fill="#c49a76" />
+        </g>
+      </g>
+      <g data-part="ear-r">
+        <g transform="rotate(28 296 138)">
+          <ellipse cx="296" cy="138" rx="32" ry="13" fill="url(#ms-fur)" className="ol" />
+          <ellipse cx="300" cy="139" rx="20" ry="6.5" fill="#c49a76" />
+        </g>
+      </g>
+      {/* the bell: the flap of fur under the chin */}
+      <path d="M190 262 Q 184 290 198 312 Q 205 302 210 310 Q 224 290 222 262 Z" fill="url(#ms-fur)" className="ol" />
+      <HeadShape id="moose" fill="url(#ms-fur)" d="M206 96 C 264 96, 298 130, 298 170 C 298 210, 264 244, 206 244 C 148 244, 114 210, 114 170 C 114 130, 148 96, 206 96 Z">
+        <path d="M184 110 q 4 10 2 18 M206 106 q 2 10 4 18 M226 110 q -2 10 2 16" fill="none" stroke="rgb(0 0 0 / 0.25)" strokeWidth="2" strokeLinecap="round" />
+        <ellipse cx="174" cy="116" rx="34" ry="12" fill="rgb(255 255 255 / 0.12)" transform="rotate(-14 174 116)" />
+      </HeadShape>
+      {/* the big overhanging muzzle, drawn over the head's outline so it hangs below it */}
+      <path d="M168 186 C 176 174, 236 174, 244 186 C 256 200, 274 226, 268 246 C 262 266, 234 270, 206 270 C 178 270, 150 266, 144 246 C 138 226, 156 200, 168 186 Z" fill="url(#ms-muzzle)" className="ol" />
+      <ellipse cx="188" cy="204" rx="24" ry="9" fill="rgb(255 255 255 / 0.16)" transform="rotate(-10 188 204)" />
+      <g data-part="eyes">
+        <Eye cx={164} cy={164} r={15.5} iris="#3a2414" />
+        <Eye cx={248} cy={164} r={15.5} iris="#3a2414" k={0.88} />
+        <Lashes l={[151, 153]} r={[260, 153]} />
+      </g>
+      <Pair l="M146 140 Q 160 132 178 138" mid={206} stroke="#2a1a0e" width={5} />
+      {/* wide nostrils on the end of the muzzle */}
+      <path d="M176 230 Q 168 220 178 214 Q 192 216 194 228 Q 188 236 176 230 Z M236 230 Q 244 220 234 214 Q 220 216 218 228 Q 224 236 236 230 Z" fill="#26170c" />
+      <path data-part="smile" d="M190 248 Q 199 255 206 250 Q 213 255 222 248" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+      <Mouth id="moose" x={206} y={248} w={14} h={22} fill="#5a1a24" line={INK} />
+    </Placed>
+  );
+}
