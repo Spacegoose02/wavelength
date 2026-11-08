@@ -9,6 +9,7 @@ import type { SmartPlaylist } from '../lib/smartPlaylists';
 import type { DontPlay } from '../../hub/src/api/dontPlay';
 import type { MotionPref } from '../lib/motion';
 import { cleanTune, DEFAULT_TUNE, type MouthTune } from '../player/voice';
+import type { StreamQuality } from '../lib/streamQuality';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
@@ -201,6 +202,12 @@ interface SettingsState {
   /** Settings → Downloads → Dead zones (lib/deadZone.ts). Per device, not synced. */
   deadZone: DeadZoneSettings;
   setDeadZone(p: Partial<DeadZoneSettings>): void;
+  /** Settings → Playback → Pick up where you left off (lib/resume.ts). Per device, not synced. */
+  resume: boolean;
+  setResume(on: boolean): void;
+  /** Settings → Playback → Streaming quality (lib/streamQuality.ts), on Wi-Fi and on mobile data. Per device, not synced. */
+  streamQuality: { wifi: StreamQuality; mobile: StreamQuality };
+  setStreamQuality(p: Partial<SettingsState['streamQuality']>): void;
   /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
   updates: { auto: boolean; prerelease: boolean };
   setUpdates(u: Partial<SettingsState['updates']>): void;
@@ -300,6 +307,10 @@ export const useSettings = create<SettingsState>()(
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       smartOffline: DEFAULT_SMART_OFFLINE,
       setSmartOffline: (p) => set((st) => ({ smartOffline: { ...st.smartOffline, ...p } })),
+      resume: true,
+      setResume: (resume) => set({ resume }),
+      streamQuality: { wifi: 'original', mobile: 'original' },
+      setStreamQuality: (p) => set((st) => ({ streamQuality: { ...st.streamQuality, ...p } })),
       deadZone: DEFAULT_DEAD_ZONE,
       setDeadZone: (p) => set((st) => ({ deadZone: { ...st.deadZone, ...p } })),
       mouthTune: DEFAULT_TUNE,
@@ -449,7 +460,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, deadZone: { ...current.deadZone, ...s.deadZone }, mouthTune: cleanTune(s.mouthTune) };
+        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, deadZone: { ...current.deadZone, ...s.deadZone }, streamQuality: { ...current.streamQuality, ...s.streamQuality }, mouthTune: cleanTune(s.mouthTune) };
       },
     },
   ),

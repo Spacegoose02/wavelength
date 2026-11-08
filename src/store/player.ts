@@ -15,6 +15,7 @@ import { replayGainFactor } from '../player/replayGain';
 import { planTransition, toNextBeat, type SoundInfo, type Transition } from '../player/automix';
 import { featuresFor } from '../lib/sonic';
 import { featureOn } from '../lib/features';
+import { onMobileData, withQuality } from '../lib/streamQuality';
 
 export type Repeat = 'off' | 'all' | 'one';
 
@@ -226,6 +227,11 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   toggle() {
     if (!get().current()) return;
     if (intercept?.('toggle')) return;
+    if (pendingResume) {
+      const resume = pendingResume;
+      pendingResume = undefined;
+      return resume();
+    }
     if (engine.el.paused) engine.play();
     else engine.pause();
   },
@@ -252,10 +258,19 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       loadCurrent();
     } else engine.seek(0);
   },
-  seek: (t) => void (intercept?.('seek', t) || engine.seek(t)),
+  seek(t) {
+    if (intercept?.('seek', t)) return;
+    // a restored queue that hasn't loaded yet: moving the bar moves where it starts
+    if (pendingResume && get().current()?.kind !== 'book') {
+      const at = Math.max(0, t);
+      pendingResume = () => void loadCurrent(at);
+      return set({ position: at });
+    }
+    engine.seek(t);
+  },
   skipBy(seconds) {
     const t = get().current();
-    if (!t || t.kind === 'radio') return;
+    if (!t || t.kind === 'radio' || pendingResume) return;
     const pos = engine.el.currentTime;
     if (t.kind === 'book') return seekBook((t.bookOffset ?? 0) + pos + seconds);
     const dur = engine.el.duration || t.duration || 0;
@@ -323,6 +338,14 @@ function begin(t: Track, startAt: number) {
   return ++loadSeq;
 }
 
+/** The link to stream a song from, at this network's quality (lib/streamQuality.ts); speakers get the original. */
+function streamAt(t: Track): string {
+  const url = t.streamUrl ?? '';
+  if (t.kind !== 'track' || engine.isRemote()) return url;
+  const q = useSettings.getState().streamQuality;
+  return withQuality(url, onMobileData() ? q?.mobile ?? 'original' : q?.wifi ?? 'original');
+}
+
 /** Load the current song again at `startAt` (casting moved playback to a speaker or back here). */
 export function reloadCurrent(startAt: number, play: boolean) {
   ahead = undefined;
@@ -341,7 +364,25 @@ async function freshPreview(t: Track): Promise<{ track: Track; startAt?: number 
   return { track: found.preview ? { ...t, streamUrl: found.preview } : t };
 }
 
+/**
+ * Pick up where you left off (lib/resume.ts): the queue is back after a restart, paused, and nothing loads until
+ * you press play. Then this runs (load the song at the saved spot, or reopen the audiobook).
+ */
+let pendingResume: (() => void) | undefined;
+
+/** Put a saved queue back, paused at `at` seconds into song `index`. `onPlay` replaces loading it at `at`. */
+export function restoreQueue(all: Track[], index: number, at: number, onPlay?: () => void) {
+  const tracks = kidSafe(all);
+  const t = all[index];
+  const i = tracks.indexOf(t);
+  if (!tracks.length || !t || i < 0 || usePlayer.getState().queue.length) return;
+  usePlayer.setState((s) => ({ queue: tracks, index: i, position: at, duration: t.duration ?? 0, playing: false, queueId: s.queueId + 1, queueBy: 'you' }));
+  updateMediaSession(t);
+  pendingResume = onPlay ?? (() => void loadCurrent(at));
+}
+
 async function loadCurrent(startAt = 0) {
+  pendingResume = undefined;
   const t = usePlayer.getState().current();
   if (!t) return;
   const token = begin(t, startAt);
@@ -387,7 +428,7 @@ async function loadCurrent(startAt = 0) {
     if (!ready.streamUrl) throw new Error('No stream for this item');
     releaseLocalBlob();
     fromStream = true;
-    await engine.load(ready.streamUrl, startAt || prepared.startAt || 0);
+    await engine.load(streamAt(ready), startAt || prepared.startAt || 0);
     if (ready.kind === 'track') sourceOf(ready)?.scrobble?.(ready, false).catch(() => {});
   } catch (e) {
     if (token === loadSeq) failed(String((e as Error).message ?? e));
@@ -536,8 +577,9 @@ async function prepareAhead(cur: Track) {
     const ready = ((await sourceOf(next)?.prepare?.(next)) ?? (await freshPreview(next))).track;
     if (!ready.streamUrl || usePlayer.getState().queue[i!] !== next) return;
     if (ready !== next) usePlayer.setState((s) => ({ queue: s.queue.map((q, j) => (j === i ? ready : q)) }));
-    engine.preload(ready.streamUrl);
-    ahead = { key, url: ready.streamUrl };
+    const url = streamAt(ready);
+    engine.preload(url);
+    ahead = { key, url };
     void planAhead(cur, ready, key);
   } catch {
     /* it just loads normally when its turn comes */
@@ -719,7 +761,7 @@ function updateMediaSession(t: Track, live?: string, cover?: string) {
 
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
-  ms.setActionHandler('play', () => engine.play());
+  ms.setActionHandler('play', () => (pendingResume ? usePlayer.getState().toggle() : engine.play()));
   ms.setActionHandler('pause', () => engine.pause());
   ms.setActionHandler('nexttrack', () => usePlayer.getState().next());
   ms.setActionHandler('previoustrack', () => usePlayer.getState().prev());
