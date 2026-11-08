@@ -1,16 +1,28 @@
 # Changelog
 
-## Unreleased
+## 0.32.0
 - **Wrong lyrics? Pick the right ones.** Under the lyrics in Now Playing, **Wrong lyrics?** lists the other LRCLIB
   entries for the song (name, artist, album, length and the first lines, the likeliest first), searches LRCLIB with
   your own words, takes lyrics you paste in (plain, or LRC with times for karaoke), or marks the song as having
   none. The pick is remembered for the song, wins over Navidrome's and LRCLIB's, and replaces the Hub's shared copy
   so the rest of the house gets it too. **Forget my pick** looks the song up again (`LyricsFixer.tsx`,
-  `setLyricsPick` in `lib/lyrics.ts`).
+  `setLyricsPick` in `lib/lyrics.ts`, #218).
 - **Fix: lyrics from another song.** The LRCLIB lookup now needs the artist to match when LRCLIB names one, only
   takes a name that contains the title when it is most of it ("Zoo York" no longer passes for "Zoo"), takes a
   near name only at the song's length, and turns down an entry with the same name but a much different length
-  (more than a minute and over a third off), which is another song rather than a live take.
+  (more than a minute and over a third off), which is another song rather than a live take (#218).
+- **The Hub answers browsing, search and covers from its catalog (phase 3 of replacing Navidrome).** Off by default:
+  **Hub answers browsing, search and covers** under Settings → Server → Music catalog. For devices that reach
+  Navidrome through the Hub, `getArtists`, `getArtist`, `getAlbum`, `getSong`, `getGenres`, `getSongsByGenre`,
+  `getRandomSongs`, `search3`, `getAlbumList2` and album/song `getCoverArt` come from the catalog with Navidrome's
+  ids, so streaming, stars, playlists and scrobbles still go to Navidrome. Migration 31 adds ReplayGain, album artist
+  id and first-seen columns and re-reads every file once (`hub/src/subsonicCatalog.ts`, #220).
+- **Tidy genres keep Christmas.** Occasion genres (Christmas, Christmas Country, Holiday Pop, Halloween …) stay after
+  the tidy genre instead of being dropped, and a one-time restore puts back the ones earlier tidies removed, from the
+  undo log, as one undoable save ("Put Christmas genres back"). The genre review proposes exact spellings ("Rap;Hip-Hop"
+  becomes "Rap; Hip-Hop"), and the Music catalog card lists songs Navidrome has that no file matched (#219).
+- **Critters: heads sit on their necks.** Every species' head is lowered by `NECK_DROP` so the chin tucks over the
+  collar instead of floating over the shoulders, in every act (#221).
 
 ## 0.31.0
 - **A panda critter.** The twelfth species: a cute panda cub with a round cream-white head and fluffy cheeks,
