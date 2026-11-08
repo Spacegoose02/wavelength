@@ -235,6 +235,8 @@ export class Catalog {
   private running: Promise<void> | null = null;
   /** Navidrome's songs, for linking (the library index's listing: libraryIndex.ts). Set by app.ts. */
   listNavidrome: () => Promise<NavidromeSong[] | null> = async () => null;
+  /** Navidrome's real file path for each song id (its own API, libraryAdmin.ts), set by app.ts. */
+  listRealPaths: () => Promise<Map<string, string> | null> = async () => null;
   /** When Navidrome last finished a scan, to scan the folder again after it (library.ts). */
   scannedAt: () => number | null = () => null;
   /** for tests */
@@ -255,6 +257,12 @@ export class Catalog {
     if (this.lastLinkAt === null || !this.navidromeSongs) return false;
     const { linked } = this.db.prepare('SELECT COUNT(nd_id) AS linked FROM catalog_songs').get() as { linked: number };
     return linked >= this.navidromeSongs * 0.95;
+  }
+
+  /** The file of each matched Navidrome song id (paths relative to the music folder). */
+  pathsById(): Map<string, string> {
+    const rows = this.db.prepare('SELECT nd_id, path FROM catalog_songs WHERE nd_id IS NOT NULL').all() as { nd_id: string; path: string }[];
+    return new Map(rows.map((r) => [r.nd_id, r.path]));
   }
 
   /** An album's songs (Navidrome album id), from the catalog. */
@@ -442,16 +450,33 @@ export class Catalog {
   async link() {
     const songs = await this.listNavidrome().catch(() => null);
     if (!songs) return;
+    // Subsonic's `path` is made up ("Artist/Album/01 - Title.flac") unless a player has Report Real Path on, so
+    // the files' real paths come from Navidrome's own API; Subsonic's is only a fallback.
+    const real = await this.listRealPaths().catch(() => null);
     const byPath = new Map<string, NavidromeSong>();
     for (const s of songs) {
-      const rel = s.path ? fromNavidromePath(this.navidromeDir, s.path) : null;
+      const path = real?.get(s.id) ?? s.path;
+      const rel = path ? fromNavidromePath(this.navidromeDir, path) : null;
       if (rel) byPath.set(rel, s);
     }
     const rows = this.db.prepare('SELECT path, nd_id, nd_album_id, nd_artist_id FROM catalog_songs').all() as { path: string; nd_id: string | null; nd_album_id: string | null; nd_artist_id: string | null }[];
+    // When Navidrome's music folder sits above or below the Hub's (/music/Music vs /music), whole paths never
+    // match: fall back to the last three parts (artist folder, album folder, file) when only one file has them.
+    const tail = (p: string) => p.split('/').slice(-3).join('/');
+    const byTail = new Map<string, NavidromeSong | null>();
+    for (const s of songs) {
+      const path = real?.get(s.id) ?? s.path;
+      if (!path) continue;
+      const k = tail(path.replace(/^\/+/, ''));
+      byTail.set(k, byTail.has(k) ? null : s);
+    }
+    const files = new Set(rows.map((r) => r.path));
+    const fileTails = new Map<string, number>();
+    for (const p of files) fileTails.set(tail(p), (fileTails.get(tail(p)) ?? 0) + 1);
     const set = this.db.prepare('UPDATE catalog_songs SET nd_id = ?, nd_album_id = ?, nd_artist_id = ? WHERE path = ?');
     tx(this.db, () => {
       for (const r of rows) {
-        const s = byPath.get(r.path);
+        const s = byPath.get(r.path) ?? (fileTails.get(tail(r.path)) === 1 ? byTail.get(tail(r.path)) ?? undefined : undefined);
         const id = s?.id ?? null;
         const album = s?.albumId ?? null;
         const artist = s?.artistId ?? null;

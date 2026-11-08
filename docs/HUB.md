@@ -671,9 +671,13 @@ and hands out ids.
   can't read are kept with the reason and listed.
 - **An empty-looking folder drops nothing.** When a scan finds less than half the files the catalog has (a share
   that isn't mounted), nothing is removed and the scan says so.
-- **Matching to Navidrome** is by path: Navidrome's song paths (absolute under `WAVELENGTH_NAVIDROME_MUSIC_DIR`, or
-  relative to its library) are mapped onto the music folder, and `nd_id`, `nd_album_id` and `nd_artist_id` are saved.
-  Files Navidrome doesn't list stay unmatched.
+- **Matching to Navidrome** is by path. Subsonic's `path` is made up ("Artist/Album/01 - Title.flac") unless a
+  player has Report Real Path on, so the real paths come from Navidrome's own API (5000 songs a page, the admin login
+  under Library updates). They are mapped onto the music folder (absolute under `WAVELENGTH_NAVIDROME_MUSIC_DIR`, or
+  relative to Navidrome's library). When Navidrome's music folder sits above or below the Hub's (`/music/Music` vs
+  `/music`), the last three parts (artist folder, album folder, file) match instead, when only one file has them.
+  `nd_id`, `nd_album_id` and `nd_artist_id` are saved; files Navidrome doesn't list stay unmatched. Sound-alike
+  analysis reads files by these real paths too.
 - **One listing of Navidrome.** The library index (Search, Discover's library check, Guest Jam) used to list Navidrome
   every hour, and sound-alike analysis listed it again on its own. Now the library index lists it once
   (`LibraryIndex.navidromeSongs()`), and the catalog's matching and sound-alike analysis both take that copy.
