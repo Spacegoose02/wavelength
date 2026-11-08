@@ -159,3 +159,77 @@ test("sound-alike analysis takes its songs from the library index's listing", as
   assert.equal(await sonic.list(), 1);
   assert.deepEqual(db.prepare('SELECT id, path, title FROM sonic_songs').all().map((r) => ({ ...r })), [{ id: 'a', path: 'X/a.flac', title: 'A' }]);
 });
+
+test('Library care, the editors and the genre review read the catalog, not Navidrome, once it matches', { skip: !hasFfmpeg && 'needs ffmpeg' }, async () => {
+  const { saveScanSettings } = await import('../src/library.ts');
+  const musicDir = mkdtempSync(join(tmpdir(), 'wl-catalog-'));
+  song(join(musicDir, 'Drake/Scorpion/01.mp3'), { title: '01 - Nonstop', artist: 'Drake', album_artist: 'Drake', album: 'Scorpion', track: '1', genre: 'Hip Hop' });
+  song(join(musicDir, 'Drake/Scorpion/02.mp3'), { title: 'Elevate', artist: 'Drake', album_artist: 'Drake', album: 'Scorpion', track: '2', genre: 'Hip Hop' });
+  song(join(musicDir, 'Lorde/Pure Heroine/01.mp3'), { title: 'Royals', artist: 'Lorde', album: 'Pure Heroine', track: '1', genre: 'Pop' });
+  const { app, db, config, tokens } = await seeded({}, { musicDir });
+  // a Navidrome nobody can reach: anything that still asked it would fail
+  saveScanSettings(db, config.secretKey, { url: 'http://127.0.0.1:9', username: 'admin', password: 'pw' });
+  const catalog = (app as unknown as { hubCatalog: Catalog }).hubCatalog;
+  const nd = [
+    { id: 's1', albumId: 'al1', artistId: 'ar1', path: '/music/Drake/Scorpion/01.mp3' },
+    { id: 's2', albumId: 'al1', artistId: 'ar1', path: '/music/Drake/Scorpion/02.mp3' },
+    { id: 's3', albumId: 'al2', artistId: 'ar2', path: '/music/Lorde/Pure Heroine/01.mp3' },
+  ];
+  catalog.listNavidrome = async () => nd;
+  const admin = (url: string, body?: unknown) => json(app, body === undefined ? 'GET' : 'PUT', url, { token: tokens.admin, body });
+
+  // before a scan: Navidrome's API, which isn't there
+  assert.equal((await admin('/api/admin/tags/numbered')).status, 502);
+
+  await catalog.scan();
+  assert.equal(catalog.usable(), true);
+
+  const numbered = await admin('/api/admin/tags/numbered');
+  assert.equal(numbered.status, 200, JSON.stringify(numbered.body));
+  assert.equal(numbered.body.total, 3);
+  assert.deepEqual(numbered.body.fixes.map((f: { path: string; to: string; albumId: string }) => [f.path, f.to, f.albumId]), [['Drake/Scorpion/01.mp3', 'Nonstop', 'al1']]);
+
+  const album = await admin('/api/admin/tags/album/al1');
+  assert.equal(album.status, 200, JSON.stringify(album.body));
+  assert.deepEqual(album.body.songs.map((s: { id: string }) => s.id), ['s1', 's2']);
+
+  const values = await admin('/api/admin/tags/values');
+  assert.ok(values.body.artists.includes('Lorde'));
+  assert.ok(values.body.genres.includes('Hip Hop'));
+
+  const review = await admin('/api/admin/genres/review');
+  assert.equal(review.status, 200, JSON.stringify(review.body));
+  assert.equal(review.body.total, 2);
+  const drake = review.body.albums.find((a: { id: string }) => a.id === 'al1');
+  assert.ok(drake, JSON.stringify(review.body.albums));
+  assert.equal(drake.songs, 2);
+
+  // a save shows in the catalog at once, before any scan: the review stops suggesting it
+  const apply = await json(app, 'POST', '/api/admin/genres/apply', { token: tokens.admin, body: { albums: [{ id: 'al1', genre: drake.proposed }] } });
+  assert.equal(apply.status, 200, JSON.stringify(apply.body));
+  assert.equal(apply.body.changed.length, 2);
+  assert.equal((await admin('/api/admin/genres/review')).body.albums.find((a: { id: string }) => a.id === 'al1'), undefined);
+
+  // a deleted album leaves the catalog at once
+  const del = await json(app, 'DELETE', '/api/admin/library/album/al2', { token: tokens.admin });
+  assert.equal(del.status, 200, JSON.stringify(del.body));
+  assert.equal(catalog.albumSongs('al2').length, 0);
+  assert.equal(catalog.albumSongs('al1').length, 2);
+  rmSync(musicDir, { recursive: true, force: true });
+});
+
+test('the catalog is only used once it matches nearly all of Navidrome', async () => {
+  const musicDir = mkdtempSync(join(tmpdir(), 'wl-catalog-'));
+  writeFileSync(join(musicDir, 'a.mp3'), 'a');
+  const { app } = await seeded({}, { musicDir });
+  const catalog = (app as unknown as { hubCatalog: Catalog }).hubCatalog;
+  catalog.probeFn = async () => parseProbe({ format: { duration: '100', tags: { title: 'A' } } });
+  catalog.listNavidrome = async () => [{ id: '1', path: 'a.mp3' }, { id: '2', path: 'elsewhere/b.mp3' }];
+  await catalog.scan();
+  assert.equal(catalog.status().linked, 1);
+  assert.equal(catalog.usable(), false); // 1 of Navidrome's 2: Navidrome's API is still asked
+  catalog.listNavidrome = async () => [{ id: '1', path: 'a.mp3' }];
+  await catalog.scan();
+  assert.equal(catalog.usable(), true);
+  rmSync(musicDir, { recursive: true, force: true });
+});

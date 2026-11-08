@@ -4,7 +4,7 @@ import { setPriority } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import type { Db } from './db.ts';
 import { tx } from './db.ts';
-import { AUDIO_EXT } from './tags.ts';
+import { AUDIO_EXT, type Tags } from './tags.ts';
 
 /**
  * The Hub's own catalog of the music folder (phase 1 of replacing Navidrome, see
@@ -64,6 +64,8 @@ export interface CatalogStatus {
   /** files added, changed and removed by the last scan */
   lastChanges: { added: number; changed: number; removed: number } | null;
   lastLinkAt: number | null;
+  /** Library care, the editors and the genre review read the catalog (usable()), not Navidrome's API */
+  inUse: boolean;
   lastError: string | null;
 }
 
@@ -167,6 +169,44 @@ export function fromNavidromePath(navidromeRoot: string, path: string): string |
   return path.startsWith(`${ndRoot}/`) ? path.slice(ndRoot.length + 1) : null;
 }
 
+/**
+ * The Hub just wrote these tags into a file (tag editor, genre review, Library care, undo): put them in the catalog
+ * at once, so lists built from it (Library care, the genre review) show the change before the next scan. The file
+ * is marked to be read again on the next scan, which picks up everything else the write changed.
+ */
+export function catalogWrote(db: Db, rel: string, tags: Tags) {
+  const cols: Record<string, string> = { title: 'title', artist: 'artist', album: 'album', albumArtist: 'album_artist', genre: 'genre' };
+  const sets: string[] = ['mtime = 0'];
+  const args: (string | number | null)[] = [];
+  for (const [k, v] of Object.entries(tags)) {
+    if (v === undefined) continue;
+    if (cols[k]) {
+      sets.push(`${cols[k]} = ?`);
+      args.push(v);
+    } else if (k === 'track' || k === 'disc' || k === 'year') {
+      const n = Number.parseInt(k === 'year' ? v.slice(0, 4) : v, 10);
+      sets.push(`${k} = ?`);
+      args.push(Number.isFinite(n) && n > 0 ? n : null);
+    }
+  }
+  db.prepare(`UPDATE catalog_songs SET ${sets.join(', ')} WHERE path = ?`).run(...args, rel);
+}
+
+/** A song as Library care, the tag editor and the genre review list them (Navidrome ids, path in the music folder). */
+export interface AdminSong {
+  id: string;
+  path: string;
+  title: string;
+  trackNumber: number;
+  albumId: string;
+  album: string;
+  artist: string;
+  albumArtist: string;
+}
+
+/** Split a genre tag the way Navidrome does ("Rap; Hip-Hop", "Pop/Rock" stays one). */
+const splitGenres = (g: string) => [...new Set(g.split(';').map((x) => x.trim()).filter(Boolean))];
+
 /** A song from the library index, with Navidrome's path for it. */
 export interface NavidromeSong {
   id: string;
@@ -207,6 +247,56 @@ export class Catalog {
     this.navidromeDir = navidromeDir;
   }
 
+  /**
+   * Whether lists can come from the catalog instead of Navidrome's API: a scan finished and matched (nearly) every
+   * song Navidrome has to a file. Otherwise Library care and the editors ask Navidrome as before.
+   */
+  usable(): boolean {
+    if (this.lastLinkAt === null || !this.navidromeSongs) return false;
+    const { linked } = this.db.prepare('SELECT COUNT(nd_id) AS linked FROM catalog_songs').get() as { linked: number };
+    return linked >= this.navidromeSongs * 0.95;
+  }
+
+  /** An album's songs (Navidrome album id), from the catalog. */
+  albumSongs(albumId: string): AdminSong[] {
+    return (this.db.prepare(`SELECT nd_id, path, title, track, nd_album_id, album, artist, album_artist FROM catalog_songs
+      WHERE nd_album_id = ? AND nd_id IS NOT NULL ORDER BY disc, track, path`).all(albumId) as Record<string, string | number | null>[]).map(adminSong);
+  }
+
+  /** One page of every matched song, in album order, and how many there are. */
+  songs(start: number, end: number): { songs: AdminSong[]; total: number } {
+    const rows = this.db.prepare(`SELECT nd_id, path, title, track, nd_album_id, album, artist, album_artist FROM catalog_songs
+      WHERE nd_id IS NOT NULL ORDER BY lower(album), nd_album_id, disc, track, path LIMIT ? OFFSET ?`).all(Math.max(0, end - start), start) as Record<string, string | number | null>[];
+    const { n } = this.db.prepare('SELECT COUNT(*) AS n FROM catalog_songs WHERE nd_id IS NOT NULL').get() as { n: number };
+    return { songs: rows.map(adminSong), total: n };
+  }
+
+  /** Every album (Navidrome album id) with its genres and song count, for the genre review. */
+  albums(): { id: string; name: string; artist: string; genres: string[]; songs: number }[] {
+    const rows = this.db.prepare(`SELECT nd_album_id AS id, album, CASE WHEN album_artist <> '' THEN album_artist ELSE artist END AS who, genre
+      FROM catalog_songs WHERE nd_album_id IS NOT NULL ORDER BY lower(album)`).all() as { id: string; album: string; who: string; genre: string }[];
+    const out = new Map<string, { id: string; name: string; artist: string; genres: string[]; songs: number }>();
+    for (const r of rows) {
+      let a = out.get(r.id);
+      if (!a) out.set(r.id, (a = { id: r.id, name: r.album, artist: r.who, genres: [], songs: 0 }));
+      a.songs++;
+      for (const g of splitGenres(r.genre)) if (!a.genres.includes(g)) a.genres.push(g);
+    }
+    return [...out.values()];
+  }
+
+  /** Artist and genre names in the library, for the editors' suggestions. */
+  names(): { artists: string[]; genres: string[] } {
+    const artists = new Map<string, string>();
+    const genres = new Map<string, string>();
+    for (const r of this.db.prepare('SELECT artist, album_artist, genre FROM catalog_songs').all() as { artist: string; album_artist: string; genre: string }[]) {
+      for (const a of [r.artist, r.album_artist]) if (a && !artists.has(a.toLowerCase())) artists.set(a.toLowerCase(), a);
+      for (const g of splitGenres(r.genre)) if (!genres.has(g.toLowerCase())) genres.set(g.toLowerCase(), g);
+    }
+    const sorted = (m: Map<string, string>) => [...m.values()].sort((a, b) => a.localeCompare(b));
+    return { artists: sorted(artists), genres: sorted(genres) };
+  }
+
   private blocked(): string | null {
     if (!this.musicDir) return 'The Hub has no music folder. Map your music share to /music (WAVELENGTH_MUSIC_DIR).';
     return null;
@@ -224,6 +314,7 @@ export class Catalog {
       lastScanMs: this.lastScanMs,
       lastChanges: this.lastChanges,
       lastLinkAt: this.lastLinkAt,
+      inUse: this.usable(),
       lastError: this.lastError,
     };
   }
@@ -370,4 +461,17 @@ export class Catalog {
     this.navidromeSongs = songs.length;
     this.lastLinkAt = this.now();
   }
+}
+
+function adminSong(r: Record<string, string | number | null>): AdminSong {
+  return {
+    id: String(r.nd_id),
+    path: String(r.path),
+    title: String(r.title ?? ''),
+    trackNumber: Number(r.track ?? 0) || 0,
+    albumId: String(r.nd_album_id ?? ''),
+    album: String(r.album ?? ''),
+    artist: String(r.artist ?? ''),
+    albumArtist: String(r.album_artist ?? ''),
+  };
 }

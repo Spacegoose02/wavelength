@@ -483,6 +483,8 @@ export interface HubCatalogStatus {
   lastScanMs: number | null;
   lastChanges: { added: number; changed: number; removed: number } | null;
   lastLinkAt: number | null;
+  /** Library care, the tag editors and the genre review read the catalog (absent on older Hubs) */
+  inUse?: boolean;
   lastError: string | null;
   summary: {
     albums: number;
