@@ -7,6 +7,8 @@ export type Route =
   | { view: 'home' }
   | { view: 'albums' }
   | { view: 'artists' }
+  /** Browse by genre and decade (views/Browse.tsx): neither = the tiles. */
+  | { view: 'browse'; genre?: string; decade?: number }
   | { view: 'artist'; artist: Artist }
   /** Browse releases: the artist's Deezer discography (views/ArtistReleases.tsx), optionally with one release open. */
   | { view: 'artistReleases'; artist: Artist; open?: Browse }

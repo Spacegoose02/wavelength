@@ -1,3 +1,4 @@
+import { splitGenres } from '../lib/genreNames';
 import { http, qs, trimSlash } from '../lib/http';
 import { withoutTrackNumber } from '../lib/trackTitles';
 import type { Album, Artist, MusicSource, SearchResults, ServerPlaylist, SourceConfig, Track } from './types';
@@ -74,6 +75,7 @@ export class PlexSource implements MusicSource {
     coverUrl: this.img(m.thumb),
     trackCount: m.leafCount,
     addedAt: m.addedAt ? m.addedAt * 1000 : undefined,
+    genres: splitGenres((m.Genre ?? []).map((g: { tag?: string }) => g.tag ?? '')),
   });
 
   private artist = (m: any): Artist => ({

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { filesSince, GENRE_CHECK_MS, genreKey, getGenreCheck, setGenreCheck, genreLookup, genresSince, genreTargets, getGenreSettings, normalizeGenre, saveGenreSettings, setGenresSince, type GenreRule } from '../genres.ts';
+import { filesSince, GENRE_CHECK_MS, genreKey, getGenreCheck, setGenreCheck, genreLookup, genresSince, genreTargets, getGenreSettings, subgenresOf, normalizeGenre, saveGenreSettings, setGenresSince, type GenreRule } from '../genres.ts';
 import { clientIp, HttpError, need } from '../http.ts';
 import { getScanSettings } from '../library.ts';
 import { notify, withPermission } from '../notify.ts';
@@ -27,8 +27,10 @@ function readRules(v: unknown): GenreRule[] {
   const out = new Map<string, GenreRule>();
   for (const r of v as Record<string, unknown>[]) {
     const from = typeof r?.from === 'string' ? r.from.trim() : '', to = typeof r?.to === 'string' ? r.to.trim() : '';
-    if (!genreKey(from) || !genreKey(to) || from.length > 100 || to.length > 100) throw new HttpError(400, 'Each rule needs a genre to change and what it becomes (up to 100 characters)');
-    out.set(genreKey(from), { from, to });
+    const sub = typeof r?.sub === 'string' ? r.sub.trim() : '';
+    if (!genreKey(from) || !genreKey(to) || from.length > 100 || to.length > 100 || sub.length > 100) throw new HttpError(400, 'Each rule needs a genre to change and what it becomes (up to 100 characters)');
+    if (sub && (sub.includes(';') || genreKey(sub) === genreKey(to))) throw new HttpError(400, 'A sub-genre is one name, other than its genre');
+    out.set(genreKey(from), genreKey(sub) ? { from, to, sub } : { from, to });
   }
   return [...out.values()];
 }
@@ -41,7 +43,7 @@ export function genreRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
   };
   const settingsOut = () => {
     const s = getGenreSettings(db);
-    return { auto: s.auto, rules: s.rules, defaults: s.defaults, kept: s.keep.length, genres: genreTargets(s.rules) };
+    return { auto: s.auto, rules: s.rules, defaults: s.defaults, kept: s.keep.length, genres: genreTargets(s.rules), subgenres: subgenresOf(s.rules) };
   };
 
   // Downloads that finish from now on are new; the library already there is for the review.

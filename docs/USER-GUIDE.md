@@ -251,9 +251,30 @@ place: **Play**, **Play next**, **Add to queue**, **Add to playlist…**, **Song
 sound-alike analysis on the Hub), **Go to artist**, **Go to album**, **Share** and **Copy song name**. Esc or a click
 outside closes it.
 
+## Browse by genre and decade
+
+**Browse** (in the sidebar, and under Library on the phone) shows your music by genre and by decade.
+
+- **Decades**: 60s, 70s, 80s and so on, with how many albums each has.
+- **Genres**: every genre in your library, most albums first, with its sub-genres on the tile (Trap, Drill and Boom
+  Bap on Rap / Hip-Hop; House, Techno and Drum & Bass on Electronic). Tap a sub-genre to go straight to it.
+  **Find a genre** searches sub-genres too.
+- Open one to see its **Artists** and **Albums**, sorted by newest, oldest, A to Z, artist or recently added.
+  Chips narrow it down: a sub-genre, or a decade ("90s Electronic"). In a decade, chips show its genres.
+  **Shuffle** plays a random mix of songs from 25 of its albums; **Play** plays the first 25 in order.
+
+Sub-genres come from your genre tags. A genre whose albums all also have a bigger genre counts as its sub-genre, so a
+Hub that tidies genres (see "Tidying genres") gives you sub-genres by itself. Genres that always come together, like
+"Rap" and "Hip-Hop" from **Rap; Hip-Hop**, show as one.
+
+**Albums** and **Artists** have the same filters at the top: a genre (sub-genres indented under their genre), a
+decade or **Pick years…** for a from–to range, and a sort (Albums: A to Z, artist, newest, oldest, recently added;
+Artists: A to Z or most albums). **Clear** takes the filters off. They stay put while you open an album and come
+back. An artist is in a genre or decade when one of their albums is.
+
 ## The sidebar
 
-Pages are grouped: Home, Search and the AI DJ at the top, then **Your library** (Recently added, Albums, Artists,
+Pages are grouped: Home, Search and the AI DJ at the top, then **Your library** (Recently added, Browse, Albums, Artists,
 Favorites, Downloaded, History, Audiobooks, Podcasts), **Explore** (Discover, Radio, SUB/WAVE), and Downloads,
 Inbox and Settings. Click a section's heading to fold it; it stays folded on this device, and the page you're on
 still shows.
@@ -1765,9 +1786,10 @@ Your Hub needs your music at `/music`, read-write, and the Navidrome admin login
 
 ### Tidying genres (admins)
 
-New music often comes in with messy genres: one album says "Hip Hop", the next "Trap", another "Rap/Hip Hop". Your
-Hub keeps one genre per kind of music instead: **Rap; Hip-Hop** for rap, **Pop** for pop, **Electronic** for EDM,
-house and techno, and so on.
+New music often comes in with messy genres: one album says "Hip Hop", the next "Rap/Hip Hop", another "Trap". Your
+Hub keeps one genre per kind of music instead, with the sub-genre next to it: **Rap; Hip-Hop** for rap, **Rap;
+Hip-Hop; Trap** for trap, **Electronic** for EDM, **Electronic; Deep House** for deep house, and so on. Browse then
+shows Trap inside Rap / Hip-Hop.
 
 - **New downloads** get the tidy genre before they show up in your library. Turn this off under **Settings →
   Server → Genres** if you'd rather not.
@@ -1776,8 +1798,13 @@ house and techno, and so on.
   selected**, or **Apply all**. **Undo** puts them back (also later, under **Tag edits**). **Keep** leaves an album
   as it is.
 - **Genres without a rule** are ones your Hub doesn't know yet, like "Afrobeats" or "Christmas". Type or pick what
-  each becomes and **Save rule**, or **Keep** it as a genre of its own. New downloads follow the rule from then on.
-- **Rules** shows what becomes what. Remove one with ×, add your own, or **Reset to defaults**.
+  each becomes and **Save rule**, or **Keep** it as a genre of its own. With **Sub-genre** ticked (the default) it
+  stays next to the genre, so "Afrobeats" → Pop gives **Pop; Afrobeats**; untick it to just make it Pop. New
+  downloads follow the rule from then on.
+- **Rules** shows each genre with its sub-genres and other spellings. × on a sub-genre stops keeping it (it just
+  becomes the genre); × on a spelling stops changing it. Add your own, or **Reset to defaults**.
+- Albums tidied before sub-genres existed only say **Rap; Hip-Hop** or **Electronic**: the sub-genre was dropped back
+  then. Set one by hand in the review's box (for example "Electronic; Techno") or in **Edit info**.
 
 Once a week the Hub looks over the library's genres by itself. When it finds albums or genres that need
 tidying that it hasn't told you about, admins get one **Genres to tidy** notification; clicking it opens the

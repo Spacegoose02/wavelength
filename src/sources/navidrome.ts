@@ -1,3 +1,4 @@
+import { splitGenres } from '../lib/genreNames';
 import SparkMD5 from 'spark-md5';
 import { withoutTrackNumber } from '../lib/trackTitles';
 import { getJson, http, qs, trimSlash } from '../lib/http';
@@ -77,6 +78,8 @@ export class NavidromeSource implements MusicSource {
     trackCount: a.songCount,
     explicit: rating(a.explicitStatus),
     addedAt: a.created ? Date.parse(a.created) : undefined,
+    // OpenSubsonic lists every genre; plain Subsonic gives one tag, which may hold several ("Pop; Dance")
+    genres: splitGenres(Array.isArray(a.genres) && a.genres.length ? a.genres.map((g: { name?: string }) => g.name ?? '') : a.genre),
   });
 
   private artist = (a: any): Artist => ({

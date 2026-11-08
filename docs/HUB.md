@@ -365,13 +365,22 @@ is audited as `tags.edited`.
 
 ## Genres
 
-The Hub keeps one genre per kind of music: "Hip Hop", "Trap", "Pop Rap" and Deezer's "Rap/Hip Hop" all become
-**Rap; Hip-Hop**, "Dance Pop" and "Synth-pop" become **Pop**, "EDM", "House" and "Techno" become **Electronic**, and so
-on. A list of rules (genre → what it becomes) decides; the defaults are in `DEFAULT_GENRES` in `hub/src/genres.ts`,
-and admins change them under **Settings → Server → Genres** (kept in `hub_settings` as `genres`, no migration).
-Names are compared without case, spaces or punctuation, so "hip-hop", "Hip Hop" and "HipHop" are one rule; "&" and
-"and" count as the same. A tag with several genres ("Christmas; Dance Pop") takes the genre of the first one a rule
-knows. A genre that is already a rule's result is left as it is.
+The Hub keeps one genre per kind of music, with its sub-genres next to it. "Hip Hop" and Deezer's "Rap/Hip Hop"
+become **Rap; Hip-Hop**, "Trap" becomes **Rap; Hip-Hop; Trap**, "EDM" becomes **Electronic**, "Deep House"
+**Electronic; Deep House** and "Synthpop" **Pop; Synth-Pop**. Navidrome splits tags on ";", so a song shows under the
+genre and the sub-genre, and the app's Browse page puts sub-genres inside their genre (see "Browse" in
+docs/USER-GUIDE.md).
+
+A list of rules decides: `{ from, to }` makes `from` the genre `to` (another spelling), and `{ from, to, sub }` also
+keeps the sub-genre `sub` (a kind of music within it; a sub-genre's own name always counts as known). The defaults
+are `DEFAULT_GENRES` (genre → spellings) and `DEFAULT_SUBGENRES` (genre → sub-genre → spellings) in
+`hub/src/genres.ts`, and admins change them under **Settings → Server → Genres** (kept in `hub_settings` as
+`genres`, no migration). Rules saved before sub-genres existed get them once when read (`withSubgenres`): a saved rule
+that matches a default sub-genre rule takes its `sub`, and the default sub-genres of genres in use are added; rules an
+admin made stay as they are. Names are compared without case, spaces or punctuation, so "hip-hop", "Hip Hop" and
+"HipHop" are one rule; "&" and "and" count as the same. A tag with several genres ("Christmas; Dance Pop") takes
+the genre of the first one a rule knows, plus every sub-genre of that genre the tag names ("Deep House; Techno" →
+"Electronic; Deep House; Techno"); sub-genres of other genres are dropped. Tidying a tidy tag changes nothing.
 
 **New downloads.** When a download finishes (deemix, Soulseek or yt-dlp), the Hub looks for music files in the
 music folder that changed since it last looked (`genres.since` in `hub_settings`, set when the Hub first starts with
@@ -870,7 +879,7 @@ with a 4xx status.
 | `GET /api/admin/tags/history`, `POST /api/admin/tags/undo/:batch` | `library.edit` | saved edits / put a save's files back |
 | `GET /api/admin/tags/albums?ids=a,b` | `library.edit` | up to 200 Navidrome albums' files and tags at once, each with `albumId` (for Edit artist) → `{ songs, missing }` |
 | `GET /api/admin/tags/values` | `library.edit` | `{ artists, genres }`: names in Navidrome and in recent edits, for suggestions |
-| `GET /api/admin/genres`, `PUT /api/admin/genres` | `library.edit` | genre rules: `{ auto, rules: [{ from, to }], defaults, kept, genres }`; `PUT` takes `{ auto?, rules? }` (`rules: null` = the defaults) |
+| `GET /api/admin/genres`, `PUT /api/admin/genres` | `library.edit` | genre rules: `{ auto, rules: [{ from, to, sub? }], defaults, kept, genres, subgenres: { genre: [sub-genre] } }`; `PUT` takes `{ auto?, rules? }` (`rules: null` = the defaults) |
 | `GET /api/admin/credits`, `PUT /api/admin/credits` | `library.edit` | joined artist credits: `{ auto }`, whether new downloads' "A;B" credits become "A; B" before the scan |
 | `GET /api/admin/genres/review` | `library.edit` | `{ albums: [{ id, name, artist, songs, current, proposed }], unknown: [{ genre, albums, examples }], total, kept, genres }` |
 | `POST /api/admin/genres/apply` | `library.edit` | `{ albums: [{ id, genre }] }` (up to 500) sets the genre in every song, as one undoable save → `{ batch, label, changed, failed, missing }` |

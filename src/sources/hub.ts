@@ -185,9 +185,12 @@ export interface HubTagMatch {
 /** An album an admin deleted (GET /api/admin/trash): in the trash until `purgeAt`, unless restored or purged. */
 export interface HubTrashAlbum { batch: string; label: string; at: number; files: number; by: string | null; restoredAt: number | null; purgedAt: number | null; purgeAt: number }
 export interface HubTagEdit { batch: string; label: string; at: number; files: number; undoneAt: number | null; by: string | null }
-/** Tidy genres (hub/src/genres.ts): rules turn variants ("Hip Hop", "Trap") into one genre ("Rap; Hip-Hop"). */
-export interface HubGenreRule { from: string; to: string }
-export interface HubGenreSettings { auto: boolean; rules: HubGenreRule[]; defaults: boolean; kept: number; genres: string[] }
+/**
+ * Tidy genres (hub/src/genres.ts): rules turn variants ("Hip Hop") into one genre ("Rap; Hip-Hop"); with `sub`,
+ * the variant is kept as a sub-genre next to it ("Trap" → "Rap; Hip-Hop; Trap").
+ */
+export interface HubGenreRule { from: string; to: string; sub?: string }
+export interface HubGenreSettings { auto: boolean; rules: HubGenreRule[]; defaults: boolean; kept: number; genres: string[]; subgenres?: Record<string, string[]> }
 export interface HubGenreAlbum { id: string; name: string; artist: string; songs: number; current: string; proposed: string }
 export interface HubGenreReview { albums: HubGenreAlbum[]; unknown: { genre: string; albums: number; examples: string[] }[]; total: number; kept: number; genres: string[] }
 

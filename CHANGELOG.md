@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+- **Browse by genre and decade.** A new **Browse** page shows a tile for every decade and every genre in the library,
+  with sub-genres on each genre. Open one for its artists and albums, narrow it with sub-genre and decade chips, and
+  Shuffle or Play it (`src/views/Browse.tsx`, `src/lib/browse.ts`). Navidrome and Plex albums now carry their genres
+  (OpenSubsonic `genres`, Plex `Genre`).
+- **Filters on Albums and Artists.** Genre (with sub-genres), decade or a year range, and sort (A to Z, artist,
+  newest, oldest, recently added; artists by name or most albums). They stay while you open an album and come back
+  (`src/components/BrowseFilters.tsx`, `src/store/browse.ts`).
+- **Sub-genres.** The Hub's tidy genres keep the sub-genre next to the genre instead of dropping it: "Trap" becomes
+  "Rap; Hip-Hop; Trap" and "Deep House" "Electronic; Deep House", written into the file tags so Navidrome lists both.
+  The defaults have about 140 sub-genres (`DEFAULT_SUBGENRES` in `hub/src/genres.ts`); saved rules get them once.
+  Settings → Server → Genres shows and edits each genre's sub-genres, and a new rule can keep its genre as a sub-genre.
+
 ## 0.27.3
 - **Critters bend at the elbow.** Every arm is split at an elbow halfway along its curve; acts move the forearm and
   hand with `bend()` and leave the upper arm still (`src/components/critters/arm.ts`). The guitar and banjo fret and
