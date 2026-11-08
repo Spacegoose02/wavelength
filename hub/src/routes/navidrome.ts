@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
@@ -6,19 +6,39 @@ import { clientIp, HttpError, need } from '../http.ts';
 import { serviceForHub, setServiceUser } from '../services.ts';
 import { getUser } from '../users.ts';
 
+/**
+ * Admin sessions by server and login. Navidrome only lets a few sign-ins through per address in a short window
+ * (AuthRequestLimit, 5 per 20 s by default) and answers the rest with 429, so a Library care scan that signed in
+ * again for every page or batch of albums got "refused" part way through. One sign-in now lasts a while.
+ */
+const sessions = new Map<string, { token: string; isAdmin?: boolean; at: number }>();
+const SESSION_FOR = 10 * 60_000;
+
 /** Navidrome's own API (not Subsonic): sign in as the admin, then call it with the token. */
 export async function navidromeAdmin(url: string, username: string, password: string) {
   const base = url.replace(/\/+$/, '');
+  const key = `${base}\n${username}\n${createHash('sha256').update(password).digest('hex')}`;
   const call = async (path: string, init: RequestInit) => {
+    let r: Response;
     try {
-      return await fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(15_000) });
+      r = await fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(15_000) });
     } catch {
       throw new HttpError(502, `Couldn't reach Navidrome at ${url}`);
     }
+    // Navidrome restarted or the token ran out: sign in afresh next time
+    if (r.status === 401) sessions.delete(key);
+    return r;
   };
-  const login = await call('/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) });
-  const session = (await login.json().catch(() => null)) as { token?: string; isAdmin?: boolean } | null;
-  if (!login.ok || !session?.token) throw new HttpError(502, 'Navidrome refused the admin login saved on the Hub');
+  let session = sessions.get(key);
+  if (!session || Date.now() - session.at > SESSION_FOR) {
+    sessions.delete(key);
+    const login = await call('/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) });
+    if (login.status === 429) throw new HttpError(502, 'Navidrome is turning away sign-ins for a moment (too many in a row). Wait a minute and try again');
+    const body = (await login.json().catch(() => null)) as { token?: string; isAdmin?: boolean } | null;
+    if (!login.ok || !body?.token) throw new HttpError(502, 'Navidrome refused the admin login saved on the Hub. Check it under Settings → Server');
+    session = { token: body.token, isAdmin: body.isAdmin, at: Date.now() };
+    sessions.set(key, session);
+  }
   if (session.isAdmin === false) throw new HttpError(502, `${username} isn't a Navidrome admin, so it can't make accounts`);
   return {
     /** An album's songs with their file paths (as Navidrome sees them). */

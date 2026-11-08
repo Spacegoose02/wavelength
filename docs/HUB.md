@@ -346,6 +346,9 @@ Every save is kept in an undo log (migration 11, `tag_edits`): **Undo** on the p
 Server → Tag edits**, puts those tags back. After a save or an undo the Hub asks Navidrome to rescan.
 
 It needs the music mounted read-write at `/music` (as for yt-dlp) and a Navidrome admin login on the Hub.
+The Hub signs in to Navidrome's own API once and keeps that session for 10 minutes (`hub/src/routes/navidrome.ts`):
+Navidrome lets only a few sign-ins through per address in a short window (`AuthRequestLimit`, 5 per 20 s by default)
+and answers the rest with 429, so signing in per request cut long Library care scans off.
 If Navidrome sees the music somewhere other than `/music`, set `WAVELENGTH_NAVIDROME_MUSIC_DIR` to that path.
 Code: `hub/src/tags.ts`, `hub/src/routes/tags.ts`, `src/views/TagEditor.tsx`.
 
