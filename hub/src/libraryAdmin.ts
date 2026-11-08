@@ -42,3 +42,21 @@ export async function libraryAdmin(db: Db, key: Buffer, catalog: Catalog): Promi
     names: async () => catalog.names(),
   };
 }
+
+/**
+ * Every Navidrome song's real file path, from Navidrome's own API (5000 songs a page, one sign-in kept 10 minutes).
+ * Subsonic answers with made-up paths unless a player has Report Real Path on. null without the admin login.
+ */
+export async function navidromeRealPaths(db: Db, key: Buffer): Promise<Map<string, string> | null> {
+  const s = getScanSettings(db, key);
+  if (!s) return null;
+  const nd = await navidromeAdmin(s.url, s.username, s.password);
+  const out = new Map<string, string>();
+  const PAGE = 5000;
+  for (let start = 0; start < 2_000_000; start += PAGE) {
+    const { songs, total } = await nd.songs(start, start + PAGE);
+    for (const x of songs) if (x.id && x.path) out.set(x.id, x.path);
+    if (songs.length < PAGE || start + PAGE >= total) break;
+  }
+  return out;
+}

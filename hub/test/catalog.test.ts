@@ -233,3 +233,34 @@ test('the catalog is only used once it matches nearly all of Navidrome', async (
   assert.equal(catalog.usable(), true);
   rmSync(musicDir, { recursive: true, force: true });
 });
+
+test("matches by Navidrome's real paths, and by the last folders when Navidrome's music folder is elsewhere", async () => {
+  const musicDir = mkdtempSync(join(tmpdir(), 'wl-catalog-'));
+  for (const f of ['Drake/Scorpion/a.flac', 'Drake/Scorpion/b.flac', 'Lorde/Melodrama/a.flac', 'Other/Melodrama/a.flac']) {
+    mkdirSync(join(musicDir, f, '..'), { recursive: true });
+    writeFileSync(join(musicDir, f), f);
+  }
+  const { app } = await seeded({}, { musicDir });
+  const catalog = (app as unknown as { hubCatalog: Catalog }).hubCatalog;
+  catalog.probeFn = async () => parseProbe({ format: { duration: '100', tags: { title: 'T' } } });
+  // Subsonic's made-up paths; the real ones come from Navidrome's own API
+  catalog.listNavidrome = async () => [
+    { id: 's1', albumId: 'al1', path: 'Drake/Scorpion/01 - Nonstop.flac' },
+    { id: 's2', albumId: 'al1', path: 'Drake/Scorpion/02 - Elevate.flac' },
+    { id: 's3', albumId: 'al2', path: 'Lorde/Melodrama/01 - Green Light.flac' },
+  ];
+  catalog.listRealPaths = async () => new Map([
+    ['s1', '/music/Drake/Scorpion/a.flac'],
+    // Navidrome's folder is one level up from the Hub's: matched by artist/album/file
+    ['s2', '/music/Music/Drake/Scorpion/b.flac'],
+    // two files end in Melodrama/a.flac (Lorde's and Other's) but only one has Lorde's folder
+    ['s3', '/music/Music/Lorde/Melodrama/a.flac'],
+  ]);
+  await catalog.scan();
+  const files = catalog.pathsById();
+  assert.equal(files.get('s1'), 'Drake/Scorpion/a.flac');
+  assert.equal(files.get('s2'), 'Drake/Scorpion/b.flac');
+  assert.equal(files.get('s3'), 'Lorde/Melodrama/a.flac');
+  assert.equal(catalog.status().linked, 3);
+  rmSync(musicDir, { recursive: true, force: true });
+});

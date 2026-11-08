@@ -52,6 +52,7 @@ import { ChartCache } from './discover.ts';
 import { ChartHistory } from './chartHistory.ts';
 import { LibraryIndex } from './libraryIndex.ts';
 import { Catalog } from './catalog.ts';
+import { navidromeRealPaths } from './libraryAdmin.ts';
 import { catalogRoutes } from './routes/catalog.ts';
 import { ReleaseRadar } from './radar.ts';
 import { radarRoutes } from './routes/radar.ts';
@@ -163,9 +164,15 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.lyrics = new LyricsCache(db);
   ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => ctx.library.status().lastScanAt);
   // one listing of Navidrome for the whole Hub: the catalog and sound-alike analysis take the library index's
-  ctx.sonic.listSongs = () => ctx.libraryIndex.navidromeSongs();
+  // sound-alike analysis reads the files: their real paths from the catalog, Subsonic's (often made up) otherwise
+  ctx.sonic.listSongs = async () => {
+    const songs = await ctx.libraryIndex.navidromeSongs();
+    const files = ctx.catalog.pathsById();
+    return songs && songs.map((x) => ({ ...x, path: files.get(x.id) ?? x.path }));
+  };
   ctx.catalog = new Catalog(db, config.musicDir, config.navidromeMusicDir);
   ctx.catalog.listNavidrome = () => ctx.libraryIndex.navidromeSongs();
+  ctx.catalog.listRealPaths = () => navidromeRealPaths(db, config.secretKey);
   ctx.catalog.scannedAt = () => ctx.library.status().lastScanAt;
   if (opts.watchLibrary ?? true) ctx.catalog.start();
   app.addHook('onClose', async () => ctx.catalog.stop());
