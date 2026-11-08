@@ -161,12 +161,12 @@ describe('the owl and the T. rex', () => {
 
   it('gives the owl feathered wings for arms and the T. rex a thin forearm with claws', async () => {
     const owl = await arm('owl');
-    expect(owl).toContain('wing-tip');
+    expect(owl).toContain('wing-seam');
     const trex = await arm('trex');
     expect(trex).toContain('hand-claw');
     // the forearm, past the elbow, is thinner than the upper arm
     const widths = [...trex.matchAll(/class="sleeve"[^>]*stroke-width="(\d+)"/g)].map((m) => Number(m[1]));
     expect(widths[1]).toBeLessThan(widths[0]);
-    expect(await arm('panda')).not.toMatch(/wing-tip|hand-claw/);
+    expect(await arm('panda')).not.toMatch(/wing-seam|hand-claw/);
   });
 });

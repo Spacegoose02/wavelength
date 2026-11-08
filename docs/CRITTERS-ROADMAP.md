@@ -137,7 +137,7 @@ the asset work and a risk on low-end phones and the iOS WebView.
 - An owl and a T. rex (November 2026), drawn cute and kept clear of famous cartoon ones (no snowy post owl,
   spectacles or mortarboard; no purple dinosaur). The owl's ear tufts are `ear-l` / `ear-r` like the bears' ears,
   so the rig wiggles them and the cowboy hat hides them. Two optional `Figure` fields shape the arms (`Arm` in
-  parts.tsx): `hand: 'wing'` puts three feathers like fingers over the owl's hands (its sleeves are bare,
+  parts.tsx): `hand: 'wing'` ends the owl's arms in one rounded wing tip with three scalloped feathers (`wingTip`) (its sleeves are bare,
   `.species-owl .sleeve`), and the T. rex's `fore` makes the forearm thinner than the upper arm, so
   the short arm reads as bending at a little elbow, with `hand: 'claws'` adding two claws. Its shoulders sit high
   and close on the chest, but its `reach` is the usual, so its hands still land on every instrument. The T. rex
