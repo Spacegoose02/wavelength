@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.27.1
 - **Fixed: "Wrong username or password" on Navidrome through the Hub.** With **Send everyone through the Hub** on,
   a device's Navidrome source points at the Hub (`<hub>/nd/<id>`) and signs in with a login the Hub made for that
   device (`<name>~<device id>`). Settings → Sources still showed editable login fields, so typing your own
