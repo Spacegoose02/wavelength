@@ -3,7 +3,7 @@
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
 charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears and moose), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
-**searching your playlists**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
+**searching your playlists**, **Popular**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
 
 ---
@@ -329,6 +329,30 @@ MusicBrainz knows. Both need no setup and are kept on the device for a week. An 
 **On tour** lists upcoming shows with a **Tickets** link, when a Hub admin turns on **Tour dates** in
 **Settings → Features** and pastes a free Ticketmaster key (from developer.ticketmaster.com) or a Bandsintown
 app ID there. The key stays on the Hub.
+
+## Popular songs (artist pages)
+
+At the top of an artist page, above the albums, **Popular** lists the artist's best-known songs, the way Spotify
+does, but only the ones you have, so every row plays. Five show at first; **Show more** opens up to ten. **Play**
+plays them all in order and **Shuffle** mixes them. Click (or tap, on a phone) a row to play from that song.
+
+<p align="center">
+  <img src="screenshots/artist-popular.png" alt="Kodak Black's artist page with a Popular list of five songs, Play and Shuffle, above the albums" width="88%">
+</p>
+
+The order comes from Deezer's top tracks for the artist, and each one is looked up in your Navidrome and Plex
+libraries. When Deezer doesn't know the artist, or none of its list is in your library, Navidrome's own top songs
+(from Last.fm, if the server has a Last.fm key) are used. A song you have twice, or in Explicit and Clean, shows
+once. Songs on your **Don't play** list and songs hidden from a kid profile are left out, and the section isn't
+shown at all when nothing matches, or on "Various Artists". The list is kept for half an hour, so going back to the
+page is instant.
+
+> **Developer notes.** `src/lib/popularSongs.ts`: `popularSongs(name)` asks Deezer for the same-name artist
+> (`sameNameArtists`, so a wrong artist's hits never show), takes their top 25 (`popularCandidates`, one per title),
+> and finds each with `findInLibrary` (lib/match.ts, as Song radio does) four at a time, stopping at ten;
+> `uniqueSongs` drops repeats. The fallback is `MusicSource.getTopSongs`, which `NavidromeSource` answers with
+> Subsonic `getTopSongs`. `src/components/PopularSongs.tsx` renders it with `TrackList` above the album grid in
+> `ArtistView` (src/views/Library.tsx). Tests in `src/test/popularSongs.test.ts`.
 
 ## Appears On (artist pages)
 

@@ -204,6 +204,8 @@ export interface MusicSource {
   /** Albums by other artists where this artist is featured on a song ("Appears On"), leaving out `ownAlbumIds`. */
   getAppearsOn?(artist: { id: string; name: string }, ownAlbumIds?: string[]): Promise<Album[]>;
   getAlbumTracks?(albumId: string): Promise<Track[]>;
+  /** The artist's best-known songs that are on this server, most popular first (Navidrome asks Last.fm). */
+  getTopSongs?(artistName: string, count?: number): Promise<Track[]>;
   getStations?(): Promise<Station[]>;
   /** Delete one of the server's own radio stations. Navidrome only allows this for admin accounts. */
   deleteStation?(id: string): Promise<void>;

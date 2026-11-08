@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **Popular songs on artist pages.** Above the albums, an artist page lists the artist's best-known songs that are in
+  your library, Spotify-style: five, with **Show more** for up to ten, plus **Play** and **Shuffle**. The order is
+  Deezer's top tracks for the artist, each found on your Navidrome or Plex; Navidrome's Last.fm top songs fill in when
+  Deezer has nothing. The section is left out when none of them are in the library (`src/lib/popularSongs.ts`,
+  `src/components/PopularSongs.tsx`, #207).
+
 ## 0.29.0
 - **The Hub's own music catalog (phase 1 of replacing Navidrome).** The Hub walks the music folder and keeps one row
   per file in `catalog_songs` (migration 30, `hub/src/catalog.ts`): tags, length, bit rate, format, MusicBrainz ids
