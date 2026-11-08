@@ -202,7 +202,8 @@ export function genreLookup(rules: GenreRule[]): GenreLookup {
 
 /**
  * The tidy genre for a genre tag: the genre the first known name leads to, followed by every sub-genre of it
- * the tag names ("Deep House; Techno" → "Electronic; Deep House; Techno"). A tag with no known genre gives
+ * the tag names ("Deep House; Techno" → "Electronic; Deep House; Techno"), then any occasion it names ("Christmas;
+ * Dance Pop" → "Pop; Dance Pop; Christmas", OCCASIONS). A tag with no known genre gives
  * `genre: null` and lists them as `unknown`. Tidying a tidy tag gives the same tag.
  */
 export function normalizeGenre(raw: string, lookup: GenreLookup): { genre: string | null; unknown: string[] } {
@@ -210,7 +211,10 @@ export function normalizeGenre(raw: string, lookup: GenreLookup): { genre: strin
   if (!text) return { genre: null, unknown: [] };
   const whole = lookup.get(genreKey(text));
   if (whole) return { genre: whole.sub ? `${whole.to}; ${whole.sub}` : whole.to, unknown: [] };
-  const parts = [...new Set(text.split(/\s*[;,/|\\]\s*/).map((p) => p.trim()).filter((p) => genreKey(p)))];
+  const all = [...new Set(text.split(/\s*[;,/|\\]\s*/).map((p) => p.trim()).filter((p) => genreKey(p)))];
+  // Christmas, Holiday …: kept as they are, after the tidy genre (the app's Seasonal mixes look for them)
+  const occasions = all.filter((p) => isOccasion(p) && !lookup.has(genreKey(p)));
+  const parts = all.filter((p) => !occasions.includes(p));
   const found = parts.map((p) => ({ p, hit: lookup.get(genreKey(p)) }));
   const first = found.find((f) => f.hit)?.hit;
   if (!first) return { genre: null, unknown: parts };
@@ -219,8 +223,16 @@ export function normalizeGenre(raw: string, lookup: GenreLookup): { genre: strin
     const sub = f.hit?.sub;
     if (sub && genreKey(f.hit!.to) === genreKey(first.to) && !subs.some((x) => genreKey(x) === genreKey(sub))) subs.push(sub);
   }
-  return { genre: [first.to, ...subs].join('; '), unknown: [] };
+  return { genre: [first.to, ...subs, ...occasions].join('; '), unknown: [] };
 }
+
+/**
+ * Genres for a time of year rather than a kind of music: any genre with one of these words ("Christmas", "Christmas
+ * Country", "Holiday Pop", "Halloween"). Tidying keeps them, spelled as they are, after the tidy genre.
+ */
+export const OCCASION_WORDS = ['christmas', 'xmas', 'holiday', 'holidays', 'halloween', 'hanukkah', 'easter', 'valentine', 'valentines', 'thanksgiving'];
+const OCCASION_RE = new RegExp(`(^|[^\\p{L}])(${OCCASION_WORDS.join('|')})([^\\p{L}]|$)`, 'iu');
+export const isOccasion = (g: string) => OCCASION_RE.test(g.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''));
 
 /** Music files under the music folder changed after `since` (hidden folders, like the trash, skipped). */
 export function filesSince(musicDir: string, since: number): string[] {

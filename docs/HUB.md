@@ -380,7 +380,18 @@ that matches a default sub-genre rule takes its `sub`, and the default sub-genre
 admin made stay as they are. Names are compared without case, spaces or punctuation, so "hip-hop", "Hip Hop" and
 "HipHop" are one rule; "&" and "and" count as the same. A tag with several genres ("Christmas; Dance Pop") takes
 the genre of the first one a rule knows, plus every sub-genre of that genre the tag names ("Deep House; Techno" →
-"Electronic; Deep House; Techno"); sub-genres of other genres are dropped. Tidying a tidy tag changes nothing.
+"Electronic; Deep House; Techno"); sub-genres of other genres are dropped. Genres for a time of year rather than a
+kind of music (`isOccasion`: any genre with the word Christmas, Xmas, Holiday, Halloween, Hanukkah, Easter,
+Valentine or Thanksgiving, such as "Christmas Country") are kept as spelled, after the tidy genre ("Christmas; Dance
+Pop" → "Pop; Dance Pop; Christmas"), so smart playlists that leave Christmas out keep working; a tag with only an
+occasion is left alone. Tidying a tidy tag changes nothing. An album counts as tidy only when its genres are spelled
+exactly so: "Rap;Hip-Hop" is a different genre to Navidrome (it splits only on "; "), so the review proposes
+"Rap; Hip-Hop".
+
+**Christmas put back.** Tidies before occasions were kept dropped them. Once, 30 seconds after the Hub starts
+(`genres.occasionsRestored` in `hub_settings`), `restoreOccasions` reads the undo log of genre tidies ("Genre: …",
+"Genres of …"; hand edits are left as chosen) and adds each file's lost occasion genres after its genre now, as one
+undoable save, "Put Christmas genres back".
 
 **New downloads.** When a download finishes (deemix, Soulseek or yt-dlp), the Hub looks for music files in the
 music folder that changed since it last looked (`genres.since` in `hub_settings`, set when the Hub first starts with
@@ -690,7 +701,8 @@ and hands out ids.
   Every tag save and undo updates the catalog row at once (`catalogWrote()`) and marks the file to be read again on
   the next scan, and Delete album drops its files from the catalog, so the lists don't wait for a rescan.
 - **Settings → Server → Music catalog** shows songs, albums, artists and hours, how many match Navidrome, formats,
-  top genres, files missing tags, and files that couldn't be read.
+  top genres, files missing tags, files that couldn't be read, and (up to 100) songs Navidrome lists that no file
+  matched (`missing`), with their paths.
 
 Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
 under Library updates; without it the catalog still scans.
@@ -902,7 +914,7 @@ with a 4xx status.
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
-| `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
+| `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, missing: [{ title, artist, album, path }], summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
 | `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |
 | `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |
 | `POST /api/lyrics/translate` | signed in, `lyricsTranslate` on, the AI DJ allowed | `{ key, lines, mode: translate\|romanize, to }` → `{ lines, cached, …allowance }`: one line out for each line in, through the AI DJ's quick model; kept in memory for the house (500 songs) |

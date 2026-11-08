@@ -55,6 +55,8 @@ export interface CatalogStatus {
   linked: number;
   /** songs Navidrome listed last time (the library index) */
   navidromeSongs: number;
+  /** Navidrome's songs with no file in the catalog (the first 100), from the last match */
+  missing: MissingSong[];
   scanning: boolean;
   /** what the running scan is doing: walking the folders, or reading files (done of total) */
   progress: { step: 'walking' | 'reading'; done: number; total: number } | null;
@@ -213,6 +215,18 @@ export interface NavidromeSong {
   albumId?: string;
   artistId?: string;
   path?: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+}
+
+/** A song Navidrome lists whose file the catalog didn't find (shown on Settings → Server → Music catalog). */
+export interface MissingSong {
+  title: string;
+  artist: string;
+  album: string;
+  /** Navidrome's path for it */
+  path: string;
 }
 
 export class Catalog {
@@ -231,6 +245,7 @@ export class Catalog {
   private lastChanges: CatalogStatus['lastChanges'] = null;
   private lastLinkAt: number | null = null;
   private navidromeSongs = 0;
+  private missing: MissingSong[] = [];
   private lastError: string | null = null;
   private running: Promise<void> | null = null;
   /** Navidrome's songs, for linking (the library index's listing: libraryIndex.ts). Set by app.ts. */
@@ -288,7 +303,8 @@ export class Catalog {
       let a = out.get(r.id);
       if (!a) out.set(r.id, (a = { id: r.id, name: r.album, artist: r.who, genres: [], songs: 0 }));
       a.songs++;
-      for (const g of splitGenres(r.genre)) if (!a.genres.includes(g)) a.genres.push(g);
+      // split like Navidrome ("; " only), so "Rap;Hip-Hop" stays a spelling the genre review can tidy
+      for (const g of r.genre.split(/;\s+/).map((x) => x.trim()).filter(Boolean)) if (!a.genres.includes(g)) a.genres.push(g);
     }
     return [...out.values()];
   }
@@ -316,6 +332,7 @@ export class Catalog {
       blocked: this.blocked(),
       ...c,
       navidromeSongs: this.navidromeSongs,
+      missing: this.missing,
       scanning: this.scanning,
       progress: this.progress,
       lastScanAt: this.lastScanAt,
@@ -483,6 +500,13 @@ export class Catalog {
         if (id !== r.nd_id || album !== r.nd_album_id || artist !== r.nd_artist_id) set.run(id, album, artist, r.path);
       }
     });
+    const linked = new Set((this.db.prepare('SELECT nd_id FROM catalog_songs WHERE nd_id IS NOT NULL').all() as { nd_id: string }[]).map((r) => r.nd_id));
+    this.missing = songs.filter((x) => !linked.has(x.id)).slice(0, 100).map((x) => ({
+      title: x.title ?? '',
+      artist: x.artist ?? '',
+      album: x.album ?? '',
+      path: real?.get(x.id) ?? x.path ?? '',
+    }));
     this.navidromeSongs = songs.length;
     this.lastLinkAt = this.now();
   }

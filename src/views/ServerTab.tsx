@@ -350,6 +350,13 @@ function MusicCatalog() {
             {msg && <span className="errors small">{msg}</span>}
           </div>
           {st.lastError && <p className="kid-blocked small">{st.lastError}</p>}
+          {!!st.missing?.length && (
+            <details className="small">
+              <summary>{n(Math.max(0, st.navidromeSongs - st.linked))} songs Navidrome lists without a file the Hub found</summary>
+              <p className="muted">Usually files that were moved or deleted and are still in Navidrome until it cleans up, or files in a hidden folder or one with a .ndignore, which the Hub skips.</p>
+              <ul>{st.missing.map((m) => <li key={m.path || `${m.artist}-${m.title}`}>{m.artist} – {m.title}{m.album ? ` (${m.album})` : ''}{m.path && <> · <code>{m.path}</code></>}</li>)}</ul>
+            </details>
+          )}
           {sum.failed.length > 0 && (
             <details className="small">
               <summary>{n(st.failed)} files couldn't be read</summary>

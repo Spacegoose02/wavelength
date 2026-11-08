@@ -477,6 +477,8 @@ export interface HubCatalogStatus {
   failed: number;
   linked: number;
   navidromeSongs: number;
+  /** Navidrome's songs with no file in the catalog (first 100; absent on older Hubs) */
+  missing?: { title: string; artist: string; album: string; path: string }[];
   scanning: boolean;
   progress: { step: 'walking' | 'reading'; done: number; total: number } | null;
   lastScanAt: number | null;

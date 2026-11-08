@@ -67,7 +67,7 @@ test('scans the music folder, reads only what changed, and links files to Navidr
   catalog.listNavidrome = async () => [
     { id: 'nd1', albumId: 'al1', artistId: 'ar1', path: '/music/Drake/Scorpion/01 Nonstop.mp3' },
     { id: 'nd2', albumId: 'al1', artistId: 'ar1', path: 'Drake/Scorpion/02 Elevate.flac' },
-    { id: 'nd9', path: '/music/Gone/away.mp3' },
+    { id: 'nd9', path: '/music/Gone/away.mp3', title: 'Away', artist: 'Gone', album: 'Gone' },
   ];
 
   await catalog.scan();
@@ -77,6 +77,7 @@ test('scans the music folder, reads only what changed, and links files to Navidr
   assert.equal(st.body.files, 3);
   assert.equal(st.body.linked, 2);
   assert.equal(st.body.navidromeSongs, 3);
+  assert.deepEqual(st.body.missing, [{ title: 'Away', artist: 'Gone', album: 'Gone', path: '/music/Gone/away.mp3' }], 'songs Navidrome lists that no file matched');
   assert.equal(st.body.failed, 0);
   assert.deepEqual(st.body.lastChanges, { added: 3, changed: 0, removed: 0 });
   assert.equal(st.body.summary.albums, 2);
