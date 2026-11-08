@@ -468,7 +468,7 @@ alien are all possible.
 | **Gray alien** | The classic grey: a big bulb head tapering to a pointed chin, huge black eyes and a slim body |
 | **Black bear** / **Brown bear** | Round ears and a pale muzzle, in black or brown fur |
 | **Moose** | Dark brown with a big droopy muzzle, a fur bell under the chin, long ears, pale stockings and hooves, and wide flat antlers that stick out either side of any hat (and tuck under the hazmat hood) |
-| **Turtle** | A box turtle with olive skin, gold freckles, a hooked beak and ember-red eyes, carrying a high domed shell whose rim shows round any outfit |
+| **Turtle** | Sea-green with a soft mint muzzle, big blue eyes, rosy cheeks and a wide smile, carrying a high domed shell whose rim shows round any outfit |
 
 <img src="screenshots/critter-moose.png" alt="The moose in all eight acts: DJ in headphones, Country in a cowboy hat with its antlers either side of the crown, Rapper, Rocker, Drummer, Theremin, Synth and Accordion in a beanie" width="90%">
 
@@ -552,7 +552,7 @@ cowgirl denim fringe skirt, a pleated mini (Rapper), a pink tutu (Rocker), a sai
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
-**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle olive),
+**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
 Some groups of skins give them a whole outfit:
 

@@ -305,7 +305,7 @@ const RAYS = [-140, -90, -40, 0, 180, 150, 30]
   .join(' ');
 
 /**
- * Turtle (a box turtle): a round top over a tall domed shell whose rim shows behind the shoulders and either
+ * Turtle: a round top over a tall domed shell whose rim shows behind the shoulders and either
  * side of the clothes. The shell is drawn under the top, so every act's outfit goes over it and the arms and
  * instruments in front of it (the hazmat suit covers it). A short scaly neck, stumpy legs with blunt claws (or
  * the act's shoes) and a little pointed tail.
