@@ -1071,7 +1071,9 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
   requests at once) and lists each song with what's wrong:
   - **Joined artists:** several artists in one tag with a semicolon and no space, like "Lil Wayne;Drake".
     Navidrome only splits on "; " (with the space), " / ", " feat. " and " ft. ", so it shows "Lil Wayne;Drake"
-    as one artist. **Split joined artists** fixes every one at once by writing "Lil Wayne; Drake"; **Split
+    as one artist. A tag like that means Lil Wayne featuring Drake, so **Split joined artists** fixes every one at
+    once by writing the Artist as "Lil Wayne feat. Drake" and the Album artist as just "Lil Wayne", so the song and
+    its album are Lil Wayne's with Drake featured; **Split
     artists** on a song fixes just that one. The same artist written twice ("Lil Durk;Lil Durk", or "Lil Durk Lil
     Durk") is listed here too and becomes just "Lil Durk".
   - **Maybe joined:** a comma or slash with no space around it ("Lil Wayne,Drake", "Lil Wayne/Drake"). These
@@ -1087,7 +1089,7 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
   Navidrome shows the new tags after its rescan a minute later.
 
   New downloads have their joined artists split by the Hub before Navidrome scans them, so "Lil Wayne;Drake"
-  shows up as Lil Wayne and Drake straight away. The tick box at the top of the tab turns that off.
+  shows up as Lil Wayne feat. Drake straight away. The tick box at the top of the tab turns that off.
 
 ## Selecting several albums or artists
 

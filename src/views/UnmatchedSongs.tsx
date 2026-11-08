@@ -14,7 +14,7 @@ import { useUi } from '../store/ui';
 /**
  * Library care → Unmatched songs (lib/songIssues.ts), for Hub admins: every song whose tags stop Navidrome
  * filing it under the right artist or album. Filter by what's wrong and search; split joined credits
- * ("Lil Wayne;Drake" → "Lil Wayne; Drake") in one go; set a tag on the ticked songs at once; or edit one song's
+ * ("Lil Wayne;Drake" → "Lil Wayne feat. Drake") in one go; set a tag on the ticked songs at once; or edit one song's
  * tags in place. Every Save goes through the Hub's tag editor, so Settings → Server → Tag edits can undo it.
  */
 
@@ -167,7 +167,7 @@ export function UnmatchedSongs() {
   const autoBox = auto !== undefined && (
     <label className="check">
       <input type="checkbox" checked={auto} onChange={(e) => void toggleAuto(e.target.checked)} />
-      <small>Split joined artists in new downloads by themselves (“Lil Wayne;Drake” becomes “Lil Wayne; Drake”, and “Lil Durk;Lil Durk” becomes “Lil Durk”, before Navidrome scans them)</small>
+      <small>Split joined artists in new downloads by themselves (“Lil Wayne;Drake” becomes “Lil Wayne feat. Drake” with “Lil Wayne” as album artist, and “Lil Durk;Lil Durk” becomes “Lil Durk”, before Navidrome scans them)</small>
     </label>
   );
 

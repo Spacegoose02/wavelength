@@ -4,9 +4,10 @@ import type { Db } from './db.ts';
  * Joined artist credits (docs/USERS-AND-ADMIN.md, "Joined artist credits"). Navidrome splits a single Artist or
  * Album artist tag into several artists only on its own separators: " / ", " feat. ", " feat ", " ft. ", " ft "
  * and "; " (resources/mappings.yaml in Navidrome). A semicolon with no space after it ("Lil Wayne;Drake"), which
- * many taggers and downloaders write, isn't one of them, so Navidrome lists "Lil Wayne;Drake" as one artist. The
- * Hub rewrites such tags to "Lil Wayne; Drake" so Navidrome splits them: for new downloads before Navidrome scans
- * them (routes/credits.ts), and for the rest of the library from Library care → Unmatched songs in the app.
+ * many taggers and downloaders write, isn't one of them, so Navidrome lists "Lil Wayne;Drake" as one artist. Such a
+ * credit means the first artist featuring the rest, so the Hub rewrites the Artist tag to "Lil Wayne feat. Drake"
+ * and the Album artist to "Lil Wayne" (tidyCredit): for new downloads before Navidrome scans them
+ * (routes/credits.ts), and for the rest of the library from Library care → Unmatched songs in the app.
  */
 
 /** Any semicolon with any spacing around it, the full-width "；" too. */
@@ -27,24 +28,45 @@ export function undouble(value: string): string {
   return sameKey(a) === sameKey(w.slice(half).join(' ')) ? a : value;
 }
 
+/** Where the artists in a credit are cut apart to find the main one: semicolons and Navidrome's feat./ft. */
+const PARTS = /\s*[;；]\s*|\s+(?:feat\.?|ft\.?|featuring)\s+/i;
+
 /**
- * The credit written the way Navidrome splits it, each artist once: "Lil Wayne;Drake" → "Lil Wayne; Drake",
- * "A ; B;C" → "A; B; C", "Lil Durk;Lil Durk" and "Lil Durk Lil Durk" → "Lil Durk". Empty parts ("Drake;") go.
- * A value with nothing to tidy comes back as it is.
+ * A joined credit as the main artist and the artists featured: "Lil Durk;Drake" → ["Lil Durk", "Drake"]. Each
+ * artist once ("Lil Durk;Lil Durk" is just Lil Durk). Empty parts ("Drake;") go.
  */
-export function tidyCredit(value: string): string {
-  if (!SEMI.test(value)) return undouble(value);
+function creditParts(value: string): string[] {
   const seen = new Set<string>();
   return value
-    .split(SEMI)
+    .split(PARTS)
     .map((p) => undouble(p.trim()))
     .filter((p) => {
       const k = sameKey(p);
       if (!p || seen.has(k)) return false;
       seen.add(k);
       return true;
-    })
-    .join('; ');
+    });
+}
+
+/**
+ * A credit tidied so the song belongs to its main artist: the first artist named is the main one and the rest
+ * are featured, as a semicolon-joined tag means ("Lil Durk;Drake" is Lil Durk featuring Drake).
+ *
+ * - **Artist** (`artist`, the default): "Lil Durk;Drake" → "Lil Durk feat. Drake", "A;B;C" → "A feat. B; C".
+ *   Navidrome splits on " feat. " and "; ", so Lil Durk is the song's artist and Drake is listed as featured,
+ *   and the song shows as "Bang Bang – Lil Durk feat. Drake".
+ * - **Album artist** (`albumArtist`): just the main artist, "Lil Durk;Drake" → "Lil Durk", so the album is filed
+ *   under Lil Durk and not under a joined "Lil Durk;Drake" artist.
+ *
+ * Either way the same artist named twice is once ("Lil Durk;Lil Durk", "Lil Durk Lil Durk" → "Lil Durk").
+ * A value without a semicolon (or a doubled name) comes back as it is: commas, "&" and slashes are left, since
+ * "Tyler, The Creator", "Simon & Garfunkel" and "AC/DC" are one artist.
+ */
+export function tidyCredit(value: string, tag: 'artist' | 'albumArtist' = 'artist'): string {
+  if (!SEMI.test(value)) return undouble(value);
+  const [main, ...rest] = creditParts(value);
+  if (!main) return '';
+  return tag === 'albumArtist' || !rest.length ? main : `${main} feat. ${rest.join('; ')}`;
 }
 
 /**

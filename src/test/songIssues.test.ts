@@ -7,11 +7,13 @@ const full = { title: 'Mrs. Officer', album: 'Tha Carter III', track: '7', year:
 
 describe('joined artist credits', () => {
   test('a semicolon with or without a space becomes the "; " Navidrome splits on', () => {
-    expect(tidyCredit('Lil Wayne;Drake')).toBe('Lil Wayne; Drake');
-    expect(tidyCredit('Lil Wayne ;Drake;  Future')).toBe('Lil Wayne; Drake; Future');
-    expect(tidyCredit('Lil Wayne；Drake')).toBe('Lil Wayne; Drake');
+    expect(tidyCredit('Lil Wayne;Drake')).toBe('Lil Wayne feat. Drake');
+    expect(tidyCredit('Lil Wayne ;Drake;  Future')).toBe('Lil Wayne feat. Drake; Future');
+    expect(tidyCredit('Lil Wayne；Drake')).toBe('Lil Wayne feat. Drake');
+    expect(tidyCredit('Lil Durk;Drake', 'albumArtist')).toBe('Lil Durk');
     expect(tidyCredit('Drake;')).toBe('Drake');
-    expect(tidyCredit('Lil Wayne; Drake')).toBe('Lil Wayne; Drake');
+    expect(tidyCredit('Lil Wayne; Drake')).toBe('Lil Wayne feat. Drake');
+    expect(tidyCredit('Lil Wayne feat. Drake; Future')).toBe('Lil Wayne feat. Drake; Future');
     expect(tidyCredit('Lil Wayne feat. Drake')).toBe('Lil Wayne feat. Drake');
     expect(tidyCredit('Lil Durk;Lil Durk')).toBe('Lil Durk');
     expect(tidyCredit('Lil Durk Lil Durk')).toBe('Lil Durk');
@@ -43,9 +45,9 @@ describe('unmatched songs', () => {
   });
 
   test('the fix touches only the joined tags', () => {
-    expect(creditFix({ artist: 'Lil Wayne;Drake', albumArtist: 'Lil Wayne' })).toEqual({ artist: 'Lil Wayne; Drake' });
-    expect(creditFix({ artist: 'Lil Wayne', albumArtist: 'Lil Wayne;Drake' })).toEqual({ albumArtist: 'Lil Wayne; Drake' });
-    expect(creditFix({ artist: 'Lil Wayne; Drake' })).toBeNull();
+    expect(creditFix({ artist: 'Lil Wayne;Drake', albumArtist: 'Lil Wayne' })).toEqual({ artist: 'Lil Wayne feat. Drake' });
+    expect(creditFix({ artist: 'Lil Wayne', albumArtist: 'Lil Wayne;Drake' })).toEqual({ albumArtist: 'Lil Wayne' });
+    expect(creditFix({ artist: 'Lil Wayne feat. Drake' })).toBeNull();
     expect(creditFix({ artist: 'Lil Durk;Lil Durk', albumArtist: 'Lil Durk' })).toEqual({ artist: 'Lil Durk' });
     expect(songIssues({ ...full, artist: 'Lil Durk Lil Durk', albumArtist: 'Lil Durk' })).toContain('joined');
   });

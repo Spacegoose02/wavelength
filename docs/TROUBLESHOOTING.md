@@ -84,9 +84,9 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| An artist shows as "Lil Wayne;Drake" instead of Lil Wayne and Drake | Navidrome splits artists on "; " with a space, not on ";" alone | **Library care → Unmatched songs → Split joined artists**. New downloads are fixed by the Hub before the scan unless the tick box there is off |
+| An artist shows as "Lil Wayne;Drake" instead of Lil Wayne feat. Drake | Navidrome splits artists on "; " with a space, not on ";" alone | **Library care → Unmatched songs → Split joined artists** writes Artist "Lil Wayne feat. Drake" and Album artist "Lil Wayne". New downloads are fixed by the Hub before the scan unless the tick box there is off |
 | An artist shows as "Lil Durk;Lil Durk" or "Lil Durk Lil Durk" | The file names the same artist twice in one tag (some downloaders write the main artist again) | **Library care → Unmatched songs → Split joined artists** writes just "Lil Durk". New downloads are fixed by the Hub before the scan unless the tick box there is off |
-| "Lil Wayne,Drake" or "Lil Wayne/Drake" isn't split | Commas and slashes can be part of a name ("AC/DC"), so they're only listed as **Maybe joined** | Filter **Maybe joined**, tick the wrong ones and set the Artist, or **Edit tags** one by one. Write "Lil Wayne; Drake" so Navidrome splits it |
+| "Lil Wayne,Drake" or "Lil Wayne/Drake" isn't split | Commas and slashes can be part of a name ("AC/DC"), so they're only listed as **Maybe joined** | Filter **Maybe joined**, tick the wrong ones and set the Artist, or **Edit tags** one by one. Write "Lil Wayne feat. Drake" so Navidrome splits it with Lil Wayne as the main artist |
 | "504 error" in Library care after **Fix titles** or **Split joined artists** (before 0.26.1) | The whole fix went to the Hub as one long request and the proxy in front of it gave up; the Hub usually kept writing | Update the app and Hub, then **Check again**: titles already fixed are skipped. Settings → Server → Tag edits shows what was saved and can undo it |
 | **Unmatched songs** isn't in Library care | It's for Hub admins (`library.edit`) | Sign in to the Hub as an admin |
 | Fixed songs still look the same | Navidrome shows new tags after its rescan, about a minute later | Wait for the rescan, then **Check again** |

@@ -18,19 +18,24 @@ function audio(file: string, tags: Record<string, string>) {
 const tick = () => new Promise((r) => setTimeout(r, 20));
 
 test('joined credits get the "; " Navidrome splits on', () => {
-  assert.equal(tidyCredit('Lil Wayne;Drake'), 'Lil Wayne; Drake');
-  assert.equal(tidyCredit('Lil Wayne ; Drake;Future'), 'Lil Wayne; Drake; Future');
-  assert.equal(tidyCredit('Lil Wayne；Drake'), 'Lil Wayne; Drake');
+  // the first artist is the main one, the rest are featured
+  assert.equal(tidyCredit('Lil Wayne;Drake'), 'Lil Wayne feat. Drake');
+  assert.equal(tidyCredit('Lil Wayne ; Drake;Future'), 'Lil Wayne feat. Drake; Future');
+  assert.equal(tidyCredit('Lil Wayne；Drake'), 'Lil Wayne feat. Drake');
+  assert.equal(tidyCredit('Lil Wayne feat. Drake; Future'), 'Lil Wayne feat. Drake; Future', 'already tidy');
+  // the album belongs to the main artist
+  assert.equal(tidyCredit('Lil Durk;Drake', 'albumArtist'), 'Lil Durk');
+  assert.equal(tidyCredit('Lil Durk', 'albumArtist'), 'Lil Durk');
   assert.equal(tidyCredit('Drake;'), 'Drake');
-  assert.equal(tidyCredit('Lil Wayne; Drake'), 'Lil Wayne; Drake');
+  assert.equal(tidyCredit('Lil Wayne; Drake'), 'Lil Wayne feat. Drake');
   assert.equal(tidyCredit('AC/DC'), 'AC/DC');
   // the same artist twice is them once
   assert.equal(tidyCredit('Lil Durk;Lil Durk'), 'Lil Durk');
-  assert.equal(tidyCredit('Lil Durk; lil durk;J. Cole'), 'Lil Durk; J. Cole');
+  assert.equal(tidyCredit('Lil Durk; lil durk;J. Cole'), 'Lil Durk feat. J. Cole');
   assert.equal(tidyCredit('Lil Durk Lil Durk'), 'Lil Durk');
   assert.equal(tidyCredit('Lil Durk Lil Durk;Lil Durk'), 'Lil Durk');
   assert.equal(tidyCredit('Duran Duran'), 'Duran Duran');
-  assert.equal(tidyCredit('Talk Talk;Drake'), 'Talk Talk; Drake');
+  assert.equal(tidyCredit('Talk Talk;Drake'), 'Talk Talk feat. Drake');
 });
 
 test('a credit splits the same with or without the space', () => {
@@ -63,15 +68,15 @@ test('new downloads get their joined credits split before the scan; older music 
   app.hubLibrary.downloaded();
   await app.hubLibrary.tidy();
   const a = await readTags(join(music, 'New/01.mp3'));
-  assert.equal(a.artist, 'Lil Wayne; Drake');
-  assert.equal(a.albumArtist, 'Lil Wayne; Drake');
-  assert.equal((await readTags(join(music, 'New/02.mp3'))).artist, 'Lil Wayne; Drake');
+  assert.equal(a.artist, 'Lil Wayne feat. Drake');
+  assert.equal(a.albumArtist, 'Lil Wayne');
+  assert.equal((await readTags(join(music, 'New/02.mp3'))).artist, 'Lil Wayne feat. Drake');
   assert.equal((await readTags(join(music, 'New/03.mp3'))).artist, 'Nicki;Drake;', 'a hand edit stays');
   assert.equal((await readTags(join(music, 'Old/01.mp3'))).artist, 'Lil Wayne;Drake', 'music from before is for Library care');
   const hist = await json(app, 'GET', '/api/admin/tags/history', { token: tokens.admin });
   const edit = hist.body.edits.find((e: { label: string }) => e.label === 'Artist credits of new downloads');
-  assert.equal(edit.files, 1);
-  assert.equal((await json(app, 'POST', `/api/admin/tags/undo/${edit.batch}`, { token: tokens.admin })).body.undone, 1);
+  assert.equal(edit.files, 2);
+  assert.equal((await json(app, 'POST', `/api/admin/tags/undo/${edit.batch}`, { token: tokens.admin })).body.undone, 2);
   assert.equal((await readTags(join(music, 'New/01.mp3'))).artist, 'Lil Wayne;Drake');
 
   // off: left as they come

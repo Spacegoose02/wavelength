@@ -415,9 +415,13 @@ It needs what the tag editor needs: the music read-write at `/music` and a Navid
 Navidrome splits a single Artist or Album artist tag into several artists only on its own separators: `" / "`,
 `" feat. "`, `" feat "`, `" ft. "`, `" ft "` and `"; "` (`resources/mappings.yaml` in Navidrome). A semicolon with no
 space after it, which many taggers and downloaders write ("Lil Wayne;Drake"), isn't one of them, so Navidrome lists
-"Lil Wayne;Drake" as one artist with no albums. `tidyCredit()` in `hub/src/credits.ts` rewrites any semicolon, with
-any spacing (the full-width "；" too), to `"; "`: "Lil Wayne;Drake" → "Lil Wayne; Drake", "A ; B;C" → "A; B; C".
-Empty parts ("Drake;") are dropped, and so is an artist named twice ("Lil Durk;Lil Durk" → "Lil Durk"). A name of
+"Lil Wayne;Drake" as one artist with no albums. Such a credit means the first artist featuring the rest, so
+`tidyCredit()` in `hub/src/credits.ts` writes the **Artist** tag as the main artist "feat." the others ("Lil
+Wayne;Drake" → "Lil Wayne feat. Drake", "A ; B;C" → "A feat. B; C") and the **Album artist** tag as just the main
+artist ("Lil Wayne"). Navidrome splits on " feat. " and "; ", so the song is Lil Wayne's with Drake featured, shows as
+"Lil Wayne feat. Drake", and the album is filed under Lil Wayne. A credit already split with "; " ("Lil Wayne;
+Drake") is rewritten the same way. Any semicolon counts, with any spacing (the full-width "；" too). The app shows a
+joined credit it gets from Navidrome the same way before the tag is fixed (`src/sources/navidrome.ts`). Empty parts ("Drake;") are dropped, and so is an artist named twice ("Lil Durk;Lil Durk" → "Lil Durk"). A name of
 two or more words written twice with only a space between ("Lil Durk Lil Durk") becomes the name once; a one-word
 name twice ("Duran Duran", "Talk Talk") is a real band and stays. Nothing else is changed: commas and slashes are left, since "Tyler, The Creator"
 and "AC/DC" are one artist.
