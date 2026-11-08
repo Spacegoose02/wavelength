@@ -398,9 +398,16 @@ export function Head({ species, hat, eyewear, over, girlHat, hidesEars }: { spec
  *
  * Parts: `part` is the whole arm; `<part>-fore` the forearm (it carries `data-elbow` and `data-hand`, where
  * `bend` reads the joint); `<part>-paw` the hand with whatever it holds. `children` (a drumstick, say) are drawn
- * under the hand and move with it.
+ * under the hand and move with it. They are drawn from the act's `hand` and shifted to where this species' hand
+ * really is; pass a function instead to draw them from the real hand (a stick that must land on a drum head).
  */
-export function Arm({ part, d, hand, handLater, children }: { part: string; d: string; hand: [number, number]; handLater?: boolean; children?: ReactNode }) {
+export function Arm({
+  part,
+  d,
+  hand,
+  handLater,
+  children,
+}: { part: string; d: string; hand: [number, number]; handLater?: boolean; children?: ReactNode | ((hand: [number, number]) => ReactNode) }) {
   const g = useArm(part, d, hand);
   return (
     <Pivot from={g.base} to={g.sh} part={part}>
@@ -414,7 +421,7 @@ export function Arm({ part, d, hand, handLater, children }: { part: string; d: s
         <path className="sleeve" d={g.fore} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
       </g>
       <g data-part={`${part}-paw`}>
-        <g transform={g.held}>{children}</g>
+        {typeof children === 'function' ? children([Number(g.hx), Number(g.hy)]) : <g transform={g.held}>{children}</g>}
         {!handLater && <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />}
       </g>
     </Pivot>

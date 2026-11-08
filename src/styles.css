@@ -1681,7 +1681,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .boot-black { fill: #0f0f12; }
 .critter .leather { fill: #1d1d22; }
 .critter-rocker .sleeve { stroke: #1d1d22; }
-.critter .fretboard { fill: #222226; }
+.critter .fretboard { fill: #222226; stroke: #7a7a84; stroke-width: 1.2; }
 .critter .axe { fill: var(--viz-mid); stroke: #111; stroke-width: 2; }
 
 /* shark face (species.tsx) and the Drums act (Drums.tsx): sailor tee, drum shells and logo follow the skin */
