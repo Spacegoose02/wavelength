@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.3
+- **Critters bend at the elbow.** Every arm is split at an elbow halfway along its curve; acts move the forearm and
+  hand with `bend()` and leave the upper arm still (`src/components/critters/arm.ts`). The guitar and banjo fret and
+  strum from the elbow instead of sliding the whole arm off the shoulder, and the synth, DJ, rapper, drummer,
+  theremin and accordion get bent-elbow playing patterns on the beat (#199).
+
 ## 0.27.2
 - **Fixed: "Navidrome refused the admin login saved on the Hub" during Library care scans.** The Hub signed in to
   Navidrome's API for every page of songs or batch of albums, and Navidrome's sign-in limit (`AuthRequestLimit`,
