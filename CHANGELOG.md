@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 0.27.0
 - **Audiobooks and podcasts: sorting, speed, skip and chapters.** Audiobooks sort by recently added, recently
   played, title, author, series, published or length, with Not started / In progress / Finished chips. Podcasts sort
   by new episodes, recently added, recently played, title, author or most episodes, and a show's episodes by newest,
