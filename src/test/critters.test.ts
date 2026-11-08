@@ -123,3 +123,50 @@ describe('the panda', () => {
     expect(await draw(true)).toContain('lashes');
   });
 });
+
+describe('the owl and the T. rex', () => {
+  const draw = async (id: string, girl: boolean) => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    const { GirlContext } = await import('../components/critters/faces');
+    const species = SPECIES.find((s) => s.id === id)!;
+    return renderToStaticMarkup(h(GirlContext.Provider, { value: girl }, h('svg', null, h(Head, { species, hat: h('g', { className: 'own-hat' }) }))));
+  };
+  const arm = async (id: string) => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Arm } = await import('../components/critters/parts');
+    const { SpeciesContext } = await import('../components/critters/bodies');
+    const species = SPECIES.find((s) => s.id === id)!;
+    return renderToStaticMarkup(h(SpeciesContext.Provider, { value: species }, h('svg', null, h(Arm, { part: 'arm-r', d: 'M262 268 Q 290 300 300 330', hand: [300, 330] }))));
+  };
+
+  it('are species with their own figures', async () => {
+    const { SPECIES } = await import('../components/critters/species');
+    const { FIGURES } = await import('../components/critters/bodies');
+    expect(SPECIES.find((s) => s.id === 'owl')?.figure).toBe(FIGURES.owl);
+    expect(SPECIES.find((s) => s.id === 'trex')?.figure).toBe(FIGURES.trex);
+  });
+
+  it('draws the owl ear tufts behind the head, so the cowboy hat can hide them, and lashes only on the girl', async () => {
+    const boy = await draw('owl', false);
+    expect(boy.indexOf('data-part="ear-l"')).toBeGreaterThan(-1);
+    expect(boy.indexOf('data-part="ear-l"')).toBeLessThan(boy.indexOf('head-owl'));
+    expect(boy).not.toContain('lashes');
+    expect(await draw('owl', true)).toContain('lashes');
+  });
+
+  it('gives the owl feathered wings for arms and the T. rex a thin forearm with claws', async () => {
+    const owl = await arm('owl');
+    expect(owl).toContain('wing-tip');
+    const trex = await arm('trex');
+    expect(trex).toContain('hand-claw');
+    // the forearm, past the elbow, is thinner than the upper arm
+    const widths = [...trex.matchAll(/class="sleeve"[^>]*stroke-width="(\d+)"/g)].map((m) => Number(m[1]));
+    expect(widths[1]).toBeLessThan(widths[0]);
+    expect(await arm('panda')).not.toMatch(/wing-tip|hand-claw/);
+  });
+});

@@ -26,6 +26,11 @@ export interface Figure {
   paw: number;
   /** how far a hand reaches from the shoulder; the acts' hands are brought in to it */
   reach: number;
+  /** forearm width, below the elbow, when it's thinner than the upper arm (the T. rex's little arms) */
+  fore?: number;
+  /** what the hand is: a plain paw (default), a paw with two little claws, or a wing's feathered tip, and the
+   *  wing's sleeve barred like feathers (`Arm`, parts.tsx) */
+  hand?: 'claws' | 'wing';
   /** where a girl's skirt hangs from: waist y, half-width there, and the skirt's length */
   waist: [y: number, w: number, len: number];
   /** the shadow the head casts on the top, just under the chin */
@@ -548,6 +553,131 @@ const panda: Figure = {
   ),
 };
 
+/** An owl's foot: three plump orange toes with dark talon tips, under a fluffy feathered ankle. */
+function Talons({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const foot = (
+    <g>
+      {[-11, 0, 11].map((dx) => (
+        <g key={dx}>
+          <ellipse cx={x + dx} cy={y + 2} rx={6} ry={9} transform={`rotate(${dx * 1.6} ${x + dx} ${y + 2})`} className="talon ol-thin" />
+          <path d={`M${x + dx * 1.25} ${y + 9} l 0 4`} className="claw-tip" strokeWidth="3.5" strokeLinecap="round" />
+        </g>
+      ))}
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
+/**
+ * Owl: a plump round egg of a top on short fluffy legs, orange talons (or the act's shoes) and a little fan of
+ * tail feathers peeking out below. Its arms are its wings: bare feathered sleeves with feathered tips (`wing`, see
+ * `Arm` in parts.tsx, and `.species-owl .sleeve` in styles.css) and a feathered tip for a hand.
+ */
+const owl: Figure = {
+  head: [188, 0.88],
+  torso: 'M174 252 Q 200 244 226 252 Q 256 266 258 296 Q 258 320 248 332 Q 200 342 152 332 Q 142 320 142 296 Q 144 266 174 252 Z',
+  shoulders: [[156, 276], [244, 276]],
+  arm: 26,
+  paw: 13,
+  reach: 64,
+  hand: 'wing',
+  waist: [316, 54, 28],
+  chin: [252, 50],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[200, 326]} part="tail">
+        {[-16, 0, 16].map((dx) => (
+          <path key={dx} d={`M${200 + dx * 0.5} 326 Q ${200 + dx * 1.4 - 9} 350 ${200 + dx * 1.6} 362 Q ${200 + dx * 1.4 + 9} 350 ${200 + dx * 0.5} 326 Z`} className="owl-tail ol-thin" />
+        ))}
+      </Pivot>
+      <Shaded d={tube([182, 318], [180, 336], [180, 352], 28, 24)} className={legs} />
+      <Shaded d={tube([218, 318], [220, 336], [220, 352], 28, 24)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[176, 364]} rx={20} ry={10} shoe={shoe} />
+          <Foot at={[224, 364]} rx={20} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <Talons at={[178, 360]} />
+          <Talons at={[222, 360]} right />
+        </>
+      )}
+    </>
+  ),
+};
+
+/** A T. rex's foot: a broad round foot with three pale claws. */
+function DinoFoot({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const foot = (
+    <g>
+      <ellipse cx={x} cy={y} rx={23} ry={11} className="bare ol-thin" />
+      {[-13, 0, 13].map((dx) => (
+        <path key={dx} d={`M${x + dx - 4} ${y + 7} Q ${x + dx} ${y + 15} ${x + dx + 4} ${y + 7} Z`} className="dino-claw ol-thin" />
+      ))}
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
+const TREX_TAIL = 'M214 318 C 250 316, 286 330, 312 346 C 330 356, 350 356, 358 340 C 362 352, 352 370, 326 370 C 290 370, 250 360, 214 350 Z';
+
+/**
+ * T. rex: a sturdy pear of a top on big strong thighs, broad three-clawed feet (or the act's shoes) and a thick
+ * tail sweeping out behind to the right along the ground with a row of little rounded plates. Its arms are short and thin, with a
+ * plump upper arm, a skinny forearm bending at the elbow and two little claws on each hand (`fore`, `hand`),
+ * set high and close on the chest; they still reach the instruments.
+ */
+const trex: Figure = {
+  head: [186, 0.9],
+  torso: 'M176 252 Q 200 244 224 252 Q 252 264 256 296 Q 258 320 250 332 Q 200 342 150 332 Q 142 320 144 296 Q 148 264 176 252 Z',
+  shoulders: [[166, 276], [234, 276]],
+  arm: 19,
+  fore: 13,
+  paw: 9,
+  reach: 62,
+  hand: 'claws',
+  waist: [316, 54, 28],
+  chin: [254, 50],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[226, 330]} part="tail">
+        <defs>
+          <clipPath id="critter-trex-tail">
+            <path d={TREX_TAIL} />
+          </clipPath>
+        </defs>
+        {[[248, 320], [276, 328], [302, 340], [326, 350]].map(([x, y], i) => (
+          <circle key={x} cx={x} cy={y - 4} r={9 - i * 1.5} className="dino-plate ol-thin" />
+        ))}
+        <path d={TREX_TAIL} className="bare ol" />
+        <g clipPath="url(#critter-trex-tail)">
+          <path d="M214 352 C 252 360, 292 368, 330 364 L 340 380 L 214 380 Z" className="dino-belly" />
+          <circle cx="262" cy="334" r="4" className="dino-spot" />
+          <circle cx="292" cy="344" r="3.4" className="dino-spot" />
+          <circle cx="318" cy="354" r="2.6" className="dino-spot" />
+        </g>
+        <path d={TREX_TAIL} fill="url(#critter-vinyl)" />
+      </Pivot>
+      <Shaded d={tube([178, 312], [172, 334], [176, 354], 40, 26)} className={legs} />
+      <Shaded d={tube([222, 312], [228, 334], [224, 354], 40, 26)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[174, 364]} rx={22} ry={10} shoe={shoe} />
+          <Foot at={[226, 364]} rx={22} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <DinoFoot at={[175, 361]} />
+          <DinoFoot at={[225, 361]} right />
+        </>
+      )}
+    </>
+  ),
+};
+
 /**
  * How far each head sits down into its top from where the figures above place it: the chin tucks over the
  * collar so the head reads as sitting on a neck, not floating over the shoulders. The chin's shadow comes down
@@ -569,4 +699,6 @@ export const FIGURES = {
   lion: seat(bigCat(LionTail)),
   elephant: seat(elephant),
   panda: seat(panda),
+  owl: seat(owl),
+  trex: seat(trex),
 } satisfies Record<string, Figure>;

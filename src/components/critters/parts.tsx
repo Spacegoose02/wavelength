@@ -397,15 +397,15 @@ export function Arm({
       {/* outlines under both sleeves, so the elbow joins without a seam */}
       <path className="limb-outline" d={g.upper} fill="none" strokeWidth={g.arm + 5} strokeLinecap="round" />
       <g data-follow={`${part}-fore`}>
-        <path className="limb-outline" d={g.fore} fill="none" strokeWidth={g.arm + 5} strokeLinecap="round" />
+        <path className="limb-outline" d={g.fore} fill="none" strokeWidth={g.foreW + 5} strokeLinecap="round" />
       </g>
       <path className="sleeve" d={g.upper} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
       <g data-part={`${part}-fore`} data-elbow={g.elbow} data-hand={`${g.hx} ${g.hy}`}>
-        <path className="sleeve" d={g.fore} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
+        <path className="sleeve" d={g.fore} fill="none" strokeWidth={g.foreW} strokeLinecap="round" />
       </g>
       <g data-part={`${part}-paw`}>
         {typeof children === 'function' ? children([Number(g.hx), Number(g.hy)]) : <g transform={g.held}>{children}</g>}
-        {!handLater && <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />}
+        {!handLater && <Hand g={g} right={part === 'arm-r'} />}
       </g>
     </Pivot>
   );
@@ -421,9 +421,50 @@ export function ArmHand({ part, d, hand }: { part: string; d: string; hand: [num
   return (
     <Pivot from={g.base} to={g.sh} follow={part}>
       <g data-follow={`${part}-paw`}>
-        <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />
+        <Hand g={g} right={part === 'arm-r'} />
       </g>
     </Pivot>
+  );
+}
+
+/**
+ * The hand at the end of an arm: a round paw, with two little claws for the T. rex (`hand: 'claws'`), or the
+ * feathered tip of an owl's wing (`hand: 'wing'`): three feathers like little fingers over the front of the hand.
+ */
+function Hand({ g, right }: { g: ReturnType<typeof useArm>; right: boolean }) {
+  const x = Number(g.hx);
+  const y = Number(g.hy);
+  const r = g.paw;
+  const side = right ? 1 : -1;
+  return (
+    <>
+      {g.hand === 'claws' && (
+        <path
+          d={`M${fx(x - r * 0.45)} ${fx(y + r * 0.7)} q ${fx(-r * 0.15)} ${fx(r * 0.6)} ${fx(r * 0.25)} ${fx(r * 0.85)} M${fx(x + r * 0.45)} ${fx(y + r * 0.7)} q ${fx(r * 0.15)} ${fx(r * 0.6)} ${fx(-r * 0.25)} ${fx(r * 0.85)}`}
+          className="hand-claw"
+          fill="none"
+          strokeWidth={r * 0.45}
+          strokeLinecap="round"
+        />
+      )}
+      <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={r} />
+      {g.hand === 'wing' &&
+        [-1, 0, 1].map((k) => {
+          const fx0 = x + side * r * 0.2 + k * r * 0.55;
+          const fy0 = y + r * 0.35;
+          return (
+            <ellipse
+              key={k}
+              cx={fx(fx0)}
+              cy={fx(fy0 + r * 0.5)}
+              rx={fx(r * 0.36)}
+              ry={fx(r * 0.75)}
+              transform={`rotate(${fx(-k * 14 - side * 8)} ${fx(fx0)} ${fx(fy0 + r * 0.5)})`}
+              className="hand wing-tip ol-thin"
+            />
+          );
+        })}
+    </>
   );
 }
 
@@ -431,7 +472,7 @@ const fx = (n: number) => n.toFixed(1);
 
 /** Where an arm goes on this species: from its shoulder, bending through the act's control point, to the hand (brought within reach), split at the elbow. */
 function useArm(part: string, d: string, hand: [number, number]) {
-  const { shoulders, arm, paw, reach } = useSpecies().figure;
+  const { shoulders, arm, paw, reach, fore: foreW = arm, hand: handKind } = useSpecies().figure;
   const right = part === 'arm-r';
   const base: [number, number] = right ? [262, 268] : [138, 268];
   const sh = shoulders[right ? 1 : 0];
@@ -448,7 +489,9 @@ function useArm(part: string, d: string, hand: [number, number]) {
     base,
     sh,
     arm,
+    foreW,
     paw,
+    hand: handKind,
     hx: fx(hx),
     hy: fx(hy),
     elbow: `${fx(ex)} ${fx(ey)}`,
