@@ -1,3 +1,4 @@
+import { AlarmSettings } from '../components/AlarmSettings';
 import { StreamingSettings } from '../components/StreamingSettings';
 import { DesktopSettings } from '../components/DesktopSettings';
 import { MotionSettings } from '../components/MotionSettings';
@@ -642,6 +643,7 @@ const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string }[] = [
   { tab: 'playback', heading: 'Critter mouths', also: 'mouth tuner singing' },
   { tab: 'playback', heading: 'Volume levelling and crossfade', also: 'replaygain loudness crossfade gapless automix' },
   { tab: 'playback', heading: 'Streaming quality', also: 'mobile data cellular bitrate data saver flac opus transcode wifi' },
+  { tab: 'playback', heading: 'Wake-up alarm', also: 'alarm clock wake morning snooze' },
   { tab: 'playback', heading: 'Pick up where you left off', also: 'resume restore queue restart continue' },
   { tab: 'playback', heading: 'Talking DJ', also: 'voice dj name' },
   { tab: 'playback', heading: 'Mini player, tray and hotkeys', also: 'mini player tray menu bar hotkey shortcut keyboard global always on top close minimize' },
@@ -821,6 +823,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <MouthTunerSection />
           <PlaybackOptions />
           <StreamingSettings />
+          <AlarmSettings />
           <DjVoiceSettings />
           <DesktopSettings />
           <DiscordSettings />

@@ -15,6 +15,9 @@ interface NativeMedia {
   openNtfy?(url: string): boolean;
   /** Hold Wi-Fi multicast open while looking for speakers to cast to (missing on older app builds). */
   multicast?(on: boolean): void;
+  /** Wake-up alarm (lib/alarm.ts): have Android wake the app at `at` (ms); false when it may not. Missing on older builds. */
+  setAlarm?(at: number, label: string): boolean;
+  cancelAlarm?(): void;
 }
 
 declare global {
@@ -42,6 +45,8 @@ export function enableNativeMedia() {
     // Android Auto / voice: play an item it browsed, or what was asked for
     else if (cmd.startsWith('playId:')) void import('./carBrowse').then((m) => m.carPlay(cmd.slice(7)));
     else if (cmd.startsWith('search:')) void import('./carBrowse').then((m) => m.carSearch(cmd.slice(7)));
+    // the wake-up alarm Android set for us went off (AlarmBridge.kt, lib/alarm.ts)
+    else if (cmd === 'alarm') void import('./alarm').then((m) => m.alarmDue());
   };
 
   // Android Auto opened a folder: answer with its items (lib/carBrowse.ts)
