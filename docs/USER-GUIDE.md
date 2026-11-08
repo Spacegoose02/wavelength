@@ -738,12 +738,39 @@ name, so Wavelength looks a few ways (the exact song, a search by name and artis
 artist, a free-text search) and takes an entry with words over one marked instrumental. A song only shows
 "Instrumental" when its name says so or every matching entry is marked that way. Version notes like
 "(2011 Remaster)", "- Radio Edit" or "(feat. …)" are left off when searching. When the only match is a different
-length (a live take, say), you get its words without the karaoke timing.
+length (a live take, say), you get its words without the karaoke timing. An entry only counts when its artist is
+one of the song's and its name is the song's (an entry for "Zoo York" isn't taken for "Zoo"); one with the same name
+but a much different length (over a minute and over a third off) is taken to be another song.
+
+### Wrong lyrics
+
+When a song shows another song's words, press **Wrong lyrics?** at the top right of the lyrics (or **Find lyrics**
+when none were found). You get:
+
+- **Other LRCLIB entries** for the song, the likeliest first, each with its artist, album, length (and how far off
+  the song's it is), whether it's synced, and its first lines. Tap one to see more of it, then **Use**. An entry of
+  a different length gives its words without the karaoke timing, since the times wouldn't line up.
+- **A search box** to look LRCLIB up with your own words, for a song tagged in a way the lookup didn't expect.
+- **Paste lyrics**: plain lines, or LRC (`[01:23.45]A line`) to get the karaoke highlight.
+- **This song has no lyrics**, to hide wrong ones when nobody has the right ones.
+
+The pick is remembered for that song on this device (and for the same song from your other sources), and wins
+over Navidrome's and LRCLIB's. With a Hub signed in, it also replaces the house's shared copy, so everyone else
+gets the right lyrics too. The credit under the lyrics then reads "Lyrics you picked". To undo it, open **Wrong
+lyrics?** again and press **Forget my pick and look again**.
+
+If the wrong lyrics came from **Navidrome** (the credit says "Lyrics from Navidrome"), they're in the file's tags
+or a `.lrc` file next to it: a pick here covers them up in Wavelength, but to fix them at the source, correct the
+tags or the `.lrc` file and rescan.
 
 > **Developer notes.** `src/lib/lyrics.ts` (LRC parsing, the LRCLIB lookup: `cleanTitle` and `artistVariants`
 > build the queries, every reply is pooled, entries with words and a matching name win, then a length within
 > 10 s, then synced; an unreachable LRCLIB throws so the miss isn't cached; the kid filter), `NavidromeSource.getLyrics` (OpenSubsonic
-> `getLyricsBySongId`), and `src/components/Lyrics.tsx`. Lyrics are cached per song for the session. The
+> `getLyricsBySongId`), and `src/components/Lyrics.tsx`. Lyrics are cached per song for the session.
+> "Wrong lyrics?" is `src/components/LyricsFixer.tsx`; picks are kept in `localStorage` as `wl.lyricsPick.<sourceId>:<id>`
+> and `wl.lyricsPick.<sharedKey>` (`setLyricsPick`, `clearLyricsPick`, `lyricsPickFor`), checked before anything
+> else in `lookup`, and announced with `onLyricsPicked` so the critters' sing-along (`lib/singAlong.ts`) reloads.
+> `lyricsCandidates` lists LRCLIB entries with the same `matchers` the automatic lookup uses. The
 > [critters](#critters) look up the playing song's lyrics too (same cache) while their scene is on screen,
 > to know when someone is singing (`src/lib/singAlong.ts`).
 

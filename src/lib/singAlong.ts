@@ -5,7 +5,7 @@
  *
  * Lyrics come from the same per-song cache as the Lyrics panel, so this costs no extra lookups.
  */
-import { lyricsFor, type LyricLine } from './lyrics';
+import { lyricsFor, onLyricsPicked, type LyricLine } from './lyrics';
 import { syllableShapes, type SyllableShape } from '../player/visemes';
 import type { Track } from '../sources/types';
 
@@ -57,6 +57,10 @@ let key = '';
 let sung: SungLine[] | undefined;
 let raw: LyricLine[] | undefined;
 let rawSyllable = 0.32;
+// other lyrics picked for the playing song ("Wrong lyrics?"): look them up again on the next ask
+onLyricsPicked((k) => {
+  if (k === key) key = '';
+});
 
 /**
  * The current song's sung spans: `undefined` until (and unless) synced lyrics arrive, `[]` for an instrumental.
