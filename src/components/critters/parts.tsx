@@ -69,34 +69,17 @@ export function Shadow({ cx, cy, rx, ry = 6 }: { cx: number; cy: number; rx: num
  * and the vinyl shading.
  */
 export function Body({ species, children }: { species: SpeciesInfo; children: ReactNode }) {
-  const { torso, Top, Skin, chin, shoulders } = species.figure;
-  const girl = useContext(GirlContext);
+  const { torso, Top, Skin, chin } = species.figure;
   return (
     <g data-part="body">
       {Top ? <Top /> : <path className="top ol" d={torso} />}
       <g clipPath="url(#critter-torso)">
         {Skin && <Skin />}
-        {girl && <Bust shoulders={shoulders} />}
         {children}
         <ellipse className="chin-shadow" cx="200" cy={chin[0]} rx={chin[1]} ry="16" filter="url(#critter-blur)" />
         <path d={torso} fill="url(#critter-vinyl)" />
       </g>
       <path d={torso} fill="none" className="ol" />
-    </g>
-  );
-}
-
-/** The girl look on the top: a soft fold under each side of the chest, between the shoulders. */
-function Bust({ shoulders: [[lx, y], [rx]] }: { shoulders: [number, number][] }) {
-  const half = (rx - lx) / 2;
-  const r = half * 0.42;
-  const cy = y + 18;
-  const fold = (cx: number) => `M${(cx - r).toFixed(1)} ${cy} Q ${cx.toFixed(1)} ${(cy + r * 1.1).toFixed(1)} ${(cx + r).toFixed(1)} ${cy}`;
-  const at = [200 - half * 0.5, 200 + half * 0.5];
-  return (
-    <g className="bust">
-      {at.map((cx) => <ellipse key={cx} cx={cx} cy={cy - r * 0.15} rx={r * 0.8} ry={r * 0.5} fill="rgb(255 255 255 / 0.18)" />)}
-      <path d={at.map(fold).join(' ')} fill="none" stroke="rgb(0 0 0 / 0.38)" strokeWidth="2.4" strokeLinecap="round" />
     </g>
   );
 }
