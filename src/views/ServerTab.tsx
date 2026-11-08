@@ -325,15 +325,17 @@ function MusicCatalog() {
     <section>
       <h2>Music catalog</h2>
       <p className="muted small">
-        The Hub reads your music folder itself and keeps its own list of every song, with its tags. It's the first step of
-        the Hub becoming your music server. For now Navidrome still plays everything; this list is matched to Navidrome's
-        songs so the two can be compared. The Hub looks for changes every hour and after every Navidrome scan.
+        The Hub reads your music folder itself and keeps its own list of every song, with its tags, on the way to becoming
+        your music server. Navidrome still plays everything; this list is matched to Navidrome's songs. Once nearly all of
+        them match, Library care, the tag editors, the genre review and Delete album read this list instead of asking
+        Navidrome. The Hub looks for changes every hour and after every Navidrome scan.
       </p>
       {st.blocked ? <p className="errors small">{st.blocked}</p> : (
         <>
           <div className="server-grid">
             <div><span className="muted">Songs</span><b>{n(st.files)} files · {n(sum.albums)} albums · {n(sum.artists)} artists · {n(Math.round(sum.hours))} hours</b></div>
             {st.navidromeSongs > 0 && <div><span className="muted">Matched to Navidrome</span><b>{n(st.linked)} of Navidrome's {n(st.navidromeSongs)} songs{sum.unlinked ? ` · ${n(sum.unlinked)} files Navidrome doesn't list` : ''}</b></div>}
+            {st.inUse !== undefined && <div><span className="muted">Library care reads</span><b>{st.inUse ? 'This catalog (no sign-ins to Navidrome)' : 'Navidrome, until the catalog matches nearly all of its songs'}</b></div>}
             {sum.formats.length > 0 && <div><span className="muted">Formats</span><b>{sum.formats.map((f) => `${f.codec} ${n(f.files)}`).join(' · ')}</b></div>}
             {sum.untagged > 0 && <div><span className="muted">Missing tags</span><b>{n(sum.untagged)} files have no title, artist or album</b></div>}
             {sum.genres.length > 0 && <div><span className="muted">Top genres</span><b>{sum.genres.slice(0, 8).map((g) => g.genre).join(' · ')}</b></div>}

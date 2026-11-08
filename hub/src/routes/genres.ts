@@ -6,7 +6,7 @@ import { clientIp, HttpError, need } from '../http.ts';
 import { getScanSettings } from '../library.ts';
 import { notify, withPermission } from '../notify.ts';
 import { libraryFile, readTags, relPath, type Tags } from '../tags.ts';
-import { navidromeAdmin } from './navidrome.ts';
+import { libraryAdmin } from '../libraryAdmin.ts';
 import { saveTagChanges } from './tags.ts';
 
 /**
@@ -35,12 +35,8 @@ function readRules(v: unknown): GenreRule[] {
   return [...out.values()];
 }
 
-export function genreRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
-  const admin = async () => {
-    const s = getScanSettings(db, config.secretKey);
-    if (!s) throw new HttpError(409, 'Add the Navidrome admin login under Settings → Server first');
-    return navidromeAdmin(s.url, s.username, s.password);
-  };
+export function genreRoutes(app: FastifyInstance, { db, config, library, catalog }: Ctx) {
+  const admin = () => libraryAdmin(db, config.secretKey, catalog);
   const settingsOut = () => {
     const s = getGenreSettings(db);
     return { auto: s.auto, rules: s.rules, defaults: s.defaults, kept: s.keep.length, genres: genreTargets(s.rules), subgenres: subgenresOf(s.rules) };

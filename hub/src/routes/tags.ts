@@ -7,7 +7,8 @@ import { clientIp, HttpError, need, str } from '../http.ts';
 import { getScanSettings } from '../library.ts';
 import { findMatches, libraryFile, readTags, relPath, TAG_KEYS, writeTags, type Tags } from '../tags.ts';
 import { numberedTitle } from '../trackTitles.ts';
-import { navidromeAdmin } from './navidrome.ts';
+import { libraryAdmin } from '../libraryAdmin.ts';
+import { catalogWrote } from '../catalog.ts';
 
 /**
  * The tag editor (docs/USERS-AND-ADMIN.md Phase 5), for admins (`library.edit`): read an album's tags
@@ -55,7 +56,10 @@ export async function saveTagChanges(db: Db, musicDir: string, plan: { file: str
       }
       if (!Object.keys(after).length) return;
       await writeTags(p.file, after);
-      tx(db, () => save.run(batch, rel, JSON.stringify(before), JSON.stringify(after), label, userId, now));
+      tx(db, () => {
+        save.run(batch, rel, JSON.stringify(before), JSON.stringify(after), label, userId, now);
+        catalogWrote(db, rel, after);
+      });
       changed.push(rel);
     } catch (e) {
       failed.push({ path: rel, error: (e as Error).message });
@@ -69,13 +73,9 @@ export async function saveTagChanges(db: Db, musicDir: string, plan: { file: str
   return { batch: changed.length ? batch : null, changed, failed };
 }
 
-export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
+export function tagRoutes(app: FastifyInstance, { db, config, library, catalog }: Ctx) {
   const file = (path: string) => libraryFile(config.musicDir, config.navidromeMusicDir, path);
-  const admin = async () => {
-    const s = getScanSettings(db, config.secretKey);
-    if (!s) throw new HttpError(409, 'Add the Navidrome admin login under Settings → Server first');
-    return navidromeAdmin(s.url, s.username, s.password);
-  };
+  const admin = () => libraryAdmin(db, config.secretKey, catalog);
 
   /** An album's songs (Navidrome album id), with the tags in their files. */
   app.get<{ Params: { id: string } }>('/api/admin/tags/album/:id', async (req) => {
@@ -216,6 +216,7 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
     for (const r of rows) {
       try {
         await writeTags(file(r.path), JSON.parse(r.before) as Tags);
+        catalogWrote(db, r.path, JSON.parse(r.before) as Tags);
         db.prepare('UPDATE tag_edits SET undone_at = ? WHERE id = ?').run(Date.now(), r.id);
         undone++;
       } catch (e) {
