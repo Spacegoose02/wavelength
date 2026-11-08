@@ -92,3 +92,33 @@ test('numbered titles come from Navidrome’s song list, a page at a time, and a
   assert.equal((await json(app, 'POST', `/api/admin/tags/undo/${batch}`, { token: tokens.admin })).body.undone, 2);
   assert.equal((await readTags(join(music, 'A/B/01.mp3'))).title, '01 - One');
 });
+
+test('a scan signs in to Navidrome once, not once a page (Navidrome limits sign-ins and answers 429)', async () => {
+  const music = mkdtempSync(join(tmpdir(), 'wl-numbered-'));
+  const all = Array.from({ length: 20 }, (_, i) => ({ id: `s${i}`, albumId: 'ab', album: 'B', albumArtist: 'A', artist: 'A', path: `/music/A/B/${i}.mp3`, title: `Song ${i}`, trackNumber: i + 1 }));
+  let logins = 0;
+  const nd = await listen((url) => {
+    // like Navidrome's AuthRequestLimit, but tighter
+    if (url === '/auth/login') return ++logins > 3 ? [429, {}] : [200, { token: 'jwt', isAdmin: true }];
+    if (url.startsWith('/rest/')) return [200, { 'subsonic-response': { status: 'ok', user: { adminRole: true } } }];
+    if (url.startsWith('/api/song?')) {
+      const q = new URLSearchParams(url.split('?')[1]);
+      return [200, all.slice(Number(q.get('_start')), Number(q.get('_end'))), { 'x-total-count': String(all.length) }];
+    }
+    return [404, {}];
+  });
+  const { app, tokens } = await seeded({}, { musicDir: music });
+  assert.equal((await json(app, 'PUT', '/api/admin/library/navidrome', { token: tokens.admin, body: { url: nd, username: 'admin', password: 'pw' } })).status, 200);
+  for (let offset = 0; offset < all.length; offset += 2) {
+    const r = await json(app, 'GET', `/api/admin/tags/numbered?offset=${offset}&limit=2`, { token: tokens.admin });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+  }
+  assert.ok(logins <= 2, `signed in ${logins} times`);
+
+  // a Navidrome that turns sign-ins away says so, rather than calling the login wrong
+  const busy = await listen((url) => (url === '/auth/login' ? [429, {}] : [200, { 'subsonic-response': { status: 'ok', user: { adminRole: true } } }]));
+  assert.equal((await json(app, 'PUT', '/api/admin/library/navidrome', { token: tokens.admin, body: { url: busy, username: 'admin', password: 'pw' } })).status, 200);
+  const r = await json(app, 'GET', '/api/admin/tags/numbered', { token: tokens.admin });
+  assert.equal(r.status, 502);
+  assert.match(r.body.error, /too many in a row/);
+});
