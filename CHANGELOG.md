@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **An elephant, a tiger and a lion.** Three more critters, drawn cute. The elephant calf is soft grey with big
+  round pink-lined ears that stay out either side of every hat (even the cowboy hat) and flap to the beat, and a
+  short trunk that curls up to one side so the smile shows under it. The tiger cub is orange with bold stripes, white
+  cheeks, green eyes and a pink nose, and a striped tail. The lion cub has a russet mane round its head (the girl is a
+  lioness, without one) and a tufted tail. All three play every act as a boy or a girl; the hazmat hood hides the
+  ears, trunk and mane (`ElephantFace`, `TigerFace`, `LionFace` in `faces.tsx`; `FIGURES.elephant` and the big-cat
+  figure `FIGURES.tiger` / `FIGURES.lion` in `bodies.tsx`).
 - **A turtle critter.** The eighth species: a cute sea-green turtle with a soft mint muzzle, big blue eyes, rosy
   cheeks and a wide smile, on stumpy clawed legs with a little pointed tail. Its high domed shell is
   drawn behind the top, so the rim shows round every act's outfit and the instruments and arms go in front of it.

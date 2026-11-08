@@ -121,6 +121,13 @@ the asset work and a risk on low-end phones and the iOS WebView.
   the top, wider than it, so the gold-rayed rim shows round any act's clothes while the arms and instruments go
   in front; then stumpy legs with blunt claws (or the act's shoes) and a pointed tail. No ears or horns, so
   every hat fits the head unchanged.
+- An elephant, a tiger and a lion (November 2026), drawn cute and kept clear of famous cartoon ones (no flying
+  ears or bonnet, no blue nose or bouncy tail, no crown). The elephant's ears are `ear-l` / `ear-r` like the bears',
+  but styles.css keeps them out under the cowboy hat and turns them from where they join the head, so they flap;
+  its trunk is outlined down its sides only, so it grows out of the face, and curls up to the right so the mouth
+  sits under its left side. The tiger and lion share a big-cat figure (`bigCat` in bodies.tsx) with their own
+  tails. The lion's mane is drawn behind the head and left out for the girl, who is a lioness. The hazmat hood
+  hides the elephant's ears and trunk and the lion's mane (`.elephant-ears`, `.elephant-trunk`, `.lion-mane`).
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

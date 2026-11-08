@@ -65,3 +65,35 @@ describe('the turtle', () => {
     expect(svg.indexOf('turtle-shell')).toBeLessThan(svg.indexOf('data-part="body"'));
   });
 });
+
+describe('the elephant, tiger and lion', () => {
+  const draw = async (id: string, girl: boolean) => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    const { GirlContext } = await import('../components/critters/faces');
+    const species = SPECIES.find((s) => s.id === id)!;
+    const hat = h('g', { className: 'own-hat' });
+    return renderToStaticMarkup(h(GirlContext.Provider, { value: girl }, h('svg', null, h(Head, { species, hat }))));
+  };
+
+  it('are species', async () => {
+    const { SPECIES } = await import('../components/critters/species');
+    expect(SPECIES.map((s) => s.id)).toEqual(expect.arrayContaining(['elephant', 'tiger', 'lion']));
+  });
+
+  it('draws the elephant ears and the lion mane behind the head, so a hat covers their roots', async () => {
+    const elephant = await draw('elephant', false);
+    expect(elephant.indexOf('elephant-ears')).toBeGreaterThan(-1);
+    expect(elephant.indexOf('elephant-ears')).toBeLessThan(elephant.indexOf('head-elephant'));
+    expect(elephant.indexOf('elephant-trunk')).toBeLessThan(elephant.indexOf('own-hat'));
+    const lion = await draw('lion', false);
+    expect(lion.indexOf('lion-mane')).toBeGreaterThan(-1);
+    expect(lion.indexOf('lion-mane')).toBeLessThan(lion.indexOf('head-lion'));
+  });
+
+  it('draws the girl lion as a lioness, with no mane', async () => {
+    expect(await draw('lion', true)).not.toContain('lion-mane');
+  });
+});
