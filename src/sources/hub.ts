@@ -467,6 +467,32 @@ export interface HubListening {
 }
 
 /** Rescans after downloads (GET /api/admin/library). */
+/** The Hub's own catalog of the music folder (hub/src/catalog.ts, hub/src/routes/catalog.ts). */
+export interface HubCatalogStatus {
+  blocked: string | null;
+  files: number;
+  failed: number;
+  linked: number;
+  navidromeSongs: number;
+  scanning: boolean;
+  progress: { step: 'walking' | 'reading'; done: number; total: number } | null;
+  lastScanAt: number | null;
+  lastScanMs: number | null;
+  lastChanges: { added: number; changed: number; removed: number } | null;
+  lastLinkAt: number | null;
+  lastError: string | null;
+  summary: {
+    albums: number;
+    artists: number;
+    hours: number;
+    untagged: number;
+    unlinked: number;
+    formats: { codec: string; files: number }[];
+    genres: { genre: string; files: number }[];
+    failed: { path: string; error: string }[];
+  };
+}
+
 export interface HubLibraryStatus {
   navidrome: { url: string; username: string } | null;
   scanning: boolean;
@@ -914,6 +940,8 @@ export class HubClient {
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
   server = () => this.call<HubServerStatus>('GET', '/api/admin/server');
   library = () => this.call<HubLibraryStatus>('GET', '/api/admin/library');
+  catalog = () => this.call<HubCatalogStatus>('GET', '/api/admin/catalog');
+  scanCatalog = () => this.call<HubCatalogStatus>('POST', '/api/admin/catalog/scan', {});
   containers = () => this.call<{ enabled: boolean; containers: HubContainer[] }>('GET', '/api/admin/docker');
   container = (name: string, action: 'start' | 'stop' | 'restart') =>
     this.call<{ name: string; state: string; status: string }>('POST', `/api/admin/docker/${encodeURIComponent(name)}/${action}`, {});

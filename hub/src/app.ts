@@ -51,6 +51,8 @@ import { LyricsCache } from './lyricsCache.ts';
 import { ChartCache } from './discover.ts';
 import { ChartHistory } from './chartHistory.ts';
 import { LibraryIndex } from './libraryIndex.ts';
+import { Catalog } from './catalog.ts';
+import { catalogRoutes } from './routes/catalog.ts';
 import { ReleaseRadar } from './radar.ts';
 import { radarRoutes } from './routes/radar.ts';
 import { scrobbleRoutes } from './routes/scrobble.ts';
@@ -94,6 +96,8 @@ export interface Ctx {
   chartHistory: ChartHistory;
   /** Every Navidrome song, kept to match Discover's charts against in one go (libraryIndex.ts). */
   libraryIndex: LibraryIndex;
+  /** The Hub's own catalog of the music folder (catalog.ts). */
+  catalog: Catalog;
   /** Lyrics the house's apps found, shared and searchable (lyricsCache.ts). */
   lyrics: LyricsCache;
   /** Deezer related artists and top songs (mixes.ts), for Made for you and Discover's For you. */
@@ -158,6 +162,13 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   ctx.lyrics = new LyricsCache(db);
   ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => ctx.library.status().lastScanAt);
+  // one listing of Navidrome for the whole Hub: the catalog and sound-alike analysis take the library index's
+  ctx.sonic.listSongs = () => ctx.libraryIndex.navidromeSongs();
+  ctx.catalog = new Catalog(db, config.musicDir, config.navidromeMusicDir);
+  ctx.catalog.listNavidrome = () => ctx.libraryIndex.navidromeSongs();
+  ctx.catalog.scannedAt = () => ctx.library.status().lastScanAt;
+  if (opts.watchLibrary ?? true) ctx.catalog.start();
+  app.addHook('onClose', async () => ctx.catalog.stop());
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
   if (opts.watchLibrary ?? true) ctx.library.start();
   app.addHook('onClose', async () => ctx.library.stop());
@@ -178,6 +189,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   app.decorate('hubClean', ctx.clean);
   app.decorate('hubScrobbler', ctx.scrobbler);
   app.decorate('hubSonic', ctx.sonic);
+  app.decorate('hubCatalog', ctx.catalog);
 
   // database backups, for restore (routes/server.ts); the route sets how big
   app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
@@ -266,6 +278,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   djRoutes(app, ctx);
   mixRoutes(app, ctx);
   sonicRoutes(app, ctx);
+  catalogRoutes(app, ctx);
   tourRoutes(app, ctx);
   videoRoutes(app, ctx);
   publicLinkRoutes(app, ctx);

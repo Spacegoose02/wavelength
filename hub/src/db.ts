@@ -603,6 +603,36 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   );
   CREATE VIRTUAL TABLE lyrics_fts USING fts5(key UNINDEXED, artist UNINDEXED, title UNINDEXED, lines UNINDEXED, words, tokenize = 'unicode61 remove_diacritics 2');
   `,
+  `
+  -- The Hub's own catalog of the music folder (catalog.ts): one row per music file, read by the Hub, matched to the
+  -- Navidrome song it is by path (nd_*: NULL until matched). path is relative to the music folder.
+  CREATE TABLE catalog_songs (
+    path         TEXT PRIMARY KEY,
+    size         INTEGER NOT NULL,
+    mtime        INTEGER NOT NULL,          -- ms; size or mtime changing means read it again
+    title        TEXT NOT NULL DEFAULT '',
+    artist       TEXT NOT NULL DEFAULT '',
+    album        TEXT NOT NULL DEFAULT '',
+    album_artist TEXT NOT NULL DEFAULT '',
+    track        INTEGER,
+    disc         INTEGER,
+    year         INTEGER,
+    genre        TEXT NOT NULL DEFAULT '',  -- as tagged ("Rap; Hip-Hop")
+    explicit     TEXT NOT NULL DEFAULT '',  -- 'explicit', 'clean' or ''
+    duration     REAL NOT NULL DEFAULT 0,   -- seconds
+    bit_rate     INTEGER,                   -- kbps
+    codec        TEXT NOT NULL DEFAULT '',
+    mb_track_id  TEXT NOT NULL DEFAULT '',
+    mb_album_id  TEXT NOT NULL DEFAULT '',
+    error        TEXT,                      -- why the file couldn't be read
+    read_at      INTEGER NOT NULL,
+    nd_id        TEXT,
+    nd_album_id  TEXT,
+    nd_artist_id TEXT
+  );
+  CREATE INDEX catalog_songs_nd ON catalog_songs (nd_id);
+  CREATE INDEX catalog_songs_album ON catalog_songs (album_artist, album);
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
