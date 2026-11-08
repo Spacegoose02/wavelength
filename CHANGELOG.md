@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+- **Wrong lyrics? Pick the right ones.** Under the lyrics in Now Playing, **Wrong lyrics?** lists the other LRCLIB
+  entries for the song (name, artist, album, length and the first lines, the likeliest first), searches LRCLIB with
+  your own words, takes lyrics you paste in (plain, or LRC with times for karaoke), or marks the song as having
+  none. The pick is remembered for the song, wins over Navidrome's and LRCLIB's, and replaces the Hub's shared copy
+  so the rest of the house gets it too. **Forget my pick** looks the song up again (`LyricsFixer.tsx`,
+  `setLyricsPick` in `lib/lyrics.ts`).
+- **Fix: lyrics from another song.** The LRCLIB lookup now needs the artist to match when LRCLIB names one, only
+  takes a name that contains the title when it is most of it ("Zoo York" no longer passes for "Zoo"), takes a
+  near name only at the song's length, and turns down an entry with the same name but a much different length
+  (more than a minute and over a third off), which is another song rather than a live take.
+
 ## 0.31.0
 - **A panda critter.** The twelfth species: a cute panda cub with a round cream-white head and fluffy cheeks,
   round black ears, black teardrop patches round big shiny brown eyes, a little black button nose, rosy cheeks and a
