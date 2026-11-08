@@ -21,6 +21,46 @@ export function tidyCredit(value: string): string {
   return value.split(SEMI).map((p) => p.trim()).filter(Boolean).join('; ');
 }
 
+/**
+ * Separators that always join two artists in a credit: "feat.", "ft.", "featuring", "•", "·", ";" and " / ".
+ * (" / " needs its spaces, so "AC/DC" stays one name.)
+ */
+const STRONG = /\s+(?:featuring|feat\.?|ft\.?)\s+|\s*\(\s*(?:featuring|feat\.?|ft\.?|with)\s+|\s*[•·;；]\s*|\s+\/\s+/i;
+/** Separators that can join two artists but are also part of names ("Simon & Garfunkel", "Tyler, The Creator"). */
+const WEAK = /\s*,\s*|\s+(?:&|and|x|×|with)\s+/i;
+const bare = (s: string) => s.replace(/^[\s([]+|[\s)\]]+$/g, '').trim();
+const keyOf = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+/** The pieces of a credit split only on the separators that always mean two artists. */
+export function strongParts(credit: string): string[] {
+  return credit.split(STRONG).map(bare).filter(Boolean);
+}
+
+/**
+ * The individual artists in a credit, for lists of artists (Search): "Lil Durk • J. Cole" → ["Lil Durk", "J. Cole"],
+ * "DJ Khaled feat. Lil Baby & Lil Durk" → ["DJ Khaled", "Lil Baby", "Lil Durk"], "Calboy;Meek Mill;Lil Durk" → three.
+ * A piece joined with "&", "and", "x", "with" or a comma is split only when one of its names is an artist on its own
+ * somewhere in the library (`known`, from strongParts() of every credit), so "Simon & Garfunkel", "Earth, Wind &
+ * Fire" and "Tyler, The Creator" stay one artist while "Lil Baby & Lil Durk" becomes two.
+ */
+export function creditNames(credit: string, known: (name: string) => boolean): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const add = (n: string) => {
+    const k = keyOf(n);
+    if (k && !seen.has(k)) {
+      seen.add(k);
+      out.push(n);
+    }
+  };
+  for (const piece of strongParts(credit)) {
+    const parts = piece.split(WEAK).map(bare).filter(Boolean);
+    if (parts.length > 1 && parts.some(known)) parts.forEach(add);
+    else add(piece);
+  }
+  return out;
+}
+
 export interface CreditSettings {
   /** Tidy the credits of new downloads before Navidrome scans them. */
   auto: boolean;
