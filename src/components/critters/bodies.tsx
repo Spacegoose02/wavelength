@@ -284,6 +284,93 @@ const moose: Figure = {
   },
 };
 
+
+/** The turtle's shell seen from the front: a high dome, wider than the top, so its rim shows all round it. */
+const SHELL = 'M200 222 C 258 222, 292 258, 292 300 C 292 334, 272 356, 246 362 Q 200 372 154 362 C 128 356, 108 334, 108 300 C 108 258, 142 222, 200 222 Z';
+
+/** points round an ellipse about the shell's middle, at `deg` degrees (0 is to the right, 90 down) */
+const ring = (rx: number, ry: number, deg: number) => {
+  const r = (deg * Math.PI) / 180;
+  return `${(200 + rx * Math.cos(r)).toFixed(1)} ${(298 + ry * Math.sin(r)).toFixed(1)}`;
+};
+const RIM_SEAMS = Array.from({ length: 14 }, (_, i) => `M${ring(70, 60, i * (360 / 14) - 90)} L${ring(100, 84, i * (360 / 14) - 90)}`).join(' ');
+/** the big plates inside the rim: seams from the middle out to the rim, and a gold sunburst on each */
+const PLATE_SEAMS = [-160, -120, -60, -20, 20, 160].map((a) => `M${ring(30, 26, a)} L${ring(70, 60, a)}`).join(' ') + ` M${ring(30, 26, 0)} A30 26 0 1 1 ${ring(30, 26, 180)} A30 26 0 1 1 ${ring(30, 26, 0)}`;
+const RAYS = [-140, -90, -40, 0, 180, 150, 30]
+  .map((a) => {
+    const c = ring(50, 43, a);
+    const [x, y] = c.split(' ').map(Number);
+    return [0, 60, 120, 180, 240, 300].map((r) => `M${x} ${y} l ${(9 * Math.cos((r * Math.PI) / 180)).toFixed(1)} ${(9 * Math.sin((r * Math.PI) / 180)).toFixed(1)}`).join(' ');
+  })
+  .join(' ');
+
+/**
+ * Turtle: a round top over a tall domed shell whose rim shows behind the shoulders and either
+ * side of the clothes. The shell is drawn under the top, so every act's outfit goes over it and the arms and
+ * instruments in front of it (the hazmat suit covers it). A short scaly neck, stumpy legs with blunt claws (or
+ * the act's shoes) and a little pointed tail.
+ */
+const turtle: Figure = {
+  head: [190, 0.84],
+  torso: 'M174 256 Q 200 248 226 256 Q 250 264 254 290 Q 256 314 248 326 Q 200 336 152 326 Q 144 314 146 290 Q 150 264 174 256 Z',
+  shoulders: [[156, 276], [244, 276]],
+  arm: 21,
+  paw: 12,
+  reach: 64,
+  waist: [314, 50, 28],
+  chin: [252, 44],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[232, 350]} part="tail">
+        <path d="M222 346 Q 248 348 262 366 Q 242 366 224 358 Z" className="bare ol-thin" />
+      </Pivot>
+      <defs>
+        <clipPath id="critter-turtle-shell">
+          <path d={SHELL} />
+        </clipPath>
+      </defs>
+      <g className="turtle-shell">
+        <path d={SHELL} className="shell-rim ol" />
+        <g clipPath="url(#critter-turtle-shell)">
+          <path d={RIM_SEAMS} className="shell-seam" strokeWidth="3" />
+          <ellipse cx="200" cy="298" rx="70" ry="60" className="shell ol-thin" />
+          <path d={PLATE_SEAMS} className="shell-seam" strokeWidth="3" fill="none" />
+          <path d={RAYS} className="shell-ray" strokeWidth="3.5" strokeLinecap="round" />
+        </g>
+        <path d={SHELL} fill="url(#critter-vinyl)" />
+      </g>
+      <Shaded d={tube([178, 318], [174, 338], [174, 356], 30, 26)} className={legs} />
+      <Shaded d={tube([222, 318], [226, 338], [226, 356], 30, 26)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[172, 364]} rx={21} ry={10} shoe={shoe} />
+          <Foot at={[228, 364]} rx={21} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <Claws at={[172, 362]} />
+          <Claws at={[228, 362]} right />
+        </>
+      )}
+      {/* the neck, with a fold of skin */}
+      <path d={tube([200, 226], [200, 240], [200, 256], 40, 46)} className="bare ol" />
+      <path d="M184 244 Q 200 250 216 244" fill="none" stroke="rgb(0 0 0 / 0.22)" strokeWidth="2" strokeLinecap="round" />
+    </>
+  ),
+};
+
+/** A bare turtle foot: a stumpy round pad in the dark skin with three blunt pale claws. */
+function Claws({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const foot = (
+    <g>
+      <ellipse cx={x} cy={y} rx={19} ry={10} className="foot ol-thin" />
+      <path d={`M${x - 11} ${y + 5} l -2 5 M${x} ${y + 7} v 5 M${x + 11} ${y + 5} l 2 5`} className="claw" strokeWidth="4.5" strokeLinecap="round" />
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
 export const FIGURES = {
   raccoon,
   bear,
@@ -291,4 +378,5 @@ export const FIGURES = {
   alien: alien(202, [226, 262, 30]),
   grey: alien(186, [226, 254, 12]),
   moose,
+  turtle,
 } satisfies Record<string, Figure>;

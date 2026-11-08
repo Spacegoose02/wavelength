@@ -396,3 +396,44 @@ export function MooseFace() {
     </Placed>
   );
 }
+
+/**
+ * A turtle's face, drawn cute: a round sea-green head with a soft mint muzzle, a few gold freckles on the
+ * crown, big open eyes, pink cheeks, two little nostrils and a wide happy smile. No ears or horns, so hats and
+ * headphones sit on the plain round head; the shell is on the figure (`FIGURES.turtle`).
+ */
+export function TurtleFace() {
+  return (
+    <Placed cx={206} cy={174} s={0.84}>
+      <defs>
+        <Shade id="tt-skin" hi="#a6dfb0" mid="#62b07f" lo="#367a55" />
+        <Shade id="tt-muzzle" hi="#f1fbe6" lo="#bfe3bd" />
+      </defs>
+      <HeadShape id="turtle" fill="url(#tt-skin)" d="M206 96 C 266 96, 302 132, 302 176 C 302 220, 264 252, 206 252 C 148 252, 110 220, 110 176 C 110 132, 146 96, 206 96 Z">
+        {/* the soft pale muzzle */}
+        <ellipse cx="206" cy="220" rx="62" ry="38" fill="url(#tt-muzzle)" />
+        <g fill="#e9c35c" opacity="0.85">
+          <circle cx="184" cy="114" r="4" />
+          <circle cx="206" cy="108" r="3.2" />
+          <circle cx="228" cy="114" r="4" />
+          <circle cx="196" cy="124" r="2.2" />
+          <circle cx="218" cy="124" r="2.2" />
+        </g>
+        <ellipse cx="176" cy="120" rx="38" ry="13" fill="rgb(255 255 255 / 0.16)" transform="rotate(-14 176 120)" />
+      </HeadShape>
+      {/* rosy cheeks */}
+      <ellipse cx="140" cy="200" rx="15" ry="9" fill="#ff8f9c" opacity="0.5" />
+      <ellipse cx="272" cy="200" rx="15" ry="9" fill="#ff8f9c" opacity="0.5" />
+      <g data-part="eyes">
+        <Eye cx={166} cy={164} r={21} iris="#2a6f8a" />
+        <Eye cx={246} cy={164} r={21} iris="#2a6f8a" k={0.9} />
+        <Lashes l={[148, 152]} r={[262, 152]} />
+      </g>
+      <Pair l="M146 130 Q 160 123 176 128" mid={206} stroke="#2f6b47" width={4.5} />
+      <ellipse cx="199" cy="198" rx="2.6" ry="2" fill="#2c5a3e" />
+      <ellipse cx="213" cy="198" rx="2.6" ry="2" fill="#2c5a3e" />
+      <path data-part="smile" d="M176 208 Q 206 236 236 208 M172 205 Q 175 210 179 210 M240 205 Q 237 210 233 210" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+      <Mouth id="turtle" x={206} y={212} w={16} h={26} fill="#5a1a24" line={INK} teeth="none" />
+    </Placed>
+  );
+}

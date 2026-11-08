@@ -114,6 +114,13 @@ the asset work and a risk on low-end phones and the iOS WebView.
   act's hat and the headphones sit between them with the palms showing either side; the hazmat hood hides them.
   Its figure (`FIGURES.moose`) is a deep chest on long legs with pale stockings and cloven hooves (or the act's
   shoes), and a tiny tail.
+- A turtle (eighth species, November 2026), kept clear of any famous cartoon turtle (no mask, no bandana,
+  no spiky shell, no orange shell with a yellow front). Sea-green skin with a soft mint muzzle and a few gold
+  freckles, big blue eyes, rosy cheeks and a wide smile. A first draft had a hooked beak and heavy lids; it
+  looked grumpy, so the face was redrawn cuter. Its figure (`FIGURES.turtle`) draws a high domed shell under
+  the top, wider than it, so the gold-rayed rim shows round any act's clothes while the arms and instruments go
+  in front; then stumpy legs with blunt claws (or the act's shoes) and a pointed tail. No ears or horns, so
+  every hat fits the head unchanged.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

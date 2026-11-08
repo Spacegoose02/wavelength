@@ -1598,6 +1598,12 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .hoof { fill: #2a221c; }
 /* the moose's antlers stick out either side of every hat, but not through the hazmat hood */
 :root[data-skin-group='nuclear'] .critter .moose-antlers { display: none; }
+.species-turtle { --skin: #62b07f; --skin-dark: #367a55; --belly: #d9f0cf; }
+.critter .shell { fill: #4e341c; }
+.critter .shell-rim { fill: #8a5e30; }
+.critter .shell-seam { stroke: #2a1c10; fill: none; }
+.critter .shell-ray { stroke: #e8b445; fill: none; }
+.critter .claw { stroke: #f1fbe6; fill: none; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }

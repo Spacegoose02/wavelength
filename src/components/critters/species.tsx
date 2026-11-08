@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Species } from '../../store/settings';
 import { FIGURES, type Figure } from './bodies';
-import { AlienFace, BlackBearFace, BrownBearFace, GreyFace, MooseFace, RaccoonFace, SharkFace } from './faces';
+import { AlienFace, BlackBearFace, BrownBearFace, GreyFace, MooseFace, RaccoonFace, SharkFace, TurtleFace } from './faces';
 
 /**
  * Who plays: each species is a face (faces.tsx, drawn on the shared skeleton, see parts.tsx) and a figure
@@ -54,4 +54,5 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'bear-black', noun: 'black bear', label: 'Black bear', Face: BlackBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.24, 1.22], bow: [170, 118, -20] } },
   { id: 'bear-brown', noun: 'brown bear', label: 'Brown bear', Face: BrownBearFace, figure: FIGURES.bear, fit: { eyeY: 178, eyes: [1.24, 1.22], bow: [170, 118, -20] } },
   { id: 'moose', noun: 'moose', label: 'Moose', Face: MooseFace, figure: FIGURES.moose, fit: { eyeY: 172, eyes: [1.28, 1.2], mask: 16, bow: [168, 116, -20] } },
+  { id: 'turtle', noun: 'turtle', label: 'Turtle', Face: TurtleFace, figure: FIGURES.turtle, fit: { eyeY: 172, eyes: [1.3, 1.24], mask: 10, bow: [168, 118, -20] } },
 ];
