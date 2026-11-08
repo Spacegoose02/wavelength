@@ -32,6 +32,9 @@ import { SongRadioButton } from '../components/SongRadioButton';
 import { ArtistNews, notOneArtist, useCanGet } from '../components/ArtistNews';
 import { MadeForYou } from './Mix';
 import { JumpBackIn } from '../components/JumpBackIn';
+import { ALBUM_SORTS, ARTIST_SORTS, BrowseFilters } from '../components/BrowseFilters';
+import { isFiltered, queryAlbums, queryArtists } from '../lib/browse';
+import { useBrowseFilters } from '../store/browse';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -144,13 +147,15 @@ export function Albums() {
   const hidden = useHidden();
   const kid = useIsKid();
   const [busy, setBusy] = useState<string>();
+  const q = useBrowseFilters((s) => s.albums);
+  const setQ = useBrowseFilters((s) => s.setAlbums);
   const shown = useMemo(() => {
     const f = filter.toLowerCase();
-    return albums.filter(
+    return queryAlbums(albums.filter(
       (a) => (!f || a.title.toLowerCase().includes(f) || a.artist.toLowerCase().includes(f)) &&
         (!only || (a.refs ?? [a]).some((r) => r.sourceId === only)) && !hidden.album(a),
-    );
-  }, [albums, filter, only, hidden]);
+    ), q, q.sort);
+  }, [albums, filter, only, hidden, q]);
   const musicSources = sources.filter((s) => s.enabled && (s.kind === 'navidrome' || s.kind === 'plex'));
   const cardKey = (a: Album) => `${a.sourceId}:${a.id}`;
   // what can be ticked: the cards on screen (a version hidden by Settings → Playback isn't)
@@ -167,7 +172,7 @@ export function Albums() {
         <input className="filter" placeholder="Filter albums…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
       {sel.selecting && (
-        <SelectBar sel={sel} all={selectable} filtered={!!filter || !!only} name={(a) => a.title} status={busy}>
+        <SelectBar sel={sel} all={selectable} filtered={!!filter || !!only || isFiltered(q)} name={(a) => a.title} status={busy}>
           <AlbumSelectActions sel={sel} busy={busy} setBusy={setBusy} />
         </SelectBar>
       )}
@@ -181,6 +186,7 @@ export function Albums() {
           ))}
         </div>
       )}
+      <BrowseFilters albums={albums} q={q} set={setQ} sorts={ALBUM_SORTS} />
       <Grid>{shown.slice(0, 600).map((a) => (
         <AlbumCard key={cardKey(a)} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
           selected={sel.isPicked(a)} badge={sel.badge(a)} />
@@ -191,14 +197,19 @@ export function Albums() {
 }
 
 export function Artists() {
-  const { artists } = useCatalog();
+  const { artists, albums } = useCatalog();
   const go = useUi((s) => s.go);
+  const q = useBrowseFilters((s) => s.artists);
+  const setQ = useBrowseFilters((s) => s.setArtists);
   const [filter, setFilter] = useState('');
   const hidden = useHidden();
   const kid = useIsKid();
   const canEdit = useCan('library.edit');
   const [busy, setBusy] = useState<string>();
-  const shown = useMemo(() => artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()) && !hidden.artist(a)), [artists, filter, hidden]);
+  const shown = useMemo(
+    () => queryArtists(artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()) && !hidden.artist(a)), albums, q, q.sort),
+    [artists, albums, filter, hidden, q],
+  );
   const selectable = useMemo(() => shown.slice(0, 600), [shown]);
   const sel = useSelection(selectable, (a: Artist) => `${a.sourceId}:${a.id}`);
   const chosen = sel.chosen;
@@ -218,11 +229,12 @@ export function Artists() {
         <input className="filter" placeholder="Filter artists…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
       {sel.selecting && (
-        <SelectBar sel={sel} all={selectable} filtered={!!filter} name={(a) => a.name} status={busy}>
+        <SelectBar sel={sel} all={selectable} filtered={!!filter || isFiltered(q)} name={(a) => a.name} status={busy}>
           <SelectionPlayButtons disabled={!chosen.length || !!busy} play={play} />
           {canEdit && !kid && <button className="btn" disabled={chosen.length < 2 || !!busy} title="Merge the others into the first one you ticked" onClick={merge}>Merge{chosen.length > 1 ? ` (${chosen.length})` : ''}</button>}
         </SelectBar>
       )}
+      <BrowseFilters albums={albums} q={q} set={setQ} sorts={ARTIST_SORTS} />
       <Grid>
         {selectable.map((a) => (
           <ArtistCard key={`${a.sourceId}:${a.id}`} artist={a} onOpen={(x, e) => sel.click(x, e) || go({ view: 'artist', artist: x })} onPick={sel.pick}

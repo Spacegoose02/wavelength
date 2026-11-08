@@ -36,6 +36,8 @@ export const IconPodcast = make('M12 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM11 17h2l.5 
 export const IconPlaylist = make('M3 6h12M3 12h12M3 18h7M17 18a2 2 0 1 0 4 0V8l-4 1');
 export const IconWave = make('M2 12h2l2-6 3 12 3-15 3 15 3-9 2 3h2');
 export const IconCompass = make('M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z');
+/** Browse: four tiles. */
+export const IconBrowse = make('M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z');
 export const IconSparkle = make('M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z');
 export const IconLibrary = make('M4 4v16M9 4v16M14 5l5 14.5');
 export const IconMore = make('M5 12h.01M12 12h.01M19 12h.01');

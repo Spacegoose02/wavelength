@@ -127,6 +127,8 @@ export interface Album {
   trackCount?: number;
   /** When it was added to the library (ms epoch). */
   addedAt?: number;
+  /** Its genres, as the server lists them (lib/browse.ts). */
+  genres?: string[];
   /** Same album found on several sources (first = preferred). */
   refs?: Album[];
 }

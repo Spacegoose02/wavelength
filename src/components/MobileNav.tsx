@@ -7,7 +7,7 @@ import { Cover } from './common';
 import { MiniProgress, usePlayerControls } from './PlayerClock';
 import { DjModeBar, DjModeButton, DjStationPanel } from './DjStation';
 import {
-  IconAlbum, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
+  IconAlbum, IconBrowse, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
   IconNext, IconPause, IconPlay, IconPlaylist, IconPodcast, IconRadio, IconSearch, IconSettings, IconSparkle, IconWave, IconInbox, IconDj,
 } from './Icons';
 import { useDjAvailable } from '../lib/djStatus';
@@ -21,7 +21,7 @@ const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route[
   { view: 'discover', label: 'Discover', icon: <IconCompass /> },
   { view: 'search', label: 'Search', icon: <IconSearch /> },
   { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave /> },
-  { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'podcasts', 'podcast', 'radio', 'downloads', 'inbox', 'settings', 'offline', 'offlineCollection', 'dj'] },
+  { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['browse', 'albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'podcasts', 'podcast', 'radio', 'downloads', 'inbox', 'settings', 'offline', 'offlineCollection', 'dj'] },
 ];
 
 /** Phone layout: mini player + bottom tab bar (replaces the sidebar and desktop deck). */
@@ -80,6 +80,7 @@ export function LibraryHub() {
   const dj = useDjAvailable();
   const items: { view: Route['view']; label: string; icon: ReactNode }[] = [
     { view: 'recent', label: 'Recently added', icon: <IconSparkle /> },
+    { view: 'browse', label: 'Browse', icon: <IconBrowse /> },
     { view: 'albums', label: 'Albums', icon: <IconAlbum /> },
     { view: 'artists', label: 'Artists', icon: <IconArtist /> },
     { view: 'offline', label: 'Downloaded', icon: <IconDownload /> },

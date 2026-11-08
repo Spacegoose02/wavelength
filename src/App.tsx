@@ -35,7 +35,7 @@ import { useUi, type Route } from './store/ui';
 import { usePlayer } from './store/player';
 import { PlayerBar } from './components/PlayerBar';
 import { NowPlaying, QueuePanel } from './components/NowPlaying';
-import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart, IconInbox, IconDj } from './components/Icons';
+import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconBrowse, IconHeart, IconInbox, IconDj } from './components/Icons';
 import { Podcasts, PodcastView } from './views/Podcasts';
 import { History } from './views/History';
 import { HouseholdPlaylistView } from './views/Household';
@@ -75,6 +75,7 @@ const ArtistReleases = page(() => import('./views/ArtistReleases'), 'ArtistRelea
 const Inbox = page(() => import('./views/Inbox'), 'Inbox');
 const Settings = page(() => import('./views/Settings'), 'Settings');
 const DJ = page(() => import('./views/DJ'), 'DJ');
+const Browse = page(() => import('./views/Browse'), 'Browse');
 
 type NavGroup = 'main' | 'library' | 'discover' | 'you';
 const NAV: { view: Route['view']; label: string; icon: ReactNode; group: NavGroup }[] = [
@@ -82,6 +83,7 @@ const NAV: { view: Route['view']; label: string; icon: ReactNode; group: NavGrou
   { view: 'search', label: 'Search', icon: <IconSearch />, group: 'main' },
   { view: 'dj', label: 'AI DJ', icon: <IconDj />, group: 'main' },
   { view: 'recent', label: 'Recently added', icon: <IconSparkle />, group: 'library' },
+  { view: 'browse', label: 'Browse', icon: <IconBrowse />, group: 'library' },
   { view: 'albums', label: 'Albums', icon: <IconAlbum />, group: 'library' },
   { view: 'artists', label: 'Artists', icon: <IconArtist />, group: 'library' },
   { view: 'favorites', label: 'Favorites', icon: <IconHeart />, group: 'library' },
@@ -125,6 +127,7 @@ function View({ route }: { route: Route }) {
     case 'home': return <Home />;
     case 'albums': return <Albums />;
     case 'artists': return <Artists />;
+    case 'browse': return <Browse key={`${route.genre ?? ''}|${route.decade ?? ''}`} genre={route.genre} decade={route.decade} />;
     case 'artist': return <ArtistView key={route.artist.id} artist={route.artist} />;
     case 'artistReleases': return <ArtistReleases key={`${route.artist.id}:${route.open?.id ?? ''}`} artist={route.artist} open={route.open} />;
     case 'album': return <AlbumView key={route.album.id} album={route.album} focus={route.track} />;
