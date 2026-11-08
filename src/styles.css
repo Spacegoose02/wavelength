@@ -1717,7 +1717,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
 /* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
-.critter:is(.critter-country, .critter-rapper, .critter-accordion) .shark-fin,
+.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive) .shark-fin,
 :root[data-skin-group='nuclear'] .critter .shark-fin,
 :root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
@@ -1785,6 +1785,44 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .flame-a { fill: #ff7a1a; }
 .critter .flame-b { fill: #ffd34a; }
 .critter .firefly { fill: #f4ff8a; }
+
+/* the Drive act (Drive.tsx): the car, cap, scarf and lights follow the skin; the road and the sunset are fixed */
+.critter .drive-sky { fill: #2a1c3a; }
+.critter .drive-sky-band { fill: #2a1c3a; }
+.critter .drive-sun { fill: color-mix(in srgb, var(--viz-high) 55%, #ffb347); }
+.critter .hill-far { fill: #3b2a4c; }
+.critter .hill-near { fill: #2a2238; }
+.critter .verge { fill: #23301f; }
+.critter .road { fill: #2c2c33; }
+.critter .road-line { fill: #f2d16b; }
+.critter .road-edge { stroke: rgb(255 255 255 / 0.7); }
+.critter-drive .top { fill: #ececf1; }
+.critter-drive .sleeve { stroke: #ececf1; }
+.critter .tee-print { fill: var(--accent); }
+.critter .post { fill: #e9e9ee; }
+.critter .post-light { fill: var(--viz-high); }
+.critter .tyre { fill: #141417; }
+.critter .car-body { fill: var(--accent); }
+.critter .car-tub { fill: color-mix(in srgb, var(--accent) 60%, #000); }
+.critter .car-stripe { fill: rgb(255 255 255 / 0.85); }
+.critter .seat { fill: #3a2a22; }
+.critter .chrome { fill: #d8d8de; }
+.critter .chrome-line { stroke: #d8d8de; }
+.critter .car-grille { fill: #1b1b20; }
+.critter .headlight { fill: #fff6cf; }
+.critter .headlight-glow { fill: var(--viz-low); }
+.critter .plate { fill: #f4f4f6; }
+.critter .plate-text { fill: #1b1b20; }
+.critter .windscreen { fill: rgb(190 225 255 / 0.16); }
+.critter .windscreen-rim { stroke: #d8d8de; }
+.critter .wheel-rim { stroke: #1f1f24; }
+.critter .wheel-spoke { stroke: #3a3a42; }
+.critter .wheel-hub { fill: var(--viz-mid); }
+.critter .cap { fill: var(--viz-high); }
+.critter .cap-peak { fill: color-mix(in srgb, var(--viz-high) 70%, #000); }
+.critter .cap-button { fill: color-mix(in srgb, var(--viz-high) 70%, #000); }
+.critter .scarf { fill: var(--viz-low); }
+.critter .scarf-knot { fill: color-mix(in srgb, var(--viz-low) 70%, #000); }
 
 /* holiday hats replace the critter's own headwear */
 .critter .hat, .critter .outfit { display: none; }
