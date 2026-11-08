@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { armJoint, beatClock, bend } from './arm';
 import { swell, windUp } from './flourish';
-import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -197,12 +197,17 @@ export function Drive({ species, still }: ActProps) {
           </g>
         ))}
         <g data-part="ride">
+          {/* the driver sits up high in the seat, so the wheel and the bonnet hide only the lap. Behind the top: the
+              seat, then what the species draws behind it (neck, a shell, legs and tail), which the car's tub hides
+              below the shoulders */}
+          <g transform={`translate(0 ${-LIFT})`}>
+            <path className="seat ol" d="M150 300 V 238 Q 150 214 176 214 H224 Q 250 214 250 238 V300 Z" />
+            <path d="M162 232 Q 200 222 238 232" fill="none" stroke="rgb(255 255 255 / 0.18)" strokeWidth="4" strokeLinecap="round" />
+            <Legs species={species} />
+          </g>
           {/* the tub of the car behind the driver */}
           <path className="car-tub ol" d="M62 312 Q 60 276 96 270 H304 Q 340 276 338 312 Z" />
-          {/* the driver sits up high in the seat, so the wheel and the bonnet hide only the lap */}
           <g transform={`translate(0 ${-LIFT})`}>
-          <path className="seat ol" d="M150 300 V 238 Q 150 214 176 214 H224 Q 250 214 250 238 V300 Z" />
-          <path d="M162 232 Q 200 222 238 232" fill="none" stroke="rgb(255 255 255 / 0.18)" strokeWidth="4" strokeLinecap="round" />
 
           <Body species={species}>
             {/* a white racing tee: two stripes across the chest */}

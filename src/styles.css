@@ -1796,6 +1796,8 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .road { fill: #2c2c33; }
 .critter .road-line { fill: #f2d16b; }
 .critter .road-edge { stroke: rgb(255 255 255 / 0.7); }
+/* sat in the car: the neck and any shell show behind the top, but a tail would stick up beside the seat */
+.critter-drive [data-part='tail'] { display: none; }
 .critter-drive .top { fill: #ececf1; }
 .critter-drive .sleeve { stroke: #ececf1; }
 .critter .tee-print { fill: var(--accent); }
