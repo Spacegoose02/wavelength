@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- **Fix: the owl's hands.** Its three finger feathers splayed into a clump that looked broken, most of all round the
+  mic. Each wing now ends in one soft rounded wing tip with three short scalloped feathers along its edge
+  (`wingTip` in `parts.tsx`).
+
 ## 0.32.0
 - **An owl and a T. rex.** The thirteenth and fourteenth critters, drawn cute. The owlet is drawn like a sticker: a round
   brown head with two short pointed tufts, a big cream face, huge round dark eyes with big shines, a little yellow
