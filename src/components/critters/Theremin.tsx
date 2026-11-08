@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { beatClock, bend } from './arm';
 import { swell } from './flourish';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
@@ -11,8 +12,9 @@ const STARS: [number, number, number][] = [
 
 /**
  * Theremin alien on the moon, under a hovering UFO. The space-age tunic, the UFO lights and the sound waves take
- * the skin's colours. The left hand rises over the volume loop with the bass, the right moves toward the
- * pitch antenna with the highs and wobbles on sharp hits, waves pour off the antenna, the antennae glow with
+ * the skin's colours. The left hand rises over the volume loop with the bass, palm rolling on the beat and
+ * waving across it every other bar; the right reaches in toward the pitch antenna with the highs, fluttering a
+ * vibrato from the wrist and trembling on sharp hits; the waves off the antenna tighten as that hand gets closer, the antennae glow with
  * the bass and the stars twinkle. Flourish: a swoop up the antenna with a wide vibrato and big waves.
  * Paused, the hands drop and the antennae perk up now and then.
  */
@@ -22,21 +24,35 @@ export function Theremin({ species, still }: ActProps) {
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, rock, flourish, $ }) => {
+    (f) => {
+      const { t, a, idle, bob, rock, flourish, $ } = f;
       const s = state.current;
       const svg = root.current!;
+      const { phase, index } = beatClock(f);
       s.vol += ((idle ? 0 : a.live ? a.bass : 0.4 + Math.sin(t * 1.5) * 0.3) - s.vol) * 0.15;
       s.pitch += ((idle ? 0 : a.live ? Math.min(1, a.treble * 1.6 + a.mid * 0.5) : 0.5 + Math.sin(t * 0.9) * 0.4) - s.pitch) * 0.12;
-      const vibrato = a.playing ? Math.sin(t * 14) * 1.5 : 0;
-      $('arm-l').setAttribute('transform', `rotate(${(s.vol * 22 - (idle ? 6 : 0)).toFixed(2)} 138 268)`);
-      // flourish: a big swoop up the antenna with a wide vibrato, the volume hand thrown up
+      const vibrato = a.playing ? Math.sin(t * 14) : 0;
       const show = swell(flourish);
-      $('arm-r').setAttribute('transform', `rotate(${(s.pitch * 14 + vibrato * (1 + show * 4) + rock * 4 - (idle ? 8 : 0) - show * 22).toFixed(2)} 262 268)`);
-      if (flourish) $('arm-l').setAttribute('transform', `rotate(${(s.vol * 22 + show * 30).toFixed(2)} 138 268)`);
+      // volume hand: rises and dips over the loop with the bass, palm rolling with the beat, a slow wave
+      // across it every other bar
+      const sweep = idle ? 0 : Math.floor(index / 8) % 2 ? Math.sin(Math.PI * ((index % 8) + phase) / 4) * 10 : 0;
+      $('arm-l').setAttribute('transform', `rotate(${(s.vol * 10 - (idle ? 6 : 0) + show * 30).toFixed(2)} 138 268)`);
+      bend($, 'arm-l', {
+        to: [sweep * 1.4, -s.vol * 18 + (idle ? 0 : -bob * 4)],
+        wrist: idle ? 0 : Math.sin(2 * Math.PI * phase) * 14,
+        turn: show * -40,
+      });
+      // pitch hand: reaches in to the antenna as the notes climb, fingers fluttering a vibrato from the wrist,
+      // trembling on sharp hits; flourish: a swoop up the antenna with a wide vibrato
+      $('arm-r').setAttribute('transform', `rotate(${(s.pitch * 8 + rock * 4 - (idle ? 8 : 0) - show * 22).toFixed(2)} 262 268)`);
+      const [px] = bend($, 'arm-r', {
+        to: [s.pitch * 14, -s.pitch * 10 + vibrato * 1.5 * (1 + show * 3)],
+        wrist: vibrato * (8 + show * 14) + rock * 8,
+      });
 
       // two sine waves off the pitch antenna: louder with the mids, tighter with the highs
       const amp = a.playing ? 3 + a.mid * 14 + bob * 4 + show * 10 : 0;
-      const freq = 0.1 + s.pitch * 0.18;
+      const freq = 0.1 + s.pitch * 0.12 + Math.max(0, px) * 0.008;
       ['wave-a', 'wave-b'].forEach((name, i) => {
         let d = '';
         for (let x = 298; x <= 392; x += 4) {

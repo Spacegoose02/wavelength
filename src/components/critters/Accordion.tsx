@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { bend } from './arm';
 import { swell } from './flourish';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
@@ -31,9 +32,12 @@ export function Accordion({ species, still }: ActProps) {
       $('bellows').setAttribute('transform', `translate(200 0) scale(${(1 + dx / 44).toFixed(3)} 1) translate(-200 0)`);
       $('acc-l').setAttribute('transform', `translate(${(-dx).toFixed(2)} 0)`);
       $('acc-r').setAttribute('transform', `translate(${dx.toFixed(2)} 0)`);
-      const deg = (dx / 32) * 57.3;
+      // the hands ride the ends of the bellows: mostly from the elbows, the upper arms only following a little
+      const deg = (dx / 32) * 57.3 * 0.35;
       $('arm-l').setAttribute('transform', `rotate(${deg.toFixed(2)} 138 268)`);
       $('arm-r').setAttribute('transform', `rotate(${(-deg).toFixed(2)} 262 268)`);
+      bend($, 'arm-l', { to: [-dx * 0.65, 0], wrist: -dx * 0.4 });
+      bend($, 'arm-r', { to: [dx * 0.65, 0], wrist: dx * 0.4 });
 
       const flare = 1 + (a.playing ? a.bass * 0.35 + bob * 0.15 : 0) + Math.sin(t * 13) * 0.05 + Math.sin(t * 7.3) * 0.04;
       $('flame').setAttribute('transform', `translate(332 352) scale(${(1 + Math.sin(t * 9) * 0.04).toFixed(3)} ${flare.toFixed(3)}) translate(-332 -352)`);

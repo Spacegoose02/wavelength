@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { beatClock, bend, lift } from './arm';
 import { swell, windUp } from './flourish';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
@@ -15,27 +16,43 @@ const KEYS = Array.from({ length: 14 }, (_, i) => 118 + i * 11.7);
 /**
  * Grey alien in a wheat field at night, playing a synth under the tractor beam of its saucer: the classic
  * big-headed grey with huge black eyes and a slim grey body. The synth and the beam take the skin's colours.
- * The keys light up with the spectrum, the left hand hops on the beat, the right glides along the keys with
- * the highs, the beam brightens with the bass and the saucer's lights chase. Flourish: a glissando down the
+ * The keys light up with the spectrum; the elbows bend to play: the left hand presses a chord on each beat
+ * and moves to a new one now and then, the right taps sixteenth notes while it glides along the keys with the highs, the beam brightens with the bass and the saucer's lights chase. Flourish: a glissando down the
  * keys with the other hand thrown up. Paused, the hands rest.
  */
 export function Synth({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
-  const state = useRef({ pulse: 0, glide: 0 });
+  const state = useRef({ pulse: 0, glide: 0, chord: 0, chordTo: 0, beat: 0 });
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, rock, flourish, $ }) => {
+    (f) => {
+      const { t, a, idle, bob, rock, flourish, $ } = f;
       const s = state.current;
       const svg = root.current!;
+      const { phase, index } = beatClock(f);
+      // left hand: a chord on each beat, pressed down on the beat and lifted between, moving to a new chord
+      // shape now and then; right hand: a run of quick notes, gliding up and down the keys with the highs
+      const onBeat = index !== s.beat;
+      s.beat = index;
+      if (onBeat && Math.random() < 0.4) s.chordTo = [-9, -3, 3, 8][Math.floor(Math.random() * 4)];
+      if (idle) s.chordTo = 0;
+      s.chord += (s.chordTo - s.chord) * 0.25;
       s.glide += ((idle ? 0 : a.live ? Math.min(1, a.treble * 1.8) * 2 - 1 : Math.sin(t * 0.8)) - s.glide) * 0.1;
-      const hop = idle ? 0 : a.live ? bob * 8 : Math.max(0, Math.sin(t * 4)) * 6;
-      $('arm-l').setAttribute('transform', `rotate(${(-hop + (idle ? 4 : 0)).toFixed(2)} 138 268)`);
+      const press = idle ? 0 : lift(phase);
+      // sixteenth-note taps on the right hand
+      const taps = idle ? 0 : Math.abs(Math.sin(Math.PI * ((phase * 4) % 1)));
+      $('arm-l').setAttribute('transform', `rotate(${(-s.chord * 0.5 + (idle ? 4 : 0)).toFixed(2)} 138 268)`);
+      bend($, 'arm-l', { to: [s.chord * 0.6, -press * 9], wrist: -press * 14 });
       // flourish: a glissando, the hand sweeping down the keys with the lit key running ahead of it, the other
       // hand thrown up
       const gliss = flourish ? windUp(flourish) : 0;
-      $('arm-r').setAttribute('transform', `rotate(${(flourish ? -18 + gliss * 40 : -s.glide * 18 + rock * 3).toFixed(2)} 262 268)`);
-      if (flourish) $('arm-l').setAttribute('transform', `rotate(${(-70 * swell(flourish)).toFixed(2)} 138 268)`);
+      $('arm-r').setAttribute('transform', `rotate(${(flourish ? -18 + gliss * 40 : -s.glide * 10 + rock * 3).toFixed(2)} 262 268)`);
+      bend($, 'arm-r', { to: [s.glide * -4, -taps * 6], wrist: taps * 10 });
+      if (flourish) {
+        $('arm-l').setAttribute('transform', `rotate(${(-70 * swell(flourish)).toFixed(2)} 138 268)`);
+        bend($, 'arm-l', { turn: -60 * swell(flourish) });
+      }
 
       const bins = a.freq.length;
       svg.querySelectorAll<SVGElement>('[data-key]').forEach((k, i) => {
@@ -101,8 +118,8 @@ export function Synth({ species, still }: ActProps) {
       <rect className="synth-trim" x="110" y="290" width="180" height="5" rx="2" />
 
       {/* hands on the keys */}
-      <Arm part="arm-l" d="M138 268 Q 136 292 158 298" hand={[160, 298]} />
-      <Arm part="arm-r" d="M262 268 Q 264 292 242 298" hand={[240, 298]} />
+      <Arm part="arm-l" d="M138 268 Q 122 298 158 298" hand={[160, 298]} />
+      <Arm part="arm-r" d="M262 268 Q 278 298 242 298" hand={[240, 298]} />
     </CritterFrame>
   );
 }

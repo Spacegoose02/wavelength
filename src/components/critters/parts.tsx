@@ -391,18 +391,32 @@ export function Head({ species, hat, eyewear, over, girlHat, hidesEars }: { spec
 
 /**
  * An arm from the species' shoulder to a hand at `hand`, bending through the act's `d` (drawn from the old
- * shoulder, `M138 268 Q cx cy …` or `M262 268 …`), with the sleeve and hand coloured by CSS. The acts turn
- * it about the old shoulder, which `Pivot` puts on the species' own. `children` (a drumstick, say) are drawn
- * under the hand and move with the arm.
+ * shoulder, `M138 268 Q cx cy …` or `M262 268 …`), with the sleeve and hand coloured by CSS. The curve is split
+ * at an elbow halfway along it: the upper arm and the forearm are separate pieces, so an act can move the
+ * forearm and hand from the elbow (`bend`, arm.ts) while the upper arm stays put, and still turn the whole arm
+ * about the old shoulder (`part`), which `Pivot` puts on the species' own.
+ *
+ * Parts: `part` is the whole arm; `<part>-fore` the forearm (it carries `data-elbow` and `data-hand`, where
+ * `bend` reads the joint); `<part>-paw` the hand with whatever it holds. `children` (a drumstick, say) are drawn
+ * under the hand and move with it.
  */
 export function Arm({ part, d, hand, handLater, children }: { part: string; d: string; hand: [number, number]; handLater?: boolean; children?: ReactNode }) {
   const g = useArm(part, d, hand);
   return (
     <Pivot from={g.base} to={g.sh} part={part}>
-      <path className="limb-outline" d={g.path} fill="none" strokeWidth={g.arm + 5} strokeLinecap="round" />
-      <path className="sleeve" d={g.path} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
-      <g transform={g.held}>{children}</g>
-      {!handLater && <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />}
+      {/* outlines under both sleeves, so the elbow joins without a seam */}
+      <path className="limb-outline" d={g.upper} fill="none" strokeWidth={g.arm + 5} strokeLinecap="round" />
+      <g data-follow={`${part}-fore`}>
+        <path className="limb-outline" d={g.fore} fill="none" strokeWidth={g.arm + 5} strokeLinecap="round" />
+      </g>
+      <path className="sleeve" d={g.upper} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
+      <g data-part={`${part}-fore`} data-elbow={g.elbow} data-hand={`${g.hx} ${g.hy}`}>
+        <path className="sleeve" d={g.fore} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
+      </g>
+      <g data-part={`${part}-paw`}>
+        <g transform={g.held}>{children}</g>
+        {!handLater && <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />}
+      </g>
     </Pivot>
   );
 }
@@ -410,18 +424,22 @@ export function Arm({ part, d, hand, handLater, children }: { part: string; d: s
 /**
  * The hand of an `Arm` drawn with `handLater`, for an arm that goes behind an instrument with only the hand in
  * front (the guitar acts): draw the arm before the instrument and this after it, with the same `part`, `d` and
- * `hand`. The rig copies the arm's transform onto it every frame (`data-follow`).
+ * `hand`. The rig copies the arm's and the hand's transforms onto it every frame (`data-follow`).
  */
 export function ArmHand({ part, d, hand }: { part: string; d: string; hand: [number, number] }) {
   const g = useArm(part, d, hand);
   return (
     <Pivot from={g.base} to={g.sh} follow={part}>
-      <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />
+      <g data-follow={`${part}-paw`}>
+        <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={g.paw} />
+      </g>
     </Pivot>
   );
 }
 
-/** Where an arm goes on this species: from its shoulder, bending through the act's control point, to the hand (brought within reach). */
+const fx = (n: number) => n.toFixed(1);
+
+/** Where an arm goes on this species: from its shoulder, bending through the act's control point, to the hand (brought within reach), split at the elbow. */
 function useArm(part: string, d: string, hand: [number, number]) {
   const { shoulders, arm, paw, reach } = useSpecies().figure;
   const right = part === 'arm-r';
@@ -433,14 +451,19 @@ function useArm(part: string, d: string, hand: [number, number]) {
   const at = (p: [number, number]) => [sh[0] + (p[0] - sh[0]) * k, sh[1] + (p[1] - sh[1]) * k];
   const [hx, hy] = at(hand);
   const [qx, qy] = at([cx, cy]);
+  // the elbow: the curve's midpoint, splitting it into two quadratic halves (de Casteljau)
+  const ex = (sh[0] + 2 * qx + hx) / 4;
+  const ey = (sh[1] + 2 * qy + hy) / 4;
   return {
     base,
     sh,
     arm,
     paw,
-    hx: hx.toFixed(1),
-    hy: hy.toFixed(1),
-    held: k < 1 ? `translate(${(hx - hand[0]).toFixed(1)} ${(hy - hand[1]).toFixed(1)})` : undefined,
-    path: `M${sh[0]} ${sh[1]} Q ${qx.toFixed(1)} ${qy.toFixed(1)} ${hx.toFixed(1)} ${hy.toFixed(1)}`,
+    hx: fx(hx),
+    hy: fx(hy),
+    elbow: `${fx(ex)} ${fx(ey)}`,
+    held: k < 1 ? `translate(${fx(hx - hand[0])} ${fx(hy - hand[1])})` : undefined,
+    upper: `M${sh[0]} ${sh[1]} Q ${fx((sh[0] + qx) / 2)} ${fx((sh[1] + qy) / 2)} ${fx(ex)} ${fx(ey)}`,
+    fore: `M${fx(ex)} ${fx(ey)} Q ${fx((qx + hx) / 2)} ${fx((qy + hy) / 2)} ${fx(hx)} ${fx(hy)}`,
   };
 }
