@@ -128,6 +128,11 @@ the asset work and a risk on low-end phones and the iOS WebView.
   sits under its left side. The tiger and lion share a big-cat figure (`bigCat` in bodies.tsx) with their own
   tails. The lion's mane is drawn behind the head and left out for the girl, who is a lioness. The hazmat hood
   hides the elephant's ears and trunk and the lion's mane (`.elephant-ears`, `.elephant-trunk`, `.lion-mane`).
+- A panda (November 2026), drawn cute and kept clear of famous cartoon pandas (no jade eyes, no kung-fu
+  headband). Its round black ears are `ear-l` / `ear-r` like the bears', so the rig wiggles them and the cowboy
+  hat and hazmat hood hide them. The eye patches are drawn outside the `eyes` group so blinks don't squash them,
+  and the girl's lashes are pale (`.species-panda .lashes`) so they show on the black. `FIGURES.panda` is a chubby
+  top on short black legs with pale toe pads and a little white puff of a tail.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

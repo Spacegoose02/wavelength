@@ -97,3 +97,29 @@ describe('the elephant, tiger and lion', () => {
     expect(await draw('lion', true)).not.toContain('lion-mane');
   });
 });
+
+describe('the panda', () => {
+  const draw = async (girl: boolean) => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    const { GirlContext } = await import('../components/critters/faces');
+    const species = SPECIES.find((s) => s.id === 'panda')!;
+    return renderToStaticMarkup(h(GirlContext.Provider, { value: girl }, h('svg', null, h(Head, { species, hat: h('g', { className: 'own-hat' }) }))));
+  };
+
+  it('is a species with its own figure', async () => {
+    const { SPECIES } = await import('../components/critters/species');
+    const { FIGURES } = await import('../components/critters/bodies');
+    expect(SPECIES.find((s) => s.id === 'panda')?.figure).toBe(FIGURES.panda);
+  });
+
+  it('draws its ears behind the head, so the cowboy hat can hide them, and lashes only on the girl', async () => {
+    const boy = await draw(false);
+    expect(boy.indexOf('data-part="ear-l"')).toBeGreaterThan(-1);
+    expect(boy.indexOf('data-part="ear-l"')).toBeLessThan(boy.indexOf('head-panda'));
+    expect(boy).not.toContain('lashes');
+    expect(await draw(true)).toContain('lashes');
+  });
+});

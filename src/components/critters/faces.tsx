@@ -634,3 +634,59 @@ export function ElephantFace() {
     </Placed>
   );
 }
+
+/** The panda's left eye patch (the right is its mirror): a soft teardrop round the eye, drooping out and down. */
+const PANDA_PATCH = 'M182 148 C 186 166, 180 194, 160 204 C 140 212, 124 200, 126 180 C 128 158, 144 140, 162 138 C 174 137, 180 140, 182 148 Z';
+
+/**
+ * A panda cub's face, drawn cute and kept clear of famous cartoon pandas (no jade eyes, no kung-fu headband):
+ * a round cream-white head with fluffy cheeks, round black ears, black teardrop patches round big shiny brown
+ * eyes, a little black button nose on a soft muzzle, pink cheeks and a wide smile. The ears are `ear-l` /
+ * `ear-r` like the bears', so the rig wiggles them and the cowboy hat hides them; the patches sit outside the
+ * `eyes` group so blinks don't squash them. The girl's lashes are pale so they show against the patches
+ * (`.species-panda .lashes`, styles.css).
+ */
+export function PandaFace() {
+  return (
+    <Placed cx={206} cy={174} s={0.84}>
+      <defs>
+        <Shade id="pd-fur" hi="#ffffff" mid="#f4f2ec" lo="#c9c6c0" />
+        <Shade id="pd-black" hi="#4a4852" mid="#2a2930" lo="#141318" />
+        <Shade id="pd-muzzle" hi="#ffffff" lo="#ebe7de" />
+      </defs>
+      {/* round black ears, twitching on accents (rig) */}
+      <g data-part="ear-l">
+        <circle cx="132" cy="108" r="30" fill="url(#pd-black)" className="ol" />
+        <circle cx="135" cy="112" r="15" fill="#3c3a44" />
+      </g>
+      <g data-part="ear-r">
+        <circle cx="280" cy="108" r="30" fill="url(#pd-black)" className="ol" />
+        <circle cx="277" cy="112" r="15" fill="#3c3a44" />
+      </g>
+      <HeadShape id="panda" fill="url(#pd-fur)" d="M206 94 C 268 94, 304 130, 304 172 Q 318 188 302 200 C 294 234, 256 256, 206 256 C 156 256, 118 234, 110 200 Q 94 188 108 172 C 108 130, 144 94, 206 94 Z">
+        <ellipse cx="206" cy="220" rx="48" ry="32" fill="url(#pd-muzzle)" />
+        <ellipse cx="176" cy="114" rx="36" ry="12" fill="rgb(255 255 255 / 0.5)" transform="rotate(-14 176 114)" />
+      </HeadShape>
+      {/* the eye patches, outside the eyes group so a blink leaves them be */}
+      <path d={PANDA_PATCH} fill="url(#pd-black)" />
+      <g transform="translate(412 0) scale(-1 1)">
+        <path d={PANDA_PATCH} fill="url(#pd-black)" />
+      </g>
+      {/* rosy cheeks */}
+      <ellipse cx="128" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.55" />
+      <ellipse cx="284" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.55" />
+      <g data-part="eyes">
+        <Eye cx={160} cy={170} r={17} iris="#5a3418" />
+        <Eye cx={252} cy={170} r={17} iris="#5a3418" k={0.9} />
+        <Lashes l={[146, 160]} r={[266, 160]} />
+      </g>
+      <Pair l="M144 132 Q 156 124 172 128" mid={206} stroke="#2a2930" width={4.5} />
+      {/* a little black button nose */}
+      <path d="M194 200 Q 206 193 218 200 Q 216 211 206 214 Q 196 211 194 200 Z" fill="#17161b" className="ol-thin" />
+      <ellipse cx="201" cy="199" rx="4.5" ry="2" fill="rgb(255 255 255 / 0.6)" />
+      <path d="M206 214 V221" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
+      <path data-part="smile" d="M188 222 Q 197 232 206 222 Q 215 232 224 222" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+      <Mouth id="panda" x={206} y={222} w={14} h={26} fill="#5a1a24" line={INK} />
+    </Placed>
+  );
+}

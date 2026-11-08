@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger and lion), the **equalizer**,
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion and panda), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **Popular**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
@@ -459,7 +459,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
-| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear, a moose, a turtle, an elephant, a tiger or a lion playing along (see below) |
+| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear, a moose, a turtle, an elephant, a tiger, a lion or a panda playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -479,7 +479,7 @@ spectrum under the title does the same.
 
 <a id="raccoons"></a>
 The last visualizer is a critter who plays along with the music. You pick **who** plays and **what** they
-play, and any critter can play any act: 11 critters × 9 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
+play, and any critter can play any act: 12 critters × 9 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
 alien are all possible.
 
 <img src="screenshots/critters.png" alt="Every critter in every act in the Neon synth skin: rows are the raccoon, shark, alien, grey alien, black bear and brown bear; columns are DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth and Accordion" width="100%">
@@ -496,6 +496,7 @@ alien are all possible.
 | **Elephant** | A soft grey calf with big round pink-lined ears that stick out either side of any hat and flap to the beat, and a short trunk curling up to one side |
 | **Tiger** | An orange cub with bold black stripes, white cheeks, green eyes, a pink nose and a striped tail |
 | **Lion** | A golden cub in a russet mane (the girl is a lioness, without one), with a cream muzzle and a tufted tail |
+| **Panda** | A cream-white cub with round black ears, black teardrop patches round big brown eyes, a button nose and rosy cheeks, with black arms and legs and a white puff of a tail |
 
 <img src="screenshots/critter-moose.png" alt="The moose in all eight acts: DJ in headphones, Country in a cowboy hat with its antlers either side of the crown, Rapper, Rocker, Drummer, Theremin, Synth and Accordion in a beanie" width="90%">
 
@@ -506,6 +507,8 @@ alien are all possible.
 <img src="screenshots/critter-tiger.png" alt="The tiger in all eight acts" width="90%">
 
 <img src="screenshots/critter-lion.png" alt="The lion in all eight acts, its mane framing the headphones, cowboy hat and beanie" width="90%">
+
+<img src="screenshots/critter-panda.png" alt="The panda in all nine acts, from DJ in headphones and Country in a cowboy hat to Accordion in a beanie and Driver at the wheel of the open-top car" width="90%">
 
 | Act | Scene and outfit | While the music plays |
 |---|---|---|
@@ -537,7 +540,7 @@ lyrics move the mouth with the music rather than the voice.
 **A new look.** The critters' faces are drawn like vinyl toys: big round heads with soft shading, a dark
 outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge that takes your
 skin's colours. Their bodies match: the raccoon short and chunky with a big striped tail, the bears in puffy
-jackets, the shark one slim torpedo with its fins for arms, the aliens spindly and hovering, the moose deep-chested on long legs, the turtle round and stumpy under its shell, the elephant chunky on thick legs with toenails, and the tiger and lion sturdy with long curling tails.
+jackets, the shark one slim torpedo with its fins for arms, the aliens spindly and hovering, the moose deep-chested on long legs, the turtle round and stumpy under its shell, the elephant chunky on thick legs with toenails, the tiger and lion sturdy with long curling tails, and the panda chubby on short black legs.
 
 <img src="screenshots/critter-new-faces.png" alt="All six critters with the new faces and bodies, each playing the DJ, Rapper and Synth acts" width="100%">
 
@@ -589,7 +592,7 @@ cowgirl denim fringe skirt, a pleated mini (Rapper), a pink tutu (Rocker), a sai
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
-**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold),
+**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold, panda black and white),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
 Some groups of skins give them a whole outfit:
 

@@ -1617,6 +1617,12 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .tiger-stripe { stroke: #2a1a12; fill: none; stroke-linecap: round; }
 .species-lion { --skin: #e3a64a; --skin-dark: #a86d22; --belly: #fbf0d8; }
 .critter .lion-tuft { fill: #a4501c; }
+/* the panda: black arms, legs and ears on a white head; its tail is a white puff, its toe pads pale, and the
+   girl's lashes pale so they show on the black eye patches */
+.species-panda { --skin: #2a2930; --skin-dark: #141318; --belly: #f4f2ec; }
+.critter .panda-tail { fill: #f4f2ec; }
+.critter .panda-pad { fill: #6a6874; }
+.critter.species-panda .lashes { stroke: #f4f2ec; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }
