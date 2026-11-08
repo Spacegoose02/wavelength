@@ -493,7 +493,7 @@ alien are all possible.
 | **Black bear** / **Brown bear** | Round ears and a pale muzzle, in black or brown fur |
 | **Moose** | Dark brown with a big droopy muzzle, a fur bell under the chin, long ears, pale stockings and hooves, and wide flat antlers that stick out either side of any hat (and tuck under the hazmat hood) |
 | **Turtle** | Sea-green with a soft mint muzzle, big blue eyes, rosy cheeks and a wide smile, carrying a high domed shell whose rim shows round any outfit |
-| **Elephant** | A soft grey calf with big round pink-lined ears that stick out either side of any hat and flap to the beat, and a short trunk curling up to one side |
+| **Elephant** | A soft grey calf with big round pink-lined ears that stick out either side of any hat and flap to the beat, a trunk sweeping out to one side over a wide smile |
 | **Tiger** | An orange cub with bold black stripes, white cheeks, green eyes, a pink nose and a striped tail |
 | **Lion** | A golden cub in a russet mane (the girl is a lioness, without one), with a cream muzzle and a tufted tail |
 | **Panda** | A cream-white cub with round black ears, black teardrop patches round big brown eyes, a button nose and rosy cheeks, with black arms and legs and a white puff of a tail |

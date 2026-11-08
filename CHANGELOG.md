@@ -11,7 +11,7 @@
 ## 0.30.0
 - **An elephant, a tiger and a lion.** Three more critters, drawn cute. The elephant calf is soft grey with big
   round pink-lined ears that stay out either side of every hat (even the cowboy hat) and flap to the beat, and a
-  short trunk that curls up to one side so the smile shows under it. The tiger cub is orange with bold stripes, white
+  trunk that sweeps out to the left over a wide smile, with the singing mouth showing beside and under it. The tiger cub is orange with bold stripes, white
   cheeks, green eyes and a pink nose, and a striped tail. The lion cub has a russet mane round its head (the girl is a
   lioness, without one) and a tufted tail. All three play every act as a boy or a girl; the hazmat hood hides the
   ears, trunk and mane (`ElephantFace`, `TigerFace`, `LionFace` in `faces.tsx`; `FIGURES.elephant` and the big-cat
