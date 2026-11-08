@@ -108,3 +108,31 @@ test('Home Assistant: its own token lists the players by name and sends them com
   await json(app, 'DELETE', `/api/me/devices/${haDev.id}`, { token: tokens.member });
   assert.equal((await json(app, 'GET', '/api/ha/players', { token: ha.token })).status, 401);
 });
+
+test('Home Assistant: hands playback off from one player to another', async () => {
+  const { app, tokens } = await seeded();
+  const ha = (await json(app, 'POST', '/api/me/homeassistant', { token: tokens.member })).body;
+  // two of mia's devices: the phone is playing, the desktop is idle
+  const desk = (await json(app, 'POST', '/auth/login', { body: { username: 'mia', password: 'mia-password-123', deviceName: 'Desktop' } })).body.token;
+  await json(app, 'PUT', '/api/me/remote/state', {
+    token: tokens.member,
+    body: { queue: [song('a'), song('b')], index: 1, position: 42, duration: 200, playing: false, volume: 1 },
+  });
+  await json(app, 'PUT', '/api/me/remote/state', { token: desk, body: { queue: [], index: -1, position: 0, duration: 0, playing: false, volume: 1 } });
+  const players = (await json(app, 'GET', '/api/ha/players', { token: ha.token })).body.players;
+  const phone = players.find((p: { name: string }) => p.name === 'Phone');
+  const deskP = players.find((p: { name: string }) => p.name === 'Desktop');
+  // devices can't use the Home Assistant route, and an idle player has nothing to hand off
+  assert.equal((await json(app, 'POST', `/api/ha/players/${phone.id}/handoff`, { token: tokens.member, body: { to: deskP.id } })).status, 403);
+  assert.equal((await json(app, 'POST', `/api/ha/players/${deskP.id}/handoff`, { token: ha.token, body: { to: phone.id } })).status, 409);
+  assert.equal((await json(app, 'POST', `/api/ha/players/${phone.id}/handoff`, { token: ha.token, body: { to: 'Kitchen' } })).status, 404);
+  assert.equal((await json(app, 'POST', `/api/ha/players/${phone.id}/handoff`, { token: ha.token, body: { to: phone.id } })).status, 400);
+  const r = await json(app, 'POST', `/api/ha/players/${phone.id}/handoff`, { token: ha.token, body: { to: 'desktop' } });
+  assert.equal(r.status, 200);
+  assert.deepEqual([r.body.from, r.body.to], ['Phone', 'Desktop']);
+  const deskCmds = (await json(app, 'GET', '/api/me/remote/wait?timeout=10', { token: desk })).body.commands;
+  assert.deepEqual(deskCmds.map((c: { action: string; index: number; position: number; play: boolean }) => [c.action, c.index, c.position, c.play]), [['load', 1, 42, true]]);
+  assert.equal(deskCmds[0].queue.length, 2);
+  const phoneCmds = (await json(app, 'GET', '/api/me/remote/wait?timeout=10', { token: tokens.member })).body.commands;
+  assert.deepEqual(phoneCmds.map((c: { action: string }) => c.action), ['pause']);
+});

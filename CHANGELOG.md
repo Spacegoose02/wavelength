@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Home Assistant can hand playback off between your devices.** `POST /api/ha/players/:id/handoff` with
+  `{ "to": "Kitchen" }` moves the queue, song and spot to the other device and pauses this one, like "play this
+  queue from here" in Devices. Handy from a dashboard button or a macro pad.
 
 ## 0.26.1
 - **"Fix 1550 titles" no longer ends in a 504.** Library care sent a big fix as one request of up to 1000 songs.

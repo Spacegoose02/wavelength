@@ -13,7 +13,8 @@ import { clientIp, HttpError, signedIn } from '../http.ts';
  *
  * Home Assistant (docs/HOME-ASSISTANT.md) gets a token of its own, a device with the `homeassistant` platform,
  * from POST /api/me/homeassistant. With it, Home Assistant lists the person's players (GET /api/ha/players) and
- * sends them the same commands (POST /api/ha/players/:id). It never shows up as a player itself.
+ * sends them the same commands (POST /api/ha/players/:id), or moves playback to another player
+ * (POST /api/ha/players/:id/handoff). It never shows up as a player itself.
  */
 
 export const HA_PLATFORM = 'homeassistant';
@@ -207,6 +208,33 @@ export function remoteRoutes(app: FastifyInstance, { db, config }: Ctx) {
     target.commands = [...target.commands, cmd].slice(-50);
     target.wake?.();
     return { ok: true };
+  });
+
+  /**
+   * Home Assistant (or another remote like a macro pad) moves playback from one player to another:
+   * `{ to: <player id or name> }`. The other player loads this one's queue at the same song and spot and plays;
+   * this one pauses. Same as "play this queue from here" in the Devices panel.
+   */
+  app.post<{ Params: { id: string } }>('/api/ha/players/:id/handoff', async (req) => {
+    const { user, device } = signedIn(req);
+    if (device.platform !== HA_PLATFORM) throw new HttpError(403, 'Devices hand off with /api/me/remote/command');
+    const mine = (d: Live | undefined) => !!d && d.userId === user.id && online(d) && d.platform !== HA_PLATFORM;
+    const from = live.get(Number(req.params.id));
+    if (!mine(from)) throw new HttpError(404, "That player isn't online");
+    const want = (req.body ?? {}) as Record<string, unknown>;
+    const name = String(want.to ?? '').trim().toLowerCase();
+    const to = live.get(Number(want.to)) ?? [...live.values()].find((d) => mine(d) && d.name.toLowerCase() === name);
+    if (!mine(to)) throw new HttpError(404, "The player to hand off to isn't online");
+    if (to!.deviceId === from!.deviceId) throw new HttpError(400, 'That’s the same player');
+    const s = from!.state;
+    if (!s || s.index < 0 || !s.queue.length) throw new HttpError(409, 'Nothing is playing there to hand off');
+    const position = Math.min(s.position + (s.playing ? (Date.now() - s.at) / 1000 : 0), s.duration || Infinity);
+    const at = Date.now();
+    to!.commands = [...to!.commands, { id: nextId++, action: 'load' as const, queue: s.queue, index: s.index, position, play: true, from: device.name, at }].slice(-50);
+    from!.commands = [...from!.commands, { id: nextId++, action: 'pause' as const, from: device.name, at }].slice(-50);
+    to!.wake?.();
+    from!.wake?.();
+    return { ok: true, from: from!.name, to: to!.name };
   });
 
   app.post('/api/me/remote/command', { bodyLimit: 4 * 1024 * 1024 }, async (req) => {

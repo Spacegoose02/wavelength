@@ -103,6 +103,10 @@ tap_action:
 
 (Dashboards don't fill in templates; use a script that calls `rest_command.wavelength` and point the button at it.)
 
+To move the music from one device to another ("continue on the kitchen speaker"), post to
+`/api/ha/players/<id>/handoff` with `{"to": "Kitchen"}` (a player's name or id). The other device picks up the
+same queue at the same song and spot; this one pauses.
+
 ## What Home Assistant gets
 
 Each player's name, kind of device, `state`, the song's title, artist and album, the position, length, volume and
@@ -117,6 +121,7 @@ anyone else's devices.
 | `GET /api/ha/players` | any of your tokens | `{ playing, players: [{ id, name, platform, state, title, artist, album, position, duration, volume, queued }] }` |
 | `GET /api/ha/player?name=` | any of your tokens | one of those by device name (any case), or `{ state: 'off', name }` while it isn't open |
 | `POST /api/ha/players/:id` | any of your tokens | `{ action, value? }`, sent to that device like a Devices command; `404` when it isn't online |
+| `POST /api/ha/players/:id/handoff` | the Home Assistant token | `{ to: <player id or name> }`: the other player picks up this one's queue at the same song and spot and plays; this one pauses. `404` when either isn't online, `409` when nothing is queued there |
 
 The Home Assistant token can't wait for commands or report a state, so it never shows up as a player.
 `hub/src/routes/remote.ts`.
