@@ -38,7 +38,7 @@ describe('bend', () => {
   });
 
   it('skips an act that has no such arm', () => {
-    expect(bend(() => null as unknown as SVGElement, 'arm-r', { turn: 10 })).toEqual([0, 0]);
+    expect(bend(() => null as unknown as SVGElement, 'arm-r', { turn: 10 })).toEqual([0, 0, 0]);
   });
 });
 

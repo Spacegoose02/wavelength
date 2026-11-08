@@ -3,9 +3,18 @@ import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from 
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 import { swell } from './flourish';
-import { beatClock, bend, lift } from './arm';
+import { armJoint, beatClock, bend, lift } from './arm';
 
 /** Bubbles: x, size, where in the climb each starts (0..1), speed. */
+/** Where the sticks' tips land, whatever the species' reach: the snare's head, the crash's edge, the floor tom's head. */
+const SNARE_AT: [number, number] = [94, 315];
+const CRASH_AT: [number, number] = [322, 243];
+const TOM_AT: [number, number] = [304, 312];
+
+const angle = (from: readonly [number, number], to: readonly [number, number]) => (Math.atan2(to[1] - from[1], to[0] - from[0]) * 180) / Math.PI;
+/** -180..180 */
+const wrap = (deg: number) => ((((deg + 180) % 360) + 360) % 360) - 180;
+
 const BUBBLES: [number, number, number, number][] = [
   [30, 5, 0, 1], [70, 3, 0.45, 1.3], [128, 4, 0.7, 0.9], [176, 3, 0.2, 1.2],
   [238, 5, 0.85, 1], [282, 3, 0.35, 1.4], [352, 4, 0.6, 1.1], [384, 3, 0.1, 0.8],
@@ -38,7 +47,8 @@ export function Drums({ species, still }: ActProps) {
       bend($, 'arm-l', { turn: idle ? 1 + Math.sin(t * 1.1) : up * 30 * back, wrist: up * 14 });
       $('arm-l').setAttribute('transform', `rotate(${(idle ? 0 : up * 4).toFixed(2)} 138 268)`);
       // the other hand: the crash on the first beat of each bar (and on strong highs), the floor tom on the
-      // rest; the arm swings down to the tom from the shoulder and the stick strikes from the elbow
+      // rest. For the tom the forearm swings down and the wrist turns the stick onto the tom's head; the stick
+      // strikes from the elbow either way
       const next = (index + 1) % 4;
       const onTom = !idle && !hit && next !== 0 ? 1 : 0;
       s.tom += (onTom - s.tom) * 0.18;
@@ -48,13 +58,25 @@ export function Drums({ species, still }: ActProps) {
       }
       s.crashHit *= 0.9;
       s.tomHit *= 0.8;
-      $('arm-r').setAttribute('transform', `rotate(${(s.tom * 58 + (idle ? Math.sin(t * 0.9) * 1.5 : 0)).toFixed(2)} 262 268)`);
-      bend($, 'arm-r', { turn: idle ? 0 : -up * 30 + (hit ? rock * 6 : 0), wrist: -up * 14 });
+      $('arm-r').setAttribute('transform', `rotate(${(idle ? Math.sin(t * 0.9) * 1.5 : 0).toFixed(2)} 262 268)`);
+      const j = armJoint($, 'arm-r');
+      let aim = 0;
+      let to: [number, number] = [0, 0];
+      if (j && s.tom > 0.01) {
+        const h = [j.hx, j.hy] as const;
+        const len = Math.hypot(CRASH_AT[0] - h[0], CRASH_AT[1] - h[1]);
+        // the hand just up and left of the tom, so the stick reaches its head at a slant
+        const want = [TOM_AT[0] - len * Math.cos(Math.PI / 5) - h[0], TOM_AT[1] - len * Math.sin(Math.PI / 5) - h[1]];
+        to = [want[0] * s.tom, want[1] * s.tom];
+        const [dx, dy, rot] = bend($, 'arm-r', { to });
+        aim = wrap(angle([h[0] + dx, h[1] + dy], TOM_AT) - angle(h, CRASH_AT) - rot) * s.tom;
+      }
+      bend($, 'arm-r', { to, turn: idle ? 0 : -up * 30 + (hit ? rock * 6 : 0), wrist: aim - up * 14 });
       // flourish: a fast drum fill, both sticks alternating, ending on a crash
       if (flourish) {
         const fill = flourish < 0.75 ? Math.sin(t * 40) : 0;
         bend($, 'arm-l', { turn: 10 + fill * 26 });
-        $('arm-r').setAttribute('transform', `rotate(${(flourish < 0.75 ? 50 : -16 * swell((flourish - 0.75) * 4)).toFixed(2)} 262 268)`);
+        $('arm-r').setAttribute('transform', `rotate(${(flourish < 0.75 ? 0 : -16 * swell((flourish - 0.75) * 4)).toFixed(2)} 262 268)`);
         bend($, 'arm-r', { turn: flourish < 0.75 ? -fill * 26 : 0 });
         if (flourish > 0.75) s.crashHit = Math.max(s.crashHit, 1 - flourish);
       }
@@ -136,10 +158,10 @@ export function Drums({ species, still }: ActProps) {
 
       {/* fins with sticks: snare hand (left of picture), cymbal hand (right) */}
       <Arm part="arm-l" d="M138 268 Q 118 286 116 300" hand={[116, 302]}>
-        <path className="stick" d="M116 302 L 80 318" strokeWidth="4" strokeLinecap="round" />
+        {([x, y]) => <path className="stick" d={`M${x} ${y} L ${SNARE_AT[0]} ${SNARE_AT[1]}`} strokeWidth="4" strokeLinecap="round" />}
       </Arm>
       <Arm part="arm-r" d="M262 268 Q 282 278 294 264" hand={[296, 262]}>
-        <path className="stick" d="M296 262 L 330 242" strokeWidth="4" strokeLinecap="round" />
+        {([x, y]) => <path className="stick" d={`M${x} ${y} L ${CRASH_AT[0]} ${CRASH_AT[1]}`} strokeWidth="4" strokeLinecap="round" />}
       </Arm>
     </CritterFrame>
   );

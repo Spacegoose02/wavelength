@@ -29,15 +29,21 @@ function joint(fore: SVGElement): Joint {
 
 const deg = (rad: number) => (rad * 180) / Math.PI;
 
+/** Where an `Arm`'s elbow and hand are drawn on this species (parts.tsx), or null if the act has no such arm. */
+export function armJoint($: RigFrame['$'], part: string): Joint | null {
+  const fore = $(`${part}-fore`);
+  return fore ? joint(fore) : null;
+}
+
 /**
  * Moves an `Arm`'s forearm and hand from the elbow (parts.tsx), leaving the upper arm where it is. Any turn of
  * the whole arm about the shoulder (`part`'s own transform) still applies on top. Returns where the hand ended
- * up, relative to where it was drawn.
+ * up, relative to where it was drawn, and how far (degrees) the forearm turned.
  */
-export function bend($: RigFrame['$'], part: string, { turn = 0, to = [0, 0], wrist = 0 }: Bend): [number, number] {
+export function bend($: RigFrame['$'], part: string, { turn = 0, to = [0, 0], wrist = 0 }: Bend): [number, number, number] {
   const fore = $(`${part}-fore`);
   const paw = $(`${part}-paw`);
-  if (!fore || !paw) return [0, 0];
+  if (!fore || !paw) return [0, 0, 0];
   const { ex, ey, hx, hy } = joint(fore);
   const vx = hx - ex;
   const vy = hy - ey;
@@ -65,7 +71,7 @@ export function bend($: RigFrame['$'], part: string, { turn = 0, to = [0, 0], wr
     'transform',
     `translate(${nx.toFixed(2)} ${ny.toFixed(2)}) rotate(${(a - deg(from) + wrist).toFixed(2)}) translate(${(-hx).toFixed(2)} ${(-hy).toFixed(2)})`,
   );
-  return [nx - hx, ny - hy];
+  return [nx - hx, ny - hy, a - deg(from)];
 }
 
 /**
