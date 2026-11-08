@@ -499,6 +499,55 @@ const elephant: Figure = {
   ),
 };
 
+/** A bare panda foot: a soft round black foot with three pale toe pads peeking under the front. */
+function PandaFoot({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const foot = (
+    <g>
+      <ellipse cx={x} cy={y} rx={21} ry={10} className="bare ol-thin" />
+      {[-10, 0, 10].map((dx) => (
+        <ellipse key={dx} cx={x + dx} cy={y + 5} rx={4} ry={2.6} className="panda-pad" />
+      ))}
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
+/**
+ * Panda: a round chubby top on short thick black legs, round black feet with pale toe pads (or the act's shoes)
+ * and a little white puff of a tail. Arms and legs are black (`--skin`), like a real panda's.
+ */
+const panda: Figure = {
+  head: [188, 0.88],
+  torso: 'M172 254 Q 200 246 228 254 Q 254 262 256 290 Q 258 316 250 328 Q 200 338 150 328 Q 142 316 144 290 Q 146 262 172 254 Z',
+  shoulders: [[154, 274], [246, 274]],
+  arm: 24,
+  paw: 13,
+  reach: 64,
+  waist: [314, 54, 28],
+  chin: [252, 50],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[240, 318]} part="tail">
+        <circle cx="252" cy="318" r="13" className="panda-tail ol-thin" />
+      </Pivot>
+      <Shaded d={tube([180, 316], [177, 338], [176, 356], 30, 27)} className={legs} />
+      <Shaded d={tube([220, 316], [223, 338], [224, 356], 30, 27)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[174, 364]} rx={21} ry={10} shoe={shoe} />
+          <Foot at={[226, 364]} rx={21} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <PandaFoot at={[175, 362]} />
+          <PandaFoot at={[225, 362]} right />
+        </>
+      )}
+    </>
+  ),
+};
+
 export const FIGURES = {
   raccoon,
   bear,
@@ -510,4 +559,5 @@ export const FIGURES = {
   tiger: bigCat(TigerTail),
   lion: bigCat(LionTail),
   elephant,
+  panda,
 } satisfies Record<string, Figure>;

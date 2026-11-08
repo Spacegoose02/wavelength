@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **A panda critter.** The twelfth species: a cute panda cub with a round cream-white head and fluffy cheeks,
+  round black ears, black teardrop patches round big shiny brown eyes, a little black button nose, rosy cheeks and a
+  wide smile, on a chubby figure with black arms and legs, round black feet with pale toe pads and a white puff of a
+  tail. It plays all nine acts (the Driver too) as a boy or a girl; the girl's lashes are pale so they show against
+  the eye patches. The ears tuck under the cowboy hat and the hazmat hood like the bears' and show round every
+  holiday hat (`PandaFace` in `faces.tsx`, `FIGURES.panda` in `bodies.tsx`).
+
 ## 0.30.0
 - **An elephant, a tiger and a lion.** Three more critters, drawn cute. The elephant calf is soft grey with big
   round pink-lined ears that stay out either side of every hat (even the cowboy hat) and flap to the beat, and a
