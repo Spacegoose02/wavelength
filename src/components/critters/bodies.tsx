@@ -571,7 +571,7 @@ function Talons({ at, right }: { at: P; right?: boolean }) {
 
 /**
  * Owl: a plump round egg of a top on short fluffy legs, orange talons (or the act's shoes) and a little fan of
- * tail feathers peeking out below. Its arms are its wings: bare feathered sleeves with barring (`wing`, see
+ * tail feathers peeking out below. Its arms are its wings: bare feathered sleeves with feathered tips (`wing`, see
  * `Arm` in parts.tsx, and `.species-owl .sleeve` in styles.css) and a feathered tip for a hand.
  */
 const owl: Figure = {
@@ -608,16 +608,14 @@ const owl: Figure = {
   ),
 };
 
-/** A T. rex's foot: three chunky toes, each with a pale claw. */
+/** A T. rex's foot: a broad round foot with three pale claws. */
 function DinoFoot({ at, right }: { at: P; right?: boolean }) {
   const [x, y] = at;
   const foot = (
     <g>
-      {[-14, 0, 14].map((dx) => (
-        <g key={dx}>
-          <path d={`M${x + dx * 1.3} ${y + 12} l ${dx * 0.12 - 3} 5 l 6 0 Z`} className="dino-claw ol-thin" />
-          <ellipse cx={x + dx} cy={y + 2} rx={9} ry={11} transform={`rotate(${dx * 1.4} ${x + dx} ${y + 2})`} className="bare ol-thin" />
-        </g>
+      <ellipse cx={x} cy={y} rx={23} ry={11} className="bare ol-thin" />
+      {[-13, 0, 13].map((dx) => (
+        <path key={dx} d={`M${x + dx - 4} ${y + 7} Q ${x + dx} ${y + 15} ${x + dx + 4} ${y + 7} Z`} className="dino-claw ol-thin" />
       ))}
     </g>
   );
@@ -628,7 +626,7 @@ const TREX_TAIL = 'M214 318 C 250 316, 286 330, 312 346 C 330 356, 350 356, 358 
 
 /**
  * T. rex: a sturdy pear of a top on big strong thighs, broad three-clawed feet (or the act's shoes) and a thick
- * tail sweeping out behind to the right along the ground, striped dark brown on top with a cream underside. Its arms are short and thin, with a
+ * tail sweeping out behind to the right along the ground with a row of little rounded plates. Its arms are short and thin, with a
  * plump upper arm, a skinny forearm bending at the elbow and two little claws on each hand (`fore`, `hand`),
  * set high and close on the chest; they still reach the instruments.
  */
@@ -651,10 +649,15 @@ const trex: Figure = {
             <path d={TREX_TAIL} />
           </clipPath>
         </defs>
+        {[[248, 320], [276, 328], [302, 340], [326, 350]].map(([x, y], i) => (
+          <circle key={x} cx={x} cy={y - 4} r={9 - i * 1.5} className="dino-plate ol-thin" />
+        ))}
         <path d={TREX_TAIL} className="bare ol" />
         <g clipPath="url(#critter-trex-tail)">
           <path d="M214 352 C 252 360, 292 368, 330 364 L 340 380 L 214 380 Z" className="dino-belly" />
-          <path d="M246 318 q 6 10 2 20 M272 324 q 6 10 2 20 M296 334 q 5 9 1 18 M318 344 q 4 8 0 15 M338 348 q 3 6 0 11" className="dino-stripe" strokeWidth="6" strokeLinecap="round" fill="none" />
+          <circle cx="262" cy="334" r="4" className="dino-spot" />
+          <circle cx="292" cy="344" r="3.4" className="dino-spot" />
+          <circle cx="318" cy="354" r="2.6" className="dino-spot" />
         </g>
         <path d={TREX_TAIL} fill="url(#critter-vinyl)" />
       </Pivot>

@@ -400,10 +400,8 @@ export function Arm({
         <path className="limb-outline" d={g.fore} fill="none" strokeWidth={g.foreW + 5} strokeLinecap="round" />
       </g>
       <path className="sleeve" d={g.upper} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
-      {g.hand === 'wing' && <path className="wing-bars" d={g.upper} fill="none" strokeWidth={g.arm * 0.3} strokeDasharray="0.1 9" strokeLinecap="round" />}
       <g data-part={`${part}-fore`} data-elbow={g.elbow} data-hand={`${g.hx} ${g.hy}`}>
         <path className="sleeve" d={g.fore} fill="none" strokeWidth={g.foreW} strokeLinecap="round" />
-        {g.hand === 'wing' && <path className="wing-bars" d={g.fore} fill="none" strokeWidth={g.foreW * 0.3} strokeDasharray="0.1 9" strokeLinecap="round" />}
       </g>
       <g data-part={`${part}-paw`}>
         {typeof children === 'function' ? children([Number(g.hx), Number(g.hy)]) : <g transform={g.held}>{children}</g>}
@@ -431,7 +429,7 @@ export function ArmHand({ part, d, hand }: { part: string; d: string; hand: [num
 
 /**
  * The hand at the end of an arm: a round paw, with two little claws for the T. rex (`hand: 'claws'`), or the
- * feathered tip of an owl's wing (`hand: 'wing'`), which fans out away from the body.
+ * feathered tip of an owl's wing (`hand: 'wing'`): three feathers like little fingers over the front of the hand.
  */
 function Hand({ g, right }: { g: ReturnType<typeof useArm>; right: boolean }) {
   const x = Number(g.hx);
@@ -449,19 +447,23 @@ function Hand({ g, right }: { g: ReturnType<typeof useArm>; right: boolean }) {
           strokeLinecap="round"
         />
       )}
-      {g.hand === 'wing' &&
-        [-0.7, 0, 0.7].map((k) => (
-          <ellipse
-            key={k}
-            cx={fx(x + side * r * 0.55 + r * k * 0.5)}
-            cy={fx(y + r * 0.75)}
-            rx={fx(r * 0.42)}
-            ry={fx(r * 0.85)}
-            transform={`rotate(${fx(side * 12 + k * 22)} ${fx(x + side * r * 0.55 + r * k * 0.5)} ${fx(y + r * 0.75)})`}
-            className="hand wing-tip ol-thin"
-          />
-        ))}
       <circle className="hand ol-thin" cx={g.hx} cy={g.hy} r={r} />
+      {g.hand === 'wing' &&
+        [-1, 0, 1].map((k) => {
+          const fx0 = x + side * r * 0.2 + k * r * 0.55;
+          const fy0 = y + r * 0.35;
+          return (
+            <ellipse
+              key={k}
+              cx={fx(fx0)}
+              cy={fx(fy0 + r * 0.5)}
+              rx={fx(r * 0.36)}
+              ry={fx(r * 0.75)}
+              transform={`rotate(${fx(-k * 14 - side * 8)} ${fx(fx0)} ${fx(fy0 + r * 0.5)})`}
+              className="hand wing-tip ol-thin"
+            />
+          );
+        })}
     </>
   );
 }

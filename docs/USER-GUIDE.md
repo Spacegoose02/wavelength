@@ -496,8 +496,8 @@ alien are all possible.
 | **Elephant** | A soft grey calf with big round pink-lined ears that stick out either side of any hat and flap to the beat, a trunk sweeping out to one side over a wide smile |
 | **Tiger** | An orange cub with bold black stripes, white cheeks, green eyes, a pink nose and a striped tail |
 | **Lion** | A golden cub in a russet mane (the girl is a lioness, without one), with a cream muzzle and a tufted tail |
-| **Owl** | A round brown owlet with big feather tufts, a cream face with pale brows, huge orange eyes and a long orange beak; its spotted wings are its arms, and it stands on orange talons |
-| **T. rex** | A leaf-green baby T. rex with its head turned to show a big blunt snout, brown stripes, big eyes and a long grin full of little teeth, short thin arms with little claws, three-toed feet and a thick striped tail |
+| **Owl** | A round brown owlet with short pointed tufts, a big cream face, huge round dark eyes, a little yellow beak and pink cheeks; its wings are its arms, with feathery fingers, and it stands on orange talons |
+| **T. rex** | A leaf-green baby T. rex with a big soft snout, freckles and a wide grin with two tiny teeth, short thin arms with little claws, big clawed feet and a thick tail |
 | **Panda** | A cream-white cub with round black ears, black teardrop patches round big brown eyes, a button nose and rosy cheeks, with black arms and legs and a white puff of a tail |
 
 <img src="screenshots/critter-moose.png" alt="The moose in all eight acts: DJ in headphones, Country in a cowboy hat with its antlers either side of the crown, Rapper, Rocker, Drummer, Theremin, Synth and Accordion in a beanie" width="90%">

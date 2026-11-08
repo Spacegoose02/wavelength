@@ -1623,23 +1623,21 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .panda-tail { fill: #f4f2ec; }
 .critter .panda-pad { fill: #6a6874; }
 .critter.species-panda .lashes { stroke: #f4f2ec; }
-/* the owl: brown feathers, its wings are its arms (bare and barred, with a feathered tip for a hand), orange
+/* the owl: brown feathers, its wings are its arms (bare, with feathered tips like fingers for hands), orange
    talons and a fan of tail feathers */
-.species-owl { --skin: #9c6b43; --skin-dark: #5e3d22; --belly: #f6e7c8; }
+.species-owl { --skin: #a5713f; --skin-dark: #6e4626; --belly: #f6e6c6; }
 .critter.species-owl .sleeve { stroke: var(--skin); }
-.critter .wing-bars { stroke: #5a3a20; opacity: 0.6; }
-.critter .wing-tip { fill: var(--skin-dark); }
+.critter .wing-tip { fill: color-mix(in srgb, var(--skin) 80%, #fff); }
 .critter .owl-tail { fill: #7a5232; }
-.critter .talon { fill: #f2a33a; }
-.critter .claw-tip { stroke: #e9e2d4; fill: none; }
-/* the T. rex: leaf green with a cream belly, dark brown stripes down its tail, pale claws */
-.species-trex { --skin: #7cc25a; --skin-dark: #3f7a2c; --belly: #f4ead0; }
-.critter .dino-belly { fill: #f4ead0; }
-.critter .dino-stripe { stroke: #5b4a1e; opacity: 0.85; }
+.critter .talon { fill: #f5b82e; }
+.critter .claw-tip { stroke: #6e4626; fill: none; }
+/* the T. rex: leaf green with a pale yellow belly, little rounded plates down its tail, pale claws */
+.species-trex { --skin: #7cc25a; --skin-dark: #3f7a2c; --belly: #f6ebb4; }
+.critter .dino-belly { fill: #f6ebb4; }
+.critter .dino-spot { fill: #4f8c38; }
+.critter .dino-plate { fill: #3f7a2c; }
 .critter .dino-claw { fill: #fffbe8; }
 .critter .hand-claw { stroke: #fffbe8; }
-/* its snout would poke out of the hazmat hood: the face shrinks a little and moves over inside it */
-:root[data-skin-group='nuclear'] .critter .trex-face { transform: translate(14px, 4px) scale(0.86); transform-origin: 214px 180px; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }

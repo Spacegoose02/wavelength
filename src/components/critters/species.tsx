@@ -60,5 +60,5 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'lion', noun: 'lion', label: 'Lion', Face: LionFace, figure: FIGURES.lion, fit: { eyeY: 174, eyes: [1.28, 1.2], mask: 10, bow: [170, 116, -20] } },
   { id: 'panda', noun: 'panda', label: 'Panda', Face: PandaFace, figure: FIGURES.panda, fit: { eyeY: 176, eyes: [1.36, 1.2], mask: 10, bow: [166, 114, -20] } },
   { id: 'owl', noun: 'owl', label: 'Owl', Face: OwlFace, figure: FIGURES.owl, fit: { eyeY: 180, eyes: [1.52, 1.4], mask: 18, bow: [166, 118, -20] } },
-  { id: 'trex', noun: 'T. rex', label: 'T. rex', Face: TrexFace, figure: FIGURES.trex, fit: { eyeY: 164, eyes: [1.38, 1.32], mask: 22, bow: [176, 116, -20] } },
+  { id: 'trex', noun: 'T. rex', label: 'T. rex', Face: TrexFace, figure: FIGURES.trex, fit: { eyeY: 166, eyes: [1.3, 1.22], mask: 16, bow: [168, 114, -20] } },
 ];
