@@ -5,6 +5,9 @@
   words without times, LRCLIB is asked for a synced version of the same song, which is used instead (and replaces
   the Hub's copy), so the line being sung lights up. **Wrong lyrics?** also offers **Use with times** on an entry of
   another length, for when its times fit well enough; **Lyrics timing** in Tune mouth can shift them.
+- **Fix: the owl's hands.** Its three finger feathers splayed into a clump that looked broken, most of all round the
+  mic. Each wing now ends in one soft rounded wing tip with three short scalloped feathers along its edge
+  (`wingTip` in `parts.tsx`).
 
 ## 0.32.0
 - **An owl and a T. rex.** The thirteenth and fourteenth critters, drawn cute. The owlet is drawn like a sticker: a round

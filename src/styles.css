@@ -1627,7 +1627,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
    talons and a fan of tail feathers */
 .species-owl { --skin: #a5713f; --skin-dark: #6e4626; --belly: #f6e6c6; }
 .critter.species-owl .sleeve { stroke: var(--skin); }
-.critter .wing-tip { fill: color-mix(in srgb, var(--skin) 80%, #fff); }
+.critter .wing-seam { stroke: rgb(0 0 0 / 0.28); }
 .critter .owl-tail { fill: #7a5232; }
 .critter .talon { fill: #f5b82e; }
 .critter .claw-tip { stroke: #6e4626; fill: none; }
