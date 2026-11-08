@@ -30,6 +30,7 @@ import { primaryArtist } from '../lib/match';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
 import { ArtistNews, notOneArtist, useCanGet } from '../components/ArtistNews';
+import { PopularSongs } from '../components/PopularSongs';
 import { MadeForYou } from './Mix';
 import { JumpBackIn } from '../components/JumpBackIn';
 import { ALBUM_SORTS, ARTIST_SORTS, BrowseFilters } from '../components/BrowseFilters';
@@ -458,6 +459,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
           <ArtistNews artist={artist} />
         </div>
       </header>
+      {!notOneArtist(artist.name) && <PopularSongs artist={artist.name} />}
       {albums && albums.length > 1 && (
         <div className="row">
           <button className={`btn small ${sel.selecting ? 'primary' : ''}`} onClick={sel.selecting ? sel.stop : sel.start}>{sel.selecting ? 'Done' : 'Select'}</button>

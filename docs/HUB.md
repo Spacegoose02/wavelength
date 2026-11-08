@@ -677,6 +677,14 @@ and hands out ids.
 - **One listing of Navidrome.** The library index (Search, Discover's library check, Guest Jam) used to list Navidrome
   every hour, and sound-alike analysis listed it again on its own. Now the library index lists it once
   (`LibraryIndex.navidromeSongs()`), and the catalog's matching and sound-alike analysis both take that copy.
+- **Library care reads the catalog** (phase 2, `hub/src/libraryAdmin.ts`). Once a scan has matched at least 95% of
+  Navidrome's songs to files, the tag editor, Edit artist, Merge, Library care (Numbered titles, Unmatched songs), the
+  genre review and suggestions, and Delete album take their album and song lists from the catalog instead of signing
+  in to Navidrome's API. No Navidrome sign-ins means no 429s, and big lists come from SQLite instead of paged HTTP.
+  Ids are still Navidrome's. Until the catalog matches (right after the Hub starts, or when Navidrome sees the music
+  at other paths), they ask Navidrome as before; an album the catalog doesn't know yet is asked of Navidrome too.
+  Every tag save and undo updates the catalog row at once (`catalogWrote()`) and marks the file to be read again on
+  the next scan, and Delete album drops its files from the catalog, so the lists don't wait for a rescan.
 - **Settings → Server → Music catalog** shows songs, albums, artists and hours, how many match Navidrome, formats,
   top genres, files missing tags, and files that couldn't be read.
 

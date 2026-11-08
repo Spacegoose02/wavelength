@@ -6,9 +6,8 @@ import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { tx, type Db } from '../db.ts';
 import { clientIp, HttpError, need } from '../http.ts';
-import { getScanSettings } from '../library.ts';
 import { AUDIO_EXT, libraryFile } from '../tags.ts';
-import { navidromeAdmin } from './navidrome.ts';
+import { libraryAdmin } from '../libraryAdmin.ts';
 
 /**
  * Deleting albums (admins, `library.edit`). Nothing is deleted straight away: the album's files move into a
@@ -51,7 +50,7 @@ export function purgeTrash(db: Db, musicDir: string, now = Date.now()) {
   return old.length;
 }
 
-export function trashRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
+export function trashRoutes(app: FastifyInstance, { db, config, library, catalog }: Ctx) {
   const root = () => {
     if (!config.musicDir) throw new HttpError(501, 'The Hub has no music folder. Map your music share to /music (WAVELENGTH_MUSIC_DIR)');
     return resolve(config.musicDir);
@@ -70,9 +69,7 @@ export function trashRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
   app.delete<{ Params: { id: string } }>('/api/admin/library/album/:id', async (req) => {
     const { user } = need(req, 'library.edit');
     const music = root();
-    const s = getScanSettings(db, config.secretKey);
-    if (!s) throw new HttpError(409, 'Add the Navidrome admin login under Settings → Server first');
-    const songs = await (await navidromeAdmin(s.url, s.username, s.password)).albumSongs(req.params.id.slice(0, 100));
+    const songs = await (await libraryAdmin(db, config.secretKey, catalog)).albumSongs(req.params.id.slice(0, 100));
     const files = new Set<string>();
     for (const song of songs) {
       try {
@@ -114,7 +111,11 @@ export function trashRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
       try {
         mkdirSync(dirname(to), { recursive: true });
         renameSync(m.from, to);
-        tx(db, () => insert.run(batch, label, rel, relative(music, to), m.files, user.id, now));
+        tx(db, () => {
+          insert.run(batch, label, rel, relative(music, to), m.files, user.id, now);
+          // gone from the catalog now, not at the next scan (a restore comes back with the scan after it)
+          db.prepare("DELETE FROM catalog_songs WHERE path = ? OR path LIKE ? ESCAPE '\\'").run(rel, `${rel.replace(/[\\%_]/g, '\\$&')}/%`);
+        });
         moved += m.files;
         pruneEmpty(music, dirname(m.from));
       } catch (e) {

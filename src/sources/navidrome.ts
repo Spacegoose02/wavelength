@@ -261,6 +261,12 @@ export class NavidromeSource implements MusicSource {
     return (r.album?.song ?? []).map(this.track);
   }
 
+  /** Navidrome's top songs for an artist, from Last.fm when the server has it set up; empty otherwise. */
+  async getTopSongs(artistName: string, count = 10) {
+    const r = await this.call('getTopSongs', { artist: artistName, count });
+    return (r.topSongs?.song ?? []).map(this.track);
+  }
+
   async search(q: string): Promise<Partial<SearchResults>> {
     const r = await this.call('search3', { query: q, artistCount: 20, albumCount: 30, songCount: 60 });
     const s = r.searchResult3 ?? {};
