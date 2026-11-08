@@ -13,6 +13,9 @@ describe('joined artist credits', () => {
     expect(tidyCredit('Drake;')).toBe('Drake');
     expect(tidyCredit('Lil Wayne; Drake')).toBe('Lil Wayne; Drake');
     expect(tidyCredit('Lil Wayne feat. Drake')).toBe('Lil Wayne feat. Drake');
+    expect(tidyCredit('Lil Durk;Lil Durk')).toBe('Lil Durk');
+    expect(tidyCredit('Lil Durk Lil Durk')).toBe('Lil Durk');
+    expect(tidyCredit('Duran Duran')).toBe('Duran Duran');
   });
 
   test('the main artist is found the same with or without the space', () => {
@@ -43,6 +46,8 @@ describe('unmatched songs', () => {
     expect(creditFix({ artist: 'Lil Wayne;Drake', albumArtist: 'Lil Wayne' })).toEqual({ artist: 'Lil Wayne; Drake' });
     expect(creditFix({ artist: 'Lil Wayne', albumArtist: 'Lil Wayne;Drake' })).toEqual({ albumArtist: 'Lil Wayne; Drake' });
     expect(creditFix({ artist: 'Lil Wayne; Drake' })).toBeNull();
+    expect(creditFix({ artist: 'Lil Durk;Lil Durk', albumArtist: 'Lil Durk' })).toEqual({ artist: 'Lil Durk' });
+    expect(songIssues({ ...full, artist: 'Lil Durk Lil Durk', albumArtist: 'Lil Durk' })).toContain('joined');
   });
 
   test('filters and counts', () => {

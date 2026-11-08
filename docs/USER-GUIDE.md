@@ -1072,7 +1072,8 @@ rules follow you to every device with a Hub. Genres match your tags, so tidy gen
   - **Joined artists:** several artists in one tag with a semicolon and no space, like "Lil Wayne;Drake".
     Navidrome only splits on "; " (with the space), " / ", " feat. " and " ft. ", so it shows "Lil Wayne;Drake"
     as one artist. **Split joined artists** fixes every one at once by writing "Lil Wayne; Drake"; **Split
-    artists** on a song fixes just that one.
+    artists** on a song fixes just that one. The same artist written twice ("Lil Durk;Lil Durk", or "Lil Durk Lil
+    Durk") is listed here too and becomes just "Lil Durk".
   - **Maybe joined:** a comma or slash with no space around it ("Lil Wayne,Drake", "Lil Wayne/Drake"). These
     aren't changed by themselves, because "AC/DC" is one band; fix the ones that are wrong with **Edit tags**.
   - **No artist**, **No album artist**, **No album**, **No title**, **No genre**, **No year**, **No track number**

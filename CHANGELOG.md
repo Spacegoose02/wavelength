@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Fix: "Lil Durk;Lil Durk".** Songs whose Artist or Album artist tag names the same artist twice ("Lil Durk;Lil
+  Durk", "Lil Durk Lil Durk") made Navidrome list a separate artist with that name. Library care → Unmatched songs
+  now lists them under Joined artists and **Split joined artists** writes just "Lil Durk"; the Hub does the same to
+  new downloads before Navidrome scans them, and its search counts them as Lil Durk. One-word band names twice
+  ("Duran Duran") stay (`tidyCredit` and `undouble` in `hub/src/credits.ts` and `src/lib/songIssues.ts`).
 - **Lyrics follow the song more often.** When Navidrome (a file's lyrics tag) or the Hub's shared copy only has the
   words without times, LRCLIB is asked for a synced version of the same song, which is used instead (and replaces
   the Hub's copy), so the line being sung lights up. **Wrong lyrics?** also offers **Use with times** on an entry of

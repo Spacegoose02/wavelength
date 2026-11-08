@@ -24,6 +24,13 @@ test('joined credits get the "; " Navidrome splits on', () => {
   assert.equal(tidyCredit('Drake;'), 'Drake');
   assert.equal(tidyCredit('Lil Wayne; Drake'), 'Lil Wayne; Drake');
   assert.equal(tidyCredit('AC/DC'), 'AC/DC');
+  // the same artist twice is them once
+  assert.equal(tidyCredit('Lil Durk;Lil Durk'), 'Lil Durk');
+  assert.equal(tidyCredit('Lil Durk; lil durk;J. Cole'), 'Lil Durk; J. Cole');
+  assert.equal(tidyCredit('Lil Durk Lil Durk'), 'Lil Durk');
+  assert.equal(tidyCredit('Lil Durk Lil Durk;Lil Durk'), 'Lil Durk');
+  assert.equal(tidyCredit('Duran Duran'), 'Duran Duran');
+  assert.equal(tidyCredit('Talk Talk;Drake'), 'Talk Talk; Drake');
 });
 
 test('a credit splits the same with or without the space', () => {
@@ -89,4 +96,6 @@ test('creditNames lists each artist in a credit, keeping duos whose names nobody
   assert.deepEqual(creditNames('Simon & Garfunkel', known), ['Simon & Garfunkel']);
   assert.deepEqual(creditNames('Tyler, The Creator', known), ['Tyler, The Creator']);
   assert.deepEqual(creditNames('AC/DC', known), ['AC/DC']);
+  assert.deepEqual(creditNames('Lil Durk;Lil Durk', known), ['Lil Durk']);
+  assert.deepEqual(creditNames('Lil Durk Lil Durk', known), ['Lil Durk']);
 });

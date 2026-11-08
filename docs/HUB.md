@@ -417,7 +417,9 @@ Navidrome splits a single Artist or Album artist tag into several artists only o
 space after it, which many taggers and downloaders write ("Lil Wayne;Drake"), isn't one of them, so Navidrome lists
 "Lil Wayne;Drake" as one artist with no albums. `tidyCredit()` in `hub/src/credits.ts` rewrites any semicolon, with
 any spacing (the full-width "；" too), to `"; "`: "Lil Wayne;Drake" → "Lil Wayne; Drake", "A ; B;C" → "A; B; C".
-Empty parts ("Drake;") are dropped. Nothing else is changed: commas and slashes are left, since "Tyler, The Creator"
+Empty parts ("Drake;") are dropped, and so is an artist named twice ("Lil Durk;Lil Durk" → "Lil Durk"). A name of
+two or more words written twice with only a space between ("Lil Durk Lil Durk") becomes the name once; a one-word
+name twice ("Duran Duran", "Talk Talk") is a real band and stays. Nothing else is changed: commas and slashes are left, since "Tyler, The Creator"
 and "AC/DC" are one artist.
 
 **New downloads.** Like genres, `hub/src/routes/credits.ts` adds a `Library.onNewMusic` step: music files changed

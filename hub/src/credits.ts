@@ -12,13 +12,39 @@ import type { Db } from './db.ts';
 /** Any semicolon with any spacing around it, the full-width "；" too. */
 const SEMI = /\s*[;；]\s*/;
 
+/** A name for comparing: lower case, no accents or punctuation. */
+const sameKey = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
 /**
- * The credit written the way Navidrome splits it: "Lil Wayne;Drake" → "Lil Wayne; Drake", "A ; B;C" →
- * "A; B; C". Empty parts ("Drake;") go. A value without a semicolon comes back as it is.
+ * A name of two or more words written twice in a row, "Lil Durk Lil Durk", as the name once. A one-word name
+ * twice ("Duran Duran", "Talk Talk") is a real band name and stays.
+ */
+export function undouble(value: string): string {
+  const w = value.trim().split(/\s+/);
+  if (w.length < 4 || w.length % 2) return value;
+  const half = w.length / 2;
+  const a = w.slice(0, half).join(' ');
+  return sameKey(a) === sameKey(w.slice(half).join(' ')) ? a : value;
+}
+
+/**
+ * The credit written the way Navidrome splits it, each artist once: "Lil Wayne;Drake" → "Lil Wayne; Drake",
+ * "A ; B;C" → "A; B; C", "Lil Durk;Lil Durk" and "Lil Durk Lil Durk" → "Lil Durk". Empty parts ("Drake;") go.
+ * A value with nothing to tidy comes back as it is.
  */
 export function tidyCredit(value: string): string {
-  if (!SEMI.test(value)) return value;
-  return value.split(SEMI).map((p) => p.trim()).filter(Boolean).join('; ');
+  if (!SEMI.test(value)) return undouble(value);
+  const seen = new Set<string>();
+  return value
+    .split(SEMI)
+    .map((p) => undouble(p.trim()))
+    .filter((p) => {
+      const k = sameKey(p);
+      if (!p || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .join('; ');
 }
 
 /**
@@ -53,7 +79,7 @@ export function creditNames(credit: string, known: (name: string) => boolean): s
       out.push(n);
     }
   };
-  for (const piece of strongParts(credit)) {
+  for (const piece of strongParts(credit).map(undouble)) {
     const parts = piece.split(WEAK).map(bare).filter(Boolean);
     if (parts.length > 1 && parts.some(known)) parts.forEach(add);
     else add(piece);
