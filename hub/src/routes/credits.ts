@@ -32,7 +32,7 @@ export function creditRoutes(app: FastifyInstance, { db, config, library }: Ctx)
         const tags: Tags = {};
         for (const k of ['artist', 'albumArtist'] as const) {
           const v = cur[k];
-          if (v && tidyCredit(v) !== v) tags[k] = tidyCredit(v);
+          if (v && tidyCredit(v, k) !== v) tags[k] = tidyCredit(v, k);
         }
         if (Object.keys(tags).length) plan.push({ file, tags });
       }));
