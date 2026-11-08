@@ -1,17 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.31.0
 - **A panda critter.** The twelfth species: a cute panda cub with a round cream-white head and fluffy cheeks,
   round black ears, black teardrop patches round big shiny brown eyes, a little black button nose, rosy cheeks and a
   wide smile, on a chubby figure with black arms and legs, round black feet with pale toe pads and a white puff of a
   tail. It plays all nine acts (the Driver too) as a boy or a girl; the girl's lashes are pale so they show against
   the eye patches. The ears tuck under the cowboy hat and the hazmat hood like the bears' and show round every
-  holiday hat (`PandaFace` in `faces.tsx`, `FIGURES.panda` in `bodies.tsx`).
+  holiday hat (`PandaFace` in `faces.tsx`, `FIGURES.panda` in `bodies.tsx`, #216).
+- **Critters: the elephant gets a wide smile.** Its trunk now comes down between the eyes and sweeps out to the left,
+  tip up, over a wide smile that shows either side of it, and the bigger singing mouth opens just right of centre
+  under the trunk's bend (#215).
+- **Fix: the Driver act had no necks, and the turtle no shell.** The act skipped `Legs`, where each species draws its
+  neck, shell, legs and tail, so heads floated over the car. They're now drawn behind the car's tub, with the tail
+  hidden (#214).
 
 ## 0.30.0
 - **An elephant, a tiger and a lion.** Three more critters, drawn cute. The elephant calf is soft grey with big
   round pink-lined ears that stay out either side of every hat (even the cowboy hat) and flap to the beat, and a
-  trunk that sweeps out to the left over a wide smile, with the singing mouth showing beside and under it. The tiger cub is orange with bold stripes, white
+  short trunk that curls up to one side so the smile shows under it. The tiger cub is orange with bold stripes, white
   cheeks, green eyes and a pink nose, and a striped tail. The lion cub has a russet mane round its head (the girl is a
   lioness, without one) and a tufted tail. All three play every act as a boy or a girl; the hazmat hood hides the
   ears, trunk and mane (`ElephantFace`, `TigerFace`, `LionFace` in `faces.tsx`; `FIGURES.elephant` and the big-cat
