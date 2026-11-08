@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **A turtle critter.** The eighth species: a box turtle with olive skin, gold freckles, a hooked horn beak and
+  ember-red eyes under heavy lids, on stumpy clawed legs with a little pointed tail. Its high domed shell is
+  drawn behind the top, so the rim shows round every act's outfit and the instruments and arms go in front of it.
+  The plain round head takes every hat, the headphones, the visor and the respirator. It plays all eight acts as a
+  boy or a girl (`TurtleFace` in `faces.tsx`, `FIGURES.turtle` in `bodies.tsx`).
+
 ## 0.29.0
 - **The Hub's own music catalog (phase 1 of replacing Navidrome).** The Hub walks the music folder and keeps one row
   per file in `catalog_songs` (migration 30, `hub/src/catalog.ts`): tags, length, bit rate, format, MusicBrainz ids

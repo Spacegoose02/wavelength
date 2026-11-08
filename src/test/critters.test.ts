@@ -51,3 +51,17 @@ describe('the moose', () => {
     expect(svg.indexOf('moose-antlers')).toBeLessThan(svg.indexOf('own-hat'));
   });
 });
+
+describe('the turtle', () => {
+  it('is a species whose shell is drawn under the top, so the clothes go over it', async () => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Body, Legs } = await import('../components/critters/parts');
+    const turtle = SPECIES.find((s) => s.id === 'turtle')!;
+    expect(turtle.noun).toBe('turtle');
+    const svg = renderToStaticMarkup(h('svg', null, h(Legs, { species: turtle }), h(Body, { species: turtle, children: null })));
+    expect(svg.indexOf('turtle-shell')).toBeGreaterThan(-1);
+    expect(svg.indexOf('turtle-shell')).toBeLessThan(svg.indexOf('data-part="body"'));
+  });
+});

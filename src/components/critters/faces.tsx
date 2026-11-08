@@ -396,3 +396,54 @@ export function MooseFace() {
     </Placed>
   );
 }
+
+/**
+ * A box turtle's face: a smooth round head in olive skin with faint plates and gold freckles on the crown, a
+ * hooked horn beak over a pale chin, two pinprick nostrils, and big ember-red eyes under heavy lids (they blink
+ * with the eyes). No ears, so hats and headphones sit on the plain round head; the shell is on the figure
+ * (`FIGURES.turtle`).
+ */
+export function TurtleFace() {
+  return (
+    <Placed cx={206} cy={174} s={0.84}>
+      <defs>
+        <Shade id="tt-skin" hi="#b3bf7e" mid="#7e8b52" lo="#4f5a2e" />
+        <Shade id="tt-jaw" hi="#f6ebc0" lo="#d2bb7c" />
+        <Shade id="tt-lid" hi="#97a466" lo="#5b6735" />
+        <Shade id="tt-beak" hi="#a4a868" mid="#6f7a3e" lo="#454d22" />
+      </defs>
+      <HeadShape id="turtle" fill="url(#tt-skin)" d="M206 98 C 266 98, 302 132, 302 174 C 302 218, 264 252, 206 252 C 148 252, 110 218, 110 174 C 110 132, 146 98, 206 98 Z">
+        {/* the pale chin and throat */}
+        <ellipse cx="206" cy="248" rx="64" ry="30" fill="url(#tt-jaw)" />
+        {/* plates on the crown, with gold freckles */}
+        <path d="M172 112 L 194 104 L 218 104 L 240 112 M194 104 L 190 124 L 206 134 L 222 124 L 218 104 M190 124 L 168 132 M222 124 L 244 132" fill="none" stroke="rgb(0 0 0 / 0.16)" strokeWidth="2" strokeLinejoin="round" />
+        <g fill="#e2b04a">
+          <ellipse cx="178" cy="120" rx="5" ry="3.5" transform="rotate(-20 178 120)" />
+          <ellipse cx="206" cy="116" rx="4" ry="3" />
+          <ellipse cx="234" cy="120" rx="5" ry="3.5" transform="rotate(20 234 120)" />
+          <ellipse cx="130" cy="196" rx="4.5" ry="3" transform="rotate(30 130 196)" />
+          <ellipse cx="282" cy="196" rx="4.5" ry="3" transform="rotate(-30 282 196)" />
+          <ellipse cx="140" cy="208" rx="2.6" ry="2" />
+          <ellipse cx="272" cy="208" rx="2.6" ry="2" />
+        </g>
+        <ellipse cx="176" cy="122" rx="38" ry="13" fill="rgb(255 255 255 / 0.12)" transform="rotate(-14 176 122)" />
+      </HeadShape>
+      <g data-part="eyes">
+        <Eye cx={164} cy={168} r={17} iris="#c4441c" />
+        <Eye cx={248} cy={168} r={17} iris="#c4441c" k={0.88} />
+        {/* heavy upper lids */}
+        <path d="M145 162 C 146 144, 182 142, 183 160 Q 164 151 145 162 Z" fill="url(#tt-lid)" className="ol-thin" />
+        <path d="M232 160 C 233 144, 264 144, 265 162 Q 248 152 232 160 Z" fill="url(#tt-lid)" className="ol-thin" />
+        <Lashes l={[149, 158]} r={[262, 158]} />
+      </g>
+      <Pair l="M144 140 Q 162 132 182 140" mid={206} stroke="#3f4824" width={4.5} />
+      {/* the horn beak: wide across the face, with a little hook in the middle */}
+      <path d="M172 212 Q 206 190 240 212 Q 230 220 220 221 Q 211 223 206 234 Q 201 223 192 221 Q 182 220 172 212 Z" fill="url(#tt-beak)" className="ol-thin" />
+      <ellipse cx="196" cy="206" rx="9" ry="3" fill="rgb(255 255 255 / 0.25)" transform="rotate(-14 196 206)" />
+      <circle cx="199" cy="198" r="2.4" fill="#2e3518" />
+      <circle cx="213" cy="198" r="2.4" fill="#2e3518" />
+      <path data-part="smile" d="M150 206 Q 158 220 180 220 Q 192 221 198 222 M214 222 Q 220 221 232 220 Q 254 220 262 206" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+      <Mouth id="turtle" x={206} y={226} w={15} h={24} fill="#5a1a24" line={INK} teeth="none" />
+    </Placed>
+  );
+}
