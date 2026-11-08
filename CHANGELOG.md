@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- **A Driver act for the critters.** The ninth act: the critter at the wheel of a little open-top car (an original
+  design: round headlights, a grinning chrome grille, a racing stripe and a WAVE plate), coming down a long road at
+  sunset, singing along. It swerves from side to side in time with the music, the wheel turning under the steering
+  hand, bounces on its springs with the bass, and the free hand changes move every bar (tapping the wheel, waving
+  out of the car, raising the roof, drumming the door). The road bends and rushes by faster as the band gets louder,
+  the headlights pulse on the beat and the scarf flaps in the wind. Flourish: the car hops off the road, hand in
+  the air. Paused, the car idles at the roadside. A flat driving cap (a bow for girls), a white racing tee and a
+  scarf; the car, cap and lights take the skin's colours, and the holiday hats and theme outfits go on as usual.
+  Every species plays it (`Drive.tsx`).
 - **A turtle critter.** The eighth species: a cute sea-green turtle with a soft mint muzzle, big blue eyes, rosy
   cheeks and a wide smile, on stumpy clawed legs with a little pointed tail. Its high domed shell is
   drawn behind the top, so the rim shows round every act's outfit and the instruments and arms go in front of it.

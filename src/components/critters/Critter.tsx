@@ -3,6 +3,7 @@ import { useSettings, type Act, type Species } from '../../store/settings';
 import { Accordion } from './Accordion';
 import { Country } from './Country';
 import { DJ } from './DJ';
+import { Drive } from './Drive';
 import { Drums } from './Drums';
 import { GirlContext } from './faces';
 import { Rapper } from './Rapper';
@@ -37,6 +38,7 @@ export const ACTS: ActInfo[] = [
   { id: 'theremin', label: 'Theremin', blurb: 'Space-age tunic, plays a theremin on the moon under a UFO', Scene: Theremin },
   { id: 'synth', label: 'Synth', blurb: 'Plays a synth in a crop circle under a tractor beam', Scene: Synth },
   { id: 'accordion', label: 'Accordion', blurb: 'Beanie and sweater, squeezes an accordion by the campfire', Scene: Accordion },
+  { id: 'drive', label: 'Driver', blurb: 'Cap and scarf, swerves an open-top car down the road at sunset, singing', Scene: Drive },
 ];
 
 /** Unknown ids (e.g. synced from a newer app) fall back to the first entry. */
