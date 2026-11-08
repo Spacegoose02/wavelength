@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Lyrics follow the song more often.** When Navidrome (a file's lyrics tag) or the Hub's shared copy only has the
+  words without times, LRCLIB is asked for a synced version of the same song, which is used instead (and replaces
+  the Hub's copy), so the line being sung lights up. **Wrong lyrics?** also offers **Use with times** on an entry of
+  another length, for when its times fit well enough; **Lyrics timing** in Tune mouth can shift them.
 - **Fix: searching an artist lists their features as artists.** Search's Artists row listed every credit an artist
   is in as an artist of its own ("Lil Durk • J. Cole", "Calboy;Meek Mill;Lil Durk", "DJ Khaled feat. Lil Baby &
   Lil Durk"), each opening the wrong artist, and the real one was lost among them. The Hub's search now splits each

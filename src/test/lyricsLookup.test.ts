@@ -281,3 +281,39 @@ describe('Wrong lyrics?', () => {
     expect(asked.filter((u) => u.includes('/search?'))).toEqual(['https://lrclib.net/api/search?q=wayne+zoo+c3']);
   });
 });
+
+describe('plain lyrics get times when LRCLIB has them', () => {
+  test("the server's plain lyrics give way to LRCLIB's synced ones", async () => {
+    replies.set('/search?', [{ trackName: 'Glitchin', artistName: 'Nardo Wick', duration: 125, syncedLyrics: synced }]);
+    const own = { lines: [{ text: 'Mine' }], synced: false, source: 'Navidrome' };
+    const ly = await lyricsFor(track('Glitchin', 'Nardo Wick', 125), { getLyrics: async () => own });
+    expect(ly?.synced).toBe(true);
+    expect(ly?.source).toBe('LRCLIB');
+  });
+
+  test("the server's plain lyrics stay when LRCLIB has no synced ones", async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, plainLyrics: 'From LRCLIB' }]);
+    const own = { lines: [{ text: 'Mine' }], synced: false, source: 'Navidrome' };
+    expect((await lyricsFor(track('Song', 'Band'), { getLyrics: async () => own }))?.source).toBe('Navidrome');
+  });
+
+  test("the Hub's plain copy is replaced by synced lyrics, for the whole house", async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, syncedLyrics: synced }]);
+    const put = vi.fn();
+    setSharedLyrics({ get: async () => ({ lines: [{ text: 'Plain' }], synced: false, source: 'lyrics.ovh' }), put });
+    try {
+      const ly = await lyricsFor(track('Song', 'Band'));
+      expect(ly?.synced).toBe(true);
+      expect(put).toHaveBeenCalledWith('band|song|20', 'Band', 'Song', ly);
+    } finally {
+      setSharedLyrics(undefined);
+    }
+  });
+
+  test('a picker entry of another length can keep its times', async () => {
+    replies.set('/search?', [{ id: 7, trackName: 'Song', artistName: 'Band', duration: 240, syncedLyrics: synced }]);
+    const [c] = await lyricsCandidates(track('Song', 'Band', 200));
+    expect(c.lyrics.synced).toBe(false);
+    expect(c.timedAnyway?.synced).toBe(true);
+  });
+});

@@ -79,7 +79,14 @@ export function LyricsFixer({ track, onDone }: { track: Track; onDone: () => voi
                   </span>
                   <span className="lyric-extra">{first.map((l) => show(l.text)).join(' / ')}</span>
                 </button>
-                <button type="button" className="chip small" onClick={() => use(c)}>Use</button>
+                <span className="lyrics-fix-use">
+                  <button type="button" className="chip small" onClick={() => use(c)}>Use</button>
+                  {c.timedAnyway && (
+                    <button type="button" className="chip small" title="Keep its times though its length differs; they may be early or late" onClick={() => use({ ...c, lyrics: c.timedAnyway! })}>
+                      Use with times
+                    </button>
+                  )}
+                </span>
               </li>
             );
           })}

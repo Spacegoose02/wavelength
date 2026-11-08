@@ -2289,6 +2289,7 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .lyrics-fix-pick .lyric-extra { font-style: italic; opacity: 0.7; }
 .lyrics-fix-paste summary { cursor: pointer; margin-bottom: 6px; }
 .lyrics-fix-paste textarea { margin-bottom: 6px; }
+.lyrics-fix-use { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
 .lyrics-fix-foot { display: flex; gap: 14px; flex-wrap: wrap; }
 .lyric .lyric-extra { display: block; font-size: 0.75em; opacity: 0.75; font-weight: 400; margin-top: 2px; }
 

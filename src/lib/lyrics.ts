@@ -320,11 +320,24 @@ async function lookup(t: Track, source?: LyricsSource): Promise<Lyrics | undefin
     if (key && (ly.lines.length || ly.instrumental)) shared?.put(key, t.artist, t.title, ly);
     return ly;
   };
+  // words without times (a file's plain lyrics tag, or what the Hub kept from lyrics.ovh): LRCLIB may have the
+  // same song synced, which follows the song line by line, so it's asked once before settling for them
+  const timedIfPossible = async (ly: Lyrics) => {
+    if (ly.synced || ly.instrumental || NO_VOCALS.test(t.title)) return undefined;
+    const better = await lrclib(t, lyricQueries(t)).catch(() => undefined);
+    return better?.synced ? better : undefined;
+  };
   const own = await source?.getLyrics?.(t).catch(() => undefined);
   // the server's own go to the Hub too, so the house can search their words
-  if (own?.lines.length || own?.instrumental) return share(own);
+  if (own?.lines.length || own?.instrumental) {
+    const better = await timedIfPossible(own);
+    return share(better ?? own);
+  }
   const fromHub = key ? await shared?.get(key).catch(() => undefined) : undefined;
-  if (fromHub) return fromHub;
+  if (fromHub) {
+    const better = await timedIfPossible(fromHub);
+    return better ? share(better) : fromHub;
+  }
   const found = await search(t);
   return found && share(found);
 }
@@ -446,6 +459,8 @@ export interface LyricsCandidate {
   lyrics: Lyrics;
   /** the entry has times, even if they don't fit this recording */
   hasTimes: boolean;
+  /** with its times kept, for an entry of another length (the times may be off; "Lyrics timing" can shift them) */
+  timedAnyway?: Lyrics;
   /** the automatic lookup would accept it (name, artist and length agree) */
   likely: boolean;
 }
@@ -495,6 +510,7 @@ export async function lyricsCandidates(t: Track, query?: string): Promise<Lyrics
       duration: h.duration,
       lyrics,
       hasTimes: !!h.syncedLyrics,
+      timedAnyway: h.syncedLyrics && !lyrics.synced ? fromLrcLib(h, true) : undefined,
       likely: nameOk(h) && artistOk(h) && (sameName(h) || fits) && near(h) <= 60,
     });
   }
