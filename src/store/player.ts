@@ -51,12 +51,14 @@ export interface PlayerState {
   playTracks(tracks: Track[], start?: number, startAt?: number, by?: QueueBy): void;
   enqueue(tracks: Track[]): void;
   playNext(tracks: Track[]): void;
-  jump(i: number): void;
+  jump(i: number, startAt?: number): void;
   removeAt(i: number): void;
   toggle(): void;
   next(): void;
   prev(): void;
   seek(t: number): void;
+  /** Jump `seconds` back (negative) or on, across an audiobook's files when it has several. */
+  skipBy(seconds: number): void;
   setVolume(v: number): void;
   toggleShuffle(): void;
   cycleRepeat(): void;
@@ -82,6 +84,12 @@ function applyLevel(t: Track | undefined) {
   const { replayGain, replayGainPreamp } = useSettings.getState().playback;
   engine.setLevel(t?.kind === 'track' ? replayGainFactor(t.replayGain, replayGain, replayGainPreamp) : 1);
 }
+
+/** Audiobook and podcast speed (lib/spoken.ts plugs in here, since it imports this store); music plays at 1. */
+let spokenSpeed: ((t: Track) => number) | undefined;
+export const setSpokenSpeed = (fn?: (t: Track) => number) => {
+  spokenSpeed = fn;
+};
 
 /** Sleep timer "end of this song" (lib/sleep.ts): stop when the current song ends instead of going on. */
 let stopAfterTrack: (() => void) | undefined;
@@ -204,11 +212,11 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       return { queue };
     });
   },
-  jump(i) {
+  jump(i, startAt = 0) {
     if (i < 0 || i >= get().queue.length) return;
     set({ index: i });
     failStreak = 0;
-    loadCurrent();
+    loadCurrent(startAt);
   },
   removeAt(i) {
     const { index } = get();
@@ -245,6 +253,14 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     } else engine.seek(0);
   },
   seek: (t) => void (intercept?.('seek', t) || engine.seek(t)),
+  skipBy(seconds) {
+    const t = get().current();
+    if (!t || t.kind === 'radio') return;
+    const pos = engine.el.currentTime;
+    if (t.kind === 'book') return seekBook((t.bookOffset ?? 0) + pos + seconds);
+    const dur = engine.el.duration || t.duration || 0;
+    get().seek(Math.max(0, dur ? Math.min(dur - 1, pos + seconds) : pos + seconds));
+  },
   setVolume(v) {
     engine.setVolume(v);
     set({ volume: v });
@@ -301,6 +317,7 @@ function begin(t: Track, startAt: number) {
   updateMediaSession(t);
   watchNowPlaying(t);
   applyLevel(t);
+  engine.setSpeed(spokenSpeed?.(t) ?? 1);
   aheadFor = undefined;
   engine.setMeta({ title: t.title, artist: t.artist, album: t.album, cover: t.coverUrl, duration: t.duration });
   return ++loadSeq;
@@ -601,7 +618,7 @@ engine.on('timeupdate', (_, el) => {
   }
   if ('mediaSession' in navigator && Number.isFinite(dur) && dur > 0) {
     try {
-      navigator.mediaSession.setPositionState({ duration: dur, position: Math.min(now, dur), playbackRate: 1 });
+      navigator.mediaSession.setPositionState({ duration: dur, position: Math.min(now, dur), playbackRate: engine.speed() });
     } catch {
       /* ignore */
     }
@@ -707,4 +724,29 @@ if ('mediaSession' in navigator) {
   ms.setActionHandler('nexttrack', () => usePlayer.getState().next());
   ms.setActionHandler('previoustrack', () => usePlayer.getState().prev());
   ms.setActionHandler('seekto', (d) => d.seekTime != null && engine.seek(d.seekTime));
+  // lock screen and headphone skip buttons: audiobooks and podcasts jump 15 s back / 30 s on (lib/spoken.ts)
+  try {
+    ms.setActionHandler('seekbackward', (d) => usePlayer.getState().skipBy(-(d.seekOffset || 15)));
+    ms.setActionHandler('seekforward', (d) => usePlayer.getState().skipBy(d.seekOffset || 30));
+  } catch {
+    /* not supported here */
+  }
+}
+
+/**
+ * Go to `abs` seconds into the audiobook that's playing (its parts are separate files in the queue, each with its
+ * `bookOffset`): seek in this part, or load the part it falls in.
+ */
+export function seekBook(abs: number) {
+  const { queue, index } = usePlayer.getState();
+  const t = queue[index];
+  if (!t) return;
+  if (t.kind !== 'book') return usePlayer.getState().seek(Math.max(0, abs));
+  const parts = queue.map((q, i) => ({ q, i })).filter(({ q }) => q.kind === 'book' && q.bookId === t.bookId);
+  const total = t.bookDuration ?? parts.reduce((n, { q }) => Math.max(n, (q.bookOffset ?? 0) + (q.duration ?? 0)), 0);
+  const at = Math.max(0, total ? Math.min(total - 1, abs) : abs);
+  const part = [...parts].reverse().find(({ q }) => at >= (q.bookOffset ?? 0)) ?? parts[0];
+  const within = at - (part.q.bookOffset ?? 0);
+  if (part.i === index) usePlayer.getState().seek(within);
+  else usePlayer.getState().jump(part.i, within);
 }

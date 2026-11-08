@@ -1,7 +1,7 @@
 import { getJson, http, qs, trimSlash } from '../lib/http';
-import type { Book, BookPlayback, MusicSource, Podcast, SearchResults, SourceConfig, Track } from './types';
+import type { Book, BookPlayback, Chapter, MusicSource, Podcast, SearchResults, SourceConfig, Track } from './types';
 
-type Progress = Map<string, { progress: number; currentTime: number; finished: boolean }>;
+type Progress = Map<string, { progress: number; currentTime: number; finished: boolean; lastUpdate?: number }>;
 
 /** Audiobookshelf: audiobooks + podcasts (kept separate), with progress synced back to the server. */
 export class AudiobookshelfSource implements MusicSource {
@@ -44,7 +44,7 @@ export class AudiobookshelfSource implements MusicSource {
     return new Map(
       (me.mediaProgress ?? []).map((p: any) => [
         p.episodeId ? `${p.libraryItemId}:${p.episodeId}` : p.libraryItemId,
-        { progress: p.isFinished ? 1 : p.progress ?? 0, currentTime: p.currentTime ?? 0, finished: !!p.isFinished },
+        { progress: p.isFinished ? 1 : p.progress ?? 0, currentTime: p.currentTime ?? 0, finished: !!p.isFinished, lastUpdate: p.lastUpdate },
       ]),
     );
   }
@@ -65,10 +65,15 @@ export class AudiobookshelfSource implements MusicSource {
       coverUrl: this.cover(item.id),
       duration: item.media?.duration,
       progress: progress?.get(item.id)?.progress,
+      finished: progress?.get(item.id)?.finished,
+      lastPlayedAt: progress?.get(item.id)?.lastUpdate,
+      addedAt: item.addedAt,
+      publishedYear: Number.parseInt(meta.publishedYear, 10) || undefined,
+      series: meta.seriesName || undefined,
     };
   };
 
-  private podcast = (item: any): Podcast => {
+  private podcast = (item: any, progress?: Progress): Podcast => {
     const meta = item.media?.metadata ?? {};
     return {
       id: item.id,
@@ -78,6 +83,9 @@ export class AudiobookshelfSource implements MusicSource {
       description: meta.description,
       coverUrl: this.cover(item.id),
       episodeCount: item.media?.numEpisodes ?? item.media?.episodes?.length,
+      addedAt: item.addedAt,
+      updatedAt: Math.max(item.updatedAt ?? 0, item.mtimeMs ?? 0) || undefined,
+      lastPlayedAt: progress && lastPlayed(progress, item.id),
     };
   };
 
@@ -95,9 +103,9 @@ export class AudiobookshelfSource implements MusicSource {
   }
 
   async getPodcasts() {
-    const libs = await this.libraries('podcast');
+    const [libs, progress] = await Promise.all([this.libraries('podcast'), this.progressMap().catch(() => undefined)]);
     const lists = await Promise.all(libs.map((l: any) => this.items(l.id)));
-    return lists.flat().map(this.podcast);
+    return lists.flat().map((i: any) => this.podcast(i, progress));
   }
 
   async getEpisodes(podcastId: string): Promise<Track[]> {
@@ -118,6 +126,7 @@ export class AudiobookshelfSource implements MusicSource {
         publishedAt: e.publishedAt,
         description: e.subtitle || stripHtml(e.description ?? '').slice(0, 220),
         progress: progress.get(`${podcastId}:${e.id}`)?.progress,
+        chapters: chapters(e.chapters),
       }))
       .sort((a: Track, b: Track) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
   }
@@ -157,6 +166,7 @@ export class AudiobookshelfSource implements MusicSource {
       bookOffset: t.startOffset ?? 0,
       bookDuration: s.duration,
       sessionId: s.id,
+      chapters: chapters(s.chapters),
     }));
     return { tracks, resumeAt: s.currentTime ?? 0 };
   }
@@ -170,7 +180,7 @@ export class AudiobookshelfSource implements MusicSource {
     const resume = s.currentTime ?? 0;
     const finished = track.duration && resume > track.duration - 15;
     return {
-      track: { ...track, streamUrl: this.withToken(audio.contentUrl), sessionId: s.id, bookOffset: 0, bookDuration: s.duration },
+      track: { ...track, streamUrl: this.withToken(audio.contentUrl), sessionId: s.id, bookOffset: 0, bookDuration: s.duration, chapters: chapters(s.chapters) ?? track.chapters },
       startAt: finished ? 0 : resume,
     };
   }
@@ -183,6 +193,23 @@ export class AudiobookshelfSource implements MusicSource {
       body: JSON.stringify({ currentTime: absoluteTime, timeListened: listened, duration: track.bookDuration }),
     });
   }
+}
+
+/** The latest listen across a show's episodes (progress keys are `showId:episodeId`). */
+function lastPlayed(progress: Progress, showId: string): number | undefined {
+  let last = 0;
+  for (const [k, v] of progress) if (k.startsWith(`${showId}:`) && (v.lastUpdate ?? 0) > last) last = v.lastUpdate!;
+  return last || undefined;
+}
+
+/** Audiobookshelf chapters (`{ start, end, title }` in seconds), or undefined when there are fewer than two. */
+export function chapters(list: any): Chapter[] | undefined {
+  if (!Array.isArray(list)) return undefined;
+  const out = list
+    .map((c: any, i: number) => ({ start: Number(c.start) || 0, end: Number(c.end) || 0, title: String(c.title || `Chapter ${i + 1}`) }))
+    .filter((c) => c.end > c.start)
+    .sort((a, b) => a.start - b.start);
+  return out.length > 1 ? out : undefined;
 }
 
 function stripHtml(s: string) {

@@ -1,6 +1,7 @@
 import { BlendView, MixView } from './views/Mix';
 import { startSmartOffline } from './lib/smartOffline';
 import { startDeadZone } from './lib/deadZone';
+import './lib/spoken';
 import { startDjVoice } from './lib/djVoice';
 import { startDjStation } from './lib/djStation';
 import { startSingMode } from './lib/singMode';

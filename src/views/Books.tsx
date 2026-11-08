@@ -5,6 +5,11 @@ import { usePlayer } from '../store/player';
 import { sourceFor } from '../sources/registry';
 import type { Book } from '../sources/types';
 import { Cover, Empty, Grid, Spinner, fmtTime } from '../components/common';
+import { SortSelect } from '../components/SortSelect';
+import { BOOK_SHOWS, BOOK_SORTS, saveChoice, savedChoice, sortBooks, type BookShow, type BookSort } from '../lib/shelfSort';
+
+const SORT_KEY = 'wavelength.booksSort';
+const SHOW_KEY = 'wavelength.booksShow';
 
 async function playBook(book: Book) {
   const cfg = useSettings.getState().sources.find((s) => s.id === book.sourceId);
@@ -39,7 +44,7 @@ export function BookCard({ book }: { book: Book }) {
       </div>
       <div className="card-title" title={book.title}>{book.title}</div>
       <div className="card-sub">
-        <span>{book.author}{book.duration ? ` · ${fmtTime(book.duration)}` : ''}</span>
+        <span>{book.author}{book.duration ? ` · ${fmtTime(book.duration)}` : ''}{book.finished ? ' · Finished' : ''}</span>
       </div>
       {err && <div className="card-err">{err}</div>}
     </button>
@@ -50,26 +55,37 @@ export function Books() {
   const { books, loading } = useCatalog();
   const hasAbs = useSettings((s) => s.sources.some((x) => x.kind === 'audiobookshelf' && x.enabled));
   const [filter, setFilter] = useState('');
+  const [sort, setSort] = useState<BookSort>(() => savedChoice(SORT_KEY, BOOK_SORTS, 'added'));
+  const [show, setShow] = useState<BookShow>(() => savedChoice(SHOW_KEY, BOOK_SHOWS, 'all'));
   if (!hasAbs) return <Empty title="No Audiobookshelf connected">Add your Audiobookshelf server in Settings.</Empty>;
   const f = filter.toLowerCase();
-  const shown = books.filter((b) => !f || b.title.toLowerCase().includes(f) || b.author.toLowerCase().includes(f));
-  const inProgress = shown.filter((b) => b.progress && b.progress > 0 && b.progress < 1);
+  const matching = books.filter((b) => !f || b.title.toLowerCase().includes(f) || b.author.toLowerCase().includes(f) || !!b.series?.toLowerCase().includes(f) || !!b.narrator?.toLowerCase().includes(f));
+  const shown = sortBooks(matching, sort, show);
+  // most recently played first, so the book you're in is the first card
+  const inProgress = sortBooks(matching, 'played', 'started');
   return (
     <div className="page">
       <header className="page-head">
         <h1>Audiobooks <small>{shown.length}</small></h1>
         {loading && <Spinner />}
-        <input className="filter" placeholder="Filter books…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <input className="filter" placeholder="Filter by title, author, series…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
-      {inProgress.length > 0 && (
+      {inProgress.length > 0 && show !== 'started' && (
         <section>
           <h2>Continue listening</h2>
           <div className="row-scroll">{inProgress.map((b) => <BookCard key={b.id} book={b} />)}</div>
         </section>
       )}
       <section>
-        <h2>All</h2>
-        <Grid>{shown.map((b) => <BookCard key={b.id} book={b} />)}</Grid>
+        <div className="shelf-bar">
+          <div className="chips" role="group" aria-label="Show">
+            {BOOK_SHOWS.map(([v, label]) => (
+              <button key={v} className={`chip ${show === v ? 'on' : ''}`} onClick={() => { setShow(v); saveChoice(SHOW_KEY, v); }}>{label}</button>
+            ))}
+          </div>
+          <SortSelect value={sort} options={BOOK_SORTS} onChange={(v) => { setSort(v); saveChoice(SORT_KEY, v); }} />
+        </div>
+        {!shown.length && !loading ? <p className="muted">No books here.</p> : <Grid>{shown.map((b) => <BookCard key={b.id} book={b} />)}</Grid>}
       </section>
     </div>
   );

@@ -50,12 +50,20 @@ export interface Track {
   publishedAt?: number;
   progress?: number;
   description?: string;
+  /** Audiobooks and podcast episodes: chapters, in seconds from the start of the whole book or episode. */
+  chapters?: Chapter[];
   /** Plex: the entry id inside a server playlist (needed to remove it). */
   playlistItemId?: string;
   /** Navidrome: starred / favorited on the server. */
   starred?: boolean;
   /** Loudness tags (OpenSubsonic `replayGain`), in dB; see player/replayGain.ts. */
   replayGain?: ReplayGain;
+}
+
+export interface Chapter {
+  start: number;
+  end: number;
+  title: string;
 }
 
 export interface ReplayGain {
@@ -91,6 +99,12 @@ export interface Podcast {
   coverUrl?: string;
   episodeCount?: number;
   description?: string;
+  /** When the show was added to the server (ms since epoch). */
+  addedAt?: number;
+  /** When the show last changed on the server, which is usually a new episode (ms). */
+  updatedAt?: number;
+  /** When you last listened to any of its episodes (ms). */
+  lastPlayedAt?: number;
 }
 
 export interface HistoryEntry {
@@ -147,6 +161,14 @@ export interface Book {
   coverUrl?: string;
   duration?: number;
   progress?: number;
+  /** Listened to the end (or marked finished on the server). */
+  finished?: boolean;
+  /** When the book was added to the server (ms since epoch). */
+  addedAt?: number;
+  /** When you last listened to it (ms). */
+  lastPlayedAt?: number;
+  publishedYear?: number;
+  series?: string;
 }
 
 export interface SearchResults {
