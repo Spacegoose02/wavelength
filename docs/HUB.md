@@ -735,7 +735,15 @@ every song as Discover's library check, indexed by every word of each title, art
 - ignores case, accents, punctuation, "&" vs "and" and apostrophes, and finds names run together ("acdc", "gods plan"),
 - puts the exact title first, then artists the person searching played in the last year (`plays` table).
 
-Albums and artists are put together from the matching songs. The app uses the answer only when the Hub's Navidrome
+Albums and artists are put together from the matching songs. **Artists are the people in each credit, one by
+one** (`creditNames` in `hub/src/credits.ts`): "Lil Durk • J. Cole", "Calboy;Meek Mill;Lil Durk" and "DJ Khaled
+feat. Lil Baby & Lil Durk" give Lil Durk once, plus J. Cole, Calboy, Meek Mill, DJ Khaled and Lil Baby. Credits
+always split on feat./ft./featuring, "•", "·", ";" and " / "; on "&", "and", "x", "with" and commas only when one of
+the names is credited on its own somewhere in the library, so "Simon & Garfunkel" and "Tyler, The Creator" stay one
+artist. The exact name comes first. Each artist gets Navidrome's id (from the songs' OpenSubsonic `artists`, or a
+song credited to just them) and picture (`ar-<id>`); one Navidrome has no id for comes back as `name:…`, which the
+app leaves out because it can't open it. The catalog's `search3` (Music catalog, phase 3) likewise replaces a joined
+album artist with the artists in it that have albums of their own, exact name first. The app uses the answer only when the Hub's Navidrome
 is one of its own servers (as for Discover); other servers (Plex, Audiobookshelf, a second Navidrome) and the radio
 directory are still searched by the app at the same time. With an older Hub, or before the first listing, the app
 searches as before. Recent searches are kept on each device.

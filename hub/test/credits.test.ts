@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { tidyCredit } from '../src/credits.ts';
+import { creditNames, tidyCredit } from '../src/credits.ts';
 import { creditedArtists } from '../src/forYou.ts';
 import { primaryArtist as kidPrimary } from '../src/kidSafe.ts';
 import { primaryArtist } from '../src/radar.ts';
@@ -75,4 +75,18 @@ test('new downloads get their joined credits split before the scan; older music 
   app.hubLibrary.downloaded();
   await app.hubLibrary.tidy();
   assert.equal((await readTags(join(music, 'New/04.mp3'))).artist, 'Future;Drake');
+});
+
+test('creditNames lists each artist in a credit, keeping duos whose names nobody records alone', () => {
+  const solo = new Set(['lil durk', 'lil baby', 'drake']);
+  const known = (n: string) => solo.has(n.toLowerCase());
+  assert.deepEqual(creditNames('Lil Durk • J. Cole', known), ['Lil Durk', 'J. Cole']);
+  assert.deepEqual(creditNames('Calboy;Meek Mill;Lil Durk', known), ['Calboy', 'Meek Mill', 'Lil Durk']);
+  assert.deepEqual(creditNames('DJ Khaled feat. Lil Baby & Lil Durk', known), ['DJ Khaled', 'Lil Baby', 'Lil Durk']);
+  assert.deepEqual(creditNames('Lil Baby & Lil Durk', known), ['Lil Baby', 'Lil Durk']);
+  assert.deepEqual(creditNames('Polo G (feat. Lil Durk)', known), ['Polo G', 'Lil Durk']);
+  assert.deepEqual(creditNames('Drake ft. Drake', known), ['Drake']);
+  assert.deepEqual(creditNames('Simon & Garfunkel', known), ['Simon & Garfunkel']);
+  assert.deepEqual(creditNames('Tyler, The Creator', known), ['Tyler, The Creator']);
+  assert.deepEqual(creditNames('AC/DC', known), ['AC/DC']);
 });

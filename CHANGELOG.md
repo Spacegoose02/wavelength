@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+- **Fix: searching an artist lists their features as artists.** Search's Artists row listed every credit an artist
+  is in as an artist of its own ("Lil Durk • J. Cole", "Calboy;Meek Mill;Lil Durk", "DJ Khaled feat. Lil Baby &
+  Lil Durk"), each opening the wrong artist, and the real one was lost among them. The Hub's search now splits each
+  credit into its artists (on feat./ft./featuring, •, ;, " / ", and on &, "and", x, "with" or a comma when one of
+  the names records on its own, so "Simon & Garfunkel" stays one), lists each artist once by their own name with
+  Navidrome's picture and id, and puts the exact name first. The Hub's catalog `search3` does the same with joined
+  album artists (`creditNames` in `hub/src/credits.ts`, `hub/src/librarySearch.ts`, `hub/src/subsonicCatalog.ts`).
+
 ## 0.32.0
 - **An owl and a T. rex.** The thirteenth and fourteenth critters, drawn cute. The owlet is drawn like a sticker: a round
   brown head with two short pointed tufts, a big cream face, huge round dark eyes with big shines, a little yellow
