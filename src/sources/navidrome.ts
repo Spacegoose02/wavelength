@@ -5,6 +5,7 @@ import { getJson, http, qs, trimSlash } from '../lib/http';
 import type { SongFacts } from '../lib/smartPlaylists';
 import type { Lyrics } from '../lib/lyrics';
 import { appearsOnSongs, type CreditedSong } from '../lib/appearsOn';
+import { tidyCredit } from '../lib/songIssues';
 import type { Album, Artist, HistoryEntry, MusicSource, ReplayGain, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
 
 /** Navidrome (or any Subsonic-compatible server) via the Subsonic REST API. */
@@ -71,7 +72,8 @@ export class NavidromeSource implements MusicSource {
     id: a.id,
     sourceId: this.config.id,
     title: a.name ?? a.title ?? a.album,
-    artist: a.artist ?? 'Unknown artist',
+    // "Lil Durk;Drake" shows as "Lil Durk feat. Drake" (the first artist is the main one) until the tag is tidied
+    artist: a.artist ? tidyCredit(a.artist) : 'Unknown artist',
     artistId: a.artistId,
     year: a.year,
     coverUrl: this.cover(a.coverArt),
@@ -95,7 +97,7 @@ export class NavidromeSource implements MusicSource {
     sourceId: this.config.id,
     kind: 'track',
     title: withoutTrackNumber(s.title ?? '', s.track),
-    artist: s.artist ?? 'Unknown artist',
+    artist: s.artist ? tidyCredit(s.artist) : 'Unknown artist',
     album: s.album,
     albumId: s.albumId,
     duration: s.duration,
