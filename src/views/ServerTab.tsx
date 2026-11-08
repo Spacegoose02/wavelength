@@ -319,6 +319,14 @@ function MusicCatalog() {
       setMsg(String((e as Error).message ?? e));
     }
   };
+  const serve = async (on: boolean) => {
+    setMsg('');
+    try {
+      setSt(await c!.setCatalogServe(on));
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    }
+  };
   const p = st.progress;
   const sum = st.summary;
   return (
@@ -350,6 +358,21 @@ function MusicCatalog() {
             {msg && <span className="errors small">{msg}</span>}
           </div>
           {st.lastError && <p className="kid-blocked small">{st.lastError}</p>}
+          {st.serve !== undefined && (
+            <>
+              <label className="check" style={{ margin: '12px 0 4px' }} title="Albums, artists, genres, search and covers come from the Hub; playing, hearts and playlists still go to Navidrome">
+                <span className="switch"><input type="checkbox" checked={st.serve} onChange={(e) => serve(e.target.checked)} /><span /></span>
+                <small>Hub answers browsing, search and covers (beta)</small>
+              </label>
+              <p className="muted small">
+                {st.serve && !st.serving ? 'Waiting until the catalog matches nearly all of Navidrome\'s songs; Navidrome answers until then. '
+                  : st.serving ? 'On for devices that reach Navidrome through the Hub. ' : ''}
+                Only devices that reach Navidrome through the Hub (kids, or everyone with “Send everyone through the Hub”) are
+                affected. Songs still play from Navidrome, by the same ids, and hearts and playlists stay there. A new download shows
+                up here after the catalog's next look, a few minutes after Navidrome's scan.
+              </p>
+            </>
+          )}
           {!!st.missing?.length && (
             <details className="small">
               <summary>{n(Math.max(0, st.navidromeSongs - st.linked))} songs Navidrome lists without a file the Hub found</summary>

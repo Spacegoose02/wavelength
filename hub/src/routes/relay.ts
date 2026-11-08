@@ -7,6 +7,8 @@ import { getDevice } from '../devices.ts';
 import { relayPassword, relayTarget } from '../services.ts';
 import { getUser } from '../users.ts';
 import { songNotForKids } from '../kidSafe.ts';
+import { join } from 'node:path';
+import { answer, cover, SERVED, type Starred } from '../subsonicCatalog.ts';
 
 /**
  * Navidrome through the Hub (docs/USERS-AND-ADMIN.md Phase 4). A device gets a Subsonic login for
@@ -53,8 +55,12 @@ const wrongLogin = (u: string | undefined) => /~\d+$/.test(u ?? '')
 
 const one = (v: unknown) => (Array.isArray(v) ? String(v[0] ?? '') : typeof v === 'string' ? v : '');
 
-export function relayRoutes(app: FastifyInstance, { db, config }: Ctx) {
+export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) {
   const key = config.secretKey;
+  const coverCache = join(config.dataDir, 'covers');
+  /** each person's Navidrome stars, for the Hub's own answers (a minute old at most; starring clears it) */
+  const stars = new Map<number, { at: number; ids: Starred }>();
+
 
   /** Check a relay login (`u` is "<hub username>~<device id>") and find the real one behind it. */
   function signIn(serviceId: string, u: string | undefined, check: (expected: string) => boolean) {
@@ -126,6 +132,33 @@ export function relayRoutes(app: FastifyInstance, { db, config }: Ctx) {
         if (!song || songNotForKids(db, song)) return reply.code(403).send({ error: 'Not for kids' });
       } catch {
         return reply.code(502).send({ error: 'Couldn’t reach Navidrome' });
+      }
+    }
+
+    if (method === 'star' || method === 'unstar') stars.delete(user.id);
+
+    // The Hub's own answers from the music catalog (subsonicCatalog.ts), when an admin turned them on: same ids, so
+    // playing and starring still go to Navidrome. Anything not answered here goes on to Navidrome below.
+    if (catalog.serving() && config.musicDir) {
+      if (method === 'getCoverArt' && q.id) {
+        const art = await cover(db, config.musicDir, coverCache, q.id, Number(q.size) || 0).catch(() => null);
+        if (art) return reply.header('content-type', art.type).header('cache-control', 'public, max-age=86400').header('x-wavelength-answered-by', 'hub').send(art.body);
+      } else if (SERVED.has(method) && q.f === 'json') {
+        let mine = stars.get(user.id);
+        if (!mine || Date.now() - mine.at > 60_000) {
+          try {
+            const r = await call('getStarred2', { f: 'json' }, { signal: AbortSignal.timeout(15_000) });
+            const s = ((await r.json()) as any)?.['subsonic-response']?.starred2;
+            if (!s) throw new Error('no stars');
+            const ids: Starred = new Map();
+            for (const x of [...(s.song ?? []), ...(s.album ?? []), ...(s.artist ?? [])]) if (x?.id) ids.set(String(x.id), String(x.starred ?? new Date().toISOString()));
+            stars.set(user.id, (mine = { at: Date.now(), ids }));
+          } catch {
+            mine = undefined; // Navidrome answers this one, stars and all
+          }
+        }
+        const body = mine && answer(db, method, q, mine.ids);
+        if (body) return reply.header('x-wavelength-answered-by', 'hub').send(body);
       }
     }
 

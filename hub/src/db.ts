@@ -633,6 +633,18 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   CREATE INDEX catalog_songs_nd ON catalog_songs (nd_id);
   CREATE INDEX catalog_songs_album ON catalog_songs (album_artist, album);
   `,
+  `
+  -- What the Hub's own Subsonic answers need (routes/relay.ts, subsonicCatalog.ts): loudness tags, the album
+  -- artist's Navidrome id, and when the file first turned up (for "newest"). Every file is read again once for the
+  -- loudness tags.
+  ALTER TABLE catalog_songs ADD COLUMN rg_track_gain REAL;
+  ALTER TABLE catalog_songs ADD COLUMN rg_album_gain REAL;
+  ALTER TABLE catalog_songs ADD COLUMN rg_track_peak REAL;
+  ALTER TABLE catalog_songs ADD COLUMN rg_album_peak REAL;
+  ALTER TABLE catalog_songs ADD COLUMN nd_album_artist_id TEXT;
+  ALTER TABLE catalog_songs ADD COLUMN created INTEGER;
+  UPDATE catalog_songs SET created = mtime, mtime = 0;
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

@@ -703,6 +703,22 @@ and hands out ids.
 - **Settings → Server → Music catalog** shows songs, albums, artists and hours, how many match Navidrome, formats,
   top genres, files missing tags, files that couldn't be read, and (up to 100) songs Navidrome lists that no file
   matched (`missing`), with their paths.
+- **The Hub answers browsing** (phase 3, `hub/src/subsonicCatalog.ts`, `hub/src/routes/relay.ts`), when an admin
+  turns on **Hub answers browsing, search and covers** on that card (`catalog.serve` in `hub_settings`, off by
+  default) and the catalog matches (`serving`). For devices that reach Navidrome through the Hub (`/nd/<id>/rest`:
+  kids, or everyone with "Send everyone through the Hub"), these Subsonic calls are answered from the catalog
+  instead of Navidrome: `getArtists`, `getArtist`, `getAlbum`, `getSong`, `getGenres`, `getSongsByGenre`,
+  `getRandomSongs`, `search3`, `getAlbumList2` (alphabetical, newest, random, by year, by genre) and `getCoverArt`
+  for albums and songs. Answers use Navidrome's ids, so `stream`, stars, playlists and scrobbles still go to
+  Navidrome unchanged; hearts come from the person's `getStarred2` (kept a minute, cleared when they star). Albums
+  are grouped by Navidrome's album id and listed under the album artist's id (`nd_album_artist_id`, from Navidrome's
+  own API); genres split on ";" like Navidrome's; "newest" goes by when a file first turned up (`created`).
+  Loudness (`replayGain`) comes from the files' `REPLAYGAIN_*` tags; migration 31 adds these columns and reads every
+  file once more to fill them. Covers: the album folder's `cover.*`, `folder.*` or `front.*`, else the picture in the
+  file, resized with ffmpeg to the size asked and kept in `<data>/covers`. Navidrome still answers the lists that
+  need a person's plays or stars (`recent`, `frequent`, `starred`, `highest`), every other call, ids the catalog
+  doesn't know yet (a download before the catalog's next look), artist pictures, and callers that ask for XML.
+  Answers from the Hub carry `x-wavelength-answered-by: hub`.
 
 Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
 under Library updates; without it the catalog still scans.
@@ -914,7 +930,8 @@ with a 4xx status.
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
-| `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, missing: [{ title, artist, album, path }], summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
+| `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, serve, serving, missing: [{ title, artist, album, path }], summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
+| `PUT /api/admin/catalog` | `server.view` | `{ serve }`: the Hub answers browsing, search and covers for devices that go through it (audited `catalog.serve`); answers with the status |
 | `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |
 | `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |
 | `POST /api/lyrics/translate` | signed in, `lyricsTranslate` on, the AI DJ allowed | `{ key, lines, mode: translate\|romanize, to }` → `{ lines, cached, …allowance }`: one line out for each line in, through the AI DJ's quick model; kept in memory for the house (500 songs) |
