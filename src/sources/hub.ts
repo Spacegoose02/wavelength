@@ -487,6 +487,10 @@ export interface HubCatalogStatus {
   lastLinkAt: number | null;
   /** Library care, the tag editors and the genre review read the catalog (absent on older Hubs) */
   inUse?: boolean;
+  /** answer browsing, search and covers from the catalog for devices that go through the Hub (absent on older Hubs) */
+  serve?: boolean;
+  /** serve is on and the catalog matches Navidrome, so it's happening */
+  serving?: boolean;
   lastError: string | null;
   summary: {
     albums: number;
@@ -949,6 +953,7 @@ export class HubClient {
   library = () => this.call<HubLibraryStatus>('GET', '/api/admin/library');
   catalog = () => this.call<HubCatalogStatus>('GET', '/api/admin/catalog');
   scanCatalog = () => this.call<HubCatalogStatus>('POST', '/api/admin/catalog/scan', {});
+  setCatalogServe = (serve: boolean) => this.call<HubCatalogStatus>('PUT', '/api/admin/catalog', { serve });
   containers = () => this.call<{ enabled: boolean; containers: HubContainer[] }>('GET', '/api/admin/docker');
   container = (name: string, action: 'start' | 'stop' | 'restart') =>
     this.call<{ name: string; state: string; status: string }>('POST', `/api/admin/docker/${encodeURIComponent(name)}/${action}`, {});

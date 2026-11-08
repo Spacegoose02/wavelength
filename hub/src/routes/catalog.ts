@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { clientIp, need } from '../http.ts';
+import { clientIp, HttpError, need } from '../http.ts';
 
 /** What's in the catalog, counted from catalog_songs (for Settings → Server → Music catalog). */
 function summary(ctx: Ctx) {
@@ -26,6 +26,19 @@ function summary(ctx: Ctx) {
 export function catalogRoutes(app: FastifyInstance, ctx: Ctx) {
   app.get('/api/admin/catalog', async (req) => {
     need(req, 'server.view');
+    return { ...ctx.catalog.status(), summary: summary(ctx) };
+  });
+
+  /**
+   * `{ serve }`: answer browsing, search and covers from the catalog for devices that go through the Hub (phase 3,
+   * routes/relay.ts). Takes effect only while the catalog matches Navidrome (usable()).
+   */
+  app.put('/api/admin/catalog', async (req) => {
+    const { user } = need(req, 'server.view');
+    const serve = (req.body as { serve?: unknown } | null)?.serve;
+    if (typeof serve !== 'boolean') throw new HttpError(400, 'serve must be true or false');
+    ctx.catalog.setServe(serve);
+    audit(ctx.db, { actorId: user.id, action: 'catalog.serve', detail: { serve }, ip: clientIp(req) });
     return { ...ctx.catalog.status(), summary: summary(ctx) };
   });
 

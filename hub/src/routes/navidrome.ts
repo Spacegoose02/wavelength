@@ -54,7 +54,7 @@ export async function navidromeAdmin(url: string, username: string, password: st
      * One page of every song in the library (`start` to `end`, sorted by album), with its file path, and how many
      * songs there are in all. Navidrome's own copy of the tags, so no file is opened.
      */
-    async songs(start: number, end: number): Promise<{ songs: { id: string; path: string; title: string; trackNumber: number; albumId: string; album: string; artist: string; albumArtist: string }[]; total: number }> {
+    async songs(start: number, end: number): Promise<{ songs: { id: string; path: string; title: string; trackNumber: number; albumId: string; album: string; artist: string; albumArtist: string; albumArtistId: string }[]; total: number }> {
       const r = await call(`/api/song?${new URLSearchParams({ _start: String(start), _end: String(end), _sort: 'album', _order: 'ASC' })}`, {
         headers: { 'x-nd-authorization': `Bearer ${session.token}` },
       });
@@ -69,6 +69,7 @@ export async function navidromeAdmin(url: string, username: string, password: st
         album: String(x.album ?? ''),
         artist: String(x.artist ?? ''),
         albumArtist: String(x.albumArtist ?? x.album_artist ?? ''),
+        albumArtistId: String(x.albumArtistId ?? x.album_artist_id ?? ''),
       }));
       const total = Number(r.headers.get('x-total-count'));
       return { songs, total: Number.isFinite(total) && total > 0 ? total : start + songs.length };

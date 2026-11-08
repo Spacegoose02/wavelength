@@ -1,4 +1,4 @@
-import type { Catalog } from './catalog.ts';
+import type { Catalog, NavidromeFile } from './catalog.ts';
 import type { Db } from './db.ts';
 import { HttpError } from './http.ts';
 import { getScanSettings } from './library.ts';
@@ -44,18 +44,18 @@ export async function libraryAdmin(db: Db, key: Buffer, catalog: Catalog): Promi
 }
 
 /**
- * Every Navidrome song's real file path, from Navidrome's own API (5000 songs a page, one sign-in kept 10 minutes).
+ * Every Navidrome song's real file path and album artist id, from Navidrome's own API (5000 songs a page, one sign-in kept 10 minutes).
  * Subsonic answers with made-up paths unless a player has Report Real Path on. null without the admin login.
  */
-export async function navidromeRealPaths(db: Db, key: Buffer): Promise<Map<string, string> | null> {
+export async function navidromeRealPaths(db: Db, key: Buffer): Promise<Map<string, NavidromeFile> | null> {
   const s = getScanSettings(db, key);
   if (!s) return null;
   const nd = await navidromeAdmin(s.url, s.username, s.password);
-  const out = new Map<string, string>();
+  const out = new Map<string, NavidromeFile>();
   const PAGE = 5000;
   for (let start = 0; start < 2_000_000; start += PAGE) {
     const { songs, total } = await nd.songs(start, start + PAGE);
-    for (const x of songs) if (x.id && x.path) out.set(x.id, x.path);
+    for (const x of songs) if (x.id && x.path) out.set(x.id, { path: x.path, albumArtistId: x.albumArtistId || undefined });
     if (songs.length < PAGE || start + PAGE >= total) break;
   }
   return out;

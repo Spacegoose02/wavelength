@@ -44,7 +44,23 @@ export interface FileTags {
   codec: string;
   mbTrackId: string;
   mbAlbumId: string;
+  /** REPLAYGAIN_* tags, in dB (gain) and 0–1 (peak); null when the file has none */
+  trackGain: number | null;
+  albumGain: number | null;
+  trackPeak: number | null;
+  albumPeak: number | null;
 }
+
+/** Navidrome's own record of a file (libraryAdmin.ts navidromeFiles): its real path and album artist. */
+export interface NavidromeFile {
+  path: string;
+  albumArtistId?: string;
+}
+
+let version = 0;
+/** Goes up whenever catalog_songs changes, so copies of it in memory (subsonicCatalog.ts) know to rebuild. */
+export const catalogVersion = () => version;
+export const catalogChanged = () => void version++;
 
 export interface CatalogStatus {
   /** why it can't run, when it can't */
@@ -69,6 +85,10 @@ export interface CatalogStatus {
   /** Library care, the editors and the genre review read the catalog (usable()), not Navidrome's API */
   inUse: boolean;
   lastError: string | null;
+  /** an admin turned on answering browsing from the catalog (Settings → Server → Music catalog) */
+  serve: boolean;
+  /** serve is on and the catalog is usable(): the Hub answers browsing for devices that go through it */
+  serving: boolean;
 }
 
 /** Turn ffprobe's tag names (any case, ID3 / Vorbis / MP4) into FileTags. */
@@ -101,7 +121,17 @@ export function parseProbe(json: { format?: { duration?: string; bit_rate?: stri
     codec: audio?.codec_name ?? '',
     mbTrackId: get('musicbrainztrackid', 'musicbrainzreleasetrackid'),
     mbAlbumId: get('musicbrainzalbumid'),
+    trackGain: decibels(get('replaygaintrackgain')),
+    albumGain: decibels(get('replaygainalbumgain')),
+    trackPeak: decibels(get('replaygaintrackpeak')),
+    albumPeak: decibels(get('replaygainalbumpeak')),
   };
+}
+
+/** "-6.50 dB" → -6.5 */
+function decibels(v: string): number | null {
+  const n = Number.parseFloat(v);
+  return v && Number.isFinite(n) ? n : null;
 }
 
 /** Read one file's tags with ffprobe, at low priority. */
@@ -192,6 +222,7 @@ export function catalogWrote(db: Db, rel: string, tags: Tags) {
     }
   }
   db.prepare(`UPDATE catalog_songs SET ${sets.join(', ')} WHERE path = ?`).run(...args, rel);
+  catalogChanged();
 }
 
 /** A song as Library care, the tag editor and the genre review list them (Navidrome ids, path in the music folder). */
@@ -251,7 +282,7 @@ export class Catalog {
   /** Navidrome's songs, for linking (the library index's listing: libraryIndex.ts). Set by app.ts. */
   listNavidrome: () => Promise<NavidromeSong[] | null> = async () => null;
   /** Navidrome's real file path for each song id (its own API, libraryAdmin.ts), set by app.ts. */
-  listRealPaths: () => Promise<Map<string, string> | null> = async () => null;
+  listRealPaths: () => Promise<Map<string, NavidromeFile> | null> = async () => null;
   /** When Navidrome last finished a scan, to scan the folder again after it (library.ts). */
   scannedAt: () => number | null = () => null;
   /** for tests */
@@ -272,6 +303,19 @@ export class Catalog {
     if (this.lastLinkAt === null || !this.navidromeSongs) return false;
     const { linked } = this.db.prepare('SELECT COUNT(nd_id) AS linked FROM catalog_songs').get() as { linked: number };
     return linked >= this.navidromeSongs * 0.95;
+  }
+
+  /** Whether an admin turned on answering browsing from the catalog. */
+  serve(): boolean {
+    const row = this.db.prepare("SELECT value FROM hub_settings WHERE key = 'catalog.serve'").get() as { value: string } | undefined;
+    return row?.value === 'true';
+  }
+  setServe(on: boolean) {
+    this.db.prepare("INSERT INTO hub_settings (key, value) VALUES ('catalog.serve', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(String(on));
+  }
+  /** The Hub answers browsing itself (routes/relay.ts): turned on, and the catalog matches Navidrome. */
+  serving(): boolean {
+    return this.serve() && this.usable();
   }
 
   /** The file of each matched Navidrome song id (paths relative to the music folder). */
@@ -341,6 +385,8 @@ export class Catalog {
       lastLinkAt: this.lastLinkAt,
       inUse: this.usable(),
       lastError: this.lastError,
+      serve: this.serve(),
+      serving: this.serving(),
     };
   }
 
@@ -422,13 +468,15 @@ export class Catalog {
     const added = todo.filter(([p]) => !known.has(p)).length;
     this.progress = { step: 'reading', done: 0, total: todo.length };
     const upsert = this.db.prepare(`INSERT INTO catalog_songs (path, size, mtime, title, artist, album, album_artist, track, disc, year, genre, explicit,
-        duration, bit_rate, codec, mb_track_id, mb_album_id, error, read_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        duration, bit_rate, codec, mb_track_id, mb_album_id, error, read_at, rg_track_gain, rg_album_gain, rg_track_peak, rg_album_peak, created)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT (path) DO UPDATE SET size = excluded.size, mtime = excluded.mtime, title = excluded.title, artist = excluded.artist,
         album = excluded.album, album_artist = excluded.album_artist, track = excluded.track, disc = excluded.disc, year = excluded.year,
         genre = excluded.genre, explicit = excluded.explicit, duration = excluded.duration, bit_rate = excluded.bit_rate,
         codec = excluded.codec, mb_track_id = excluded.mb_track_id, mb_album_id = excluded.mb_album_id, error = excluded.error,
-        read_at = excluded.read_at`);
+        read_at = excluded.read_at, rg_track_gain = excluded.rg_track_gain, rg_album_gain = excluded.rg_album_gain,
+        rg_track_peak = excluded.rg_track_peak, rg_album_peak = excluded.rg_album_peak,
+        created = COALESCE(catalog_songs.created, excluded.created)`);
     let pending: [string, Seen, FileTags | null, string | null][] = [];
     const flush = () => {
       const rows = pending;
@@ -436,7 +484,8 @@ export class Catalog {
       tx(this.db, () => {
         for (const [p, s, t, err] of rows) {
           upsert.run(p, s.size, s.mtime, t?.title ?? '', t?.artist ?? '', t?.album ?? '', t?.albumArtist ?? '', t?.track ?? null, t?.disc ?? null, t?.year ?? null,
-            t?.genre ?? '', t?.explicit ?? '', t?.duration ?? 0, t?.bitRate ?? null, t?.codec ?? '', t?.mbTrackId ?? '', t?.mbAlbumId ?? '', err, this.now());
+            t?.genre ?? '', t?.explicit ?? '', t?.duration ?? 0, t?.bitRate ?? null, t?.codec ?? '', t?.mbTrackId ?? '', t?.mbAlbumId ?? '', err, this.now(),
+            t?.trackGain ?? null, t?.albumGain ?? null, t?.trackPeak ?? null, t?.albumPeak ?? null, s.mtime || this.now());
         }
       });
     };
@@ -459,6 +508,7 @@ export class Catalog {
       const del = this.db.prepare('DELETE FROM catalog_songs WHERE path = ?');
       tx(this.db, () => gone.forEach((p) => del.run(p)));
     }
+    catalogChanged();
     this.lastChanges = { added, changed: todo.length - added, removed: dropGone ? gone.length : 0 };
     if (!dropGone && gone.length) throw new Error(`The music folder has only ${found.size} of the ${known.size} files the catalog knows. Is the share mounted? Nothing was removed.`);
   }
@@ -470,19 +520,20 @@ export class Catalog {
     // Subsonic's `path` is made up ("Artist/Album/01 - Title.flac") unless a player has Report Real Path on, so
     // the files' real paths come from Navidrome's own API; Subsonic's is only a fallback.
     const real = await this.listRealPaths().catch(() => null);
+    const pathOf = (s: NavidromeSong) => real?.get(s.id)?.path ?? s.path;
     const byPath = new Map<string, NavidromeSong>();
     for (const s of songs) {
-      const path = real?.get(s.id) ?? s.path;
+      const path = pathOf(s);
       const rel = path ? fromNavidromePath(this.navidromeDir, path) : null;
       if (rel) byPath.set(rel, s);
     }
-    const rows = this.db.prepare('SELECT path, nd_id, nd_album_id, nd_artist_id FROM catalog_songs').all() as { path: string; nd_id: string | null; nd_album_id: string | null; nd_artist_id: string | null }[];
+    const rows = this.db.prepare('SELECT path, nd_id, nd_album_id, nd_artist_id, nd_album_artist_id FROM catalog_songs').all() as { path: string; nd_id: string | null; nd_album_id: string | null; nd_artist_id: string | null; nd_album_artist_id: string | null }[];
     // When Navidrome's music folder sits above or below the Hub's (/music/Music vs /music), whole paths never
     // match: fall back to the last three parts (artist folder, album folder, file) when only one file has them.
     const tail = (p: string) => p.split('/').slice(-3).join('/');
     const byTail = new Map<string, NavidromeSong | null>();
     for (const s of songs) {
-      const path = real?.get(s.id) ?? s.path;
+      const path = pathOf(s);
       if (!path) continue;
       const k = tail(path.replace(/^\/+/, ''));
       byTail.set(k, byTail.has(k) ? null : s);
@@ -490,22 +541,24 @@ export class Catalog {
     const files = new Set(rows.map((r) => r.path));
     const fileTails = new Map<string, number>();
     for (const p of files) fileTails.set(tail(p), (fileTails.get(tail(p)) ?? 0) + 1);
-    const set = this.db.prepare('UPDATE catalog_songs SET nd_id = ?, nd_album_id = ?, nd_artist_id = ? WHERE path = ?');
+    const set = this.db.prepare('UPDATE catalog_songs SET nd_id = ?, nd_album_id = ?, nd_artist_id = ?, nd_album_artist_id = ? WHERE path = ?');
     tx(this.db, () => {
       for (const r of rows) {
         const s = byPath.get(r.path) ?? (fileTails.get(tail(r.path)) === 1 ? byTail.get(tail(r.path)) ?? undefined : undefined);
         const id = s?.id ?? null;
         const album = s?.albumId ?? null;
         const artist = s?.artistId ?? null;
-        if (id !== r.nd_id || album !== r.nd_album_id || artist !== r.nd_artist_id) set.run(id, album, artist, r.path);
+        const albumArtist = (s && real?.get(s.id)?.albumArtistId) || null;
+        if (id !== r.nd_id || album !== r.nd_album_id || artist !== r.nd_artist_id || albumArtist !== r.nd_album_artist_id) set.run(id, album, artist, albumArtist, r.path);
       }
     });
+    catalogChanged();
     const linked = new Set((this.db.prepare('SELECT nd_id FROM catalog_songs WHERE nd_id IS NOT NULL').all() as { nd_id: string }[]).map((r) => r.nd_id));
     this.missing = songs.filter((x) => !linked.has(x.id)).slice(0, 100).map((x) => ({
       title: x.title ?? '',
       artist: x.artist ?? '',
       album: x.album ?? '',
-      path: real?.get(x.id) ?? x.path ?? '',
+      path: pathOf(x) ?? '',
     }));
     this.navidromeSongs = songs.length;
     this.lastLinkAt = this.now();

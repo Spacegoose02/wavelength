@@ -1,0 +1,172 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, test } from 'node:test';
+import { type Catalog, parseProbe } from '../src/catalog.ts';
+import { json, seeded } from './helpers.ts';
+
+const servers: Server[] = [];
+after(() => servers.forEach((s) => s.close()));
+const md5 = (s: string) => createHash('md5').update(s).digest('hex');
+const hasFfmpeg = (() => {
+  try {
+    execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+/** A fake Navidrome: answers getStarred2 and records every call that reaches it. */
+async function fakeNavidrome() {
+  const calls: string[] = [];
+  const srv = createServer((req, res) => {
+    const url = new URL(req.url!, 'http://x');
+    const q = Object.fromEntries(url.searchParams);
+    const method = url.pathname.replace('/rest/', '');
+    calls.push(method);
+    res.writeHead(200, { 'content-type': 'application/json' });
+    if (q.u !== 'mia' || md5('mia-real-pw' + q.s) !== q.t) return res.end(JSON.stringify({ 'subsonic-response': { status: 'failed', error: { code: 40 } } }));
+    if (method === 'getStarred2') return res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', starred2: { song: [{ id: 'nd2', starred: '2026-01-01T00:00:00Z' }], album: [], artist: [] } } }));
+    res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', from: 'navidrome', method } }));
+  });
+  servers.push(srv);
+  await new Promise<void>((ok) => srv.listen(0, '127.0.0.1', ok));
+  return { url: `http://127.0.0.1:${(srv.address() as { port: number }).port}`, calls };
+}
+
+const TAGS: Record<string, Record<string, string>> = {
+  'Drake/Scorpion/01.mp3': { title: 'Nonstop', artist: 'Drake', album_artist: 'Drake', album: 'Scorpion', track: '1', date: '2018', genre: 'Rap; Hip-Hop', ITUNESADVISORY: '1', REPLAYGAIN_TRACK_GAIN: '-7.20 dB', REPLAYGAIN_ALBUM_GAIN: '-6.80 dB' },
+  'Drake/Scorpion/02.mp3': { title: 'Elevate', artist: 'Drake', album_artist: 'Drake', album: 'Scorpion', track: '2', date: '2018', genre: 'Rap; Hip-Hop' },
+  'The Beatles/Abbey Road/01.flac': { title: 'Come Together', artist: 'The Beatles', album_artist: 'The Beatles', album: 'Abbey Road', track: '1', date: '1969', genre: 'Rock' },
+  'Mariah Carey/Merry Christmas/01.mp3': { title: 'All I Want for Christmas Is You', artist: 'Mariah Carey', album_artist: 'Mariah Carey', album: 'Merry Christmas', track: '1', date: '1994', genre: 'Pop; Christmas' },
+};
+const ND: Record<string, { id: string; albumId: string; artistId: string; albumArtistId: string }> = {
+  'Drake/Scorpion/01.mp3': { id: 'nd1', albumId: 'al1', artistId: 'ar1', albumArtistId: 'ar1' },
+  'Drake/Scorpion/02.mp3': { id: 'nd2', albumId: 'al1', artistId: 'ar1', albumArtistId: 'ar1' },
+  'The Beatles/Abbey Road/01.flac': { id: 'nd3', albumId: 'al2', artistId: 'ar2', albumArtistId: 'ar2' },
+  'Mariah Carey/Merry Christmas/01.mp3': { id: 'nd4', albumId: 'al3', artistId: 'ar3', albumArtistId: 'ar3' },
+};
+
+async function setup() {
+  const musicDir = mkdtempSync(join(tmpdir(), 'wl-subsonic-'));
+  for (const p of Object.keys(TAGS)) {
+    mkdirSync(join(musicDir, p, '..'), { recursive: true });
+    writeFileSync(join(musicDir, p), 'not really audio');
+  }
+  const nd = await fakeNavidrome();
+  const hub = await seeded({}, { musicDir, dataDir: mkdtempSync(join(tmpdir(), 'wl-subsonic-data-')) });
+  const { app, tokens, ids } = hub;
+  const catalog = (app as unknown as { hubCatalog: Catalog }).hubCatalog;
+  catalog.probeFn = async (f) => {
+    const rel = f.slice(musicDir.length + 1);
+    return parseProbe({ format: { duration: '200.4', bit_rate: '320000', tags: TAGS[rel] }, streams: [{ codec_type: 'audio', codec_name: rel.endsWith('flac') ? 'flac' : 'mp3' }] });
+  };
+  catalog.listNavidrome = async () => Object.entries(ND).map(([p, s]) => ({ ...s, path: `/music/${p}` }));
+  catalog.listRealPaths = async () => new Map(Object.entries(ND).map(([p, s]) => [s.id, { path: `/music/${p}`, albumArtistId: s.albumArtistId }]));
+  await catalog.scan();
+
+  const s = await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body: { kind: 'navidrome', url: nd.url, config: { relay: 'everyone' } } });
+  await json(app, 'PUT', `/api/admin/services/${s.body.service.id}/users/${ids.member}`, { token: tokens.admin, body: { secrets: { username: 'mia', password: 'mia-real-pw' } } });
+  const mia = (await json(app, 'GET', '/api/me/services', { token: tokens.member })).body.services[0];
+  const rest = async (method: string, params: Record<string, string> = {}) => {
+    const salt = 'abc123';
+    const r = await app.inject({ method: 'GET', url: `/nd/${s.body.service.id}/rest/${method}?${new URLSearchParams({ u: mia.secrets.username, t: md5(mia.secrets.password + salt), s: salt, v: '1.16.1', c: 'test', f: 'json', ...params })}` });
+    return { by: r.headers['x-wavelength-answered-by'], body: r.headers['content-type']?.toString().startsWith('application/json') ? r.json()['subsonic-response'] : r.rawPayload, type: r.headers['content-type'] };
+  };
+  return { ...hub, musicDir, nd, rest, catalog };
+}
+
+test('with the switch on, the Hub answers browsing and search from the catalog, with Navidrome’s ids and stars', async () => {
+  const { app, tokens, nd, rest } = await setup();
+
+  // off by default: Navidrome answers
+  assert.equal((await rest('getAlbum', { id: 'al1' })).body.from, 'navidrome');
+  assert.equal((await json(app, 'PUT', '/api/admin/catalog', { token: tokens.member, body: { serve: true } })).status, 403);
+  assert.equal((await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: { serve: 'yes' } })).status, 400);
+  const on = await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: { serve: true } });
+  assert.equal(on.body.serve, true);
+  assert.equal(on.body.serving, true);
+  nd.calls.length = 0;
+
+  const album = await rest('getAlbum', { id: 'al1' });
+  assert.equal(album.by, 'hub');
+  assert.equal(album.body.status, 'ok');
+  assert.equal(album.body.album.name, 'Scorpion');
+  assert.equal(album.body.album.artistId, 'ar1');
+  assert.equal(album.body.album.songCount, 2);
+  assert.equal(album.body.album.explicitStatus, 'explicit');
+  assert.deepEqual(album.body.album.genres, [{ name: 'Rap' }, { name: 'Hip-Hop' }]);
+  assert.deepEqual(album.body.album.song.map((x: { id: string }) => x.id), ['nd1', 'nd2']);
+  const [first, second] = album.body.album.song;
+  assert.equal(first.title, 'Nonstop');
+  assert.equal(first.duration, 200);
+  assert.equal(first.contentType, 'audio/mpeg');
+  assert.equal(first.coverArt, 'al-al1');
+  assert.deepEqual(first.replayGain, { trackGain: -7.2, albumGain: -6.8 });
+  assert.ok(!first.starred);
+  assert.equal(second.starred, '2026-01-01T00:00:00Z', 'hearts come from Navidrome');
+  assert.deepEqual(nd.calls, ['getStarred2'], 'only the stars were asked of Navidrome');
+
+  const artists = await rest('getArtists');
+  assert.deepEqual(artists.body.artists.index.map((i: { name: string; artist: { name: string }[] }) => [i.name, i.artist.map((a) => a.name)]), [
+    ['B', ['The Beatles']], ['D', ['Drake']], ['M', ['Mariah Carey']],
+  ], '"The" is left out when sorting');
+  const artist = await rest('getArtist', { id: 'ar2' });
+  assert.deepEqual(artist.body.artist.album.map((a: { name: string }) => a.name), ['Abbey Road']);
+
+  const genres = await rest('getGenres');
+  assert.deepEqual(genres.body.genres.genre.map((g: { value: string; songCount: number }) => [g.value, g.songCount]), [['Christmas', 1], ['Hip-Hop', 2], ['Pop', 1], ['Rap', 2], ['Rock', 1]]);
+  assert.deepEqual((await rest('getSongsByGenre', { genre: 'christmas', count: '50' })).body.songsByGenre.song.map((x: { id: string }) => x.id), ['nd4']);
+  assert.equal((await rest('getRandomSongs', { size: '10', fromYear: '2000', toYear: '2030' })).body.randomSongs.song.length, 2);
+
+  const byName = await rest('getAlbumList2', { type: 'alphabeticalByName', size: '10' });
+  assert.deepEqual(byName.body.albumList2.album.map((a: { name: string }) => a.name), ['Abbey Road', 'Merry Christmas', 'Scorpion']);
+  const byYear = await rest('getAlbumList2', { type: 'byYear', fromYear: '2020', toYear: '1960' });
+  assert.deepEqual(byYear.body.albumList2.album.map((a: { year: number }) => a.year), [2018, 1994, 1969], 'from > to counts down');
+  assert.equal((await rest('getAlbumList2', { type: 'newest', size: '2' })).body.albumList2.album.length, 2);
+
+  const found = await rest('search3', { query: 'drak elev' });
+  assert.deepEqual(found.body.searchResult3.song.map((x: { id: string }) => x.id), ['nd2']);
+  assert.deepEqual(found.body.searchResult3.artist, []);
+  const beatles = await rest('search3', { query: 'beatles', songCount: '0' });
+  assert.deepEqual(beatles.body.searchResult3.artist.map((a: { id: string }) => a.id), ['ar2']);
+  assert.deepEqual(beatles.body.searchResult3.album.map((a: { id: string }) => a.id), ['al2']);
+  assert.deepEqual(beatles.body.searchResult3.song, []);
+
+  // Navidrome still answers what needs a person's plays, ids the catalog doesn't know, playing, and XML callers
+  nd.calls.length = 0;
+  assert.equal((await rest('getAlbumList2', { type: 'recent' })).body.from, 'navidrome');
+  assert.equal((await rest('getAlbum', { id: 'brand-new' })).body.from, 'navidrome');
+  assert.equal((await rest('getPlaylists')).body.from, 'navidrome');
+  assert.equal((await rest('getAlbum', { id: 'al1', f: 'xml' })).by, undefined);
+  assert.deepEqual(nd.calls, ['getAlbumList2', 'getAlbum', 'getPlaylists', 'getAlbum']);
+
+  // starring through the Hub shows at once
+  await rest('star', { id: 'nd1' });
+  nd.calls.length = 0;
+  await rest('getSong', { id: 'nd1' });
+  assert.deepEqual(nd.calls, ['getStarred2'], 'stars were asked again after starring');
+});
+
+test('covers come from the album folder, sized, and from the file when there is no picture', { skip: !hasFfmpeg && 'needs ffmpeg' }, async () => {
+  const { app, tokens, musicDir, nd, rest } = await setup();
+  await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: { serve: true } });
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=600x600', '-frames:v', '1', '-y', join(musicDir, 'Drake/Scorpion/cover.jpg')]);
+  nd.calls.length = 0;
+  const big = await rest('getCoverArt', { id: 'al-al1_6543210' });
+  assert.equal(big.by, 'hub');
+  assert.equal(big.type, 'image/jpeg');
+  const small = await rest('getCoverArt', { id: 'mf-nd2', size: '100' });
+  assert.equal(small.by, 'hub');
+  assert.ok((small.body as Buffer).length < (big.body as Buffer).length, 'made smaller');
+  assert.deepEqual(nd.calls, []);
+  // no picture in the folder or the file, and artist pictures: Navidrome's
+  await rest('getCoverArt', { id: 'al-al2' });
+  await rest('getCoverArt', { id: 'ar-ar1' });
+  assert.deepEqual(nd.calls, ['getCoverArt', 'getCoverArt']);
+});
