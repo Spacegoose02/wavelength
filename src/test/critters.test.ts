@@ -35,3 +35,19 @@ describe('critter species and looks', () => {
     }
   });
 });
+
+describe('the moose', () => {
+  it('is a species with antlers drawn behind the head, under any hat', async () => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    const moose = SPECIES.find((s) => s.id === 'moose')!;
+    expect(moose.noun).toBe('moose');
+    const hat = h('g', { className: 'own-hat' });
+    const svg = renderToStaticMarkup(h('svg', null, h(Head, { species: moose, hat })));
+    // the antlers come before the hat, so the hat covers their roots
+    expect(svg.indexOf('moose-antlers')).toBeGreaterThan(-1);
+    expect(svg.indexOf('moose-antlers')).toBeLessThan(svg.indexOf('own-hat'));
+  });
+});

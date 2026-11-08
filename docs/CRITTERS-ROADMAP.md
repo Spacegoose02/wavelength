@@ -109,7 +109,12 @@ the asset work and a risk on low-end phones and the iOS WebView.
 
 - A Boy / Girl switch (`critterLook`, synced): girls get lashes and a bow in the skin's accent in
   place of the act's hat (the beanie stays, with the bow on it). The Rapper's backwards cap came off for everyone.
-- A sasquatch (seventh species) was drawn and then put on hold. Its face and figure are in git history (commit
+- A moose (seventh species, November 2026): a big overhanging muzzle with wide nostrils, a fur bell under the
+  chin, long ears out to the sides and broad palmate antlers. The antlers are drawn behind the head, so every
+  act's hat and the headphones sit between them with the palms showing either side; the hazmat hood hides them.
+  Its figure (`FIGURES.moose`) is a deep chest on long legs with pale stockings and cloven hooves (or the act's
+  shoes), and a tiny tail.
+- A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 
 ## Phase 5: stage lighting
