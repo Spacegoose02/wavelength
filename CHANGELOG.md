@@ -1,6 +1,16 @@
 # Changelog
 
 ## 0.32.0
+- **An owl and a T. rex.** The thirteenth and fourteenth critters, drawn cute. The owlet is drawn like a sticker: a round
+  brown head with two short pointed tufts, a big cream face, huge round dark eyes with big shines, a little yellow
+  beak and pink cheeks, on a plump figure with orange talons and a fan of tail feathers. Its wings are its arms:
+  bare, with three feathers like little fingers for each hand. The baby T. rex is leaf green with a big soft snout, a pale yellow chin, freckles,
+  little brow ridges and a wide grin with two tiny teeth, on big strong legs with three-clawed feet and a thick tail
+  sweeping along the ground with a row of little plates. Its arms are short and thin: a plump upper arm, a skinny
+  forearm bending at the elbow and two little claws on each hand, and they still reach every instrument. Both play
+  all nine acts (the Driver too) as a boy or a girl, with the holiday hats and themed outfits; the owl's tufts tuck
+  under the cowboy hat like the bears' ears (`OwlFace` and `TrexFace` in `faces.tsx`, `FIGURES.owl` and
+  `FIGURES.trex` in `bodies.tsx`, a figure's `fore` and `hand` in `Arm`, `parts.tsx`, #224).
 - **Wrong lyrics? Pick the right ones.** Under the lyrics in Now Playing, **Wrong lyrics?** lists the other LRCLIB
   entries for the song (name, artist, album, length and the first lines, the likeliest first), searches LRCLIB with
   your own words, takes lyrics you paste in (plain, or LRC with times for karaoke), or marks the song as having
@@ -23,6 +33,8 @@
   becomes "Rap; Hip-Hop"), and the Music catalog card lists songs Navidrome has that no file matched (#219).
 - **Critters: heads sit on their necks.** Every species' head is lowered by `NECK_DROP` so the chin tucks over the
   collar instead of floating over the shoulders, in every act (#221).
+- **Critters: no chest lines on the girls.** The folds drawn across the chest (`Bust`) are gone for every species and
+  act; the girls keep their lashes, bows and skirts (#223).
 
 ## 0.31.0
 - **A panda critter.** The twelfth species: a cute panda cub with a round cream-white head and fluffy cheeks,
