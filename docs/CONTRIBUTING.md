@@ -147,7 +147,10 @@ those parts so the pivot lands on the figure's own shoulder, tail root or foot.
      it (`aline`, `pleated`, `ruffle`, `tutu` or `fringe`; `className` colours it, `top` for a dress), `<Head species={species}
      hat={…} eyewear={…} />` with the act's headwear (`className="own-hat"`, and `data-part="adjust"` to
      have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`<Arm part d hand>`, classes `sleeve` and `hand`, can hold a prop; `d` is drawn from
-     the old shoulder, and the arm is redrawn from the species' own).
+     the old shoulder, and the arm is redrawn from the species' own). Each arm has an elbow halfway along `d`:
+     play the instrument from it with `bend($, 'arm-l', { turn, to, wrist })` (`arm.ts`), which moves the forearm
+     and hand and leaves the upper arm still. Turn the whole arm about the shoulder (`$('arm-l')`) only for big
+     reaches (a drummer's tom, a fist in the air); `beatClock` and `lift` there give a pattern its beat and bar.
   3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Move
      things in time with `tempo` (`phase` through the beat, `index`, `locked`) rather than raw `a.beat`
      where you can, and give the act a flourish: when `flourish` is above 0, draw one move with `windUp` or

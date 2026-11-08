@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { beatClock, bend } from './arm';
 import { swell } from './flourish';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
@@ -6,23 +7,44 @@ import { useCritterRig } from './rig';
 
 /**
  * Rapper raccoon between two speaker stacks: a gold chain, no hat, a mic in one hand
- * and the other hand riding the beat. His mouth moves with the mids while playing and the speaker cones pump with
+ * bobbing at the mouth and the other hand changing move every bar (chopping on the beat, waving side to side,
+ * raising the roof, pointing at the crowd), all from the elbow. His mouth moves with the mids while playing and the speaker cones pump with
  * the bass. Flourish: the hype hand thrown high. Paused, the mic and hand drop.
  */
 export function Rapper({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
-  const state = useRef({ down: 1, pulse: 0 });
+  const state = useRef({ down: 1, pulse: 0, turn: 0, shoulder: 0 });
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, flourish, $ }) => {
+    (f) => {
+      const { t, a, idle, bob, flourish, $ } = f;
       const s = state.current;
       const svg = root.current!;
+      const { phase, index } = beatClock(f);
       s.down += ((idle ? 1 : 0) - s.down) * 0.06;
+      // the mic: held at the mouth, bobbing with the beat and tipped with the flow
       $('arm-l').setAttribute('transform', `rotate(${(s.down * -48 + (idle ? 0 : Math.sin(t * 2) * 2)).toFixed(2)} 138 268)`);
-      const hype = a.live ? -bob * 22 : idle ? 0 : -Math.max(0, Math.sin(t * 4)) * 14;
+      bend($, 'arm-l', { turn: idle ? 0 : bob * 6 + Math.sin(Math.PI * (index + phase)) * 4, wrist: idle ? 0 : Math.sin(t * 3.1) * 6 });
+
+      // the free hand changes move every bar: chops down on each beat, waves side to side over two beats,
+      // raises the roof (pushing up on the beat), points out at the crowd on the beat
       const show = swell(flourish);
-      $('arm-r').setAttribute('transform', `rotate(${(s.down * 62 + hype - show * 30).toFixed(2)} 262 268)`);
+      const swing = Math.sin(Math.PI * (index + phase));
+      const move = Math.floor(index / 4) % 4;
+      const [shoulder, turn] = idle
+        ? [0, 0]
+        : move === 0
+          ? [-6, 34 * bob - 10]
+          : move === 1
+            ? [-18, swing * 34]
+            : move === 2
+              ? [-24, -16 - bob * 26]
+              : [12 - bob * 10, 40 - bob * 30];
+      s.shoulder += (shoulder - s.shoulder) * 0.15;
+      s.turn += (turn - s.turn) * 0.35;
+      $('arm-r').setAttribute('transform', `rotate(${(s.down * 62 + s.shoulder - show * 30).toFixed(2)} 262 268)`);
+      bend($, 'arm-r', { turn: s.turn * (1 - show) - show * 20, wrist: idle ? 0 : s.turn * 0.4 });
 
       svg.querySelectorAll<SVGElement>('[data-cone]').forEach((c) => {
         const [cx, cy] = c.dataset.cone!.split(',').map(Number);
