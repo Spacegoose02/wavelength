@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Popular songs on artist pages.** Above the albums, an artist page lists the artist's best-known songs that are in
+  your library, Spotify-style: five, with **Show more** for up to ten, plus **Play** and **Shuffle**. The order is
+  Deezer's top tracks for the artist, each found on your Navidrome or Plex; Navidrome's Last.fm top songs fill in when
+  Deezer has nothing. The section is left out when none of them are in the library (`src/lib/popularSongs.ts`,
+  `src/components/PopularSongs.tsx`).
 - **A moose critter.** The seventh species: a dark brown moose with a big droopy muzzle, a fur bell under the chin,
   long ears and wide palmate antlers, on long legs with pale stockings and cloven hooves. It plays all eight acts as a
   boy or a girl. The antlers sit behind the head, so the cowboy hat, the beanie, the headphones and the holiday hats
