@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.2
+- **Fixed: "Navidrome refused the admin login saved on the Hub" during Library care scans.** The Hub signed in to
+  Navidrome's API for every page of songs or batch of albums, and Navidrome's sign-in limit (`AuthRequestLimit`,
+  5 per 20 s by default) answered the rest with 429, which the Hub reported as a bad admin login. The Hub now keeps
+  one Navidrome admin session for 10 minutes (`hub/src/routes/navidrome.ts`), and a 429 gets its own message.
+
 ## 0.27.1
 - **Fixed: "Wrong username or password" on Navidrome through the Hub.** With **Send everyone through the Hub** on,
   a device's Navidrome source points at the Hub (`<hub>/nd/<id>`) and signs in with a login the Hub made for that
