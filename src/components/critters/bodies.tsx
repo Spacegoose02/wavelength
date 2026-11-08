@@ -371,6 +371,134 @@ function Claws({ at, right }: { at: P; right?: boolean }) {
   return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
 }
 
+
+/**
+ * Big cats (tiger, lion): a round top over sturdy furry legs, big soft paws (or the act's shoes) and a long
+ * tail curling up behind; `Tail` draws the species' tail about its root at 236,320.
+ */
+const bigCat = (Tail: () => ReactNode): Figure => ({
+  head: [190, 0.86],
+  torso: 'M174 256 Q 200 248 226 256 Q 248 264 250 290 Q 252 312 246 324 Q 200 334 154 324 Q 148 312 150 290 Q 152 264 174 256 Z',
+  shoulders: [[158, 274], [242, 274]],
+  arm: 21,
+  paw: 12,
+  reach: 64,
+  waist: [312, 48, 28],
+  chin: [252, 46],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[236, 320]} part="tail">
+        <Tail />
+      </Pivot>
+      <Shaded d={tube([180, 314], [176, 336], [176, 356], 26, 22)} className={legs} />
+      <Shaded d={tube([220, 314], [224, 336], [224, 356], 26, 22)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[174, 364]} rx={20} ry={10} shoe={shoe} />
+          <Foot at={[226, 364]} rx={20} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <Paw at={[175, 362]} />
+          <Paw at={[225, 362]} right />
+        </>
+      )}
+    </>
+  ),
+});
+
+/** A bare big-cat paw: a soft round foot in the fur colour with two toe creases. */
+function Paw({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const paw = (
+    <g>
+      <ellipse cx={x} cy={y} rx={19} ry={10} className="bare ol-thin" />
+      <path d={`M${x - 6} ${y + 2} v 7 M${x + 6} ${y + 2} v 7`} stroke="rgb(0 0 0 / 0.3)" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{paw}</Pivot> : paw;
+}
+
+const CAT_TAIL = tube([230, 318], [296, 330], [292, 262], 16, 13);
+
+/** The tiger's tail: orange with dark rings and a dark tip. */
+function TigerTail() {
+  return (
+    <>
+      <defs>
+        <clipPath id="critter-tiger-tail">
+          <path d={CAT_TAIL} />
+        </clipPath>
+      </defs>
+      <path d={CAT_TAIL} className="bare ol" />
+      <g clipPath="url(#critter-tiger-tail)" className="tiger-stripe" strokeWidth="6">
+        <path d="M262 312 l 8 20 M282 300 l 18 6 M286 284 l 16 -2 M282 264 l 22 0" />
+      </g>
+      <path d={CAT_TAIL} fill="url(#critter-vinyl)" />
+    </>
+  );
+}
+
+/** The lion's tail: thin, with a dark tuft on the end. */
+function LionTail() {
+  return (
+    <>
+      <path d={tube([230, 318], [296, 330], [290, 270], 11, 8)} className="bare ol" />
+      <path d="M290 270 C 276 262, 280 244, 290 238 C 294 248, 302 246, 304 254 C 304 264, 298 272, 290 270 Z" className="lion-tuft ol-thin" />
+    </>
+  );
+}
+
+/** An elephant's foot: a thick round pad in the skin colour with three pale toenails. */
+function ElephantFoot({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const foot = (
+    <g>
+      <ellipse cx={x} cy={y} rx={22} ry={10} className="bare ol-thin" />
+      {[-12, 0, 12].map((dx) => (
+        <path key={dx} d={`M${x + dx - 5} ${y + 8} Q ${x + dx} ${y} ${x + dx + 5} ${y + 8} Z`} className="toenail" />
+      ))}
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
+/**
+ * Elephant: a round chunky top on short thick pillar legs, wide round feet with pale toenails (or the act's
+ * shoes) and a little rope tail with a tuft. The ears and trunk are on the face.
+ */
+const elephant: Figure = {
+  head: [188, 0.86],
+  torso: 'M172 254 Q 200 246 228 254 Q 254 262 256 290 Q 258 316 250 328 Q 200 338 150 328 Q 142 316 144 290 Q 146 262 172 254 Z',
+  shoulders: [[154, 274], [246, 274]],
+  arm: 25,
+  paw: 13,
+  reach: 64,
+  waist: [314, 54, 28],
+  chin: [252, 50],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[238, 316]} part="tail">
+        <path d={tube([234, 314], [256, 316], [262, 336], 7, 5)} className="bare ol-thin" />
+        <path d="M262 334 Q 254 346 260 352 Q 264 346 268 352 Q 272 344 264 334 Z" className="elephant-tuft ol-thin" />
+      </Pivot>
+      <Shaded d={tube([178, 316], [176, 338], [176, 356], 32, 30)} className={legs} />
+      <Shaded d={tube([222, 316], [224, 338], [224, 356], 32, 30)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[174, 364]} rx={22} ry={10} shoe={shoe} />
+          <Foot at={[226, 364]} rx={22} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <ElephantFoot at={[176, 362]} />
+          <ElephantFoot at={[224, 362]} right />
+        </>
+      )}
+    </>
+  ),
+};
+
 export const FIGURES = {
   raccoon,
   bear,
@@ -379,4 +507,7 @@ export const FIGURES = {
   grey: alien(186, [226, 254, 12]),
   moose,
   turtle,
+  tiger: bigCat(TigerTail),
+  lion: bigCat(LionTail),
+  elephant,
 } satisfies Record<string, Figure>;

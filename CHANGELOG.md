@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **An elephant, a tiger and a lion.** Three more critters, drawn cute. The elephant calf is soft grey with big
+  round pink-lined ears that stay out either side of every hat (even the cowboy hat) and flap to the beat, and a
+  short trunk that curls up to one side so the smile shows under it. The tiger cub is orange with bold stripes, white
+  cheeks, green eyes and a pink nose, and a striped tail. The lion cub has a russet mane round its head (the girl is a
+  lioness, without one) and a tufted tail. All three play every act as a boy or a girl; the hazmat hood hides the
+  ears, trunk and mane (`ElephantFace`, `TigerFace`, `LionFace` in `faces.tsx`; `FIGURES.elephant` and the big-cat
+  figure `FIGURES.tiger` / `FIGURES.lion` in `bodies.tsx`).
 - **A Driver act for the critters.** The ninth act: the critter at the wheel of a little open-top car (an original
   design: round headlights, a grinning chrome grille, a racing stripe and a WAVE plate), coming down a long road at
   sunset, singing along. It swerves from side to side in time with the music, the wheel turning under the steering
