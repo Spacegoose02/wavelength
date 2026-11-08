@@ -118,6 +118,9 @@ function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew
   const set = (k: keyof SourceConfig, v: string) => setCfg({ ...cfg, [k]: v });
   // a Hub admin adds Plex, Audiobookshelf and SUB/WAVE to the Hub, so everyone signed in gets them
   const toHub = canKeys && hubKeeps(cfg.kind) && (cfg.hubId !== undefined || isNew);
+  // the Hub hands each person their Navidrome login (or, through its relay, one made for this device): typing
+  // another one here only breaks it, and the next sync puts the Hub's back anyway
+  const hubLogin = cfg.kind === 'navidrome' && cfg.hubId !== undefined;
 
   return (
     <form className="editor" onSubmit={async (e) => {
@@ -141,15 +144,17 @@ function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew
           </select>
         </label>
         <label>Name<input value={cfg.name} onChange={(e) => set('name', e.target.value)} placeholder={SOURCE_LABELS[cfg.kind]} /></label>
-        <label className="span2">Server URL<input value={cfg.url} onChange={(e) => set('url', e.target.value)} placeholder={hint.url} required /></label>
-        {hint.fields.map((f) => (
+        <label className="span2">Server URL<input value={cfg.url} onChange={(e) => set('url', e.target.value)} placeholder={hint.url} required readOnly={hubLogin} /></label>
+        {!hubLogin && hint.fields.map((f) => (
           <label key={f}>{hint.labels?.[f] ?? LABELS[f]}
             <input type={f === 'password' || f === 'token' ? 'password' : 'text'} value={(cfg[f] as string) ?? ''} onChange={(e) => set(f, e.target.value)}
               placeholder={cfg.hubId !== undefined && ['username', 'password', 'token'].includes(f) ? 'Kept on the Hub; type to replace' : undefined} />
           </label>
         ))}
       </div>
-      <p className="muted small">{hint.help}</p>
+      <p className="muted small">{!hubLogin ? hint.help
+        : cfg.hubRelay ? 'Signed in through your Hub. This device has a login of its own for the Hub, and your Navidrome password stays on the Hub. An admin sets your Navidrome login under Settings → Server.'
+        : 'Your Navidrome login comes from your Hub. An admin sets it under Settings → Server.'}</p>
       {toHub && <p className="muted small">Saved on your Hub, not this device. Devices signed in to the Hub get this server{cfg.kind === 'subwave' ? ', but only admins get the SUB/WAVE admin login' : ''}.</p>}
       {test && <div className={test.ok ? 'ok' : 'errors'}>{test.msg}</div>}
       <div className="row gap">

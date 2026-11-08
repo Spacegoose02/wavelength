@@ -43,6 +43,14 @@ function passwordOf(q: Record<string, string>, expected: string): boolean {
   return safeEqual(p, expected);
 }
 
+/**
+ * A relay login always ends in `~<device id>`. Without it someone typed their own Navidrome login over the one the
+ * Hub gave the device, so say what this address is rather than only "wrong password".
+ */
+const wrongLogin = (u: string | undefined) => /~\d+$/.test(u ?? '')
+  ? 'Wrong username or password'
+  : 'Wrong username or password. This address is Navidrome through your Hub, which signs your devices in by itself: use the login the Hub gave this device (Wavelength fills it in), not your Navidrome one';
+
 const one = (v: unknown) => (Array.isArray(v) ? String(v[0] ?? '') : typeof v === 'string' ? v : '');
 
 export function relayRoutes(app: FastifyInstance, { db, config }: Ctx) {
@@ -64,7 +72,7 @@ export function relayRoutes(app: FastifyInstance, { db, config }: Ctx) {
   app.post<{ Params: { id: string } }>('/nd/:id/auth/login', async (req, reply) => {
     const b = (req.body ?? {}) as { username?: unknown; password?: unknown };
     const who = signIn(req.params.id, typeof b.username === 'string' ? b.username : '', (expected) => typeof b.password === 'string' && safeEqual(b.password, expected));
-    if (typeof who === 'string') return reply.code(401).send({ error: 'Wrong username or password' });
+    if (typeof who === 'string') return reply.code(401).send({ error: wrongLogin(typeof b.username === 'string' ? b.username : '') });
     return { token: nativeToken(who.device.id), username: b.username, isAdmin: false };
   });
   app.get<{ Params: { id: string }; Querystring: Record<string, string> }>('/nd/:id/api/song', async (req, reply) => {
@@ -94,7 +102,7 @@ export function relayRoutes(app: FastifyInstance, { db, config }: Ctx) {
     const method = req.params.method.replace(/\.view$/, '');
 
     const who = signIn(req.params.id, q.u, (expected) => passwordOf(q, expected));
-    if (who === 'login') return fail(reply, 40, 'Wrong username or password');
+    if (who === 'login') return fail(reply, 40, wrongLogin(q.u));
     if (who === 'server') return fail(reply, 50, 'This Navidrome server isn’t shared with you through the Hub any more');
     const { user, target } = who;
     if (BLOCKED.has(method)) return fail(reply, 50, 'Not allowed through the Hub');

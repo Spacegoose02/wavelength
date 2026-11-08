@@ -43,6 +43,7 @@ function toSource(s: HubService, keep?: SourceConfig): SourceConfig {
     apiUrl: str(s.config.apiUrl),
     nowPlayingUrl: str(s.config.nowPlayingUrl),
     hubAdmin: s.hubAdmin || undefined,
+    hubRelay: s.relay || undefined,
     // switching a Hub server off is a per-device choice
     enabled: keep?.enabled ?? true,
   };

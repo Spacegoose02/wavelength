@@ -18,6 +18,8 @@ export interface SourceConfig {
   hubId?: number;
   /** SUB/WAVE kept on the Hub: admin controls go through the Hub, which holds the admin login. */
   hubAdmin?: boolean;
+  /** Navidrome through the Hub's relay (`/nd/<id>`): the login is one the Hub made for this device, not the person's own. */
+  hubRelay?: boolean;
 }
 
 export type TrackKind = 'track' | 'radio' | 'book' | 'episode';
