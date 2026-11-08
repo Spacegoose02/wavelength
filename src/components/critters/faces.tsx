@@ -579,14 +579,14 @@ export function LionFace() {
 /** The elephant's left ear (the right is its mirror): a big rounded flap out to the side, pink inside. */
 const ELEPHANT_EAR = 'M140 128 C 104 92, 52 98, 40 140 C 30 180, 54 228, 96 236 C 118 240, 134 228, 142 212 Z';
 /** The trunk's outline, and just its two sides (its root at the top is left open, so it joins the face). */
-const TRUNK = 'M184 180 C 182 220, 190 264, 214 274 C 240 284, 270 268, 276 244 C 276 236, 264 234, 262 242 C 258 256, 242 262, 232 252 C 224 242, 228 206, 230 180 Z';
-const TRUNK_SIDES = 'M184 180 C 182 220, 190 264, 214 274 C 240 284, 270 268, 276 244 C 276 236, 264 234, 262 242 C 258 256, 242 262, 232 252 C 224 242, 228 206, 230 180';
+const TRUNK = 'M184 180 C 182 200, 188 218, 206 222 C 232 228, 256 218, 262 198 C 264 190, 254 186, 250 194 C 246 204, 238 208, 232 204 C 226 200, 228 192, 230 180 Z';
+const TRUNK_SIDES = 'M184 180 C 182 200, 188 218, 206 222 C 232 228, 256 218, 262 198 C 264 190, 254 186, 250 194 C 246 204, 238 208, 232 204 C 226 200, 228 192, 230 180';
 const ELEPHANT_EAR_IN = 'M132 140 C 106 116, 70 120, 60 148 C 52 178, 70 212, 100 218 C 116 220, 126 210, 130 200 Z';
 
 /**
  * An elephant calf's face, drawn cute and kept clear of famous cartoon elephants (no giant flying ears, no
  * hat or bonnet of its own): a round soft-grey head, big round ears out to the sides with pink insides,
- * big blue eyes, pink cheeks, and a short trunk that curls up to one side so the smile shows under it.
+ * big blue eyes, pink cheeks, a short trunk that curls up and out to the right, and a wide smile just under it.
  * The ears flap (rig) and stay out with every hat, even the cowboy hat; the hazmat hood hides the ears and
  * the trunk (`.elephant-ears`, `.elephant-trunk`, styles.css).
  */
@@ -621,16 +621,17 @@ export function ElephantFace() {
         <Lashes l={[148, 155]} r={[263, 155]} />
       </g>
       <Pair l="M146 136 Q 160 128 178 134" mid={206} stroke="#5d6580" width={4.5} />
-      <path data-part="smile" d="M156 226 Q 168 244 186 238" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
-      <Mouth id="elephant" x={174} y={234} w={12} h={20} fill="#5a1a24" line={INK} teeth="none" />
-      {/* the trunk: down from between the eyes, past the chin, then curling up and out to the right; outlined
+      {/* the trunk: down from between the eyes, then curling up and out to the right above the mouth; outlined
           down its sides only, so it grows out of the face without a seam */}
       <g className="elephant-trunk">
         <path d={TRUNK} fill="url(#el-skin)" />
         <path d={TRUNK_SIDES} fill="none" className="ol" />
-        <path d="M190 206 q 16 5 34 0 M194 228 q 14 5 30 0 M204 250 q 10 4 22 -2" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2.2" strokeLinecap="round" />
-        <ellipse cx="270" cy="241" rx="8" ry="5" fill="#4a5068" transform="rotate(-60 270 241)" />
+        <path d="M188 196 q 16 4 36 0 M194 210 q 12 4 28 0" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2.2" strokeLinecap="round" />
+        <ellipse cx="257" cy="193" rx="7" ry="4.5" fill="#4a5068" transform="rotate(-60 257 193)" />
       </g>
+      {/* a wide smile right under the trunk, and the singing mouth in the middle of it */}
+      <path data-part="smile" d="M160 224 Q 206 258 252 224 M156 220 Q 158 226 164 228 M256 220 Q 254 226 248 228" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+      <Mouth id="elephant" x={206} y={230} w={24} h={34} fill="#5a1a24" line={INK} teeth="none" />
     </Placed>
   );
 }
