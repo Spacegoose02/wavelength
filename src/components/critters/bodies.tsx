@@ -548,16 +548,25 @@ const panda: Figure = {
   ),
 };
 
+/**
+ * How far each head sits down into its top from where the figures above place it: the chin tucks over the
+ * collar so the head reads as sitting on a neck, not floating over the shoulders. The chin's shadow comes down
+ * with it.
+ */
+export const NECK_DROP = 10;
+
+const seat = (f: Figure, drop = NECK_DROP): Figure => ({ ...f, head: [f.head[0] + drop, f.head[1]], chin: [f.chin[0] + drop, f.chin[1]] });
+
 export const FIGURES = {
-  raccoon,
-  bear,
-  shark,
-  alien: alien(202, [226, 262, 30]),
-  grey: alien(186, [226, 254, 12]),
-  moose,
-  turtle,
-  tiger: bigCat(TigerTail),
-  lion: bigCat(LionTail),
-  elephant,
-  panda,
+  raccoon: seat(raccoon),
+  bear: seat(bear),
+  shark: seat(shark),
+  alien: seat(alien(202, [226, 262, 30])),
+  grey: seat(alien(186, [226, 254, 12])),
+  moose: seat(moose),
+  turtle: seat(turtle),
+  tiger: seat(bigCat(TigerTail)),
+  lion: seat(bigCat(LionTail)),
+  elephant: seat(elephant),
+  panda: seat(panda),
 } satisfies Record<string, Figure>;
