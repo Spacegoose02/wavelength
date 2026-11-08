@@ -511,6 +511,7 @@ alien are all possible.
 | **Driver** | A flat driving cap, a white racing tee and a scarf, at the wheel of a little open-top car coming down a long road at sunset | Swerves one way every two beats with the wheel turning under one hand, bounces on its springs with the bass, the free hand taps the wheel, waves, raises the roof or drums the door (a new move every bar), the road rushes by faster as the band gets louder, the headlights pulse on the beat and the scarf flaps in the wind |
 
 <img src="screenshots/critter-drive.png" alt="Every critter in the Driver act in the Outrun skin, boys on the top row and girls below: each sits up in a pink open-top car with round headlights and a grinning grille, a driving cap (or a bow) on its head and a scarf at its neck, on a road at sunset" width="100%">
+<img src="screenshots/critter-drive.gif" alt="The moose driving: the car swerves from side to side in time, the wheel turning under one hand while the other waves, the road bending and rushing past and the moose singing" width="280">
 
 **They sing along.** Every critter's mouth opens when someone sings (or raps) and closes when they stop.
 It listens for the lead voice the way you would: sound in the voice range that sits in the centre of the
