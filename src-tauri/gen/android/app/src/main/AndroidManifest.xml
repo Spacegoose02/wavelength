@@ -14,6 +14,8 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- in-app updates: hand the downloaded APK to the system installer (user still confirms) -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- voice requests to the AI DJ (src/lib/voiceInput.ts): asked for the first time you press the microphone -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- wake-up alarm (AlarmBridge.kt): an exact alarm clock alarm, set again after a restart -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />

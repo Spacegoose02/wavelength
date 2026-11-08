@@ -181,6 +181,8 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
 
   // database backups, for restore (routes/server.ts); the route sets how big
   app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
+  // spoken requests to the DJ (routes/dj.ts /api/dj/listen)
+  app.addContentTypeParser(/^audio\//, { parseAs: 'buffer', bodyLimit: 3_000_000 }, (_req, body, done) => done(null, body));
 
   // HTML forms post url-encoded bodies
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string', bodyLimit: 16 * 1024 }, (_req, body, done) => {

@@ -6,7 +6,7 @@ import { featureOn, requireFeature } from '../features.ts';
 import { usageSummary } from '../dj/agent.ts';
 import { ollamaModels } from '../dj/ollama.ts';
 import {
-  blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, OPENAI_VOICE_MODELS, priceOf, VOICE_ENGINES, saveSettings, setAccess, spentSince, webFor,
+  blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, OPENAI_VOICE_MODELS, priceOf, VOICE_ENGINES, LISTEN_ENGINES, saveSettings, setAccess, spentSince, webFor,
 } from '../dj/settings.ts';
 import { clientIp, HttpError, need, signedIn } from '../http.ts';
 import { getUser, listUsers } from '../users.ts';
@@ -104,6 +104,21 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
     return reply.type(type).header('cache-control', 'no-store').send(audio);
   });
 
+  /**
+   * A spoken request (raw audio, `?seconds=` its length) → `{ text }`, for the DJ chat and DJ mode's request box.
+   * `GET` says how requests are understood: `{ engine: 'device' | 'whisper' | 'openai' }`.
+   */
+  app.get('/api/dj/listen', async (req) => {
+    listener(req);
+    return { engine: voice.listenEngine() };
+  });
+  app.post<{ Querystring: { seconds?: string } }>('/api/dj/listen', { bodyLimit: 3_000_000 }, async (req) => {
+    const user = listener(req);
+    const audio = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    const text = await voice.transcribe(user, audio, String(req.headers['content-type'] ?? ''), Number(req.query.seconds));
+    return { text };
+  });
+
   /** `{ results: [{ id, content, isError? }] }` for the calls the app was given. */
   app.post<{ Params: { id: string } }>('/api/dj/chats/:id/tools', async (req) => {
     const user = listener(req);
@@ -129,6 +144,7 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
       openaiKey: keyInfo(db, key, 'openaiKey'),
       ollamaKey: keyInfo(db, key, 'ollamaKey'),
       voiceEngines: VOICE_ENGINES,
+      listenEngines: LISTEN_ENGINES,
       openaiVoiceModels: OPENAI_VOICE_MODELS,
       providers: PROVIDERS,
       efforts: EFFORTS,

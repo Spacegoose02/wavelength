@@ -15,6 +15,9 @@
   <array>
     <string>_googlecast._tcp</string>
   </array>
+  <!-- voice requests to the AI DJ (src/lib/voiceInput.ts) -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Wavelength listens when you press the microphone to ask the DJ for music.</string>
   <!-- home servers are often plain http on the local network -->
   <key>NSAppTransportSecurity</key>
   <dict>
