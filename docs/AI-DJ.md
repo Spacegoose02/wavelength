@@ -264,6 +264,33 @@ like `af_bella+af_sky` (half and half) or `af_bella(2)+af_sky(1)` (two parts Bel
 (blend)". Kokoro can also load extra voice files (`.pt`): mount a folder of them over the container's voices folder
 (`/app/api/src/voices/v1_0` in Kokoro-FastAPI) and restart it; they appear in the pickers by their file name.
 
+## Ask out loud
+
+A microphone sits next to the DJ chat's **Send** and DJ mode's **Go**. Press it, say what you want ("something for
+a road trip", "more like this but slower"), and press it again (or wait: it stops after 15 seconds). The words go
+to the DJ as if you'd typed them.
+
+Who understands them is set under **Settings → AI DJ → Voice requests**:
+
+| Choice | How | Cost |
+|---|---|---|
+| **Each device's own** (default) | The browser's speech recognition: Chrome, Edge and Safari have one; the Android app and some desktop builds don't, and say so | Free |
+| **Whisper on your Hub** | The app records and sends it to `POST /api/dj/listen`; the Hub passes it to a Whisper server that speaks OpenAI's API | Free, nothing leaves your server |
+| **OpenAI** | The same, to OpenAI's `gpt-4o-mini-transcribe`, with the OpenAI key from the voice settings | About $0.003 a minute, counted toward the AI DJ limits |
+
+Whisper runs in its own container next to the Hub, for example speaches:
+
+```yaml
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    restart: unless-stopped
+    volumes:
+      - ./whisper-cache:/home/ubuntu/.cache/huggingface/hub
+```
+
+Set its address (`http://whisper:8000`) and a model (`Systran/faster-whisper-small` is a good start on a CPU; the
+first request downloads it). The app asks for the microphone the first time you press it.
+
 ## DJ mode
 
 With **DJ mode** on in **Settings → Features** (off by default, kids separately), people the AI DJ is on for get a

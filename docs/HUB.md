@@ -608,6 +608,11 @@ On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favorites and Time Capsul
 artist (plus the track that played, for songs the person played), and each app finds them in its own library.
 Blends mix two to six people who have all said yes (`blend_optin`).
 
+The **daylist** isn't stored: it's made on every `GET /api/mixes?tz=<minutes>` (the device's
+`getTimezoneOffset()`) from the person's plays in the same part of the day over the last six months, same kind of
+day (weekday or weekend) counting double, and put first. Its name takes the most common mood among its songs when
+sound-alike analysis knows them. Requests without `tz` (older apps) get no daylist.
+
 
 **Don't play this.** Artists and songs a person set to "Don't play" in the app (a synced setting,
 `settings.dontPlay` in their prefs) are left out of every mix and DJ station segment, cached ones included
