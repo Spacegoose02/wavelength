@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.30.0
 - **A Driver act for the critters.** The ninth act: the critter at the wheel of a little open-top car (an original
   design: round headlights, a grinning chrome grille, a racing stripe and a WAVE plate), coming down a long road at
   sunset, singing along. It swerves from side to side in time with the music, the wheel turning under the steering
@@ -9,17 +9,26 @@
   the headlights pulse on the beat and the scarf flaps in the wind. Flourish: the car hops off the road, hand in
   the air. Paused, the car idles at the roadside. A flat driving cap (a bow for girls), a white racing tee and a
   scarf; the car, cap and lights take the skin's colours, and the holiday hats and theme outfits go on as usual.
-  Every species plays it (`Drive.tsx`).
+  Every species plays it (`Drive.tsx`, #212).
 - **A turtle critter.** The eighth species: a cute sea-green turtle with a soft mint muzzle, big blue eyes, rosy
   cheeks and a wide smile, on stumpy clawed legs with a little pointed tail. Its high domed shell is
   drawn behind the top, so the rim shows round every act's outfit and the instruments and arms go in front of it.
   The plain round head takes every hat, the headphones, the visor and the respirator. It plays all eight acts as a
-  boy or a girl (`TurtleFace` in `faces.tsx`, `FIGURES.turtle` in `bodies.tsx`).
+  boy or a girl (`TurtleFace` in `faces.tsx`, `FIGURES.turtle` in `bodies.tsx`, #208).
 - **Popular songs on artist pages.** Above the albums, an artist page lists the artist's best-known songs that are in
   your library, Spotify-style: five, with **Show more** for up to ten, plus **Play** and **Shuffle**. The order is
   Deezer's top tracks for the artist, each found on your Navidrome or Plex; Navidrome's Last.fm top songs fill in when
   Deezer has nothing. The section is left out when none of them are in the library (`src/lib/popularSongs.ts`,
   `src/components/PopularSongs.tsx`, #207).
+- **Library care reads the music catalog (phase 2 of replacing Navidrome).** Once the catalog matches at least 95%
+  of Navidrome's songs, the tag editor, Edit artist, Merge, Library care, the genre review and Delete album take their
+  album and song lists from `catalog_songs` instead of Navidrome's API: no sign-ins, no 429s. Before that, and for
+  albums the catalog doesn't know yet, they ask Navidrome as before. Tag saves, undos and deletes update the catalog at
+  once (`hub/src/libraryAdmin.ts`, #209).
+- **Fix: the music catalog matched only 88 songs to Navidrome.** Subsonic's song paths are made up unless a player has
+  Report Real Path on, so the catalog now takes real paths from Navidrome's own API and falls back to
+  artist/album/file when the music folders sit at different levels. Sound-alike analysis gets the real paths too
+  (#210).
 
 ## 0.29.0
 - **The Hub's own music catalog (phase 1 of replacing Navidrome).** The Hub walks the music folder and keeps one row
