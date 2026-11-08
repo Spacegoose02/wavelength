@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.28.0
 - **Browse by genre and decade.** A new **Browse** page shows a tile for every decade and every genre in the library,
   with sub-genres on each genre. Open one for its artists and albums, narrow it with sub-genre and decade chips, and
   Shuffle or Play it (`src/views/Browse.tsx`, `src/lib/browse.ts`). Navidrome and Plex albums now carry their genres
@@ -11,7 +11,11 @@
 - **Sub-genres.** The Hub's tidy genres keep the sub-genre next to the genre instead of dropping it: "Trap" becomes
   "Rap; Hip-Hop; Trap" and "Deep House" "Electronic; Deep House", written into the file tags so Navidrome lists both.
   The defaults have about 140 sub-genres (`DEFAULT_SUBGENRES` in `hub/src/genres.ts`); saved rules get them once.
-  Settings → Server → Genres shows and edits each genre's sub-genres, and a new rule can keep its genre as a sub-genre.
+  Settings → Server → Genres shows and edits each genre's sub-genres, and a new rule can keep its genre as a sub-genre
+  (#202).
+- **Critters: drumsticks land on the drum heads.** The sticks are drawn from the species' real hand to the snare's
+  head and the crash instead of a fixed offset, and the floor-tom stroke turns the wrist so the stick lands on the
+  tom's head. The flying-V's fretboard and headstock get a light outline so they show against dark fur (#201).
 
 ## 0.27.3
 - **Critters bend at the elbow.** Every arm is split at an elbow halfway along its curve; acts move the forearm and
