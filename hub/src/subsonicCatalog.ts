@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 import { catalogVersion } from './catalog.ts';
+import { creditNames } from './credits.ts';
 import type { Db } from './db.ts';
 
 /**
@@ -330,13 +331,34 @@ export function answer(db: Db, method: string, q: Record<string, string>, starre
         const o = int(offset, 0, 1_000_000);
         return xs.slice(o, o + int(count, 20, 500));
       };
-      const artists = q.artistCount === '0' ? [] : page([...v.artists.values()].filter((a) => match(fold(a.name))).sort((a, b) => sortName(a.name).localeCompare(sortName(b.name))), q.artistCount, q.artistOffset);
+      const artists = q.artistCount === '0' ? [] : page(searchArtists(v, q.query ?? '', match), q.artistCount, q.artistOffset);
       const albums = q.albumCount === '0' ? [] : page([...v.albums.values()].filter((a) => match(fold(`${a.name} ${a.artist}`))).sort((a, b) => sortName(a.name).localeCompare(sortName(b.name))), q.albumCount, q.albumOffset);
       const songs = q.songCount === '0' ? [] : page(v.ordered.filter((r) => match(v.words.get(r.nd_id)!)), q.songCount, q.songOffset);
       return ok({ searchResult3: { artist: artists.map((a) => artist(a, starred)), album: albums.map((a) => album(a, starred)), song: songs.map((r) => song(r, starred)) } });
     }
   }
   return null;
+}
+
+/**
+ * Artists for search3: an album artist that is several joined ("Lil Baby & Lil Durk", "Calboy;Meek Mill;Lil Durk")
+ * is replaced by the ones in it that are artists of their own here, so searching "lil durk" lists Lil Durk once
+ * and not every credit he's in (credits.ts creditNames()). The exact name first, then names starting with the
+ * search, then the rest by name.
+ */
+function searchArtists(v: View, query: string, match: (text: string) => boolean): Artist[] {
+  const byName = new Map<string, Artist>();
+  for (const a of v.artists.values()) if (!byName.has(fold(a.name).trim())) byName.set(fold(a.name).trim(), a);
+  const known = (n: string) => byName.has(fold(n).trim());
+  const out = new Map<string, Artist>();
+  for (const a of v.artists.values()) {
+    if (!match(fold(a.name))) continue;
+    const own = creditNames(a.name, known).map((n) => byName.get(fold(n).trim())).filter((x): x is Artist => !!x && x !== a && match(fold(x.name)));
+    for (const x of own.length ? own : [a]) out.set(x.id, x);
+  }
+  const want = fold(query).trim();
+  const rank = (a: Artist) => (fold(a.name) === want ? 0 : fold(a.name).startsWith(want) ? 1 : 2);
+  return [...out.values()].sort((a, b) => rank(a) - rank(b) || sortName(a.name).localeCompare(sortName(b.name)));
 }
 
 /**

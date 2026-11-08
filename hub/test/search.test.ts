@@ -54,6 +54,36 @@ test('the exact title comes first, then what the person plays', () => {
   assert.equal(idx.search('plan', { plays }).songs[0].id, 's7');
 });
 
+test('artists come one by one out of joined credits, the exact name first', () => {
+  const songs: IndexedSong[] = [
+    { id: 'd1', title: 'All My Life', artist: 'Lil Durk • J. Cole', artistId: 'ar-joined', album: 'All My Life', albumId: 'b1', coverArt: 'c1' },
+    { id: 'd2', title: 'Sharing Locations', artist: 'Meek Mill feat. Lil Durk & Lil Baby', artistId: 'mm', album: 'Sharing Locations', albumId: 'b2' },
+    { id: 'd3', title: 'Hats Off', artist: 'Lil Baby & Lil Durk', artistId: 'joined2', album: 'The Voice of the Heroes', albumId: 'b3' },
+    { id: 'd4', title: 'Monitoring Me', artist: 'Lil Durk', artistId: 'durk', album: 'Monitoring Me', albumId: 'b4', coverArt: 'c4' },
+    { id: 'd5', title: 'Drip Too Hard', artist: 'Lil Baby', artistId: 'baby', album: 'Drip Harder', albumId: 'b5' },
+    { id: 'd6', title: 'Pop Out', artist: 'Calboy;Meek Mill;Lil Durk', artistId: 'joined3', album: 'Pop Out', albumId: 'b6' },
+    { id: 'd7', title: 'Mrs. Robinson', artist: 'Simon & Garfunkel', artistId: 'sg', album: 'Bookends', albumId: 'b7' },
+    { id: 'd8', title: 'Lil Durk Tribute', artist: 'Lil Durkin', artistId: 'durkin', album: 'X', albumId: 'b8' },
+  ];
+  const idx = new SearchIndex(songs, new Map([['j cole', 'cole']]));
+  const artists = idx.search('lil durk').artists;
+  assert.equal(artists[0].id, 'durk');
+  assert.equal(artists[0].name, 'Lil Durk');
+  assert.equal(artists[0].coverArt, 'ar-durk');
+  // Lil Durk once, no "Lil Durk • J. Cole", "Meek Mill feat. …" or "Calboy;Meek Mill;Lil Durk"
+  assert.equal(artists.filter((a) => /durk$/i.test(a.name)).length, 1);
+  assert.ok(artists.every((a) => !/[•;&]|feat/.test(a.name)), JSON.stringify(artists));
+  // the people in those credits, each by their own name and id
+  assert.deepEqual(ids(idx.search('j cole').artists), ['cole']);
+  assert.deepEqual(ids(idx.search('meek mill').artists), ['mm']);
+  assert.deepEqual(ids(idx.search('lil baby').artists), ['baby']);
+  assert.deepEqual(idx.search('calboy').artists.map((a) => a.id), ['name:calboy']);
+  // a duo nobody in it records alone stays one artist
+  assert.deepEqual(idx.search('garfunkel').artists.map((a) => a.name), ['Simon & Garfunkel']);
+  // run together still works
+  assert.equal(idx.search('lildurk').artists[0].id, 'durk');
+});
+
 const servers: Server[] = [];
 after(() => servers.forEach((s) => s.close()));
 

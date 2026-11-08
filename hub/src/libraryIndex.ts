@@ -2,7 +2,7 @@ import type { Db } from './db.ts';
 import { getScanSettings, navidrome } from './library.ts';
 import { normName, primaryArtist } from './radar.ts';
 import type { IndexedSong } from './api/library.ts';
-import { SearchIndex, type SearchOptions, type SearchResult } from './librarySearch.ts';
+import { SearchIndex, type SearchOptions, type SearchResult, words } from './librarySearch.ts';
 
 /**
  * "Is this chart song in the library?" for Discover, answered by the Hub in one go
@@ -106,6 +106,8 @@ export class LibraryIndex {
     if (!s) return this.reset();
     const songs: IndexedSong[] = [];
     const paths = new Map<string, string>();
+    /** Navidrome's id for each artist it split out of a credit (OpenSubsonic `artists`), for Search */
+    const artistIds = new Map<string, string>();
     try {
       for (let offset = 0; offset < 1_000_000; offset += PAGE) {
         const r = await this.call(s, 'search3', { query: '', songCount: String(PAGE), songOffset: String(offset), artistCount: '0', albumCount: '0' });
@@ -113,6 +115,10 @@ export class LibraryIndex {
         for (const x of page) {
           if (!x.id || typeof x.title !== 'string') continue;
           if (typeof x.path === 'string' && x.path) paths.set(String(x.id), x.path);
+          for (const ar of Array.isArray(x.artists) ? (x.artists as { id?: unknown; name?: unknown }[]) : []) {
+            const k = typeof ar?.name === 'string' ? words(ar.name).join(' ') : '';
+            if (k && ar.id != null && !artistIds.has(k)) artistIds.set(k, String(ar.id));
+          }
           songs.push({
             id: String(x.id),
             title: x.title,
@@ -144,7 +150,7 @@ export class LibraryIndex {
       push(this.byTitle, t, x);
       push(this.byPrefix, t.slice(0, PREFIX), x);
     }
-    this.searchIndex = new SearchIndex(songs);
+    this.searchIndex = new SearchIndex(songs, artistIds);
     this.byId = undefined;
     this.server = s.url.replace(/\/+$/, '');
     this.listedAt = this.now();
