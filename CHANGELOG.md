@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.32.1
 - **Joined artists are the main artist featuring the rest.** A tag like "Lil Durk;Drake" means Lil Durk featuring
   Drake, so the song and its album now belong to Lil Durk. **Library care → Unmatched songs → Split joined
   artists** (and the Hub, for new downloads before Navidrome scans them) writes the Artist tag as "Lil Durk feat.
@@ -8,21 +8,21 @@
   equal artists. Credits already written as "Lil Durk; Drake" are listed and fixed the same way, the same artist
   named twice ("Lil Durk;Lil Durk", "Lil Durk Lil Durk") becomes "Lil Durk", and one-word band names twice ("Duran
   Duran") stay. Until the tags are fixed, the app already shows such songs as "Lil Durk feat. Drake" (`tidyCredit`
-  in `hub/src/credits.ts` and `src/lib/songIssues.ts`, `src/sources/navidrome.ts`).
+  in `hub/src/credits.ts` and `src/lib/songIssues.ts`, `src/sources/navidrome.ts`, #229).
 - **Lyrics follow the song more often.** When Navidrome (a file's lyrics tag) or the Hub's shared copy only has the
   words without times, LRCLIB is asked for a synced version of the same song, which is used instead (and replaces
   the Hub's copy), so the line being sung lights up. **Wrong lyrics?** also offers **Use with times** on an entry of
-  another length, for when its times fit well enough; **Lyrics timing** in Tune mouth can shift them.
+  another length, for when its times fit well enough; **Lyrics timing** in Tune mouth can shift them (#226).
 - **Fix: searching an artist lists their features as artists.** Search's Artists row listed every credit an artist
   is in as an artist of its own ("Lil Durk • J. Cole", "Calboy;Meek Mill;Lil Durk", "DJ Khaled feat. Lil Baby &
   Lil Durk"), each opening the wrong artist, and the real one was lost among them. The Hub's search now splits each
   credit into its artists (on feat./ft./featuring, •, ;, " / ", and on &, "and", x, "with" or a comma when one of
   the names records on its own, so "Simon & Garfunkel" stays one), lists each artist once by their own name with
   Navidrome's picture and id, and puts the exact name first. The Hub's catalog `search3` does the same with joined
-  album artists (`creditNames` in `hub/src/credits.ts`, `hub/src/librarySearch.ts`, `hub/src/subsonicCatalog.ts`).
+  album artists (`creditNames` in `hub/src/credits.ts`, `hub/src/librarySearch.ts`, `hub/src/subsonicCatalog.ts`, #227).
 - **Fix: the owl's hands.** Its three finger feathers splayed into a clump that looked broken, most of all round the
   mic. Each wing now ends in one soft rounded wing tip with three short scalloped feathers along its edge
-  (`wingTip` in `parts.tsx`).
+  (`wingTip` in `parts.tsx`, #225).
 
 ## 0.32.0
 - **An owl and a T. rex.** The thirteenth and fourteenth critters, drawn cute. The owlet is drawn like a sticker: a round
