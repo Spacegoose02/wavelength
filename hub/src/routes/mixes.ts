@@ -8,10 +8,12 @@ import { getUser, listUsers, type User } from '../users.ts';
 
 /** Made for you mixes and Blends (mixes.ts). */
 export function mixRoutes(app: FastifyInstance, { db, mixes }: Ctx) {
-  app.get<{ Querystring: { fresh?: string } }>('/api/mixes', async (req) => {
+  app.get<{ Querystring: { fresh?: string; tz?: string } }>('/api/mixes', async (req) => {
     const { user } = signedIn(req);
     requireFeature(db, 'homeMixes', user);
-    return mixes.get(user.id, user.role === 'kid', req.query.fresh === '1');
+    // the device's time zone (minutes behind UTC), for the daylist; older apps don't send it and get no daylist
+    const tz = Number(req.query.tz);
+    return mixes.get(user.id, user.role === 'kid', req.query.fresh === '1', Number.isFinite(tz) && Math.abs(tz) <= 840 ? tz : undefined);
   });
 
   /** Who this person may make a Blend with: grown-ups with grown-ups and their own kids; kids with their parents. */

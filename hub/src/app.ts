@@ -144,6 +144,15 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     videos: undefined as unknown as Videos,
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.mixes = new Mixes(db, ctx.mixLookups);
+  ctx.mixes.mood = (song) => {
+    try {
+      const id = typeof song.track?.id === 'string' ? song.track.id : undefined;
+      const i = ctx.sonic.index.find({ id, artist: song.artist, title: song.title });
+      return i === undefined ? undefined : ctx.sonic.index.hit(i).mood;
+    } catch {
+      return undefined;
+    }
+  };
   ctx.station = new Station(db, ctx.dj, ctx.mixes, opts.stationChart);
   ctx.videos = new Videos(opts.videoSearch ?? ((q, n) => ctx.ytdlp.search(q, n)));
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);

@@ -303,7 +303,7 @@ export interface HubMix {
   id: string;
   name: string;
   description: string;
-  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend';
+  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend' | 'daylist';
   songs: HubMixSong[];
 }
 
@@ -783,7 +783,8 @@ export class HubClient {
   }
 
   me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean>; shared?: { discordAppId?: string | null } }>('GET', '/api/me');
-  mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes${fresh ? '?fresh=1' : ''}`);
+  /** With the device's time zone, so the Hub can add the daylist for this time of day. */
+  mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes?tz=${new Date().getTimezoneOffset()}${fresh ? '&fresh=1' : ''}`);
   blendPeople = () => this.call<{ optedIn: boolean; people: { id: number; displayName: string; optedIn: boolean }[] }>('GET', '/api/blend/people');
   setBlendOptIn = (on: boolean) => this.call<{ optedIn: boolean }>('PUT', '/api/blend/optin', { on });
   blend = (ids: number[]) => this.call<{ mix: HubMix }>('GET', `/api/blend?with=${ids.join(',')}`);
