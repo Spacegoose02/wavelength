@@ -400,10 +400,10 @@ export function Arm({
         <path className="limb-outline" d={g.fore} fill="none" strokeWidth={g.foreW + 5} strokeLinecap="round" />
       </g>
       <path className="sleeve" d={g.upper} fill="none" strokeWidth={g.arm} strokeLinecap="round" />
-      {g.hand === 'wing' && <path className="wing-bars" d={g.upper} fill="none" strokeWidth={g.arm * 0.55} strokeDasharray="3 8" />}
+      {g.hand === 'wing' && <path className="wing-bars" d={g.upper} fill="none" strokeWidth={g.arm * 0.3} strokeDasharray="0.1 9" strokeLinecap="round" />}
       <g data-part={`${part}-fore`} data-elbow={g.elbow} data-hand={`${g.hx} ${g.hy}`}>
         <path className="sleeve" d={g.fore} fill="none" strokeWidth={g.foreW} strokeLinecap="round" />
-        {g.hand === 'wing' && <path className="wing-bars" d={g.fore} fill="none" strokeWidth={g.foreW * 0.55} strokeDasharray="3 8" />}
+        {g.hand === 'wing' && <path className="wing-bars" d={g.fore} fill="none" strokeWidth={g.foreW * 0.3} strokeDasharray="0.1 9" strokeLinecap="round" />}
       </g>
       <g data-part={`${part}-paw`}>
         {typeof children === 'function' ? children([Number(g.hx), Number(g.hy)]) : <g transform={g.held}>{children}</g>}

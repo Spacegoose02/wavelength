@@ -137,11 +137,13 @@ the asset work and a risk on low-end phones and the iOS WebView.
 - An owl and a T. rex (November 2026), drawn cute and kept clear of famous cartoon ones (no snowy post owl,
   spectacles or mortarboard; no purple dinosaur). The owl's ear tufts are `ear-l` / `ear-r` like the bears' ears,
   so the rig wiggles them and the cowboy hat hides them. Two optional `Figure` fields shape the arms (`Arm` in
-  parts.tsx): `hand: 'wing'` bars the owl's bare sleeves like feathers (`.wing-bars`, `.species-owl .sleeve`) and
+  parts.tsx): `hand: 'wing'` spots the owl's bare sleeves like feathers (`.wing-bars`, `.species-owl .sleeve`) and
   fans a feathered tip under the hand, and the T. rex's `fore` makes the forearm thinner than the upper arm, so
   the short arm reads as bending at a little elbow, with `hand: 'claws'` adding two claws. Its shoulders sit high
   and close on the chest, but its `reach` is the usual, so its hands still land on every instrument. The T. rex
-  tail sweeps along the ground to the right behind the legs, with little plates (`.dino-plate`).
+  tail sweeps along the ground to the right behind the legs, striped on top (`.dino-stripe`). Its head is turned a
+  little to its right so the snout shows, like the elephant's trunk it is off-centre, but the eyes stay centred over
+  the skeleton's so glasses and visors still fit.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

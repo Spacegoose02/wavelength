@@ -2,14 +2,15 @@
 
 ## Unreleased
 - **An owl and a T. rex.** The thirteenth and fourteenth critters, drawn cute. The owlet is round and brown with
-  two pointy ear tufts, a pale heart of a face round huge amber eyes, a little orange hooked beak and rosy cheeks, on
-  a plump figure with orange talons and a fan of tail feathers. Its wings are its arms: bare, barred like feathers,
-  with a feathered tip for a hand. The baby T. rex is leaf green with a big soft snout, a pale yellow chin, freckles,
-  little brow ridges and a wide grin with two tiny teeth, on big strong legs with three-clawed feet and a thick tail
-  sweeping along the ground with a row of little plates. Its arms are short and thin: a plump upper arm, a skinny
-  forearm bending at the elbow and two little claws on each hand, and they still reach every instrument. Both play
-  all nine acts (the Driver too) as a boy or a girl, with the holiday hats and themed outfits; the owl's tufts tuck
-  under the cowboy hat like the bears' ears (`OwlFace` and `TrexFace` in `faces.tsx`, `FIGURES.owl` and
+  scalloped crown feathers and two big feather tufts, a cream face with pale brows sweeping up to the tufts, huge
+  orange eyes, a long orange beak and rosy cheeks, on a plump figure with orange talons and a fan of tail feathers.
+  Its wings are its arms: bare and spotted, with a feathered tip for a hand. The baby T. rex is leaf green, its head
+  turned a little to show off a big blunt snout, with dark brown stripes on its crown, big eyes under heavy brows and
+  a long happy grin lined with little pointed teeth over a cream chin, on big strong legs with three-toed clawed feet
+  and a thick tail sweeping along the ground, striped on top. Its arms are short and thin: a plump upper arm, a
+  skinny forearm bending at the elbow and two little claws on each hand, and they still reach every instrument. Both
+  play all nine acts (the Driver too) as a boy or a girl, with the holiday hats and themed outfits; the owl's tufts
+  tuck under the cowboy hat like the bears' ears (`OwlFace` and `TrexFace` in `faces.tsx`, `FIGURES.owl` and
   `FIGURES.trex` in `bodies.tsx`, a figure's `fore` and `hand` in `Arm`, `parts.tsx`).
 - **Wrong lyrics? Pick the right ones.** Under the lyrics in Now Playing, **Wrong lyrics?** lists the other LRCLIB
   entries for the song (name, artist, album, length and the first lines, the likeliest first), searches LRCLIB with
