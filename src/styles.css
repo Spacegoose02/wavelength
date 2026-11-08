@@ -1604,6 +1604,19 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shell-seam { stroke: #2a1c10; fill: none; }
 .critter .shell-ray { stroke: #e8b445; fill: none; }
 .critter .claw { stroke: #f1fbe6; fill: none; }
+.species-elephant { --skin: #a3abc4; --skin-dark: #6e7690; --belly: #d2d8e8; }
+.critter .toenail { fill: #f3ecdc; }
+.critter .elephant-tuft { fill: #5d6580; }
+/* the elephant's ears stay out under every hat (even the cowboy hat) and flap from where they join the head;
+   the hazmat hood hides them and the trunk */
+.critter.species-elephant .under-hat :is([data-part='ear-l'], [data-part='ear-r']) { display: inline; }
+.critter.species-elephant [data-part='ear-l'] { transform-origin: 100% 45%; }
+.critter.species-elephant [data-part='ear-r'] { transform-origin: 0 45%; }
+:root[data-skin-group='nuclear'] .critter :is(.elephant-ears, .elephant-trunk, .lion-mane) { display: none; }
+.species-tiger { --skin: #f08a2c; --skin-dark: #b75a16; --belly: #fbf3e6; }
+.critter .tiger-stripe { stroke: #2a1a12; fill: none; stroke-linecap: round; }
+.species-lion { --skin: #e3a64a; --skin-dark: #a86d22; --belly: #fbf0d8; }
+.critter .lion-tuft { fill: #a4501c; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }

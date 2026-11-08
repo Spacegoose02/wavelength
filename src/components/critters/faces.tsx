@@ -437,3 +437,200 @@ export function TurtleFace() {
     </Placed>
   );
 }
+
+/**
+ * A big cat's round ear (`ear-l`; the right is its mirror about `mid`): fur outside, a pale inner ear, and on
+ * the tiger a dark back edge. Drawn behind the head so the cowboy hat can hide it (`hidesEars`).
+ */
+function CatEars({ fur, inner, mid = 206, rim }: { fur: string; inner: string; mid?: number; rim?: string }) {
+  const ear = (
+    <>
+      <path d="M118 140 C 104 104, 116 76, 148 78 C 170 80, 182 96, 184 112 Z" fill={fur} className="ol" />
+      {rim && <path d="M118 140 C 104 104, 116 76, 148 78" fill="none" stroke={rim} strokeWidth="9" strokeLinecap="round" opacity="0.9" />}
+      <path d="M130 128 C 124 106, 132 92, 150 94 C 162 96, 170 106, 170 116 Z" fill={inner} />
+    </>
+  );
+  return (
+    <>
+      <g data-part="ear-l">{ear}</g>
+      <g data-part="ear-r">
+        <g transform={`translate(${2 * mid} 0) scale(-1 1)`}>{ear}</g>
+      </g>
+    </>
+  );
+}
+
+/**
+ * A tiger cub's face, drawn cute and kept clear of famous cartoon tigers (no blue nose, no bouncy tail, no
+ * neckerchief): a round orange head with fluffy cheek ruffs, three bold stripes on the brow and a few on the
+ * cheeks, a white muzzle and eye patches, round ears with dark backs, big green eyes, a pink nose and
+ * whiskers.
+ */
+export function TigerFace() {
+  return (
+    <Placed cx={206} cy={176} s={0.84}>
+      <defs>
+        <Shade id="tg-fur" hi="#ffc27a" mid="#f08a2c" lo="#b75a16" />
+        <Shade id="tg-white" hi="#ffffff" lo="#e9dccb" />
+      </defs>
+      <CatEars fur="url(#tg-fur)" inner="#fff1e4" rim="#2a1a12" />
+      <HeadShape
+        id="tiger"
+        fill="url(#tg-fur)"
+        d="M206 92 C 266 92, 300 128, 302 168 Q 318 178 312 190 Q 320 200 304 208 C 292 238, 254 256, 206 256 C 158 256, 120 238, 108 208 Q 92 200 100 190 Q 94 178 110 168 C 112 128, 146 92, 206 92 Z"
+      >
+        {/* white patches over the eyes and the muzzle */}
+        <ellipse cx="164" cy="146" rx="22" ry="11" fill="url(#tg-white)" opacity="0.9" transform="rotate(-10 164 146)" />
+        <ellipse cx="248" cy="146" rx="22" ry="11" fill="url(#tg-white)" opacity="0.9" transform="rotate(10 248 146)" />
+        <path d="M206 196 C 178 186, 140 196, 132 222 C 140 252, 186 258, 206 254 C 226 258, 272 252, 280 222 C 272 196, 234 186, 206 196 Z" fill="url(#tg-white)" />
+        {/* stripes: three on the brow, three on each cheek */}
+        <g fill="#2a1a12">
+          <path d="M206 96 Q 200 112 206 128 Q 212 112 206 96 Z" />
+          <path d="M182 100 Q 180 114 190 124 Q 190 110 182 100 Z" />
+          <path d="M230 100 Q 232 114 222 124 Q 222 110 230 100 Z" />
+          <path d="M102 172 Q 124 170 140 180 Q 122 180 102 172 Z" />
+          <path d="M100 190 Q 124 186 142 194 Q 122 196 100 190 Z" />
+          <path d="M108 208 Q 126 202 140 208 Q 124 212 108 208 Z" />
+          <path d="M310 172 Q 288 170 272 180 Q 290 180 310 172 Z" />
+          <path d="M312 190 Q 288 186 270 194 Q 290 196 312 190 Z" />
+          <path d="M304 208 Q 286 202 272 208 Q 288 212 304 208 Z" />
+        </g>
+        <ellipse cx="176" cy="112" rx="34" ry="11" fill="rgb(255 255 255 / 0.18)" transform="rotate(-14 176 112)" />
+      </HeadShape>
+      <g data-part="eyes">
+        <Eye cx={166} cy={170} r={19} iris="#5f9a2c" />
+        <Eye cx={246} cy={170} r={19} iris="#5f9a2c" k={0.9} />
+        <Lashes l={[150, 159]} r={[261, 159]} />
+      </g>
+      <Pair l="M146 140 Q 160 132 178 138" mid={206} stroke="#2a1a12" width={4.5} />
+      <g data-part="whisker-l" className="whiskers">
+        <path d="M172 220 L 124 212 M172 226 L 122 228" />
+      </g>
+      <g data-part="whisker-r" className="whiskers">
+        <path d="M240 220 L 290 212 M240 226 L 292 228" />
+      </g>
+      {/* a pink heart-shaped nose */}
+      <path d="M194 202 Q 206 196 218 202 Q 216 212 206 216 Q 196 212 194 202 Z" fill="#f2869a" className="ol-thin" />
+      <ellipse cx="202" cy="202" rx="4" ry="2" fill="rgb(255 255 255 / 0.6)" />
+      <path d="M206 216 V222" stroke="#5a3a2a" strokeWidth="2.4" strokeLinecap="round" />
+      <path data-part="smile" d="M190 224 Q 198 232 206 224 Q 214 232 222 224" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+      <Mouth id="tiger" x={206} y={224} w={14} h={26} fill="#5a1a24" line={INK} />
+    </Placed>
+  );
+}
+
+/** The lion's mane: a scalloped ring of tufts round the head, darker at the edge. */
+const MANE = Array.from({ length: 16 }, (_, i) => {
+  const a0 = (i / 16) * Math.PI * 2;
+  const a1 = ((i + 1) / 16) * Math.PI * 2;
+  const am = (a0 + a1) / 2;
+  const p = (a: number, r: number) => `${(206 + r * Math.cos(a)).toFixed(1)} ${(180 + r * 0.94 * Math.sin(a)).toFixed(1)}`;
+  return `${i === 0 ? `M${p(a0, 118)} ` : ''}Q ${p(am, 140)} ${p(a1, 118)}`;
+}).join(' ') + ' Z';
+
+/**
+ * A lion cub's face, drawn cute and kept clear of famous cartoon lions: a round golden head in a big
+ * russet mane (the girl is a lioness, with no mane but a little tuft on the crown), round ears, a cream
+ * muzzle, big amber eyes, a dusky-rose nose and whiskers. The mane is behind the head, so hats sit on the
+ * head and the mane frames them; the hazmat hood hides it (`.lion-mane`, styles.css).
+ */
+export function LionFace() {
+  const girl = useContext(GirlContext);
+  return (
+    <Placed cx={206} cy={176} s={0.84}>
+      <defs>
+        <Shade id="ln-fur" hi="#ffd98a" mid="#e3a64a" lo="#a86d22" />
+        <Shade id="ln-mane" hi="#d0742c" mid="#a4501c" lo="#6a3010" />
+        <Shade id="ln-muzzle" hi="#fffaf0" lo="#ecd6ac" />
+      </defs>
+      {!girl && (
+        <g className="lion-mane">
+          <path d={MANE} fill="url(#ln-mane)" className="ol" />
+          <path d="M120 150 q 10 6 14 18 M292 150 q -10 6 -14 18 M126 220 q 12 -2 20 6 M286 220 q -12 -2 -20 6 M206 68 q -4 10 0 20" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      )}
+      <CatEars fur="url(#ln-fur)" inner="#f6d9b0" />
+      <HeadShape id="lion" fill="url(#ln-fur)" d="M206 96 C 266 96, 300 130, 300 174 C 300 220, 262 252, 206 252 C 150 252, 112 220, 112 174 C 112 130, 146 96, 206 96 Z">
+        <path d="M206 194 C 178 186, 146 196, 140 222 C 148 250, 186 256, 206 252 C 226 256, 264 250, 272 222 C 266 196, 234 186, 206 194 Z" fill="url(#ln-muzzle)" />
+        <ellipse cx="176" cy="116" rx="34" ry="11" fill="rgb(255 255 255 / 0.2)" transform="rotate(-14 176 116)" />
+      </HeadShape>
+      {girl && <path d="M196 100 Q 192 84 204 78 Q 202 90 210 92 Q 216 82 226 86 Q 216 94 216 104 Z" fill="url(#ln-fur)" className="ol-thin" />}
+      <g data-part="eyes">
+        <Eye cx={166} cy={168} r={19} iris="#b8741a" />
+        <Eye cx={246} cy={168} r={19} iris="#b8741a" k={0.9} />
+        <Lashes l={[150, 157]} r={[261, 157]} />
+      </g>
+      <Pair l="M146 140 Q 160 132 178 138" mid={206} stroke="#8a5418" width={4.5} />
+      <g data-part="whisker-l" className="whiskers">
+        <path d="M172 220 L 124 212 M172 226 L 122 228" />
+      </g>
+      <g data-part="whisker-r" className="whiskers">
+        <path d="M240 220 L 290 212 M240 226 L 292 228" />
+      </g>
+      <path d="M192 200 Q 206 192 220 200 Q 218 212 206 216 Q 194 212 192 200 Z" fill="#9a5248" className="ol-thin" />
+      <ellipse cx="201" cy="200" rx="4.5" ry="2" fill="rgb(255 255 255 / 0.5)" />
+      <path d="M206 216 V222" stroke="#5a3a2a" strokeWidth="2.4" strokeLinecap="round" />
+      <path data-part="smile" d="M190 224 Q 198 232 206 224 Q 214 232 222 224" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+      <Mouth id="lion" x={206} y={224} w={14} h={26} fill="#5a1a24" line={INK} />
+    </Placed>
+  );
+}
+
+/** The elephant's left ear (the right is its mirror): a big rounded flap out to the side, pink inside. */
+const ELEPHANT_EAR = 'M140 128 C 104 92, 52 98, 40 140 C 30 180, 54 228, 96 236 C 118 240, 134 228, 142 212 Z';
+/** The trunk's outline, and just its two sides (its root at the top is left open, so it joins the face). */
+const TRUNK = 'M184 180 C 182 220, 190 264, 214 274 C 240 284, 270 268, 276 244 C 276 236, 264 234, 262 242 C 258 256, 242 262, 232 252 C 224 242, 228 206, 230 180 Z';
+const TRUNK_SIDES = 'M184 180 C 182 220, 190 264, 214 274 C 240 284, 270 268, 276 244 C 276 236, 264 234, 262 242 C 258 256, 242 262, 232 252 C 224 242, 228 206, 230 180';
+const ELEPHANT_EAR_IN = 'M132 140 C 106 116, 70 120, 60 148 C 52 178, 70 212, 100 218 C 116 220, 126 210, 130 200 Z';
+
+/**
+ * An elephant calf's face, drawn cute and kept clear of famous cartoon elephants (no giant flying ears, no
+ * hat or bonnet of its own): a round soft-grey head, big round ears out to the sides with pink insides,
+ * big blue eyes, pink cheeks, and a short trunk that curls up to one side so the smile shows under it.
+ * The ears flap (rig) and stay out with every hat, even the cowboy hat; the hazmat hood hides the ears and
+ * the trunk (`.elephant-ears`, `.elephant-trunk`, styles.css).
+ */
+export function ElephantFace() {
+  return (
+    <Placed cx={206} cy={174} s={0.84}>
+      <defs>
+        <Shade id="el-skin" hi="#d2d8e8" mid="#a3abc4" lo="#6e7690" />
+        <Shade id="el-ear" hi="#c6cde0" mid="#9aa2bc" lo="#6a728c" />
+      </defs>
+      <g className="elephant-ears">
+        <g data-part="ear-l">
+          <path d={ELEPHANT_EAR} fill="url(#el-ear)" className="ol" />
+          <path d={ELEPHANT_EAR_IN} fill="#f2b6c0" />
+        </g>
+        <g data-part="ear-r">
+          <g transform="translate(412 0) scale(-1 1)">
+            <path d={ELEPHANT_EAR} fill="url(#el-ear)" className="ol" />
+            <path d={ELEPHANT_EAR_IN} fill="#f2b6c0" />
+          </g>
+        </g>
+      </g>
+      <HeadShape id="elephant" fill="url(#el-skin)" d="M206 94 C 266 94, 300 130, 300 176 C 300 222, 262 252, 206 252 C 150 252, 112 222, 112 176 C 112 130, 146 94, 206 94 Z">
+        <path d="M184 108 q 4 8 2 14 M206 104 q 2 8 2 14 M228 108 q -2 8 0 14" fill="none" stroke="rgb(0 0 0 / 0.18)" strokeWidth="2" strokeLinecap="round" />
+        <ellipse cx="176" cy="116" rx="36" ry="12" fill="rgb(255 255 255 / 0.22)" transform="rotate(-14 176 116)" />
+      </HeadShape>
+      <ellipse cx="140" cy="206" rx="15" ry="9" fill="#ff8f9c" opacity="0.45" />
+      <ellipse cx="272" cy="206" rx="15" ry="9" fill="#ff8f9c" opacity="0.45" />
+      <g data-part="eyes">
+        <Eye cx={164} cy={166} r={19} iris="#3a6ea8" />
+        <Eye cx={248} cy={166} r={19} iris="#3a6ea8" k={0.9} />
+        <Lashes l={[148, 155]} r={[263, 155]} />
+      </g>
+      <Pair l="M146 136 Q 160 128 178 134" mid={206} stroke="#5d6580" width={4.5} />
+      <path data-part="smile" d="M156 226 Q 168 244 186 238" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+      <Mouth id="elephant" x={174} y={234} w={12} h={20} fill="#5a1a24" line={INK} teeth="none" />
+      {/* the trunk: down from between the eyes, past the chin, then curling up and out to the right; outlined
+          down its sides only, so it grows out of the face without a seam */}
+      <g className="elephant-trunk">
+        <path d={TRUNK} fill="url(#el-skin)" />
+        <path d={TRUNK_SIDES} fill="none" className="ol" />
+        <path d="M190 206 q 16 5 34 0 M194 228 q 14 5 30 0 M204 250 q 10 4 22 -2" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2.2" strokeLinecap="round" />
+        <ellipse cx="270" cy="241" rx="8" ry="5" fill="#4a5068" transform="rotate(-60 270 241)" />
+      </g>
+    </Placed>
+  );
+}
