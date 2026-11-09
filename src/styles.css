@@ -1703,6 +1703,21 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .dino-plate { fill: #3f7a2c; }
 .critter .dino-claw { fill: #fffbe8; }
 .critter .hand-claw { stroke: #fffbe8; }
+/* the monkey: brown fur with a peach face, ears and feet; the ears stay out under every hat, and the long tail
+   curls at the tip */
+.species-monkey { --skin: #8a5530; --skin-dark: #55301a; --belly: #f2c79c; }
+.critter .monkey-sole { fill: #f2c79c; }
+.critter .monkey-tail { stroke: var(--skin); }
+.critter.species-monkey .under-hat :is([data-part='ear-l'], [data-part='ear-r']) { display: inline; }
+:root[data-skin-group='nuclear'] .critter .monkey-ears { display: none; }
+/* the flamingo: pink all over, its wings are its arms (bare, with black feathered tips for hands) */
+.species-flamingo { --skin: #f694b4; --skin-dark: #c4547e; --belly: #ffd0de; }
+.critter.species-flamingo .sleeve { stroke: var(--skin); }
+.critter.species-flamingo .hand { fill: #2c2430; }
+.critter .flamingo-tail { fill: #e57aa0; }
+/* the gorilla: charcoal fur, grey leathery hands and feet */
+.species-gorilla { --skin: #3e393b; --skin-dark: #1c191a; --belly: #7e6f68; }
+.critter .gorilla-sole { fill: #6e605a; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }
@@ -1803,7 +1818,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
 /* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
-.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano) .shark-fin,
+.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin) .shark-fin,
 :root[data-skin-group='nuclear'] .critter .shark-fin,
 :root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
@@ -2019,6 +2034,89 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .pocket-square { fill: var(--accent); }
 .critter .bowtie { fill: var(--accent); }
 .critter .bowtie-knot { fill: color-mix(in srgb, var(--accent) 70%, #000); }
+
+/* the Marimba act (Marimba.tsx): the neckerchief, hat band and the struck bars' glow follow the skin; the jungle,
+   the khaki and the wood are fixed */
+.critter .jungle-far { fill: #1d4e33; }
+.critter .jungle-trunk { fill: #163826; }
+.critter .light-shaft { fill: rgb(255 248 200 / 0.08); }
+.critter .cliff { fill: #4a5a4c; }
+.critter .falls { fill: #bfeaf2; opacity: 0.85; }
+.critter .falls-streak { stroke: #ffffff; opacity: 0.7; }
+.critter .falls-foam { stroke: #ffffff; }
+.critter .pool { fill: #5fb8c8; }
+.critter .splash { stroke: #ffffff; opacity: 0.85; }
+.critter .jungle-floor { fill: #3f6b2e; }
+.critter .moss { stroke: #5f8f3a; }
+.critter .pollen { fill: #fff6b0; }
+.critter .vine { stroke: #2f6a2a; }
+.critter .vine-leaf { fill: #4c9a3a; }
+.critter .branch { stroke: #5a3a1e; }
+.critter .parrot { fill: #e8352e; }
+.critter .parrot-wing { fill: #2a7ad8; }
+.critter .parrot-tail { fill: #f2c12e; }
+.critter .parrot-beak { fill: #f4ecd8; }
+.critter .butterfly { fill: #ffb02e; }
+.critter .butterfly-1 { fill: #5ad0ff; }
+.critter .butterfly-2 { fill: #ff6fb0; }
+.critter .jungle-leaf { fill: #2f8a46; }
+.critter .jungle-leaf-2 { fill: #3fa456; }
+.critter-marimba .top { fill: #cdb67e; }
+.critter-marimba .sleeve { stroke: #cdb67e; }
+.critter-marimba .legs { fill: #a8925c; }
+.critter-marimba .skirt .top { fill: #a8925c; }
+.critter .khaki-pocket { fill: #c0a970; }
+.critter .khaki-flap { fill: #b39b62; stroke: #b39b62; }
+.critter .neckerchief { fill: var(--accent); }
+.critter .pith { fill: #e2d3a4; }
+.critter .marimba-bar { fill: #9a4f2a; }
+.critter .bar-lit { fill: var(--viz-high); }
+.critter .marimba-rail { fill: #5a341c; }
+.critter .marimba-frame { stroke: #5a341c; }
+.critter .resonator { fill: #c9a24a; }
+.critter .mallet-shaft { stroke: #e8d6a8; }
+.critter .mallet-head { fill: var(--viz-mid); }
+
+/* the Violin act (Violin.tsx): the coat, scarf and the window's glow follow the skin; the street, the lamp, the
+   rain and the violin are fixed */
+.critter .night-sky { fill: #141a33; }
+.critter .brick-wall { fill: #5a2e26; }
+.critter .brick-line { stroke: #3e1e18; fill: none; }
+.critter .roof-edge { stroke: #2a1612; }
+.critter .window-frame { fill: #2a1a14; stroke: #2a1a14; }
+.critter .window-glow { fill: color-mix(in srgb, var(--viz-mid) 35%, #ffd27a); }
+.critter .window-sill { fill: #6e6a66; }
+.critter .cat { fill: #1b1416; stroke: #1b1416; }
+.critter .cat-eye { fill: #d8ff6a; }
+.critter .pavement { fill: #3a3d46; }
+.critter .kerb { stroke: #2a2c33; }
+.critter .puddle { fill: #23263a; }
+.critter .puddle-shine { fill: #ffe6a0; opacity: 0.5; }
+.critter .ripple { stroke: rgb(255 255 255 / 0.6); }
+.critter .lamp-post { stroke: #1e2026; }
+.critter .lamp-head { fill: #2a2d36; }
+.critter .lamp-bulb { fill: #ffe6a0; }
+.critter .case { fill: #2a1e1a; }
+.critter .case-lining { fill: #7a1e3a; }
+.critter .coin { fill: #e8c25a; }
+.critter .glint { stroke: #ffffff; }
+.critter .raindrop { stroke: rgb(200 220 255 / 0.55); }
+.critter .coat-shade { fill: color-mix(in srgb, var(--accent) 75%, #000); }
+.critter .coat-belt { stroke: color-mix(in srgb, var(--accent) 60%, #000); }
+.critter .buckle { stroke: #d8c07a; }
+.critter .coat-button { fill: color-mix(in srgb, var(--accent) 45%, #000); }
+.critter .coat-skirt { fill: color-mix(in srgb, var(--accent) 85%, #000); }
+.critter-violin .legs { fill: #23232c; }
+.critter .scarf { fill: var(--viz-mid); }
+.critter .scarf-fringe { stroke: var(--viz-mid); }
+.critter .flatcap { fill: #5e5a56; }
+.critter .violin-body { fill: #b8601e; }
+.critter .violin-neck, .critter .violin-scroll, .critter .violin-chin { fill: #2a1608; }
+.critter .violin-bridge { fill: #e8d0a0; }
+.critter .violin-string { stroke: #f0e8d8; }
+.critter .bow-stick { stroke: #4a2a12; }
+.critter .bow-hair { stroke: #f4f0e4; }
+.critter .bow-frog { fill: #1b1b1f; }
 
 /* holiday hats replace the critter's own headwear */
 .critter .hat, .critter .outfit { display: none; }

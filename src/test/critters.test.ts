@@ -171,8 +171,61 @@ describe('the owl and the T. rex', () => {
   });
 });
 
+describe('the monkey, the flamingo and the gorilla', () => {
+  const draw = async (id: string, hidesEars = false) => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    const species = SPECIES.find((s) => s.id === id)!;
+    return renderToStaticMarkup(h('svg', null, h(Head, { species, hat: h('g', { className: 'own-hat' }), hidesEars })));
+  };
+  const arm = async (id: string) => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Arm } = await import('../components/critters/parts');
+    const { SpeciesContext } = await import('../components/critters/bodies');
+    const species = SPECIES.find((s) => s.id === id)!;
+    return renderToStaticMarkup(h(SpeciesContext.Provider, { value: species }, h('svg', null, h(Arm, { part: 'arm-r', d: 'M262 268 Q 290 300 300 330', hand: [300, 330] }))));
+  };
+
+  it('are species with their own figures', async () => {
+    const { SPECIES } = await import('../components/critters/species');
+    const { FIGURES } = await import('../components/critters/bodies');
+    for (const id of ['monkey', 'flamingo', 'gorilla'] as const) expect(SPECIES.find((s) => s.id === id)?.figure).toBe(FIGURES[id]);
+  });
+
+  it('draws the monkey and gorilla ears behind the head, and keeps the monkey ears out under the cowboy hat', async () => {
+    for (const id of ['monkey', 'gorilla']) {
+      const svg = await draw(id);
+      expect(svg.indexOf('data-part="ear-l"'), id).toBeGreaterThan(-1);
+      expect(svg.indexOf('data-part="ear-l"'), id).toBeLessThan(svg.indexOf(`head-${id}`));
+    }
+    // the ears go under-hat with the cowboy hat; styles.css shows the monkey's again (they sit at the sides)
+    expect(await draw('monkey', true)).toContain('under-hat');
+  });
+
+  it('gives the flamingo wings for arms and a bill over its singing mouth', async () => {
+    expect(await arm('flamingo')).toContain('wing-seam');
+    expect(await arm('gorilla')).not.toMatch(/wing-seam|hand-claw/);
+    const svg = await draw('flamingo');
+    expect(svg.indexOf('clip-flamingo-bill')).toBeLessThan(svg.indexOf('data-part="yawn"'));
+  });
+
+  it('gives the gorilla the broadest shoulders and the longest reach, and the flamingo the longest neck', async () => {
+    const { FIGURES } = await import('../components/critters/bodies');
+    const span = (f: { shoulders: [[number, number], [number, number]] }) => f.shoulders[1][0] - f.shoulders[0][0];
+    for (const f of Object.values(FIGURES)) {
+      expect(span(FIGURES.gorilla)).toBeGreaterThanOrEqual(span(f));
+      expect(FIGURES.gorilla.reach).toBeGreaterThanOrEqual(f.reach);
+      expect(FIGURES.flamingo.head[0]).toBeLessThanOrEqual(f.head[0]);
+    }
+  });
+});
+
 describe('every act', () => {
-  it('draws for every species, boy and girl, including the Reactor, Bongo and Pianist acts', async () => {
+  it('draws for every species, boy and girl, including the Reactor, Bongo, Pianist, Marimba and Violinist acts', async () => {
     // the player behind the rig makes an <audio> when it loads; tests run without a DOM
     vi.stubGlobal('Audio', function Audio() {
       return new Proxy({}, { get: () => () => {} });
@@ -180,7 +233,7 @@ describe('every act', () => {
     const { createElement: h } = await import('react');
     const { renderToStaticMarkup } = await import('react-dom/server');
     const { ACTS, Critter, SPECIES } = await import('../components/critters/Critter');
-    expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano']));
+    expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano', 'marimba', 'violin']));
     for (const act of ACTS) {
       for (const sp of SPECIES) {
         for (const girl of [false, true]) {

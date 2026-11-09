@@ -805,3 +805,152 @@ export function TrexFace() {
     </Placed>
   );
 }
+
+/**
+ * A monkey's face, drawn cute and kept clear of famous cartoon monkeys (no fez or vest, no yellow-hat friend,
+ * no red cap): a round brown head with a little tuft of hair on the crown, big round ears out at the sides
+ * with peach insides (`ear-l` / `ear-r`; they stay out under every hat, `.species-monkey`, styles.css), a
+ * peach heart of a face round big brown eyes, a soft muzzle with two nostrils, rosy cheeks and a wide grin.
+ */
+export function MonkeyFace() {
+  return (
+    <Placed cx={206} cy={176} s={0.84}>
+      <defs>
+        <Shade id="mk-fur" hi="#b07a4c" mid="#8a5530" lo="#55301a" />
+        <Shade id="mk-face" hi="#fde3c4" mid="#f2c79c" lo="#d9a072" />
+      </defs>
+      {/* round ears out at the sides, at eye level */}
+      <g className="monkey-ears">
+        <g data-part="ear-l">
+          <circle cx="104" cy="176" r="32" fill="url(#mk-fur)" className="ol" />
+          <circle cx="106" cy="178" r="20" fill="url(#mk-face)" />
+          <path d="M100 172 Q 108 176 104 188" fill="none" stroke="rgb(0 0 0 / 0.18)" strokeWidth="3" strokeLinecap="round" />
+        </g>
+        <g data-part="ear-r">
+          <circle cx="308" cy="176" r="32" fill="url(#mk-fur)" className="ol" />
+          <circle cx="306" cy="178" r="20" fill="url(#mk-face)" />
+          <path d="M312 172 Q 304 176 308 188" fill="none" stroke="rgb(0 0 0 / 0.18)" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      </g>
+      <HeadShape id="monkey" fill="url(#mk-fur)" d="M206 92 C 266 92, 300 128, 300 174 C 300 222, 262 256, 206 256 C 150 256, 112 222, 112 174 C 112 128, 146 92, 206 92 Z">
+        {/* the peach face: a heart round the eyes, narrowing into the muzzle */}
+        <path d="M206 142 C 194 118, 144 116, 134 148 C 126 172, 136 192, 148 204 C 140 236, 168 256, 206 256 C 244 256, 272 236, 264 204 C 276 192, 286 172, 278 148 C 268 116, 218 118, 206 142 Z" fill="url(#mk-face)" />
+        <ellipse cx="206" cy="222" rx="48" ry="30" fill="#fff0dc" opacity="0.55" />
+        <path d="M188 100 q 6 10 4 20 M224 100 q -6 10 -4 20" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2" strokeLinecap="round" />
+        <ellipse cx="174" cy="112" rx="32" ry="10" fill="rgb(255 255 255 / 0.18)" transform="rotate(-14 174 112)" />
+      </HeadShape>
+      {/* a little tuft of hair on the crown */}
+      <path d="M190 98 Q 186 78 200 70 Q 198 84 208 86 Q 212 72 226 72 Q 216 84 222 98 Z" fill="url(#mk-fur)" className="ol-thin" />
+      <ellipse cx="146" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.5" />
+      <ellipse cx="266" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.5" />
+      <g data-part="eyes">
+        <Eye cx={168} cy={168} r={18} iris="#5a3418" />
+        <Eye cx={244} cy={168} r={18} iris="#5a3418" k={0.9} />
+        <Lashes l={[153, 157]} r={[258, 157]} />
+      </g>
+      <Pair l="M148 140 Q 162 132 180 138" mid={206} stroke="#55301a" width={4.5} />
+      {/* two nostrils on the muzzle */}
+      <ellipse cx="198" cy="204" rx="4" ry="3" fill="#5a3418" transform="rotate(-15 198 204)" />
+      <ellipse cx="214" cy="204" rx="4" ry="3" fill="#5a3418" transform="rotate(15 214 204)" />
+      <path data-part="smile" d="M176 222 Q 206 246 236 222 M172 218 Q 173 224 179 226 M240 218 Q 239 224 233 226" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+      <Mouth id="monkey" x={206} y={224} w={16} h={28} fill="#5a1a24" line={INK} />
+    </Placed>
+  );
+}
+
+/**
+ * A baby gorilla's face, drawn cute and kept clear of famous cartoon apes (no necktie, no initials, no
+ * skyscraper): a charcoal head domed a little at the crown, small round ears, a soft grey leathery face with a
+ * heavy brow (the brows, which lift and tilt with the singing), big brown eyes, a broad nose with wide nostrils,
+ * a wide gentle smile and pink cheeks.
+ */
+export function GorillaFace() {
+  return (
+    <Placed cx={206} cy={172} s={0.84}>
+      <defs>
+        <Shade id="go-fur" hi="#6a6466" mid="#3e393b" lo="#1c191a" />
+        <Shade id="go-face" hi="#a3958e" mid="#7e6f68" lo="#574a44" />
+      </defs>
+      <g data-part="ear-l">
+        <circle cx="112" cy="182" r="17" fill="url(#go-fur)" className="ol" />
+        <circle cx="114" cy="183" r="10" fill="url(#go-face)" />
+      </g>
+      <g data-part="ear-r">
+        <circle cx="300" cy="182" r="17" fill="url(#go-fur)" className="ol" />
+        <circle cx="298" cy="183" r="10" fill="url(#go-face)" />
+      </g>
+      <HeadShape id="gorilla" fill="url(#go-fur)" d="M206 76 C 254 76, 296 112, 300 164 Q 310 180 302 196 C 296 234, 258 258, 206 258 C 154 258, 116 234, 110 196 Q 102 180 112 164 C 116 112, 158 76, 206 76 Z">
+        {/* fur on the domed crown */}
+        <path d="M184 92 q 6 10 4 22 M206 86 q 2 12 2 24 M228 92 q -6 10 -4 22" fill="none" stroke="rgb(255 255 255 / 0.12)" strokeWidth="2.4" strokeLinecap="round" />
+        {/* the leathery face: wide over the eyes, round over the muzzle */}
+        <path d="M206 132 C 168 124, 132 132, 132 164 C 132 184, 138 196, 148 204 C 142 240, 174 256, 206 256 C 238 256, 270 240, 264 204 C 274 196, 280 184, 280 164 C 280 132, 244 124, 206 132 Z" fill="url(#go-face)" />
+        <ellipse cx="206" cy="226" rx="44" ry="26" fill="#c8b8ae" opacity="0.35" />
+        <ellipse cx="172" cy="104" rx="34" ry="11" fill="rgb(255 255 255 / 0.14)" transform="rotate(-14 172 104)" />
+      </HeadShape>
+      <ellipse cx="146" cy="214" rx="13" ry="7" fill="#ff8f9c" opacity="0.4" />
+      <ellipse cx="266" cy="214" rx="13" ry="7" fill="#ff8f9c" opacity="0.4" />
+      <g data-part="eyes">
+        <Eye cx={170} cy={170} r={17} iris="#4a2a16" />
+        <Eye cx={242} cy={170} r={17} iris="#4a2a16" k={0.9} />
+        <Lashes l={[156, 159]} r={[255, 159]} />
+      </g>
+      {/* a heavy brow ridge over each eye */}
+      <Pair l="M144 146 Q 168 134 196 144" mid={206} stroke="#3e3430" width={9} />
+      {/* a broad nose with wide nostrils */}
+      <path d="M186 196 Q 206 184 226 196 Q 232 210 218 214 Q 206 208 194 214 Q 180 210 186 196 Z" fill="#4a3e3a" className="ol-thin" />
+      <ellipse cx="196" cy="205" rx="5" ry="3.6" fill="#1f1816" />
+      <ellipse cx="216" cy="205" rx="5" ry="3.6" fill="#1f1816" />
+      <ellipse cx="202" cy="194" rx="7" ry="2.2" fill="rgb(255 255 255 / 0.3)" />
+      <path data-part="smile" d="M176 228 Q 206 248 236 228" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+      <Mouth id="gorilla" x={206} y={228} w={17} h={28} fill="#5a1a24" line={INK} />
+    </Placed>
+  );
+}
+
+/** The flamingo's bill: pale pink at the base, bending down to a black tip. */
+const FLAMINGO_BILL = 'M176 190 Q 206 178 236 190 Q 244 212 230 226 Q 216 236 213 250 Q 206 264 199 250 Q 196 236 182 226 Q 168 212 176 190 Z';
+
+/**
+ * A flamingo chick's face, drawn cute: a round pink head with a few fluffy feathers on the crown, big
+ * friendly eyes with golden irises, rosy cheeks, and a pale bill bending down to a black tip, with the smile
+ * either side of the tip; singing, the bill opens over it. No ears, so hats sit on the round head; the wings are its arms
+ * and the long legs are on the figure (`FIGURES.flamingo`).
+ */
+export function FlamingoFace() {
+  return (
+    <Placed cx={206} cy={174} s={0.84}>
+      <defs>
+        <Shade id="fl-skin" hi="#ffd0de" mid="#f694b4" lo="#d4648c" />
+        <Shade id="fl-bill" hi="#fff4f4" lo="#f1c4c8" />
+      </defs>
+      {/* a fluffy crest */}
+      <path d="M196 100 C 186 84, 192 70, 202 66 C 200 78, 206 82, 210 78 C 214 68, 226 66, 232 72 C 222 76, 222 88, 222 100 Z" fill="url(#fl-skin)" className="ol-thin" />
+      <HeadShape id="flamingo" fill="url(#fl-skin)" d="M206 94 C 266 94, 300 130, 300 176 C 300 222, 262 252, 206 252 C 150 252, 112 222, 112 176 C 112 130, 146 94, 206 94 Z">
+        <ellipse cx="176" cy="116" rx="36" ry="12" fill="rgb(255 255 255 / 0.25)" transform="rotate(-14 176 116)" />
+        <path d="M124 196 q 8 4 12 12 M288 196 q -8 4 -12 12" fill="none" stroke="rgb(0 0 0 / 0.12)" strokeWidth="2.4" strokeLinecap="round" />
+      </HeadShape>
+      <ellipse cx="140" cy="210" rx="15" ry="9" fill="#ff5f8a" opacity="0.45" />
+      <ellipse cx="272" cy="210" rx="15" ry="9" fill="#ff5f8a" opacity="0.45" />
+      <g data-part="eyes">
+        <Eye cx={164} cy={166} r={19} iris="#d9952a" />
+        <Eye cx={248} cy={166} r={19} iris="#d9952a" k={0.9} />
+        <Lashes l={[148, 155]} r={[263, 155]} />
+      </g>
+      <Pair l="M146 136 Q 160 128 178 134" mid={206} stroke="#b84a74" width={4.5} />
+      {/* the smile peeks out either side of the bill's tip */}
+      <path data-part="smile" d="M166 222 Q 178 238 194 236 M246 222 Q 234 238 218 236" fill="none" stroke={INK} strokeWidth="2.8" strokeLinecap="round" />
+      <defs>
+        <clipPath id="clip-flamingo-bill">
+          <path d={FLAMINGO_BILL} />
+        </clipPath>
+      </defs>
+      <path d={FLAMINGO_BILL} fill="url(#fl-bill)" className="ol-thin" />
+      <path d="M170 230 H240 V266 H170 Z" fill="#26202a" clipPath="url(#clip-flamingo-bill)" />
+      <path d={FLAMINGO_BILL} fill="none" className="ol-thin" />
+      <ellipse cx="196" cy="194" rx="8" ry="2.2" fill="rgb(255 255 255 / 0.8)" />
+      <path d="M194 204 q 4 2 6 0 M212 204 q 4 2 6 0" fill="none" stroke="#b07a80" strokeWidth="1.8" strokeLinecap="round" />
+      {/* singing, the bill opens: the mouth is drawn over it, where the upper bill meets the black tip */}
+      <Mouth id="flamingo" x={206} y={222} w={17} h={26} fill="#5a1a24" line={INK} teeth="none" />
+    </Placed>
+  );
+}
