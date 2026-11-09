@@ -884,7 +884,7 @@ one household's switch, and `{ off: false }` lets Navidrome answer again.
   tag edits and deletes are catalog scans (`Library.ownScan`).
 
 - **Other music apps** (SUB/WAVE, Symfonium, Feishin…) get a login of their own under Settings → Hub → Other music
-  apps (`GET`/`POST /api/me/app-logins`, audited `device.app_login`): the Hub's Subsonic address (`<hub>/nd/<id>`)
+  apps (`GET`/`POST /api/me/app-logins`, audited `device.app_login`): the Hub's own address (`<hub>`, which answers `/rest/…` itself; `<hub>/nd/<id>` works too)
   and a relay login. Each is a device with platform `subsonic-app`, so its password (made from the device id) can be
   shown again and Remove signs it out. For SUB/WAVE they go in `NAVIDROME_URL`, `NAVIDROME_USER` and
   `NAVIDROME_PASSWORD`. Available whenever the person's devices go through the Hub (Navidrome off, or "Send everyone

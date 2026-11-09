@@ -719,7 +719,7 @@ function AppLogins({ url }: { url: string }) {
           <div className="track-main">
             <div className="track-title">{l.name}</div>
             <div className="track-sub">
-              Address <code>{base}{l.path}</code> · Username <code>{l.username}</code> · Password{' '}
+              Address <code>{base}</code> · Username <code>{l.username}</code> · Password{' '}
               {shown === l.id ? <code>{l.password}</code> : <button className="btn small ghost" onClick={() => setShown(l.id)}>Show</button>}
             </div>
           </div>

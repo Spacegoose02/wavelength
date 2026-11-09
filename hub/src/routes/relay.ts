@@ -1,10 +1,10 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Readable } from 'node:stream';
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { hmac, safeEqual } from '../crypto.ts';
 import { getDevice } from '../devices.ts';
-import { relayPassword, relayTarget } from '../services.ts';
+import { relayPassword, relayTarget, serviceIdOfKind } from '../services.ts';
 import { getUser } from '../users.ts';
 import { songNotForKids } from '../kidSafe.ts';
 import { join } from 'node:path';
@@ -128,12 +128,13 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog, sonic }
     }
   });
 
-  app.get<{ Params: { id: string; method: string }; Querystring: Record<string, string | string[]> }>('/nd/:id/rest/:method', async (req, reply) => {
+  type RestReq = FastifyRequest<{ Params: { id?: string; method: string }; Querystring: Record<string, string | string[]> }>;
+  const rest = async (serviceId: string, req: RestReq, reply: FastifyReply) => {
     const q: Record<string, string> = {};
     for (const [k, v] of Object.entries(req.query ?? {})) q[k] = one(v);
     const method = req.params.method.replace(/\.view$/, '');
 
-    const who = signIn(req.params.id, q.u, (expected) => passwordOf(q, expected));
+    const who = signIn(serviceId, q.u, (expected) => passwordOf(q, expected));
     if (who === 'login') return fail(reply, 40, wrongLogin(q.u));
     if (who === 'server') return fail(reply, 50, 'This Navidrome server isn’t shared with you through the Hub any more');
     const { user, target } = who;
@@ -452,5 +453,13 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog, sonic }
       if (v && !(unzipped && h === 'content-length')) reply.header(h, v);
     }
     return reply.send(res.body ? Readable.fromWeb(res.body as any) : null);
+  };
+  app.get<{ Params: { id: string; method: string }; Querystring: Record<string, string | string[]> }>('/nd/:id/rest/:method', (req, reply) => rest(req.params.id, req, reply));
+  // The Hub's own address works too (http://hub:7780 instead of …/nd/1): apps that are given only the address ask
+  // /rest/ping there, which otherwise got the web app's page back ("Unexpected token '<'").
+  app.get<{ Params: { method: string }; Querystring: Record<string, string | string[]> }>('/rest/:method', (req, reply) => {
+    const id = serviceIdOfKind(db, 'navidrome');
+    if (id === undefined) return fail(reply, 50, 'This Hub has no music server to sign in to');
+    return rest(String(id), req, reply);
   });
 }
