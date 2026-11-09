@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { isPlayed, setPlayed, useMarks, withMarks } from '../lib/episodes';
 import { create } from 'zustand';
 import { isArtistBlocked, isSongBlocked } from '../lib/dontPlay';
 import { useFeature } from '../lib/features';
@@ -71,6 +72,10 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
   const album = t.album ? albumOfTrack(t, albums) : undefined;
   const artist = artistOfTrack(t, artists, album);
   const song = t.kind === 'track';
+  const marks = useMarks((s) => s.marks);
+  const played = isPlayed(withMarks([t], marks)[0]);
+  const podcasts = useCatalog((s) => s.podcasts);
+  const show = t.kind === 'episode' ? podcasts.find((p) => p.id === t.bookId && p.sourceId === t.sourceId) : undefined;
   const canEdit = useCanEditSong()(t);
   const dontPlay = useSettings((s) => s.dontPlay);
   const setDontPlay = useSettings((s) => s.setDontPlay);
@@ -136,6 +141,13 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
           {sonicFeature && hasHub && sonicOn() && (
             <button type="button" className="menu-item" disabled={!!msg} onClick={() => void radio(() => soundsLike(t), 'Nothing that sounds like it yet')}>Sounds like this</button>
           )}
+        </>
+      )}
+      {t.kind === 'episode' && (
+        <>
+          <div className="menu-sep" />
+          <button type="button" className="menu-item" onClick={run(() => void setPlayed([t], !played).catch(() => undefined))}>{played ? 'Mark as unplayed' : 'Mark as played'}</button>
+          {show && <button type="button" className="menu-item" onClick={run(() => go({ view: 'podcast', podcast: show }))}>Go to show</button>}
         </>
       )}
       {(artist || album) && <div className="menu-sep" />}

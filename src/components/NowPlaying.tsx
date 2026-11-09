@@ -99,6 +99,7 @@ export function NowPlaying() {
                 {!singing && <SingButton onOn={() => setShowLyrics(true)} />}
                 <VideoButton track={t} />
               </>}
+              {t.kind === 'episode' && <VideoButton track={t} />}
               <CreditsButton track={t} />
               <TogetherButton className="chip" />
               <DevicesButton className="chip" />

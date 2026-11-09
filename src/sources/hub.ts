@@ -861,6 +861,9 @@ export class HubClient {
   /** Music videos (hub/src/videos.ts): the official video's YouTube id, or null. */
   video = (artist: string, title: string, duration?: number) =>
     this.call<{ video: { id: string; title: string; channel: string; duration?: number } | null }>('GET', `/api/videos?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}${duration ? `&duration=${Math.round(duration)}` : ''}`);
+  /** A podcast episode's video on YouTube (hub/src/videos.ts), or null. Older Hubs answer 404 (no video). */
+  episodeVideo = (show: string, title: string, duration?: number) =>
+    this.call<{ video: { id: string; title: string; channel: string; duration?: number } | null }>('GET', `/api/videos/episode?show=${encodeURIComponent(show)}&title=${encodeURIComponent(title)}${duration ? `&duration=${Math.round(duration)}` : ''}`);
   /** Tour dates (hub/src/tours.ts). */
   tours = (artist: string) => this.call<{ events: HubTourEvent[] }>('GET', `/api/tours?artist=${encodeURIComponent(artist)}`);
   toursStatus = () => this.call<{ available: boolean }>('GET', '/api/tours/status');
