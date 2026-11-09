@@ -145,6 +145,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 section { margin: 0 0 34px; }
 section h2 { font-size: 19px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
 .appears-on { margin-top: 34px; }
+.artist-shelf > h2 { margin: 0 0 14px; }
 .popular { max-width: 900px; margin-bottom: 26px; }
 .popular h2 .btn:first-of-type { margin-left: 6px; }
 .popular .link-more { margin-top: 8px; }
@@ -2440,43 +2441,49 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
   .browse-filters select { max-width: none; flex: 1 1 140px; }
 }
 
-/* Edit song (admins): views/SongEditor.tsx, Plex-style tabs on the left */
-.song-editor { display: flex; flex-direction: column; width: min(760px, 100%); max-height: calc(100vh - 32px); border-radius: var(--radius); background: var(--panel); text-align: left; overflow: hidden; box-shadow: 0 20px 60px rgb(0 0 0 / 0.5); }
-.song-editor-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); font-size: 18px; }
-.song-editor-head h3 { flex: 1; margin: 0; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.song-editor-body { display: flex; min-height: 0; flex: 1; }
-.song-editor-tabs { display: flex; flex-direction: column; gap: 2px; width: 160px; flex: none; padding: 12px 0; background: var(--panel-2); }
-.song-editor-tabs button { padding: 10px 20px; text-align: left; color: var(--muted); font-weight: 600; border-left: 3px solid transparent; }
-.song-editor-tabs button:hover { color: var(--text); }
-.song-editor-tabs button.on { color: var(--accent); border-left-color: var(--accent); background: var(--panel); }
-.song-editor-pane { flex: 1; min-width: 0; padding: 18px 20px; overflow: auto; min-height: 340px; }
-.song-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.song-fields .span2 { grid-column: span 2; }
-.song-fields label, .song-field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
-.song-fields label input { width: 100%; min-width: 0; color: var(--text); font-weight: 500; }
-.song-numbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.song-hint { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; background: var(--panel-2); font-size: 13px; }
-.song-hint span { flex: 1 1 220px; }
-.song-preview { margin: -4px 0 0; }
-.song-preview b { color: var(--text); }
+/* Edit song / album / artist (admins): components/EditDialog.tsx, Plex-style tabs on the left */
+.edit-dialog { display: flex; flex-direction: column; width: min(760px, 100%); max-height: calc(100vh - 32px); border-radius: var(--radius); background: var(--panel); text-align: left; overflow: hidden; box-shadow: 0 20px 60px rgb(0 0 0 / 0.5); }
+.edit-dialog-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); font-size: 18px; }
+.edit-dialog-head h3 { flex: 1; margin: 0; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edit-dialog-body { display: flex; min-height: 0; flex: 1; }
+.edit-dialog-tabs { display: flex; flex-direction: column; gap: 2px; width: 160px; flex: none; padding: 12px 0; background: var(--panel-2); }
+.edit-dialog-tabs button { padding: 10px 20px; text-align: left; color: var(--muted); font-weight: 600; border-left: 3px solid transparent; }
+.edit-dialog-tabs button:hover { color: var(--text); }
+.edit-dialog-tabs button.on { color: var(--accent); border-left-color: var(--accent); background: var(--panel); }
+.edit-dialog-pane { flex: 1; min-width: 0; padding: 18px 20px; overflow: auto; min-height: 340px; }
+.edit-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.edit-fields .span2 { grid-column: span 2; }
+.edit-fields label, .edit-field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.edit-fields label input { width: 100%; min-width: 0; color: var(--text); font-weight: 500; }
+.edit-numbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.edit-hint { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; background: var(--panel-2); font-size: 13px; }
+.edit-hint span { flex: 1 1 220px; }
+.edit-preview { margin: -4px 0 0; }
+.edit-preview b { color: var(--text); }
 .chip-input { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 40px; padding: 5px 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-2); box-shadow: var(--bevel-in); cursor: text; }
 .chip-input:focus-within { border-color: var(--accent); }
 .chip-input .chip { padding: 4px 6px 4px 12px; font-weight: 600; }
 .chip-input .chip button { display: inline-flex; padding: 2px; border-radius: 50%; color: inherit; opacity: 0.7; }
 .chip-input .chip button:hover { opacity: 1; }
 .chip-input input { flex: 1 1 140px; min-width: 120px; border: 0; padding: 4px 6px; background: transparent; box-shadow: none; }
-.song-info { display: flex; flex-direction: column; gap: 8px; margin: 0; font-size: 13px; }
-.song-info dt { color: var(--muted); font-size: 12px; font-weight: 600; }
-.song-info dd { margin: 0 0 4px; overflow-wrap: anywhere; }
-.song-editor-foot { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel-2); }
-.song-editor-msg { flex: 1; color: var(--muted); }
+.edit-info { display: flex; flex-direction: column; gap: 8px; margin: 0; font-size: 13px; }
+.edit-info dt { color: var(--muted); font-size: 12px; font-weight: 600; }
+.edit-info dd { margin: 0 0 4px; overflow-wrap: anywhere; }
+.edit-dialog-foot { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel-2); }
+.edit-dialog-msg { flex: 1; color: var(--muted); }
 @media (max-width: 640px) {
-  .song-editor-body { flex-direction: column; }
-  .song-editor-tabs { flex-direction: row; width: auto; padding: 0 8px; }
-  .song-editor-tabs button { border-left: 0; border-bottom: 3px solid transparent; padding: 10px 14px; }
-  .song-editor-tabs button.on { border-bottom-color: var(--accent); }
-  .song-fields { grid-template-columns: 1fr; }
-  .song-fields .span2 { grid-column: auto; }
-  .song-editor-foot { flex-wrap: wrap; }
-  .song-editor-msg { flex-basis: 100%; }
+  .edit-dialog-body { flex-direction: column; }
+  .edit-dialog-tabs { flex-direction: row; width: auto; padding: 0 8px; }
+  .edit-dialog-tabs button { border-left: 0; border-bottom: 3px solid transparent; padding: 10px 14px; }
+  .edit-dialog-tabs button.on { border-bottom-color: var(--accent); }
+  .edit-fields { grid-template-columns: 1fr; }
+  .edit-fields .span2 { grid-column: auto; }
+  .edit-dialog-foot { flex-wrap: wrap; }
+  .edit-dialog-msg { flex-basis: 100%; }
 }
+.edit-fields label select, .edit-fields label textarea { width: 100%; min-width: 0; color: var(--text); font-weight: 500; }
+.edit-mixed { font-weight: 500; font-size: 11.5px; color: var(--muted); }
+.edit-dialog .art-dialog.inline { width: auto; max-height: none; padding: 0; background: none; overflow: visible; }
+.edit-dialog .art-dialog.inline .art-results { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+.edit-dialog-foot .btn.ghost { white-space: nowrap; }
+.art-results > p { grid-column: 1 / -1; }

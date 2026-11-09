@@ -16,6 +16,15 @@
     (bass note, chord, bass note, chord) with the right hand running along the keys. The keys light up, the lid
     lifts on the bass, music notes float up and the footlights chase on the beat. Flourish: a glissando and a
     burst of notes (`Piano.tsx`).
+- **Edit album and Edit artist, Plex style.** The album page's **Edit album** opens a dialog like Edit song's:
+  **General** (album, album artist, sort title, release date, release type and record label), **Tags** (genres and
+  moods as chips), **Poster** (the cover picker) and **Info** (songs, folder, formats). It writes what you change
+  into every song of the album as one Save you can undo; **Edit each song…** opens the old table. The artist page's
+  **Edit artist** has **General** (rename or merge, sort name, a biography shown instead of Wikipedia's),
+  **Tags** (their genres), **Poster** (the picture) and **Advanced** (album order: newest, oldest or A to Z).
+  The biography and album order are kept on the Hub (migration 32).
+- **Albums, Singles & EPs, Compilations.** An artist's page puts their releases on separate shelves, by the release
+  type tag (which Edit album sets) or, without one, by song count.
 
 ## 0.33.0
 - **Edit song.** Admins can fix one song's tags, Plex style: right-click a song → **Edit song…**, or **Edit** on its

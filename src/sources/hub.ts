@@ -167,7 +167,11 @@ export interface HubService {
 }
 
 /** Tags the tag editor reads and writes (hub/src/tags.ts). */
-export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' | 'disc' | 'year' | 'genre';
+export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' | 'disc' | 'year' | 'genre'
+  | 'albumSort' | 'artistSort' | 'albumArtistSort' | 'label' | 'releaseType' | 'mood';
+/** How an artist page orders that artist's albums (hub/src/routes/artistMeta.ts); '' is the app's default, newest first. */
+export type HubAlbumSort = '' | 'newest' | 'oldest' | 'title';
+export interface HubArtistMeta { name: string; bio: string; albumSort: HubAlbumSort; updatedAt: number | null }
 export type HubTags = Partial<Record<HubTagKey, string>>;
 export interface HubTagSong { id: string; path: string; tags: HubTags }
 /** A song whose title starts with its track number, and the title to write instead (GET /api/admin/tags/numbered). */
@@ -1019,6 +1023,8 @@ export class HubClient {
   myHistory = () => this.call<{ history: { playedAt: number; track: Track }[] }>('GET', '/api/me/history');
   /** One song's file and tags (Navidrome song id; its album id helps a Hub whose catalog hasn't matched it yet). */
   tagSong = (id: string, albumId?: string) => this.call<HubTagSong>('GET', `/api/admin/tags/song/${encodeURIComponent(id)}${albumId ? `?album=${encodeURIComponent(albumId)}` : ''}`);
+  artistMeta = (name: string) => this.call<HubArtistMeta>('GET', `/api/artist-meta?name=${encodeURIComponent(name)}`);
+  setArtistMeta = (name: string, meta: { bio?: string; albumSort?: HubAlbumSort }) => this.call<HubArtistMeta>('PUT', '/api/admin/artist-meta', { name, ...meta });
   tagAlbum = (albumId: string) => this.call<{ songs: HubTagSong[] }>('GET', `/api/admin/tags/album/${encodeURIComponent(albumId)}`);
   tagMatches = (artist: string, album: string) => this.call<{ candidates: HubTagMatch[] }>('GET', `/api/admin/tags/match?${new URLSearchParams({ artist, album })}`);
   /** One Save; pass the same `batch` id with each part of a big one so it stays one Save (lib/tagSave.ts). */
