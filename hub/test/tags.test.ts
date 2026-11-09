@@ -160,3 +160,48 @@ test('Edit song: one song’s tags by its Navidrome id, a featured artist writte
   const back = await readTags(join(dir, '15.mp3'));
   assert.deepEqual([back.title, back.artist, back.genre], ['Real Big (feat. Lil Wayne)', 'Mannie Fresh', undefined]);
 });
+
+test('album tags beyond the basics: sort names, record label, release type and mood, where the format holds them', async () => {
+  const { writeTags } = await import('../src/tags.ts');
+  const dir = mkdtempSync(join(tmpdir(), 'wl-extra-'));
+  const files = {
+    mp3: join(dir, 'a.mp3'), flac: join(dir, 'a.flac'), opus: join(dir, 'a.opus'), m4a: join(dir, 'a.m4a'),
+  };
+  audio(files.mp3, { title: 'A' }, ['-c:a', 'libmp3lame', '-b:a', '64k']);
+  audio(files.flac, { title: 'A' }, ['-c:a', 'flac']);
+  audio(files.opus, { title: 'A' }, ['-c:a', 'libopus']);
+  audio(files.m4a, { title: 'A' }, ['-c:a', 'aac']);
+  const extra = { albumSort: 'Mind Of Mannie Fresh, The', artistSort: 'Fresh, Mannie', albumArtistSort: 'Fresh, Mannie', label: 'Cash Money', releaseType: 'single', mood: 'Dark; Energetic', album: 'X' };
+  for (const f of [files.mp3, files.flac, files.opus]) {
+    await writeTags(f, extra);
+    const t = await readTags(f);
+    assert.deepEqual([t.albumSort, t.artistSort, t.albumArtistSort, t.label, t.releaseType, t.mood, t.album], Object.values(extra), f);
+    await writeTags(f, { releaseType: '', mood: '' });
+    const cleared = await readTags(f);
+    assert.equal(cleared.releaseType, undefined, `${f}: an empty value removes the tag`);
+    assert.equal(cleared.label, 'Cash Money');
+  }
+  // an .m4a can't hold them: the rest is still written
+  await writeTags(files.m4a, extra);
+  const m = await readTags(files.m4a);
+  assert.equal(m.album, 'X');
+  assert.equal(m.releaseType, undefined);
+});
+
+test('artist details without a tag: biography and album order, set by admins and read by everyone', async () => {
+  const { app, tokens } = await seeded();
+  const empty = await json(app, 'GET', '/api/artist-meta?name=Kodak%20Black', { token: tokens.member });
+  assert.deepEqual(empty.body, { name: 'Kodak Black', bio: '', albumSort: '', updatedAt: null });
+  assert.equal((await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.member, body: { name: 'Kodak Black', bio: 'x' } })).status, 403);
+  assert.equal((await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', albumSort: 'sideways' } })).status, 400);
+  const set = await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', bio: ' From Pompano Beach. ', albumSort: 'oldest' } });
+  assert.equal(set.status, 200, JSON.stringify(set.body));
+  // only what's sent changes; names match in any case
+  await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'kodak black', albumSort: 'title' } });
+  const got = await json(app, 'GET', '/api/artist-meta?name=KODAK%20BLACK', { token: tokens.member });
+  assert.equal(got.body.bio, 'From Pompano Beach.');
+  assert.equal(got.body.albumSort, 'title');
+  // clearing both forgets the artist
+  await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', bio: '', albumSort: '' } });
+  assert.equal((await json(app, 'GET', '/api/artist-meta?name=Kodak%20Black', { token: tokens.member })).body.updatedAt, null);
+});

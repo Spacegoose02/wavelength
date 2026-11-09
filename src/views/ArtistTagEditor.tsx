@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Spinner } from '../components/common';
 import { forgetTagValues, TagLists } from '../components/TagLists';
 import { renameArtist, splitCredit, splitCreditOptions } from '../lib/merge';
-import { sourceFor } from '../sources/registry';
-import type { HubTags, HubTagSong } from '../sources/hub';
+import { loadArtistSongs } from '../lib/artistSongs';
+import type { HubTags } from '../sources/hub';
+import type { ArtistSong } from '../lib/artistSongs';
 import type { Artist } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useSettings } from '../store/settings';
@@ -15,7 +16,7 @@ import { useUi } from '../store/ui';
  * each change before saving; a Save can be undone like any tag edit.
  */
 
-type Song = HubTagSong & { albumId: string };
+type Song = ArtistSong;
 
 const errText = (e: unknown) => String((e as Error).message ?? e);
 
@@ -37,17 +38,8 @@ export function ArtistTagEditor({ artist }: { artist: Artist }) {
 
   const load = async () => {
     try {
-      const refs = (artist.refs ?? [artist]).filter((r) => sources.find((s) => s.id === r.sourceId)?.kind === 'navidrome');
-      const albums = (await Promise.all(refs.map(async (r) => {
-        const src = sourceFor(sources.find((s) => s.id === r.sourceId)!);
-        const own = (await src.getArtistAlbums?.(r.id)) ?? [];
-        // only a track artist (often a joined credit like "Lil Baby;Jeremih", or someone only ever featured): Navidrome
-        // lists no albums of theirs, so take the albums their songs are on
-        return own.length ? own : ((await src.getAppearsOn?.({ id: r.id, name: artist.name }).catch(() => [])) ?? []);
-      }))).flat();
-      if (!albums.length) throw new Error('Navidrome has no albums for this artist');
-      setTitles(Object.fromEntries(albums.map((a) => [a.id, a.title])));
-      const r = await c!.tagAlbums(albums.map((a) => a.id).slice(0, 200));
+      const r = await loadArtistSongs(artist, sources, c!);
+      setTitles(r.titles);
       setSongs(r.songs);
       if (r.missing.length) setMsg(`${r.missing.length} file${r.missing.length === 1 ? '' : 's'} weren't found in the Hub's music folder and are left out`);
     } catch (e) {

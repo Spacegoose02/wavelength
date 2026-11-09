@@ -22,7 +22,11 @@ export function ArtworkButton({ kind, artist, album = '', current }: { kind: Hub
   );
 }
 
-function ArtworkPicker({ kind, artist, album, current, onClose }: { kind: HubArtwork['kind']; artist: string; album: string; current?: string; onClose(): void }) {
+/**
+ * The picture picker: candidates from the art services, a link, or an upload. `inline` draws it inside another
+ * dialog (Edit album / Edit artist → Poster) instead of over the page; picking one then keeps it open.
+ */
+export function ArtworkPicker({ kind, artist, album, current, onClose, inline }: { kind: HubArtwork['kind']; artist: string; album: string; current?: string; onClose(): void; inline?: boolean }) {
   useArtworkList();
   const set = artworkOn(kind, artist, album);
   const [qArtist, setQArtist] = useState(artist);
@@ -49,6 +53,7 @@ function ArtworkPicker({ kind, artist, album, current, onClose }: { kind: HubArt
   };
   useEffect(() => {
     search();
+    if (inline) return;
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', esc);
     return () => window.removeEventListener('keydown', esc);
@@ -60,7 +65,7 @@ function ArtworkPicker({ kind, artist, album, current, onClose }: { kind: HubArt
     setErr('');
     try {
       await setArtwork({ kind, artist, album: kind === 'album' ? album : undefined, ...b });
-      onClose();
+      if (!inline) onClose();
     } catch (x) {
       setErr(String((x as Error).message ?? x));
     } finally {
@@ -76,7 +81,7 @@ function ArtworkPicker({ kind, artist, album, current, onClose }: { kind: HubArt
     setBusy('reset');
     try {
       await resetArtwork(kind, artist, album);
-      onClose();
+      if (!inline) onClose();
     } catch (x) {
       setErr(String((x as Error).message ?? x));
     } finally {
@@ -84,9 +89,8 @@ function ArtworkPicker({ kind, artist, album, current, onClose }: { kind: HubArt
     }
   };
 
-  return (
-    <div className="pin-backdrop" onClick={onClose}>
-      <div className="art-dialog" role="dialog" aria-label={kind === 'album' ? 'Change cover' : 'Change picture'} onClick={(e) => e.stopPropagation()}>
+  const box = (
+      <div className={inline ? 'art-dialog inline' : 'art-dialog'} role={inline ? undefined : 'dialog'} aria-label={kind === 'album' ? 'Change cover' : 'Change picture'} onClick={(e) => e.stopPropagation()}>
         <header className="art-head">
           {current && <img className={`art-now ${kind === 'artist' ? 'round' : ''}`} src={current} alt="" />}
           <div>
@@ -126,9 +130,9 @@ function ArtworkPicker({ kind, artist, album, current, onClose }: { kind: HubArt
           <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => upload(e.target.files?.[0])} />
           <button className="btn" disabled={!!busy} onClick={() => file.current?.click()}>{busy === 'upload' ? '…' : 'Upload a picture'}</button>
           {set && <button className="btn" disabled={!!busy} onClick={reset} title={`Set by ${set.setBy ?? 'an admin'} (${set.source})`}>{busy === 'reset' ? '…' : "Use the server's picture"}</button>}
-          <button className="btn ghost" onClick={onClose}>Cancel</button>
+          {!inline && <button className="btn ghost" onClick={onClose}>Cancel</button>}
         </div>
       </div>
-    </div>
   );
+  return inline ? box : <div className="pin-backdrop" onClick={onClose}>{box}</div>;
 }

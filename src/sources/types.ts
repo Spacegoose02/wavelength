@@ -129,6 +129,10 @@ export interface Album {
   addedAt?: number;
   /** Its genres, as the server lists them (lib/browse.ts). */
   genres?: string[];
+  /** What kind of release it is, from its tags (OpenSubsonic `releaseTypes`: "album", "single", "ep", "compilation"…). */
+  releaseTypes?: string[];
+  /** Navidrome: a compilation of several artists. */
+  compilation?: boolean;
   /** Same album found on several sources (first = preferred). */
   refs?: Album[];
 }

@@ -1861,7 +1861,7 @@ explicit or flagged, so another app wouldn't get around it either.
 
 ### Fixing tags (admins)
 
-On a Navidrome album's page, **Edit tags** shows the album's tags as they are in the files: album, album
+On a Navidrome album's page, **Edit album → Edit each song…** shows the album's tags as they are in the files: album, album
 artist, year and genre for the whole album, and disc, number, title and artist per song. Type over anything,
 or press **Find on Deezer and MusicBrainz** and **Use this** on the right match to fill everything in, then
 check it and **Save**. Your Hub writes the tags into the files (the audio isn't touched) and Navidrome rescans
@@ -1870,7 +1870,7 @@ a minute later. **Undo** puts them back; older saves can be undone under **Setti
 The artist, album artist and genre boxes suggest the names already in your library as you type, so you can
 pick the existing spelling instead of making a new one.
 
-**Edit artist**, on an artist's page, changes an artist in every song on all their albums. **Credited as** is
+**Edit artist → Review songs…**, on an artist's page, changes an artist in every song on all their albums. **Credited as** is
 how the files name them now, **Change to** is the new name. To merge two spellings ("Beatles" and "The
 Beatles"), open one and change it to the other. It can also set one genre for all their songs. With **Also
 where they're credited with others** on, "Artist feat. Someone" and "Someone & Artist" change too. Every song
@@ -1885,6 +1885,42 @@ To merge one artist or album into another, use **Merge into…** on its page; to
 [Merging albums and artists](#merging-albums-and-artists-admins)).
 
 Your Hub needs your music at `/music`, read-write, and the Navidrome admin login (Settings → Server).
+
+### Editing an album (admins)
+
+**Edit album**, on a Navidrome album's page, opens a dialog laid out like Plex's:
+
+- **General:** the album's title, album artist, **Sort album** (how it sorts, "Mind Of Mannie Fresh, The"),
+  **Release date** (a year or a full date), **Release type** and **Record label**. The release type (Album, EP,
+  Single or Compilation) decides which shelf the album sits on in its artist's page. Left as **Not set**, an
+  album of up to 3 songs counts as a single and 4 to 6 songs as an EP.
+- **Tags:** genres and moods as chips, the same way as for a song.
+- **Poster:** the cover picker, right in the dialog.
+- **Info:** how many songs, the folder, and the file formats.
+
+A box whose value differs from song to song says so and is left alone unless you type in it. **Save changes**
+writes what you changed into every song of the album, and **Undo** (or **Settings → Server → Tag edits**) puts it
+back. To fix titles, numbers or artists song by song, press **Edit each song…**, which opens the table described
+above. .m4a files can't hold the sort title, release type, record label or mood, so those are skipped for them.
+
+### Editing an artist (admins)
+
+**Edit artist**, on an artist's page, opens the same kind of dialog:
+
+- **General:** the artist's name, their **Sort artist** ("Weeknd, The"), and a **Biography**. Changing the name
+  renames them in every song on their albums, credits like "Kodak Black feat. …" included; picking a name your
+  library already has merges the two. The biography is kept on your Hub and shown on the artist page in place of
+  Wikipedia's; leave it empty to get Wikipedia's back.
+- **Tags:** the genres most of their songs have, as chips. Changing them writes the new genres into every song of
+  theirs.
+- **Poster:** the artist picture picker.
+- **Advanced:** **Album sorting**: newest first (the default), oldest first, or A to Z, for everyone on your Hub.
+
+**Review songs…** opens the song-by-song rename page described under [Fixing tags](#fixing-tags-admins), which
+lists every song a rename changes, album by album.
+
+The artist page puts their releases on separate shelves: **Albums**, **Singles & EPs** and **Compilations**, each in
+the order **Album sorting** sets.
 
 ### Editing a song (admins)
 

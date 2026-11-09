@@ -363,6 +363,20 @@ album's songs) and saves only the tags that changed with the same `PUT /api/admi
 **Tag edits**. The credit is a main artist plus featured artists, written as "Main feat. A; B"
 (`src/lib/songCredit.ts`), the shape `tidyCredit` writes, which Navidrome splits on " feat. " and "; ".
 
+**Edit album** (`src/views/AlbumEditor.tsx`) and **Edit artist** (`src/views/ArtistEditor.tsx`) are the same kind of
+dialog (`src/components/EditDialog.tsx`). Edit album writes album-wide tags into every song of the album through
+`PUT /api/admin/tags` in parts (`src/lib/tagSave.ts`): album, album artist, year, genre, and the tags added for it,
+**albumSort**, **label**, **releaseType** and **mood**. Edit artist renames (the song-by-song page's `renameArtist`),
+writes **artistSort** / **albumArtistSort** and genres into their songs, and keeps what has no tag (the biography and
+how their page orders albums) on the Hub in `artist_meta` (migration 32, `hub/src/routes/artistMeta.ts`).
+
+The extra tags are written under the names Navidrome reads (`hub/src/tags.ts`): in an mp3, TSOA / TSOP for the sort
+names, TPUB for the label, and TXXX frames for ALBUMARTISTSORT, RELEASETYPE and MOOD; in FLAC, Ogg and Opus, Vorbis
+comments of those names. ffmpeg keeps only a fixed set of MP4 atoms, so an .m4a gets none of them: a Save leaves
+them out for such files (`canWrite`). The artist page puts albums on **Albums**, **Singles & EPs** and
+**Compilations** shelves by Navidrome's `releaseTypes` (from RELEASETYPE), else its compilation flag, else the song
+count (up to 3 a single, 4 to 6 an EP) (`src/lib/releaseKind.ts`).
+
 
 **Merging** (Albums or Artists → **Select → Merge**, or **Merge into…** on an artist or album page; `src/lib/merge.ts`) uses the same endpoints: it reads the
 ticked albums' files with `GET /api/admin/tags/albums`, works out the new tags in the app, and writes them with one
@@ -966,6 +980,8 @@ with a 4xx status.
 | `GET /api/radar/suggestions[?fresh=1]`, `POST /api/radar/suggestions/:id/hide` | signed in | artists you might like (`{ id, name, picture, fans, because, plays? }`) / never suggest this one again |
 | `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
 | `GET /api/admin/tags/song/:id?album=` | `library.edit` | one Navidrome song's file and its tags (`{ id, path, tags }`), for Edit song. `album` (the song's Navidrome album id) finds it when the catalog hasn't matched it yet |
+| `GET /api/artist-meta?name=` | signed in | an artist's `bio` and `albumSort` set in Edit artist (`''` when none) |
+| `PUT /api/admin/artist-meta` | `library.edit` | `{ name, bio?, albumSort? }` (`albumSort`: `''`, `newest`, `oldest` or `title`); only what's sent changes, and an artist with neither is forgotten |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
 | `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }], batch? }` writes tags (only those given), four files at a time → `{ batch, changed, failed }`. Pass the same 16-hex `batch` with each part of a big Save to keep it one Save (`src/lib/tagSave.ts` sends 25 songs per part) |
 | `GET /api/admin/tags/numbered?offset=&limit=` | `library.edit` | Library care → Numbered titles: one page (`limit` ≤ 5000, default 2000) of Navidrome's songs → `{ fixes: [{ path, albumId, artist, album, from, to }], scanned, total }`. Reads Navidrome's list only, no files |
