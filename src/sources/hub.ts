@@ -173,6 +173,23 @@ export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' |
 export type HubAlbumSort = '' | 'newest' | 'oldest' | 'title';
 export interface HubArtistMeta { name: string; bio: string; albumSort: HubAlbumSort; updatedAt: number | null }
 export type HubTags = Partial<Record<HubTagKey, string>>;
+/** Styles, moods, collections and artist genres kept on the Hub (hub/src/itemTags.ts). */
+export type HubFacet = 'genre' | 'style' | 'mood' | 'collection';
+export interface HubItemTags {
+  kind: 'artist' | 'album';
+  /** The artist, or the album's album artist. */
+  artist: string;
+  /** The album's title ('' for an artist). */
+  title: string;
+  facets: Partial<Record<HubFacet, string[]>>;
+  /** Who set each: an admin ('edit') or the Plex import ('plex'). */
+  sources: Partial<Record<HubFacet, 'edit' | 'plex'>>;
+  updatedAt: number | null;
+}
+export interface HubTagValue { name: string; albums: number; artists: number }
+export interface HubAllItemTags { artists: HubItemTags[]; albums: HubItemTags[]; values: Record<HubFacet, HubTagValue[]> }
+/** What PUT /api/admin/item-tags takes: each list sent replaces what was there (albums have no `genres` here). */
+export interface HubItemTagLists { genres?: string[]; styles?: string[]; moods?: string[]; collections?: string[] }
 export interface HubTagSong { id: string; path: string; tags: HubTags }
 /** A song whose title starts with its track number, and the title to write instead (GET /api/admin/tags/numbered). */
 export interface TitleFixRow { path: string; albumId: string; artist: string; album: string; from: string; to: string }
@@ -1051,6 +1068,11 @@ export class HubClient {
   tagSong = (id: string, albumId?: string) => this.call<HubTagSong>('GET', `/api/admin/tags/song/${encodeURIComponent(id)}${albumId ? `?album=${encodeURIComponent(albumId)}` : ''}`);
   artistMeta = (name: string) => this.call<HubArtistMeta>('GET', `/api/artist-meta?name=${encodeURIComponent(name)}`);
   setArtistMeta = (name: string, meta: { bio?: string; albumSort?: HubAlbumSort }) => this.call<HubArtistMeta>('PUT', '/api/admin/artist-meta', { name, ...meta });
+  /** Every album's and artist's styles, moods, collections and artist genres (404 on an older Hub). */
+  itemTags = () => this.call<HubAllItemTags>('GET', '/api/item-tags');
+  itemTagsOf = (kind: 'artist' | 'album', artist: string, title = '') => this.call<HubItemTags>('GET', `/api/item-tags/one?${new URLSearchParams({ kind, artist, ...(kind === 'album' && { title }) })}`);
+  setItemTags = (kind: 'artist' | 'album', artist: string, title: string, lists: HubItemTagLists) => this.call<HubItemTags>('PUT', '/api/admin/item-tags', { kind, artist, ...(kind === 'album' && { title }), ...lists });
+  renameItemTags = (kind: 'artist' | 'album', from: { artist: string; title?: string }, to: { artist: string; title?: string }) => this.call<{ moved: number }>('POST', '/api/admin/item-tags/rename', { kind, from, to });
   tagAlbum = (albumId: string) => this.call<{ songs: HubTagSong[] }>('GET', `/api/admin/tags/album/${encodeURIComponent(albumId)}`);
   tagMatches = (artist: string, album: string) => this.call<{ candidates: HubTagMatch[] }>('GET', `/api/admin/tags/match?${new URLSearchParams({ artist, album })}`);
   /** One Save; pass the same `batch` id with each part of a big one so it stays one Save (lib/tagSave.ts). */

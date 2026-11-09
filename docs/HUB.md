@@ -430,6 +430,29 @@ edits) puts them back; Navidrome rescans afterwards. **Keep** leaves an album as
 
 It needs what the tag editor needs: the music read-write at `/music` and a Navidrome admin login on the Hub.
 
+## Styles, moods and collections
+
+Plex-style metadata that has no place in the music files is kept on the Hub (`hub/src/itemTags.ts`, table
+`item_tags`, migration 36):
+
+- **Styles:** the narrow kinds of music within a genre ("Southern Rap", "Christmas Pop", "Teen Pop").
+- **Moods:** how it feels ("Laid-Back/Mellow", "Energetic"). The files' MOOD tag is no longer written by Edit album;
+  a mood the files already have is the starting value until the Hub has one for that album.
+- **Collections:** groups an admin makes ("Christmas", "Turning Red").
+- **Artist genres:** an artist's own genres, apart from their albums', so an album can have genres of its own. An
+  album's genres stay in its files (the genre rules and the tag editor look after them).
+
+Albums have styles, moods and collections; artists have those and genres. Albums are keyed by album artist and title,
+artists by name, both compared without case, accents, apostrophes or punctuation ("*NSYNC" = "NSYNC", "It’s" =
+"Its"; `tagKey`, the same rule as the app's `src/lib/itemTags.ts`), so a row doesn't depend on Navidrome's ids and
+survives rescans. Edit album and Edit artist rename the rows when they rename an album or artist (an artist's albums
+move with them); renaming onto a name that has tags puts the two lists together. Each row records who set it: an
+admin (`edit`) or an import (`plex`); an import never overwrites what an admin set. Changes are audited as
+`itemTags.edited` and `itemTags.renamed`.
+
+The app reads the whole list once per session (`GET /api/item-tags`, one row per album or artist that has any) and
+shows them as chips under the title on album and artist pages (`src/components/TagChips.tsx`).
+
 ## Joined artist credits
 
 Navidrome splits a single Artist or Album artist tag into several artists only on its own separators: `" / "`,
@@ -1028,6 +1051,10 @@ with a 4xx status.
 | `GET /api/admin/tags/song/:id?album=` | `library.edit` | one Navidrome song's file and its tags (`{ id, path, tags }`), for Edit song. `album` (the song's Navidrome album id) finds it when the catalog hasn't matched it yet |
 | `GET /api/artist-meta?name=` | signed in | an artist's `bio` and `albumSort` set in Edit artist (`''` when none) |
 | `PUT /api/admin/artist-meta` | `library.edit` | `{ name, bio?, albumSort? }` (`albumSort`: `''`, `newest`, `oldest` or `title`); only what's sent changes, and an artist with neither is forgotten |
+| `GET /api/item-tags` | signed in | every album's and artist's tags kept on the Hub: `{ artists, albums, values }`; each item is `{ kind, artist, title, facets: { genre?, style?, mood?, collection? }, sources, updatedAt }`, and `values` lists every name per facet with how many albums and artists have it |
+| `GET /api/item-tags/one?kind=&artist=&title=` | signed in | one album (`kind=album`, its album artist and title) or artist (`kind=artist`) |
+| `PUT /api/admin/item-tags` | `library.edit` | `{ kind, artist, title?, genres?, styles?, moods?, collections? }`: each list sent replaces what was there, an empty one clears it; albums take no `genres` (theirs are in the files) |
+| `POST /api/admin/item-tags/rename` | `library.edit` | `{ kind, from: { artist, title? }, to: { artist, title? } }`: the tags follow a rename (an artist's albums too); answers `{ moved }` |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
 | `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }], batch? }` writes tags (only those given), four files at a time → `{ batch, changed, failed }`. Pass the same 16-hex `batch` with each part of a big Save to keep it one Save (`src/lib/tagSave.ts` sends 25 songs per part) |
 | `GET /api/admin/tags/numbered?offset=&limit=` | `library.edit` | Library care → Numbered titles: one page (`limit` ≤ 5000, default 2000) of Navidrome's songs → `{ fixes: [{ path, albumId, artist, album, from, to }], scanned, total }`. Reads Navidrome's list only, no files |
