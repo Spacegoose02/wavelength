@@ -745,6 +745,16 @@ and hands out ids.
   need a person's plays or stars (`recent`, `frequent`, `starred`, `highest`), every other call, ids the catalog
   doesn't know yet (a download before the catalog's next look), artist pictures, and callers that ask for XML.
   Answers from the Hub carry `x-wavelength-answered-by: hub`.
+- **The Hub plays the songs** (phase 4, `hub/src/catalogStream.ts`), when an admin turns on **Hub plays the songs**
+  on the same card (`catalog.stream` in `hub_settings`, off by default, separate from browsing) and the catalog
+  matches (`streaming`). For devices that go through the Hub, `stream` and `download` of a song the catalog knows are
+  sent from the music folder instead of fetched from Navidrome: the file as it is (no `format`, `format=raw`, or a
+  `maxBitRate` the file is already under) with Range requests for seeking, an ETag and a length; `download` as an
+  attachment. A lower `maxBitRate` or another `format` (`mp3`, `opus`, `aac`; mp3 when only a bitrate is asked) is
+  converted with ffmpeg as it plays (32 to 320 kbps, `timeOffset` honoured, no seeking inside it, stopped when the
+  player goes away). Songs the catalog doesn't know, files that have gone and other formats play from Navidrome.
+  Scrobbles, stars and playlists still go to Navidrome, and kids' songs are still checked before they play.
+  Navidrome support stays: every Hub phase is a switch, and a Navidrome hosted on its own works without a Hub.
 
 Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
 under Library updates; without it the catalog still scans.
@@ -964,8 +974,8 @@ with a 4xx status.
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
-| `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, serve, serving, missing: [{ title, artist, album, path }], summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
-| `PUT /api/admin/catalog` | `server.view` | `{ serve }`: the Hub answers browsing, search and covers for devices that go through it (audited `catalog.serve`); answers with the status |
+| `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, serve, serving, stream, streaming, missing: [{ title, artist, album, path }], summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
+| `PUT /api/admin/catalog` | `server.view` | `{ serve?, stream? }`: the Hub answers browsing, search and covers, and plays songs, for devices that go through it (audited `catalog.serve`, `catalog.stream`); answers with the status |
 | `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |
 | `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |
 | `POST /api/lyrics/translate` | signed in, `lyricsTranslate` on, the AI DJ allowed | `{ key, lines, mode: translate\|romanize, to }` → `{ lines, cached, …allowance }`: one line out for each line in, through the AI DJ's quick model; kept in memory for the house (500 songs) |

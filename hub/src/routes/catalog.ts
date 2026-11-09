@@ -30,15 +30,23 @@ export function catalogRoutes(app: FastifyInstance, ctx: Ctx) {
   });
 
   /**
-   * `{ serve }`: answer browsing, search and covers from the catalog for devices that go through the Hub (phase 3,
-   * routes/relay.ts). Takes effect only while the catalog matches Navidrome (usable()).
+   * `{ serve?, stream? }`: for devices that go through the Hub (routes/relay.ts), answer browsing, search and covers
+   * from the catalog (phase 3), and play songs from the music folder (phase 4). Each takes effect only while the
+   * catalog matches Navidrome (usable()).
    */
   app.put('/api/admin/catalog', async (req) => {
     const { user } = need(req, 'server.view');
-    const serve = (req.body as { serve?: unknown } | null)?.serve;
-    if (typeof serve !== 'boolean') throw new HttpError(400, 'serve must be true or false');
-    ctx.catalog.setServe(serve);
-    audit(ctx.db, { actorId: user.id, action: 'catalog.serve', detail: { serve }, ip: clientIp(req) });
+    const body = (req.body ?? {}) as { serve?: unknown; stream?: unknown };
+    for (const k of ['serve', 'stream'] as const) if (body[k] !== undefined && typeof body[k] !== 'boolean') throw new HttpError(400, `${k} must be true or false`);
+    if (body.serve === undefined && body.stream === undefined) throw new HttpError(400, 'Send serve or stream');
+    if (typeof body.serve === 'boolean') {
+      ctx.catalog.setServe(body.serve);
+      audit(ctx.db, { actorId: user.id, action: 'catalog.serve', detail: { serve: body.serve }, ip: clientIp(req) });
+    }
+    if (typeof body.stream === 'boolean') {
+      ctx.catalog.setStream(body.stream);
+      audit(ctx.db, { actorId: user.id, action: 'catalog.stream', detail: { stream: body.stream }, ip: clientIp(req) });
+    }
     return { ...ctx.catalog.status(), summary: summary(ctx) };
   });
 

@@ -9,6 +9,7 @@ import { getUser } from '../users.ts';
 import { songNotForKids } from '../kidSafe.ts';
 import { join } from 'node:path';
 import { answer, cover, SERVED, type Starred } from '../subsonicCatalog.ts';
+import { sendSong } from '../catalogStream.ts';
 
 /**
  * Navidrome through the Hub (docs/USERS-AND-ADMIN.md Phase 4). A device gets a Subsonic login for
@@ -160,6 +161,11 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
         const body = mine && answer(db, method, q, mine.ids);
         if (body) return reply.header('x-wavelength-answered-by', 'hub').send(body);
       }
+    }
+
+    // The Hub plays the file itself (catalogStream.ts), when an admin turned it on; scrobbles still go to Navidrome
+    if ((method === 'stream' || method === 'download') && q.id && config.musicDir && catalog.streaming()) {
+      if (sendSong(db, config.musicDir, q.id, q, req, reply, method === 'download')) return reply;
     }
 
     // stop pulling from Navidrome when the player goes away (skipping, seeking)
