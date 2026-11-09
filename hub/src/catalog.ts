@@ -93,6 +93,8 @@ export interface CatalogStatus {
   stream: boolean;
   /** stream is on and the catalog is usable(): the Hub plays songs for devices that go through it */
   streaming: boolean;
+  /** an admin turned on keeping hearts, plays and ratings on the Hub (phase 5) */
+  userData: boolean;
 }
 
 /** Turn ffprobe's tag names (any case, ID3 / Vorbis / MP4) into FileTags. */
@@ -334,6 +336,13 @@ export class Catalog {
   setStream(on: boolean) {
     this.setFlag('catalog.stream', on);
   }
+  /** Whether an admin turned on keeping hearts, plays and ratings on the Hub (phase 5, userData.ts). */
+  keepsUserData(): boolean {
+    return this.flag('catalog.userData');
+  }
+  setKeepsUserData(on: boolean) {
+    this.setFlag('catalog.userData', on);
+  }
   /** The Hub plays songs itself (routes/relay.ts): turned on, and the catalog matches Navidrome. */
   streaming(): boolean {
     return this.stream() && this.usable();
@@ -415,6 +424,7 @@ export class Catalog {
       serving: this.serving(),
       stream: this.stream(),
       streaming: this.streaming(),
+      userData: this.keepsUserData(),
     };
   }
 

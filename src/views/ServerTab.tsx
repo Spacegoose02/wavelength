@@ -327,7 +327,7 @@ function MusicCatalog() {
       setMsg(String((e as Error).message ?? e));
     }
   };
-  const serve = async (b: { serve?: boolean; stream?: boolean }) => {
+  const serve = async (b: { serve?: boolean; stream?: boolean; userData?: boolean }) => {
     setMsg('');
     try {
       setSt(await c!.setCatalogServe(b));
@@ -393,6 +393,20 @@ function MusicCatalog() {
                 The Hub sends the music file itself, with seeking, instead of fetching it from Navidrome. When a device asks
                 for a lower quality it converts as it plays. Plays still count in Navidrome, and a song the catalog doesn't
                 know yet plays from Navidrome.
+              </p>
+            </>
+          )}
+          {st.userData !== undefined && (
+            <>
+              <label className="check" style={{ margin: '12px 0 4px' }} title="Hearts, play counts and ratings are kept by the Hub; Navidrome gets every change too">
+                <span className="switch"><input type="checkbox" checked={st.userData} onChange={(e) => serve({ userData: e.target.checked })} /><span /></span>
+                <small>Hub keeps hearts and play counts (beta)</small>
+              </label>
+              <p className="muted small">
+                {st.userData && st.people ? `Kept for ${n(st.people.people)} ${st.people.people === 1 ? 'person' : 'people'}: ${n(st.people.stars)} hearts, ${n(st.people.plays)} plays. ` : ''}
+                Each person's hearts, plays and ratings are copied from Navidrome the first time they use the app through the Hub,
+                then kept here. Every change is sent on to Navidrome as well, so it stays complete. Recently played, Most played
+                and Starred lists come from the Hub while the Hub answers browsing.
               </p>
             </>
           )}

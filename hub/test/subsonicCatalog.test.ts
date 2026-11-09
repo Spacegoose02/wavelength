@@ -30,6 +30,13 @@ async function fakeNavidrome() {
     const method = url.pathname.replace('/rest/', '');
     calls.push(method);
     res.writeHead(200, { 'content-type': 'application/json' });
+    // Navidrome's own API, for copying plays and ratings (sorted most first, as asked)
+    if (url.pathname === '/auth/login') return res.end(JSON.stringify({ token: 'nd-token' }));
+    if (url.pathname === '/api/song') {
+      const songs = [{ id: 'nd1', playCount: 7, playDate: '2026-03-01T00:00:00Z', rating: 0 }, { id: 'nd3', playCount: 2, playDate: '2026-05-01T00:00:00Z', rating: 5 }, { id: 'nd4', playCount: 0, rating: 0 }];
+      const sort = url.searchParams.get('_sort');
+      return res.end(JSON.stringify(sort === 'rating' ? [...songs].sort((a, b) => b.rating - a.rating) : songs));
+    }
     if (q.u !== 'mia' || md5('mia-real-pw' + q.s) !== q.t) return res.end(JSON.stringify({ 'subsonic-response': { status: 'failed', error: { code: 40 } } }));
     if (method === 'getStarred2') return res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', starred2: { song: [{ id: 'nd2', starred: '2026-01-01T00:00:00Z' }], album: [], artist: [] } } }));
     res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', from: 'navidrome', method } }));
@@ -231,4 +238,45 @@ test('with the play switch on, the Hub sends the files itself, with seeking, and
   await json(app, 'POST', '/api/me/playing', { token: tokens.admin, body: { title: 'Direct', source: 'navidrome' } });
   const all = (await json(app, 'GET', '/api/admin/listening', { token: tokens.admin })).body.listening;
   assert.equal(all.find((p: { title: string }) => p.title === 'Direct').playedBy, 'direct');
+});
+
+test('with the hearts switch on, the Hub copies a person’s hearts and plays once, keeps them, and tells Navidrome', async () => {
+  const { app, tokens, nd, rest } = await setup();
+  await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: { serve: true } });
+  const on = await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: { userData: true } });
+  assert.equal(on.body.userData, true);
+
+  // the first call copies Mia's hearts and plays
+  const album = await rest('getAlbum', { id: 'al1' });
+  assert.equal(album.by, 'hub');
+  const [first, second] = album.body.album.song;
+  assert.equal(first.playCount, 7);
+  assert.equal(first.played, '2026-03-01T00:00:00.000Z');
+  assert.equal(second.starred, '2026-01-01T00:00:00.000Z');
+  assert.equal(album.body.album.playCount, 7);
+  const st = await json(app, 'GET', '/api/admin/catalog', { token: tokens.admin });
+  assert.deepEqual(st.body.people, { people: 1, stars: 1, plays: 9 });
+
+  // hearts, plays and ratings recorded here, and passed on to Navidrome
+  nd.calls.length = 0;
+  assert.equal((await rest('star', { albumId: 'al2' })).by, 'hub');
+  assert.equal((await rest('unstar', { id: 'nd2' })).by, 'hub');
+  await rest('scrobble', { id: 'nd3', submission: 'true', time: String(Date.parse('2026-06-01T00:00:00Z')) });
+  await rest('scrobble', { id: 'nd3', submission: 'false' });
+  await rest('setRating', { id: 'nd1', rating: '4' });
+  await new Promise((r) => setTimeout(r, 100));
+  assert.deepEqual(nd.calls.sort(), ['scrobble', 'scrobble', 'setRating', 'star', 'unstar']);
+  nd.calls.length = 0;
+
+  const starred = await rest('getStarred2');
+  assert.deepEqual(starred.body.starred2.album.map((a: { id: string }) => a.id), ['al2']);
+  assert.deepEqual(starred.body.starred2.song, []);
+  const frequent = await rest('getAlbumList2', { type: 'frequent', size: '10' });
+  assert.deepEqual(frequent.body.albumList2.album.map((a: { id: string; playCount: number }) => [a.id, a.playCount]), [['al1', 7], ['al2', 3]]);
+  const recent = await rest('getAlbumList2', { type: 'recent', size: '10' });
+  assert.deepEqual(recent.body.albumList2.album.map((a: { id: string }) => a.id), ['al2', 'al1']);
+  assert.deepEqual((await rest('getAlbumList2', { type: 'starred' })).body.albumList2.album.map((a: { id: string }) => a.id), ['al2']);
+  assert.deepEqual((await rest('getAlbumList2', { type: 'highest' })).body.albumList2.album.map((a: { id: string }) => a.id), ['al2', 'al1'], 'rated 5 then 4');
+  assert.equal((await rest('getSong', { id: 'nd1' })).body.song.userRating, 4);
+  assert.deepEqual(nd.calls, [], 'Navidrome wasn’t asked for any of it');
 });
