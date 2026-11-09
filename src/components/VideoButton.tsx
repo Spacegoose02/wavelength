@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { create } from 'zustand';
 import { engine } from '../player/engine';
 import { useFeature } from '../lib/features';
 import type { Track } from '../sources/types';
@@ -25,23 +26,37 @@ export async function findVideo(t: Track): Promise<Found> {
   return v;
 }
 
+type Open = { id: string; title: string; resume: boolean };
+
+/**
+ * The one video dialog, kept in a store and drawn by VideoHost at the app's root rather than inside the button
+ * that opened it. A track row's actions are hidden (opacity 0) until the row is hovered, and the row can be
+ * re-drawn when a feed refreshes, so a dialog drawn inside the row vanished as soon as the mouse left it.
+ */
+const useVideo = create<{ open: Open | null }>(() => ({ open: null }));
+
 /** Pause the audio while a video plays, and carry on from the same spot when it's closed. */
-function useVideoDialog() {
-  const [open, setOpen] = useState<{ id: string; title: string } | null>(null);
-  const [resume, setResume] = useState(false);
-  const watch = (v: { id: string; title: string }) => {
-    const playing = usePlayer.getState().playing;
-    if (playing) engine.pause();
-    setResume(playing);
-    setOpen(v);
-  };
-  const close = () => {
-    setOpen(null);
-    const p = usePlayer.getState();
-    if (resume && !p.playing) p.toggle();
-  };
-  const dialog = open ? <VideoDialog id={open.id} title={open.title} onClose={close} /> : null;
-  return { watch, dialog };
+function watch(v: { id: string; title: string }) {
+  const prev = useVideo.getState().open;
+  const playing = usePlayer.getState().playing;
+  if (playing) engine.pause();
+  // a second video over the first keeps the first one's answer to "was the audio playing?"
+  useVideo.setState({ open: { id: v.id, title: v.title, resume: playing || !!prev?.resume } });
+}
+
+function close() {
+  const open = useVideo.getState().open;
+  if (!open) return;
+  useVideo.setState({ open: null });
+  const p = usePlayer.getState();
+  if (open.resume && !p.playing) p.toggle();
+}
+
+/** Mounted once in App: the video dialog, open until "Back to listening", Escape or a click outside it. */
+export function VideoHost() {
+  const open = useVideo((s) => s.open);
+  if (!open) return null;
+  return <VideoDialog key={open.id} id={open.id} title={open.title} onClose={close} />;
 }
 
 /**
@@ -52,7 +67,6 @@ export function VideoButton({ track }: { track: Track }) {
   const on = useFeature('musicVideos');
   const key = keyOf(track);
   const [video, setVideo] = useState<Found | undefined>(found.get(key));
-  const { watch, dialog } = useVideoDialog();
   useEffect(() => {
     setVideo(found.get(key));
     if (!on || found.has(key)) return;
@@ -63,12 +77,7 @@ export function VideoButton({ track }: { track: Track }) {
     };
   }, [key, on]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!on || !video) return null;
-  return (
-    <>
-      <button className="chip" title={video.title} onClick={() => watch(video)}>Video</button>
-      {dialog}
-    </>
-  );
+  return <button className="chip" title={video.title} onClick={() => watch(video)}>Video</button>;
 }
 
 /**
@@ -79,30 +88,31 @@ export function EpisodeVideoChip({ track }: { track: Track }) {
   const on = useFeature('musicVideos');
   const hasHub = useHub((s) => !!s.token);
   const [state, setState] = useState<'idle' | 'looking' | 'none'>(() => (found.get(keyOf(track)) === null ? 'none' : 'idle'));
-  const { watch, dialog } = useVideoDialog();
   if (!on || !hasHub || track.kind !== 'episode') return null;
   return (
-    <>
-      <button className="chip" disabled={state !== 'idle'} title={state === 'none' ? 'No video of this episode on YouTube' : 'Watch this episode on YouTube, if the show posted it'}
-        onClick={async (e) => {
-          e.stopPropagation();
-          setState('looking');
-          const v = await findVideo(track);
-          if (v) {
-            setState('idle');
-            watch(v);
-          } else setState('none');
-        }}>
-        {state === 'looking' ? 'Looking…' : state === 'none' ? 'No video' : 'Video'}
-      </button>
-      {dialog}
-    </>
+    <button className="chip" disabled={state !== 'idle'} title={state === 'none' ? 'No video of this episode on YouTube' : 'Watch this episode on YouTube, if the show posted it'}
+      onClick={async (e) => {
+        e.stopPropagation();
+        setState('looking');
+        const v = await findVideo(track);
+        if (v) {
+          setState('idle');
+          watch(v);
+        } else setState('none');
+      }}>
+      {state === 'looking' ? 'Looking…' : state === 'none' ? 'No video' : 'Video'}
+    </button>
   );
 }
 
 function VideoDialog({ id, title, onClose }: { id: string; title: string; onClose(): void }) {
   useEffect(() => {
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    // Escape closes the video; neither it nor Space reaches the app's own keys (play/pause, leave Now Playing),
+    // so Space can't start the audio under the video
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' || e.code === 'Space') e.stopPropagation();
+    };
     document.addEventListener('keydown', key);
     return () => document.removeEventListener('keydown', key);
   }, [onClose]);

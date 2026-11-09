@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **Podcast videos stay open.** The video from an episode row's **Video** button no longer vanishes when the mouse
+  leaves the row: it was drawn inside the row's hover-only actions. One dialog is now drawn at the app's root
+  (`VideoHost` in `src/components/VideoButton.tsx`) and stays until **Back to listening**, Escape or a click
+  outside it. Space no longer starts the audio underneath while the video is up.
+
 ## 0.38.0
 - **Advanced smart playlists.** Smart playlists get an Advanced mode like Plex's filter builder: nested "match
   all / any" groups of field, operator and value rows over artist, album and track fields (genre, style, mood,
