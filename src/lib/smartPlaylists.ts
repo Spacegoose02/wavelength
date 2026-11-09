@@ -4,6 +4,7 @@ import type { Album, Track } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { enabledSources } from '../store/settings';
 import { albumGenres, albumTags, type BrowseQuery, genreKey } from './browse';
+import { describeRules, evalGroup, newRule, type Rule, type RuleGroup, type SortId, sortKey } from './smartRules';
 import { featuresFor } from './sonic';
 
 /**
@@ -43,6 +44,12 @@ export interface SmartPlaylist {
   collections?: string[];
   /** Albums in these collections are left out ("everything but Christmas"). */
   notCollections?: string[];
+  /**
+   * Advanced rules (lib/smartRules.ts, Plex's filter builder): when set, they are the playlist's rules and the
+   * simple ones above are ignored. `sort` says which songs the limit keeps (random when missing).
+   */
+  rules?: RuleGroup;
+  sort?: SortId;
 }
 
 /** Whether the playlist has rules on the Hub's album tags, so its songs come from the albums that fit. */
@@ -99,6 +106,12 @@ export interface SongFacts {
   addedAt?: number;
   year?: number;
   genre?: string;
+  /** The file's type ("flac", "mp3") and bit rate (kbps); the album's record label (album songs only). */
+  format?: string;
+  bitRate?: number;
+  label?: string;
+  /** Where the file is, as the server shows it ("Artist/Album/01 Song.flac"). */
+  path?: string;
 }
 
 export const newSmartPlaylist = (): SmartPlaylist => ({
@@ -132,6 +145,10 @@ export function matches(p: SmartPlaylist, f: SongFacts, now = Date.now()): boole
 
 /** One line saying what the rules are, for the card. */
 export function describe(p: SmartPlaylist): string {
+  if (p.rules) {
+    const sort = p.sort && p.sort !== 'random' ? `, ${SORT_WORDS[p.sort]}` : '';
+    return `${describeRules(p.rules)} · up to ${p.limit}${sort}`;
+  }
   const bits = [
     p.genres.length ? p.genres.join(' or ') : 'Any genre',
     p.minRating ? `rated ${p.minRating}+` : '',
@@ -162,6 +179,7 @@ export async function smartTracks(p: SmartPlaylist): Promise<Track[]> {
   const servers = enabledSources().filter((s) => s.kind === 'navidrome').map((s) => sourceFor(s) as NavidromeSource);
   if (!servers.length) throw new Error('Smart playlists need a Navidrome server (Settings → Sources)');
   const now = Date.now();
+  if (p.rules) return ruleTracks(p, p.rules, servers, now);
   if (byAlbum(p)) return pickSounds(p, await albumTracks(p, servers, now));
   const lists = await Promise.all(servers.map(async (src) => {
     const songs = p.genres.length
@@ -196,6 +214,47 @@ async function albumTracks(p: SmartPlaylist, servers: NavidromeSource[], now: nu
   return out;
 }
 
+const SORT_WORDS: Record<SortId, string> = { random: 'at random', plays: 'most played first', leastPlays: 'least played first', played: 'last played first', added: 'newest added first', rating: 'highest rated first', newest: 'newest first', oldest: 'oldest first' };
+
+/** How many albums an advanced playlist reads at most, so a huge library doesn't mean thousands of requests. */
+export const MAX_ALBUMS = 400;
+
+/**
+ * Songs for advanced rules: the albums that could match (the artist and album rows checked on the library's album
+ * list), then their songs, each checked against every row. With random order it stops once there are plenty;
+ * sorted ("most played"), it reads every candidate album up to MAX_ALBUMS so the top ones are the real top.
+ */
+async function ruleTracks(p: SmartPlaylist, rules: RuleGroup, servers: NavidromeSource[], now: number): Promise<Track[]> {
+  const ids = new Set(servers.map((s) => s.config.id));
+  const candidates: { album: Album; ref: Album }[] = [];
+  for (const album of useCatalog.getState().albums) {
+    if (evalGroup(rules, { album, now }) === false) continue;
+    const ref = (album.refs ?? [album]).find((r) => ids.has(r.sourceId));
+    if (ref) candidates.push({ album, ref });
+  }
+  const sort = p.sort ?? 'random';
+  // a random pick stops once there are a few times the limit, from as many albums as that took
+  const enough = Math.max(p.limit * 3, 200);
+  const matched: { track: Track; album: Album; facts: SongFacts }[] = [];
+  const queue = shuffle(candidates).slice(0, MAX_ALBUMS);
+  for (let i = 0; i < queue.length && (sort !== 'random' || matched.length < enough); i += 8) {
+    const lists = await Promise.all(queue.slice(i, i + 8).map(async ({ album, ref }) => {
+      const src = servers.find((s) => s.config.id === ref.sourceId)!;
+      const read = await src.albumSongsWithFacts(ref.id).catch(() => []);
+      return read.map((s) => ({ ...s, album }));
+    }));
+    for (const s of lists.flat()) if (evalGroup(rules, { album: s.album, track: s.track, facts: s.facts, now }) === true) matched.push(s);
+  }
+  let pool = shuffle(matched);
+  if (p.moods?.length || p.minBpm || p.maxBpm) {
+    pool = pool.slice(0, 3000);
+    const feats = await featuresFor(pool.map((s) => s.track));
+    pool = pool.filter((_, i) => soundMatches(p, feats[i]));
+  }
+  if (sort !== 'random') pool.sort((a, b) => sortKey(sort, a) - sortKey(sort, b));
+  return pool.slice(0, Math.max(1, p.limit)).map((s) => s.track);
+}
+
 /** The sound-alike rules (mood, tempo), then a random pick up to the limit. */
 async function pickSounds(p: SmartPlaylist, tracks: Track[]): Promise<Track[]> {
   let all = tracks;
@@ -206,4 +265,26 @@ async function pickSounds(p: SmartPlaylist, tracks: Track[]): Promise<Track[]> {
     all = all.filter((_, i) => soundMatches(p, feats[i]));
   }
   return shuffle(all).slice(0, Math.max(1, p.limit));
+}
+
+/** The simple rules as advanced ones, for switching an existing playlist to the builder. */
+export function advancedRules(p: SmartPlaylist): RuleGroup {
+  const rules: RuleGroup['rules'] = [];
+  const anyOfRows = (field: Rule['field'], names: string[] | undefined, op: Rule['op'] = 'is') => {
+    if (!names?.length) return;
+    if (names.length === 1) rules.push({ field, op, value: names[0] });
+    else rules.push({ match: op === 'isNot' ? 'all' : 'any', rules: names.map((value) => ({ field, op, value })) });
+  };
+  anyOfRows('genre', p.genres.flatMap((g) => g.split(/\s*;\s*/)).filter(Boolean));
+  if (p.fromYear) rules.push({ field: 'year', op: 'gt', value: String(p.fromYear - 1) });
+  if (p.toYear) rules.push({ field: 'year', op: 'lt', value: String(p.toYear + 1) });
+  anyOfRows('style', p.styles);
+  anyOfRows('mood', p.tagMoods);
+  anyOfRows('collection', p.collections);
+  anyOfRows('collection', p.notCollections, 'isNot');
+  if (p.minRating) rules.push({ field: 'rating', op: 'gt', value: String(p.minRating - 1) });
+  if (p.starred) rules.push({ field: 'starred', op: 'is', value: 'true' });
+  if (p.notPlayedDays) rules.push({ field: 'played', op: 'notInLast', value: String(p.notPlayedDays) });
+  if (p.addedDays) rules.push({ field: 'added', op: 'inLast', value: String(p.addedDays) });
+  return { match: 'all', rules: rules.length ? rules : [newRule()] };
 }

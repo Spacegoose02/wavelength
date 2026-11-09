@@ -1142,6 +1142,22 @@ that fit, picked at random each time.
 "Southern Rap · Reckless") and on Albums and Artists when a filter is on. Name it, and it's under Playlists → Smart
 playlists, where **Edit** adds more rules.
 
+**Advanced** (at the top of the editor) works like Plex's filter builder: **Match all / any of the following**,
+then rows of a field, an operator and a value, and **+ Group** for a group inside (all of these, any of those).
+"Album genre is Country, and any of (Artist contains Luke, Artist contains Morgan), Album collection is not
+Christmas, Track last played is not in the last 30 days". The fields:
+
+- **Artist:** artist, artist genre (the Hub's, else their albums' genres), artist style, mood and collection.
+- **Album:** title, year, decade, genre, plays, last played, rating, ♥, record label, style, mood, collection,
+  type (album, single, EP, compilation, live…), date added.
+- **Track:** title, artist, genre, plays, last played, rating, ♥, date added, audio format, bit rate, folder.
+
+**Limit to** N songs, picked at random, most or least played, last played, recently added, highest rated, newest
+or oldest. Switching a playlist to Advanced turns its simple rules into rows. **Try it** shows how many songs
+match without playing them, and **Save as new** keeps the original. Album and artist rows are checked on the whole
+library; track rows are checked on the songs of up to 400 albums that fit the rest, read fresh each time. Plex
+fields Wavelength has no data for (artist country, critic rating, skips, trash, source) aren't offered.
+
 ## Library care
 
 **Albums → Library care** (on a phone, Library → Library care) has two lists, and two more for Hub admins:
