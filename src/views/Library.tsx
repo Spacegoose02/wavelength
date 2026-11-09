@@ -9,7 +9,7 @@ import { sourceFor, mergeAlbums } from '../sources/registry';
 import { stationToTrack } from '../sources/radio';
 import type { Album, Artist, Track } from '../sources/types';
 import { SOURCE_COLORS } from '../sources/types';
-import { AlbumCard, ArtistCard, Cover, Rating, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
+import { AlbumCard, ArtistCard, ArtistCredit, Cover, Rating, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
 import { IconDownload, IconPlay, IconShuffle } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
@@ -31,7 +31,6 @@ import { ArtworkButton } from '../components/ArtworkButton';
 import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
 import { loadParts } from '../lib/albumParts';
 import { artistOfAlbum } from '../lib/trackLinks';
-import { primaryArtist } from '../lib/match';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
 import { ArtistNews, notOneArtist, useCanGet } from '../components/ArtistNews';
@@ -521,6 +520,7 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
   useArtworkList();
   const art = albumArt(album, ref.coverUrl ?? album.coverUrl);
   useCatalog((s) => s.albums);
+  const catalogArtists = useCatalog((s) => s.artists);
   const versions = versionsOf(album);
   const both = hasBoth(versions);
   const shown = versionOf(ref);
@@ -566,11 +566,10 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
           <div className="kicker">Album{album.year ? ` · ${album.year}` : ''}</div>
           <h1>{both ? ref.title : album.title} <Rating explicit={both ? shown : explicitOfAlbum(album)} /></h1>
           {/* the library artist, else their Deezer releases, so the link always goes somewhere (lib/trackLinks.ts) */}
-          <button className="link" onClick={() => {
-            const artist = artistOfAlbum({ ...album, refs: [ref, ...refs] }, useCatalog.getState().artists);
-            if (artist) useUi.getState().go({ view: 'artist', artist });
-            else useUi.getState().go({ view: 'artistReleases', artist: { id: '', sourceId: '', name: primaryArtist(album.artist) } });
-          }}>{album.artist}</button>
+          {/* each artist in "A feat. B" links on its own; one the library lacks opens their Deezer releases */}
+          <div className="hero-artists">
+            <ArtistCredit credit={album.artist} fallback={artistOfAlbum({ ...album, refs: [ref, ...refs] }, catalogArtists)} linkClass="link" discography="all" />
+          </div>
           <div className="muted">{tracks ? `${tracks.length} tracks · ${fmtTime(total)}` : ''}</div>
           <div className="hero-actions">
             <button className="btn primary" disabled={!tracks?.length} onClick={() => tracks && playTracks(tracks)}><IconPlay /> Play</button>

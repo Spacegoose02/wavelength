@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { albumOfTrack, artistOfTrack, focusIndex } from '../lib/trackLinks';
+import { albumOfTrack, artistOfTrack, creditLinks, focusIndex } from '../lib/trackLinks';
 import type { Album, Artist, Track } from '../sources/types';
 
 const track = (more: Partial<Track> = {}): Track =>
@@ -34,5 +34,37 @@ describe('Now Playing links', () => {
     expect(focusIndex(list, { id: 'b', sourceId: 'nd' })).toBe(1);
     expect(focusIndex(list, { id: 'zz', sourceId: 'plex', title: 'Skeletons' })).toBe(1);
     expect(focusIndex(list)).toBe(-1);
+  });
+});
+
+describe('creditLinks: each artist in a credit', () => {
+  const lib = (...names: string[]) => names.map((name, i) => ({ id: `ar${i}`, sourceId: 'nd', name }) as Artist);
+  const show = (parts: ReturnType<typeof creditLinks>) => parts.map((p) => (p.name ? `[${p.name}${p.artist ? '' : '?'}]` : p.text)).join('');
+
+  it('cuts "A feat. B; C; D" into four artists, keeping the text between them', () => {
+    const parts = creditLinks('Future feat. Drake; Travis Scott; Loe Shimmy', lib('Future', 'Drake', 'Travis Scott'));
+    expect(show(parts)).toBe('[Future] feat. [Drake]; [Travis Scott]; [Loe Shimmy?]');
+    expect(parts.map((p) => p.text).join('')).toBe('Future feat. Drake; Travis Scott; Loe Shimmy');
+    expect(parts.find((p) => p.name === 'Drake')?.artist?.id).toBe('ar1');
+  });
+
+  it('keeps a library artist with a comma or "&" whole', () => {
+    expect(show(creditLinks('Tyler, The Creator', lib('Tyler, The Creator')))).toBe('[Tyler, The Creator]');
+    expect(show(creditLinks('Earth, Wind & Fire feat. Drake', lib('Earth, Wind & Fire')))).toBe('[Earth, Wind & Fire] feat. [Drake?]');
+  });
+
+  it('cuts on "&", "," and "x" only when a piece is a library artist', () => {
+    expect(show(creditLinks('Simon & Garfunkel', lib()))).toBe('[Simon & Garfunkel?]');
+    expect(show(creditLinks('Metro Boomin & Future', lib('Future')))).toBe('[Metro Boomin?] & [Future]');
+    expect(show(creditLinks('Drake, 21 Savage', lib('Drake')))).toBe('[Drake], [21 Savage?]');
+  });
+
+  it('reads a bracketed "(feat. X)" and a " / " join', () => {
+    expect(show(creditLinks('Future (feat. Drake)', lib('Future', 'Drake')))).toBe('[Future] (feat. [Drake])');
+    expect(show(creditLinks('Future / Drake', lib()))).toBe('[Future?] / [Drake?]');
+  });
+
+  it('matches names as the catalog merges them', () => {
+    expect(creditLinks('the weeknd feat. DRAKE', lib('The Weeknd', 'Drake')).filter((p) => p.artist)).toHaveLength(2);
   });
 });
