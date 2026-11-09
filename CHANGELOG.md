@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.36.1
 - **Fix: playing a song on a phone no longer blanks the screen.** The desktop mini player window (0.25.0) shared the
   `.mini-player` class with the phone's mini player, and its full-height rule stretched the phone one over the whole
   screen, hiding the page and the tab bar. The window now uses `.mini-window` (`src/components/MiniPlayer.tsx`), and
-  `src/test/phoneDock.test.ts` keeps a full-height rule off the phone's mini player.
+  `src/test/phoneDock.test.ts` keeps a full-height rule off the phone's mini player (#248).
 
 ## 0.36.0
 - **Podcasts → Latest episodes.** A new first tab lists the newest episodes from every show in one place, and
