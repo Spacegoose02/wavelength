@@ -1990,7 +1990,11 @@ Your Hub needs your music at `/music`, read-write, and the Navidrome admin login
   **Release date** (a year or a full date), **Release type** and **Record label**. The release type (Album, EP,
   Single or Compilation) decides which shelf the album sits on in its artist's page. Left as **Not set**, an
   album of up to 3 songs counts as a single and 4 to 6 songs as an EP.
-- **Tags:** genres and moods as chips, the same way as for a song.
+- **Tags:** genres as chips, the same way as for a song, then the album's **Styles** (the narrow kinds of music
+  within its genres, like "Christmas Pop" or "Southern Rap"), **Moods** ("Warm", "Laid-Back/Mellow") and
+  **Collections** (groups you make, like "Christmas"). An album's genres can differ from its artist's: a pop group's
+  Christmas album can be Christmas while the group stays Pop. Styles, moods and collections are kept on your Hub
+  rather than in the files, follow the album if you rename it, and show under the title on its page.
 - **Poster:** the cover picker, right in the dialog.
 - **Info:** how many songs, the folder, and the file formats.
 
@@ -2007,8 +2011,10 @@ above. .m4a files can't hold the sort title, release type, record label or mood,
   renames them in every song on their albums, credits like "Kodak Black feat. …" included; picking a name your
   library already has merges the two. The biography is kept on your Hub and shown on the artist page in place of
   Wikipedia's; leave it empty to get Wikipedia's back.
-- **Tags:** the genres most of their songs have, as chips. Changing them writes the new genres into every song of
-  theirs.
+- **Tags:** the artist's own **Genres**, **Styles**, **Moods** and **Collections**, kept on your Hub and shown under
+  their name. Until you set them, Genres shows what most of their songs have. Saving keeps the artist's genres apart
+  from their albums', so each album keeps its own; tick **Also write these genres into every song of theirs** to
+  set every album of theirs to them as before.
 - **Poster:** the artist picture picker.
 - **Advanced:** **Album sorting**: newest first (the default), oldest first, or A to Z, for everyone on your Hub.
 

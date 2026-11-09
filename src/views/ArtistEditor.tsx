@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArtworkPicker } from '../components/ArtworkButton';
 import { Spinner } from '../components/common';
 import { ChipInput, EditDialog } from '../components/EditDialog';
-import { forgetTagValues, TagLists, useTagValues } from '../components/TagLists';
+import { forgetTagValues, HubTagLists, TagLists, useTagValues } from '../components/TagLists';
 import { useArtistMetaStore } from '../lib/artistMeta';
 import { type ArtistSong, loadArtistSongs } from '../lib/artistSongs';
+import { useItemTagStore } from '../lib/itemTags';
 import { renameArtist } from '../lib/merge';
 import { joinGenres, readCredit, splitGenres } from '../lib/songCredit';
 import { saveInParts } from '../lib/tagSave';
@@ -20,7 +21,10 @@ import { useUi } from '../store/ui';
  * - **General:** the name (a rename, written into the Artist and Album artist tags of every song on their albums,
  *   credits like "A feat. B" too), the sort name (ARTISTSORT / ALBUMARTISTSORT, so "The Weeknd" can sort under W)
  *   and a biography, which the Hub keeps and the artist page shows instead of Wikipedia's.
- * - **Tags:** the genres of their albums as chips. Changing them writes the new genres into every song of theirs.
+ * - **Tags:** the artist's own genres, styles, moods and collections as chips, kept on the Hub (hub/src/itemTags.ts),
+ *   so an album can have genres of its own (a Christmas album by a pop group). Until the artist has genres of their
+ *   own, the ones most of their songs have are shown. Their songs' genres change only when "Also write these genres
+ *   into every song of theirs" is ticked.
  * - **Poster:** the artist picture picker.
  * - **Advanced:** how their page orders their albums (newest or oldest first, or A to Z).
  *
@@ -48,7 +52,10 @@ function usual(values: (string | undefined)[]): string {
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
 }
 
-interface Draft { name: string; sort: string; bio: string; genres: string[]; albumSort: HubAlbumSort }
+interface Draft { name: string; sort: string; bio: string; genres: string[]; styles: string[]; moods: string[]; collections: string[]; albumSort: HubAlbumSort }
+const HUB_LISTS = [['genres', 'Genres', 'Add a genre', 'tag-genres'], ['styles', 'Styles', 'Add a style, like Teen Pop', 'tag-styles'], ['moods', 'Moods', 'Add a mood, like Cheerful', 'tag-moods'], ['collections', 'Collections', 'Add to a collection', 'tag-collections']] as const;
+type HubKey = (typeof HUB_LISTS)[number][0];
+const hubBody = (d: Pick<Draft, HubKey>) => ({ genres: d.genres, styles: d.styles, moods: d.moods, collections: d.collections });
 
 export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; picture?: string; onClose: () => void }) {
   const c = hubClient();
@@ -60,20 +67,30 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const [tab, setTab] = useState<Tab>('general');
   const [msg, setMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState<{ batches: string[]; files: number; name: string; meta?: Pick<Draft, 'bio' | 'albumSort'> }>();
+  const [saved, setSaved] = useState<{ batches: string[]; files: number; name: string; meta?: Pick<Draft, 'bio' | 'albumSort'>; hub?: { lists: Pick<Draft, HubKey>; hadAny: boolean; moved: boolean } }>();
+  /** The Hub keeps artist tags (an older one doesn't), and whether this artist has any yet. */
+  const [hubOn, setHubOn] = useState(false);
+  const [hubHad, setHubHad] = useState(false);
+  const [writeSongs, setWriteSongs] = useState(false);
   const [name, setName] = useState(artist.name);
 
   const load = async (who = name) => {
     if (!c) return;
     try {
-      const [r, meta] = await Promise.all([loadArtistSongs({ ...artist, name: who }, sources, c), c.artistMeta(who)]);
+      const [r, meta] = await Promise.all([loadArtistSongs({ ...artist, name: who }, sources, c), c.artistMeta(who), useItemTagStore.getState().load()]);
+      const own = useItemTagStore.getState().ready ? await c.itemTagsOf('artist', who).catch(() => undefined) : undefined;
+      setHubOn(!!own);
+      setHubHad(own?.updatedAt != null);
       setSongs(r.songs);
       const mine = theirs(r.songs, who);
       const d: Draft = {
         name: who,
         sort: usual([...mine.map((s) => (same(readCredit(s.tags.artist ?? '').main, who) ? s.tags.artistSort : undefined)), ...mine.map((s) => (same(s.tags.albumArtist, who) ? s.tags.albumArtistSort : undefined))]),
         bio: meta.bio,
-        genres: splitGenres(usual(mine.map((s) => s.tags.genre))),
+        genres: own?.facets.genre ?? splitGenres(usual(mine.map((s) => s.tags.genre))),
+        styles: own?.facets.style ?? [],
+        moods: own?.facets.mood ?? [],
+        collections: own?.facets.collection ?? [],
         albumSort: meta.albumSort,
       };
       setStart(d);
@@ -90,7 +107,11 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => (d ? { ...d, [k]: v } : d));
   const renamed = !!draft && !!start && draft.name.trim() !== start.name && !!draft.name.trim();
   const sortChanged = !!draft && !!start && draft.sort.trim() !== start.sort;
-  const genresChanged = !!draft && !!start && joinGenres(draft.genres) !== joinGenres(start.genres);
+  const listChanged = (k: HubKey) => !!draft && !!start && joinGenres(draft[k]) !== joinGenres(start[k]);
+  const genresChanged = listChanged('genres');
+  const hubDirty = hubOn && HUB_LISTS.some(([k]) => listChanged(k));
+  // without a Hub that keeps them, genres can only go into the songs
+  const songGenres = genresChanged && (writeSongs || !hubOn);
   const metaChanged = !!draft && !!start && (draft.bio.trim() !== start.bio || draft.albumSort !== start.albumSort);
 
   /** The tags each song gets: the rename first, then the sort name and genres on the songs that are theirs. */
@@ -109,11 +130,11 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         if (main && (s.tags.artistSort ?? '') !== draft.sort.trim()) tags.artistSort = draft.sort.trim();
         if (albumMain && (s.tags.albumArtistSort ?? '') !== draft.sort.trim()) tags.albumArtistSort = draft.sort.trim();
       }
-      if (genresChanged && (albumMain || main) && joinGenres(draft.genres) !== (s.tags.genre ?? '')) tags.genre = joinGenres(draft.genres);
+      if (songGenres && (albumMain || main) && joinGenres(draft.genres) !== (s.tags.genre ?? '')) tags.genre = joinGenres(draft.genres);
       return Object.keys(tags).length ? [{ path: s.path, tags }] : [];
     });
-  }, [songs, draft, start, renamed, sortChanged, genresChanged]);
-  const dirty = changes.length > 0 || metaChanged;
+  }, [songs, draft, start, renamed, sortChanged, songGenres]);
+  const dirty = changes.length > 0 || metaChanged || hubDirty;
 
   const save = async () => {
     if (!c || !draft || !start || !dirty) return;
@@ -135,8 +156,17 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         meta = { bio: start.bio, albumSort: start.albumSort };
         if (renamed) useArtistMetaStore.getState().put(await c.setArtistMeta(start.name, { bio: '', albumSort: '' }));
       }
+      // the Hub's genres, styles, moods and collections follow a rename (their albums' too), then take what changed
+      let hub: NonNullable<typeof saved>['hub'];
+      const moved = hubOn && renamed;
+      if (moved) await c.renameItemTags('artist', { artist: start.name }, { artist: to });
+      if (hubDirty || moved) {
+        if (hubDirty) useItemTagStore.getState().put(await c.setItemTags('artist', to, '', hubBody(draft)));
+        hub = { lists: hubBody(start), hadAny: hubHad, moved };
+        void useItemTagStore.getState().load(true);
+      }
       forgetTagValues();
-      setSaved({ batches: r.batches, files: r.changed.length, name: start.name, meta });
+      setSaved({ batches: r.batches, files: r.changed.length, name: start.name, meta, hub });
       setMsg(r.failed.length ? `${plural(r.failed.length, 'song')} failed: ${r.failed[0].error}` : undefined);
       setName(to);
       await load(to);
@@ -156,6 +186,11 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         if (!same(draft.name, saved.name)) useArtistMetaStore.getState().put(await c.setArtistMeta(draft.name, { bio: '', albumSort: '' }));
         useArtistMetaStore.getState().put(await c.setArtistMeta(saved.name, saved.meta));
       }
+      if (saved.hub) {
+        if (saved.hub.moved) await c.renameItemTags('artist', { artist: draft.name }, { artist: saved.name });
+        await c.setItemTags('artist', saved.name, '', saved.hub.hadAny ? saved.hub.lists : { genres: [], styles: [], moods: [], collections: [] });
+        await useItemTagStore.getState().load(true);
+      }
       setName(saved.name);
       setSaved(undefined);
       setMsg('Put the artist back as they were. Navidrome shows it after its rescan, in a minute or so');
@@ -173,7 +208,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   };
 
   const what = [
-    renamed && 'name', sortChanged && 'sort name', genresChanged && 'genres', draft && start && draft.bio.trim() !== start.bio && 'biography', draft && start && draft.albumSort !== start.albumSort && 'album order',
+    renamed && 'name', sortChanged && 'sort name', ...HUB_LISTS.filter(([k]) => listChanged(k)).map(([k]) => k), draft && start && draft.bio.trim() !== start.bio && 'biography', draft && start && draft.albumSort !== start.albumSort && 'album order',
   ].filter(Boolean).join(', ');
 
   return (
@@ -206,15 +241,34 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         </div>
       ) : tab === 'tags' ? (
         <div className="edit-fields">
-          <div className="span2 edit-field">
-            <span className="edit-field-label">Genres</span>
-            <ChipInput values={draft.genres} onChange={(v) => set('genres', v)} list="tag-genres" placeholder="Add a genre" split={splitGenres} label="genre" />
-          </div>
-          <p className="span2 muted small">
-            {genresChanged
-              ? `Saving writes these genres into ${plural(changes.filter((x) => x.tags.genre !== undefined).length, 'song')} of theirs.`
-              : `The genres most of their ${plural(theirs(songs, draft.name).length, 'song')} have. Changing them writes the new ones into every song of theirs.`}
-          </p>
+          <HubTagLists />
+          {(hubOn ? HUB_LISTS : HUB_LISTS.slice(0, 1)).map(([k, label, placeholder, list]) => (
+            <div key={k} className="span2 edit-field">
+              <span className="edit-field-label">{label}</span>
+              <ChipInput values={draft[k]} onChange={(v) => set(k, v)} list={list} placeholder={placeholder} split={splitGenres} label={k.slice(0, -1)} />
+            </div>
+          ))}
+          {hubOn ? (
+            <>
+              <label className="span2 row gap small">
+                <input type="checkbox" checked={writeSongs} onChange={(e) => setWriteSongs(e.target.checked)} />
+                Also write these genres into every song of theirs
+              </label>
+              <p className="span2 muted small">
+                {songGenres
+                  ? `Saving writes these genres into ${plural(changes.filter((x) => x.tags.genre !== undefined).length, 'song')} of theirs, so every album of theirs gets them.`
+                  : hubHad
+                    ? 'The artist’s own genres, kept on your Hub with their styles, moods and collections. Their albums keep genres of their own.'
+                    : `Until you save, these are the genres most of their ${plural(theirs(songs, draft.name).length, 'song')} have. Saving keeps them on your Hub as the artist’s own; their albums keep genres of their own.`}
+              </p>
+            </>
+          ) : (
+            <p className="span2 muted small">
+              {genresChanged
+                ? `Saving writes these genres into ${plural(changes.filter((x) => x.tags.genre !== undefined).length, 'song')} of theirs.`
+                : `The genres most of their ${plural(theirs(songs, draft.name).length, 'song')} have. Changing them writes the new ones into every song of theirs.`}
+            </p>
+          )}
         </div>
       ) : tab === 'poster' ? (
         <ArtworkPicker inline kind="artist" artist={artist.name} album="" current={picture} onClose={() => undefined} />
