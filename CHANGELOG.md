@@ -1,18 +1,45 @@
 # Changelog
 
-## Unreleased
+## 0.39.0
+- **Turn Navidrome off: the Hub becomes the music server (phase 6 of replacing Navidrome).** Settings → Server →
+  Music catalog has **Turn Navidrome off**. Before it switches, the Hub copies what it doesn't have yet (each
+  person's hearts, plays, ratings and playlists, with their own Navidrome login, and the radio stations); if a copy
+  fails, Navidrome stays on and the card lists who, with **Turn it off anyway**. Once off, every device goes through
+  the Hub and the relay never calls Navidrome: it also answers `ping`, folders, scans, `getIndexes`,
+  `getMusicDirectory`, `getAlbumList`, `search2`, top songs, artist and album info, similar songs (from the sound
+  analysis), play history and artist and playlist covers. Navidrome's ids are kept; new files get Hub ids
+  (`h` + 20 hex digits) that follow renames and merges (`Catalog.giveIds`). The Hub's own jobs (Search, Discover,
+  Jam, sound analysis, Library care, rescans) read the catalog. **Turn Navidrome back on** undoes it, and Navidrome
+  support stays for anyone who hosts their own (`PUT /api/admin/catalog/navidrome`, docs/HUB.md "Without
+  Navidrome", #265).
+- **Logins on the Hub for other music apps.** Settings → Hub → **Other music apps** gives SUB/WAVE or any Subsonic
+  app a Hub address (`<hub>/nd/<id>`), username and password of its own, shown again whenever you need it; **Remove**
+  signs that app out. Available once devices go through the Hub (`GET`/`POST /api/me/app-logins`, #266).
+- **The Hub stays quick as it takes over.** Answers over 1 KB are compressed (Brotli or gzip; a page of 500 albums
+  drops from about 155 KB to a tenth of that), a tag edit or small scan updates only the songs that changed instead
+  of rebuilding the catalog (about 30 ms for ten songs instead of 240 ms for 30,000), hearts and plays are kept in
+  memory, and the playlist list is faster. Trashed albums now leave the Hub's answers at once (`hub/src/compress.ts`,
+  #264).
 - **Moods and styles on songs.** Like Plex's track moods, a song can have moods and styles of its own, apart from
   its album's: Edit song's Tags tab sets them, **Import from Plex** now reads every song's moods too, Browse puts an
   album under a mood any of its songs has (and plays just those songs), and smart playlists get **Track mood** and
   **Track style** rules. "Save as smart playlist" on a mood or style matches the album's or the song's own. Kept on
-  the Hub (`hub/src/trackTags.ts`, migration 37).
+  the Hub (`hub/src/trackTags.ts`, migration 37, #263).
 - **Edit album on more albums.** When the copy on screen is Plex's and the same album is on Navidrome, Edit album
   opens the Navidrome copy (it used to be hidden). An album that's only on Plex gets an Edit album for its styles,
-  moods and collections (the rest is in Plex).
+  moods and collections (the rest is in Plex; #263).
 - **Podcast videos stay open.** The video from an episode row's **Video** button no longer vanishes when the mouse
   leaves the row: it was drawn inside the row's hover-only actions. One dialog is now drawn at the app's root
   (`VideoHost` in `src/components/VideoButton.tsx`) and stays until **Back to listening**, Escape or a click
-  outside it. Space no longer starts the audio underneath while the video is up.
+  outside it. Space no longer starts the audio underneath while the video is up (#262).
+- **Fix: opening Podcasts no longer crashes Audiobookshelf.** Continue listening asked ABS for
+  `/api/me/items-in-progress`, which loads every episode of every part-listened show at once and ran ABS out of
+  memory on shows with thousands of episodes. In-progress episodes now come from the progress already loaded,
+  matched against the newest episodes, and the few left over are read one show at a time (at most five)
+  (`getEpisodesInProgress` in `src/sources/audiobookshelf.ts`, #261).
+- **Fix: Test connection explains a browser's NetworkError.** In a browser it used to say only "NetworkError when
+  attempting to fetch resource"; it now gives the likely causes and, for Audiobookshelf, names **Allowed CORS
+  Origins** and the origin to add (`browserFetchHint` in `src/lib/http.ts`, #261).
 
 ## 0.38.0
 - **Advanced smart playlists.** Smart playlists get an Advanced mode like Plex's filter builder: nested "match
