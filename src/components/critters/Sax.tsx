@@ -6,12 +6,12 @@ import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /** Where the mouthpiece meets the mouth: the sax tips about this point. */
-const MOUTH: [number, number] = [212, 240];
+const MOUTH: [number, number] = [210, 240];
 /** Where each hand rests on the keys, as drawn (upper hand, lower hand). */
-const KEYS_HI: [number, number] = [250, 282];
-const KEYS_LO: [number, number] = [263, 318];
+const KEYS_HI: [number, number] = [222, 278];
+const KEYS_LO: [number, number] = [234, 316];
 /** The bell's mouth: notes float out of here. */
-const BELL: [number, number] = [322, 262];
+const BELL: [number, number] = [286, 266];
 /** City buildings behind the roof: x, width, height. */
 const BUILDINGS: [number, number, number][] = [
   [0, 56, 170], [50, 44, 230], [92, 60, 150], [148, 40, 260], [186, 70, 190], [252, 46, 240], [296, 58, 160], [350, 50, 210],
@@ -161,23 +161,23 @@ export function Sax({ species, still }: ActProps) {
 
       {/* the sax, from the mouthpiece down to the bell */}
       <g data-part="sax">
-        <path className="sax-edge" d="M212 240 Q 234 232 246 256" fill="none" strokeWidth="10" strokeLinecap="round" />
-        <path className="sax-brass" d="M212 240 Q 234 232 246 256" fill="none" strokeWidth="7" strokeLinecap="round" />
+        <path className="sax-edge" d="M210 240 Q 224 238 226 256" fill="none" strokeWidth="10" strokeLinecap="round" />
+        <path className="sax-brass" d="M210 240 Q 224 238 226 256" fill="none" strokeWidth="7" strokeLinecap="round" />
         <path className="sax-mouthpiece" d="M204 235 L 214 237 L 214 244 L 204 243 Z" />
-        <path className="sax-edge" d="M246 256 L 264 322 Q 272 346 290 341 Q 306 336 304 314 L 306 294" fill="none" strokeWidth="22" strokeLinecap="round" />
-        <path className="sax-brass" d="M246 256 L 264 322 Q 272 346 290 341 Q 306 336 304 314 L 306 294" fill="none" strokeWidth="18" strokeLinecap="round" />
-        <path className="sax-bell ol" d="M295 304 L 293 290 Q 290 268 306 260 Q 326 252 338 266 L 318 304 Z" />
-        <ellipse className="sax-bell-mouth ol-thin" cx="322" cy="262" rx="18" ry="7" transform="rotate(24 322 262)" />
-        <path className="sax-shine" d="M251 266 L 265 318" fill="none" strokeWidth="3" strokeLinecap="round" />
-        {[[250, 268], [253, 280], [257, 293], [260, 305], [264, 318]].map(([x, y]) => (
+        <path className="sax-edge" d="M226 256 L 232 322 Q 236 346 254 342 Q 270 338 270 318 L 272 298" fill="none" strokeWidth="22" strokeLinecap="round" />
+        <path className="sax-brass" d="M226 256 L 232 322 Q 236 346 254 342 Q 270 338 270 318 L 272 298" fill="none" strokeWidth="18" strokeLinecap="round" />
+        <path className="sax-bell ol" d="M261 306 L 259 292 Q 256 272 270 264 Q 290 256 302 270 L 284 306 Z" />
+        <ellipse className="sax-bell-mouth ol-thin" cx="286" cy="266" rx="18" ry="7" transform="rotate(24 286 266)" />
+        <path className="sax-shine" d="M229 266 L 234 318" fill="none" strokeWidth="3" strokeLinecap="round" />
+        {[[226, 268], [227, 280], [228, 292], [229, 304], [231, 316]].map(([x, y]) => (
           <circle key={y} className="sax-key ol-thin" cx={x + 4} cy={y} r="4" />
         ))}
-        <path className="sax-guard" d="M282 334 q 12 -4 14 -18" fill="none" strokeWidth="2.5" />
+        <path className="sax-guard" d="M246 336 q 12 -4 14 -18" fill="none" strokeWidth="2.5" />
       </g>
 
       {/* the upper hand reaches across from the left of the picture, the lower hand from the right */}
-      <Arm part="arm-l" d="M138 268 Q 176 318 248 284" hand={[250, 282]} />
-      <Arm part="arm-r" d="M262 268 Q 300 296 265 320" hand={[263, 318]} />
+      <Arm part="arm-l" d="M138 268 Q 140 306 220 280" hand={[222, 278]} />
+      <Arm part="arm-r" d="M262 268 Q 282 318 236 318" hand={[234, 316]} />
 
       {/* notes floating out of the bell */}
       {Array.from({ length: NOTES }, (_, i) => (

@@ -204,7 +204,7 @@ export function Violin({ species, still }: ActProps) {
       </g>
 
       {/* the fingering hand on the neck (right of picture) and the bow hand (left) */}
-      <Arm part="arm-r" d="M262 268 Q 300 306 312 296" hand={[312, 296]} />
+      <Arm part="arm-r" d="M262 268 Q 268 352 304 302" hand={[304, 302]} />
       <Arm part="arm-l" d="M138 268 Q 132 312 172 304" hand={[174, 304]}>
         {([x, y]) => (
           <g>
