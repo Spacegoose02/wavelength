@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- **Critters: three new scenes in place of the Saxophone, Harpist and Tuba.** **Acoustic** strums an acoustic guitar in
+  a cosy room under fairy lights, **Surf rock** twangs an offset electric barefoot on the beach, and **Singer** sings
+  at a vintage mic on stage, the mic off to the side so the whole mouth shows, the free hand opening out on long
+  notes and notes floating up with the voice. A saved Saxophone, Harpist or Tuba pick moves to Surf rock, Acoustic or
+  Singer (`src/components/critters/Acoustic.tsx`, `Surf.tsx`, `Singer.tsx`).
+- **See-through scenes.** The Driver, Bongo, Marimba, Violinist, Pianist and Reactor no longer paint over the whole
+  picture: their skies are gone and their walls are faint, so the album colours show through like the first scenes.
+  The beach keeps its sea and sand.
+- **Critter touch-ups.** The penguin has real flippers instead of hands and a new face; the flamingo's mouth opens
+  under its bill instead of poking through it; the sloth has a new face (big shiny nose, open smile); the octopus
+  plays with four arms (two extra sticks on the drums); the dragon is now charcoal black with lime-green eyes.
+- **New critter: the turkey**, an original maroon-and-orange bird with a fan of tail feathers.
+
 ## 0.36.1
 - **Fix: playing a song on a phone no longer blanks the screen.** The desktop mini player window (0.25.0) shared the
   `.mini-player` class with the phone's mini player, and its full-height rule stretched the phone one over the whole

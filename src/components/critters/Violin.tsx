@@ -107,7 +107,6 @@ export function Violin({ species, still }: ActProps) {
         </linearGradient>
       </defs>
       {/* night sky over the rooftops, a brick wall with a lit window, the pavement */}
-      <rect className="night-sky" x="0" y="0" width="400" height="60" />
       <rect className="brick-wall" x="0" y="40" width="400" height="300" />
       {BRICK_ROWS.map((y, r) => (
         <g key={y}>

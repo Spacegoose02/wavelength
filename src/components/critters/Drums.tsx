@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { tube } from './bodies';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
@@ -24,7 +25,8 @@ const BUBBLES: [number, number, number, number][] = [
  * Drummer shark under the sea, behind a drum kit. A striped sailor tee, the drum shells and the kick drum's
  * logo take the skin's colours. The sticks swing from the elbows: the snare hand hits every beat (harder on 2
  * and 4), the other hand crashes the cymbal at the top of each bar and on strong highs and swings down to the
- * floor tom for the rest. What gets hit reacts: the crash rocks and rings, the tom and snare dip, the kick thumps, the bubbles rise faster with the bass and the seaweed sways. Flourish: a quick fill
+ * floor tom for the rest. The octopus gets two more tentacles with sticks: one on the hi-hat on the off-beats, one
+ * on the floor tom. What gets hit reacts: the crash rocks and rings, the tom and snare dip, the kick thumps, the bubbles rise faster with the bass and the seaweed sways. Flourish: a quick fill
  * with both sticks, ending on the crash. Paused, the sticks rest.
  */
 export function Drums({ species, still }: ActProps) {
@@ -89,6 +91,13 @@ export function Drums({ species, still }: ActProps) {
       const k = 1 + (a.playing ? bob * 0.06 : 0);
       $('kick').setAttribute('transform', `translate(200 344) scale(${k.toFixed(3)}) translate(-200 -344)`);
 
+      // the octopus's extra arms: the hi-hat on the off-beats, the floor tom between the other hand's hits
+      if (species.id === 'octopus') {
+        const off = idle ? 0 : lift((phase + 0.5) % 1);
+        $('octo-hat').setAttribute('transform', `rotate(${(-off * 14 + (idle ? Math.sin(t) : 0)).toFixed(2)} 150 300)`);
+        $('octo-tom').setAttribute('transform', `rotate(${(off * 12 + (flourish ? Math.sin(t * 40) * 10 : 0)).toFixed(2)} 250 300)`);
+        if (!idle && phase > 0.45 && phase < 0.55) s.tomHit = Math.max(s.tomHit, 0.6);
+      }
       s.rise += (0.08 + (a.playing ? a.bass * 0.35 : 0)) / 60;
       svg.querySelectorAll<SVGElement>('[data-bubble]').forEach((b, i) => {
         const [, , start, speed] = BUBBLES[i];
@@ -155,6 +164,24 @@ export function Drums({ species, still }: ActProps) {
         <ellipse className="cymbal" cx="344" cy="236" rx="42" ry="7" transform="rotate(-12 344 236)" />
         <circle className="cymbal-bell" cx="344" cy="235" r="5" />
       </g>
+
+      {/* the octopus plays with four: two more tentacles with sticks, on the hi-hat and the floor tom */}
+      {species.id === 'octopus' && (
+        <>
+          <g data-part="octo-hat">
+            <path className="stick" d="M84 254 L 30 286" strokeWidth="4" strokeLinecap="round" />
+            <path d={tube([152, 300], [104, 306], [84, 258], 15, 8)} className="bare ol-thin" />
+            <path d="M84 258 q -8 -6 -4 -14 q 6 -4 10 2" fill="none" className="tentacle-tip" strokeWidth="7" strokeLinecap="round" />
+            <circle cx="108" cy="300" r="2" className="sucker" />
+          </g>
+          <g data-part="octo-tom">
+            <path className="stick" d="M334 270 L 292 312" strokeWidth="4" strokeLinecap="round" />
+            <path d={tube([248, 300], [300, 312], [334, 272], 15, 8)} className="bare ol-thin" />
+            <path d="M334 272 q 8 -6 4 -14 q -6 -4 -10 2" fill="none" className="tentacle-tip" strokeWidth="7" strokeLinecap="round" />
+            <circle cx="302" cy="306" r="2" className="sucker" />
+          </g>
+        </>
+      )}
 
       {/* fins with sticks: snare hand (left of picture), cymbal hand (right) */}
       <Arm part="arm-l" d="M138 268 Q 118 286 116 300" hand={[116, 302]}>

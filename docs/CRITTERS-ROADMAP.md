@@ -165,6 +165,19 @@ the asset work and a risk on low-end phones and the iOS WebView.
   **Tuba** (`Tuba.tsx`, a snowy square). The wind players turn the rig's `talk` off, since their mouths are on the
   mouthpiece. The sax tips about the mouthpiece and the hands follow the keys (`turned`); the harp's neck and
   strings come from the same `neckY` / `boxY` lines, so the strings always meet the frame.
+- Revamp (November 2026, from feedback): the Saxophone, Harpist and Tuba were retired (the wind players didn't sing
+  and the harp hands barely touched the strings) for two guitar scenes and a singing one: **Acoustic**
+  (`Acoustic.tsx`, a cosy room), **Surf rock** (`Surf.tsx`, the beach) and **Singer** (`Singer.tsx`, a stage, the mic
+  held off to the side so the whole singing mouth shows, the free hand opening out on held notes from
+  `singingReading.mouth`). A saved pick of a retired act moves to its replacement (`RETIRED_ACTS` in
+  `store/settings.ts`, used by the settings merge and `findAct`). The newer scenes' painted skies and walls (Driver,
+  Bongo, Marimba, Violinist, Pianist, Reactor) were dropped or made translucent so the album colours show through,
+  like the first eight scenes; the beach keeps its sea and sand. The penguin got real flippers (`hand: 'flipper'`,
+  a paddle carried on along the forearm instead of a round hand) and a new face; the flamingo's mouth now opens
+  under its bill instead of through it; the sloth's face was redrawn; the octopus got two more arms (`OctoArms`,
+  `tentacle-l` / `tentacle-r` waved by the rig, and two more sticks on the Drummer); the dragon went charcoal black
+  with lime eyes and ear fins. A **turkey** joined: an original maroon-and-orange bird in a college-mascot spirit,
+  with a tail fan (`Back` on its round figure).
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

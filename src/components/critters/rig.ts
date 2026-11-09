@@ -59,6 +59,7 @@ export interface RigOptions {
  * - Species that move their own way (`Figure.move`, `data-move` on the svg): `late` runs the beat half a beat
  *   behind (the sloth), `hop` springs the head and body up between beats (the frog). A `smoke` part (the dragon)
  *   puffs on a flourish.
+ * - The octopus's extra arms (`tentacle-l`, `tentacle-r`) wave with the beat.
  * - `tail` wags, `spot` (the backlight) breathes with the bass, `[data-glow]` parts (neon and laser
  *   outfits) pulse with the bass.
  *
@@ -227,6 +228,10 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       for (const el of shines) el.style.transform = `scale(${wide.toFixed(2)})`;
       const voice = singingReading.bright * Math.min(1, mouth / 0.5);
       set('adjust', `translate(0 ${(-6 * adj).toFixed(2)})`);
+      // the octopus's extra arms (bodies.tsx) wave with the music, each its own way
+      const reach = a.playing ? (grid ? beatSwing : Math.sin(t * 2.4)) : Math.sin(t * 0.9) * 0.4;
+      set('tentacle-l', `rotate(${(reach * 10 - bob * 8).toFixed(2)} 160 300)`);
+      set('tentacle-r', `rotate(${(reach * 10 + bob * 8).toFixed(2)} 240 300)`);
       const tail = grid ? beatSwing * 8 + bob * 3 : Math.sin(t * (idle ? 0.9 : 1.8)) * 7 + bob * 4;
       set('tail', `rotate(${tail.toFixed(2)} 268 292)`);
       const spot = find('spot');

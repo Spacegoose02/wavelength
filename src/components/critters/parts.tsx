@@ -453,7 +453,9 @@ function Hand({ g }: { g: ReturnType<typeof useArm> }) {
           strokeLinecap="round"
         />
       )}
-      {g.hand === 'wing' ? (
+      {g.hand === 'flipper' ? (
+        <Flipper g={g} />
+      ) : g.hand === 'wing' ? (
         <>
           {/* one soft wing tip: a round top over three short scalloped feathers, the feathers' seams in a darker line */}
           <path className="hand ol-thin" d={wingTip(x, y, r * 1.15)} />
@@ -467,6 +469,27 @@ function Hand({ g }: { g: ReturnType<typeof useArm> }) {
 }
 
 const fx = (n: number) => n.toFixed(1);
+
+/**
+ * A penguin's flipper in place of a hand: a long flat paddle carrying on past the wrist in the forearm's
+ * direction, rounded at the tip, with a pale underside along its lower edge.
+ */
+function Flipper({ g }: { g: ReturnType<typeof useArm> }) {
+  const x = Number(g.hx);
+  const y = Number(g.hy);
+  const [ex, ey] = g.elbow.split(' ').map(Number);
+  const deg = (Math.atan2(y - ey, x - ex) * 180) / Math.PI;
+  const r = g.paw;
+  const len = r * 2.6;
+  // the paddle's outline in its own frame: from the wrist (0,0) out along +x to a rounded tip
+  const d = `M${fx(-r * 0.4)} ${fx(-r)} Q ${fx(len * 0.55)} ${fx(-r * 1.25)} ${fx(len)} ${fx(-r * 0.15)} Q ${fx(len + r * 0.3)} ${fx(r * 0.6)} ${fx(len * 0.7)} ${fx(r * 0.85)} Q ${fx(len * 0.3)} ${fx(r * 1.05)} ${fx(-r * 0.4)} ${fx(r)} Z`;
+  return (
+    <g transform={`translate(${fx(x)} ${fx(y)}) rotate(${fx(deg)})`}>
+      <path className="hand ol-thin" d={d} />
+      <path className="flipper-under" d={`M${fx(r * 0.2)} ${fx(r * 0.55)} Q ${fx(len * 0.5)} ${fx(r * 0.75)} ${fx(len * 0.9)} ${fx(r * 0.3)}`} fill="none" strokeWidth={fx(r * 0.45)} strokeLinecap="round" />
+    </g>
+  );
+}
 
 /** Where an arm goes on this species: from its shoulder, bending through the act's control point, to the hand (brought within reach), split at the elbow. */
 function useArm(part: string, d: string, hand: [number, number]) {

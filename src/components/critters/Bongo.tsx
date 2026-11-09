@@ -116,15 +116,8 @@ export function Bongo({ species, still }: ActProps) {
 
   return (
     <CritterFrame ref={root} kind="bongo" species={species} label={`A ${species.noun} playing bongos on the beach`}>
-      <defs>
-        <linearGradient id="bongo-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#5fbfe6" />
-          <stop offset="1" stopColor="#c6f1ec" />
-        </linearGradient>
-      </defs>
 
-      {/* sky, sun and clouds, the sea with an island, the sand */}
-      <rect x="0" y="0" width="400" height="230" fill="url(#bongo-sky)" />
+      {/* sun and clouds over the sea with an island, the sand: no sky drawn, so the album colours show through */}
       <g data-part="sun-rays">
         {Array.from({ length: 12 }, (_, i) => {
           const ang = (i / 12) * Math.PI * 2;

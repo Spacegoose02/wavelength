@@ -28,9 +28,9 @@ export interface Figure {
   reach: number;
   /** forearm width, below the elbow, when it's thinner than the upper arm (the T. rex's little arms) */
   fore?: number;
-  /** what the hand is: a plain paw (default), a paw with two little claws, or a wing's feathered tip, and the
-   *  wing's sleeve barred like feathers (`Arm`, parts.tsx) */
-  hand?: 'claws' | 'wing';
+  /** what the hand is: a plain paw (default), a paw with two little claws, a wing's feathered tip (`Arm`,
+   *  parts.tsx), or a penguin's flipper: no hand at all, the arm runs on into a long flat paddle */
+  hand?: 'claws' | 'wing' | 'flipper';
   /** where a girl's skirt hangs from: waist y, half-width there, and the skirt's length */
   waist: [y: number, w: number, len: number];
   /** the shadow the head casts on the top, just under the chin */
@@ -915,14 +915,18 @@ const softPaw =
     return right ? <Pivot from={[236, 362]} to={at} part="boot">{paw}</Pivot> : paw;
   };
 
-/** Penguin: a plump round top, short black legs, orange webbed feet and a little black tail. Its arms are flippers. */
+/**
+ * Penguin: a plump round top, short black legs, orange webbed feet and a little black tail. Its arms are flippers:
+ * no hands, the arm runs on into a long flat paddle with a pale underside (`hand: 'flipper'`).
+ */
 const penguin = roundFigure({
   head: [188, 0.88],
   torso: 'M174 254 Q 200 246 226 254 Q 254 266 256 296 Q 256 322 246 332 Q 200 342 154 332 Q 144 322 144 296 Q 146 266 174 254 Z',
   shoulders: [[156, 276], [244, 276]],
-  arm: 20,
-  fore: 13,
-  paw: 8,
+  arm: 22,
+  fore: 20,
+  paw: 10,
+  hand: 'flipper',
   leg: [22, 18],
   waist: [316, 54, 26],
   chin: [252, 48],
@@ -1004,8 +1008,31 @@ function Tentacle({ to, curl }: { to: P; curl: number }) {
 }
 
 /**
+ * Two more tentacles reaching out and up from behind the top's sides, curling at the tips (`tentacle-l` /
+ * `tentacle-r`, which the rig waves with the music). Acts that give the octopus more to hold (the Drummer's
+ * extra sticks) hide these (`.octo-arms`) and draw their own.
+ */
+function OctoArms() {
+  return (
+    <g className="octo-arms">
+      {[false, true].map((r) => (
+        <g key={String(r)} transform={r ? 'translate(400 0) scale(-1 1)' : undefined}>
+          <g data-part={r ? 'tentacle-r' : 'tentacle-l'}>
+            <path d={tube([160, 300], [118, 304], [100, 262], 16, 7)} className="bare ol-thin" />
+            <path d="M100 262 q -2 -12 8 -14 q 6 0 4 6" fill="none" className="tentacle-tip" strokeWidth="7" strokeLinecap="round" />
+            <circle cx="122" cy="300" r="2.2" className="sucker" />
+            <circle cx="108" cy="286" r="2" className="sucker" />
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/**
  * Octopus: a round top on six tentacles fanning out along the floor and curling at the tips, no legs or shoes. Its
- * arms are two more tentacles, tapering to a soft tip.
+ * arms are two more tentacles, tapering to a soft tip, and two more reach out from behind its sides (`OctoArms`),
+ * so it plays with four.
  */
 const octopus: Figure = {
   head: [182, 0.86],
@@ -1019,6 +1046,7 @@ const octopus: Figure = {
   chin: [252, 44],
   Under: () => (
     <>
+      <OctoArms />
       <g data-part="tail">
         {([[128, 362, -1], [152, 370, -1], [178, 374, -1], [222, 374, 1], [248, 370, 1], [272, 362, 1]] as const).map(([x, y, c]) => (
           <Tentacle key={x} to={[x, y]} curl={c} />
@@ -1104,6 +1132,30 @@ const redPanda = roundFigure({
   ),
 });
 
+/** One tail feather of the turkey's fan (pointing straight up from its root at 200,300; the rest are turned copies). */
+const TURKEY_FEATHER = 'M200 300 C 178 264, 176 190, 186 156 Q 200 138 214 156 C 224 190, 222 264, 200 300 Z';
+
+/**
+ * Turkey: the round top with a big fan of tail feathers spread behind it, maroon and orange in turn with pale
+ * tips, thin orange legs and three-toed orange feet. Its arms are wings, with feathered tips (`hand: 'wing'`).
+ */
+const turkey = roundFigure({
+  hand: 'wing',
+  leg: [16, 12],
+  Bare: (p) => <WebbedFoot {...p} className="turkey-foot" s={1.2} />,
+  Back: () => (
+    <g className="turkey-fan">
+      {[-84, -63, -42, -21, 0, 21, 42, 63, 84].map((r, i) => (
+        <g key={r} transform={`rotate(${r} 200 300)`}>
+          <path d={TURKEY_FEATHER} className={i % 2 ? 'turkey-feather-alt ol' : 'turkey-feather ol'} />
+          <path d="M187 160 Q 200 140 213 160 Q 200 172 187 160 Z" className="turkey-tip" />
+          <path d="M200 296 V160" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2" />
+        </g>
+      ))}
+    </g>
+  ),
+});
+
 /**
  * How far each head sits down into its top from where the figures above place it: the chin tucks over the
  * collar so the head reads as sitting on a neck, not floating over the shoulders. The chin's shadow comes down
@@ -1139,4 +1191,5 @@ export const FIGURES = {
   frog: seat(frog),
   bunny: seat(bunny),
   redPanda: seat(redPanda),
+  turkey: seat(turkey),
 } satisfies Record<string, Figure>;

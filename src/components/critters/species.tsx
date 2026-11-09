@@ -27,6 +27,7 @@ import {
   SlothFace,
   TigerFace,
   TrexFace,
+  TurkeyFace,
   TurtleFace,
 } from './faces';
 
@@ -100,4 +101,5 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'frog', noun: 'frog', label: 'Frog', Face: FrogFace, figure: FIGURES.frog, fit: { w: 1.1, lift: -26, eyeY: 140, eyes: [1.5, 1.3], mask: 18, bow: [162, 92, -20] } },
   { id: 'bunny', noun: 'bunny', label: 'Bunny', Face: BunnyFace, figure: FIGURES.bunny, fit: { eyeY: 170, eyes: [1.28, 1.2], mask: 10, bow: [178, 112, -10] } },
   { id: 'red-panda', noun: 'red panda', label: 'Red panda', Face: RedPandaFace, figure: FIGURES.redPanda, fit: { eyeY: 170, eyes: [1.3, 1.2], mask: 10, bow: [168, 114, -20] } },
+  { id: 'turkey', noun: 'turkey', label: 'Turkey', Face: TurkeyFace, figure: FIGURES.turkey, fit: { eyeY: 168, eyes: [1.36, 1.3], mask: 12, bow: [166, 112, -20] } },
 ];

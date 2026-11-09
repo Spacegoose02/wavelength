@@ -25,13 +25,16 @@ export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' 
 
 /** Who plays in the critter scene (`npScene: 'raccoon'`, named before there were other critters): components/critters/species.tsx. */
 export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown' | 'moose' | 'turtle' | 'elephant' | 'tiger' | 'lion' | 'panda' | 'owl' | 'trex' | 'monkey' | 'flamingo' | 'gorilla'
-  | 'penguin' | 'fox' | 'axolotl' | 'sloth' | 'octopus' | 'dragon' | 'frog' | 'bunny' | 'red-panda';
+  | 'penguin' | 'fox' | 'axolotl' | 'sloth' | 'octopus' | 'dragon' | 'frog' | 'bunny' | 'red-panda' | 'turkey';
 
 /** Boy or girl critters (Settings → Playback → Critters). */
 export type CritterLook = 'boy' | 'girl';
 
 /** What the critter plays: components/critters/Critter.tsx (`ACTS`). Any species can play any act. */
-export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion' | 'drive' | 'reactor' | 'bongo' | 'piano' | 'marimba' | 'violin' | 'sax' | 'harp' | 'tuba';
+export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion' | 'drive' | 'reactor' | 'bongo' | 'piano' | 'marimba' | 'violin' | 'acoustic' | 'surf' | 'singer';
+
+/** Acts that were retired (0.37), and the act that took each one's place, for a pick saved before. */
+export const RETIRED_ACTS: Record<string, Act> = { sax: 'surf', harp: 'acoustic', tuba: 'singer' };
 
 /** The single critter pick from 0.17.7–0.17.8 (`raccoon` setting), as a species and an act. */
 export function critterFromOldPick(old: unknown): { critter: Species; act: Act } {
@@ -466,7 +469,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, deadZone: { ...current.deadZone, ...s.deadZone }, streamQuality: { ...current.streamQuality, ...s.streamQuality }, mouthTune: cleanTune(s.mouthTune) };
+        return { ...current, ...s, ...(s.act && RETIRED_ACTS[s.act] && { act: RETIRED_ACTS[s.act] }), ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, deadZone: { ...current.deadZone, ...s.deadZone }, streamQuality: { ...current.streamQuality, ...s.streamQuality }, mouthTune: cleanTune(s.mouthTune) };
       },
     },
   ),
