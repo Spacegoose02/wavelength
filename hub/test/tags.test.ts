@@ -118,3 +118,45 @@ test('admins fix an album’s tags from a Deezer or MusicBrainz match, and undo 
   const log = JSON.stringify((await json(app, 'GET', '/api/admin/audit', { token: tokens.admin })).body);
   assert.ok(log.includes('tags.edited') && log.includes('tags.undone'));
 });
+
+test('Edit song: one song’s tags by its Navidrome id, a featured artist written and undone', async () => {
+  const music = mkdtempSync(join(tmpdir(), 'wl-song-'));
+  const dir = join(music, 'Mannie Fresh', 'The Mind Of Mannie Fresh');
+  mkdirSync(dir, { recursive: true });
+  audio(join(dir, '15.mp3'), { title: 'Real Big (feat. Lil Wayne)', artist: 'Mannie Fresh', album: 'The Mind Of Mannie Fresh', track: '15' }, ['-c:a', 'libmp3lame', '-b:a', '64k']);
+  audio(join(dir, '07.mp3'), { title: 'Wayne’s Takeover 1', artist: 'Mannie Fresh', track: '7' }, ['-c:a', 'libmp3lame', '-b:a', '64k']);
+  const nd = await listen((url) => {
+    if (url === '/auth/login') return [200, { token: 'jwt', isAdmin: true }];
+    if (url.startsWith('/rest/')) return [200, { 'subsonic-response': { status: 'ok', user: { adminRole: true } } }];
+    if (url.startsWith('/api/song?')) {
+      return [200, [
+        { id: 's7', albumId: 'mf', path: '/music/Mannie Fresh/The Mind Of Mannie Fresh/07.mp3' },
+        { id: 's15', albumId: 'mf', path: '/music/Mannie Fresh/The Mind Of Mannie Fresh/15.mp3' },
+      ]];
+    }
+    return [404, {}];
+  });
+  const { app, tokens } = await seeded({}, { musicDir: music });
+  assert.equal((await json(app, 'PUT', '/api/admin/library/navidrome', { token: tokens.admin, body: { url: nd, username: 'admin', password: 'pw' } })).status, 200);
+
+  const song = await json(app, 'GET', '/api/admin/tags/song/s15?album=mf', { token: tokens.admin });
+  assert.equal(song.status, 200, JSON.stringify(song.body));
+  assert.equal(song.body.path, 'Mannie Fresh/The Mind Of Mannie Fresh/15.mp3');
+  assert.equal(song.body.tags.title, 'Real Big (feat. Lil Wayne)');
+  assert.equal(song.body.tags.track, '15');
+  assert.equal((await json(app, 'GET', '/api/admin/tags/song/nope?album=mf', { token: tokens.admin })).status, 404);
+  assert.equal((await json(app, 'GET', '/api/admin/tags/song/s15?album=mf', { token: tokens.member })).status, 403);
+
+  // the dialog sends only what changed: the title without "(feat. …)" and the credit with Lil Wayne featured
+  const save = await json(app, 'PUT', '/api/admin/tags', { token: tokens.admin, body: { label: 'Mannie Fresh feat. Lil Wayne – Real Big', changes: [
+    { path: song.body.path, tags: { title: 'Real Big', artist: 'Mannie Fresh feat. Lil Wayne', genre: 'Hip-Hop; Southern Hip-Hop' } },
+  ] } });
+  assert.equal(save.status, 200, JSON.stringify(save.body));
+  const after = await readTags(join(dir, '15.mp3'));
+  assert.deepEqual([after.title, after.artist, after.genre, after.album], ['Real Big', 'Mannie Fresh feat. Lil Wayne', 'Hip-Hop; Southern Hip-Hop', 'The Mind Of Mannie Fresh']);
+  assert.equal((await readTags(join(dir, '07.mp3'))).title, 'Wayne’s Takeover 1', 'the other songs aren’t touched');
+
+  assert.equal((await json(app, 'POST', `/api/admin/tags/undo/${save.body.batch}`, { token: tokens.admin })).body.undone, 1);
+  const back = await readTags(join(dir, '15.mp3'));
+  assert.deepEqual([back.title, back.artist, back.genre], ['Real Big (feat. Lil Wayne)', 'Mannie Fresh', undefined]);
+});

@@ -1017,6 +1017,8 @@ export class HubClient {
   myPlaylists = () => this.call<{ playlists: HubPlaylist[] }>('GET', '/api/me/playlists');
   putMyPlaylists = (playlists: HubPlaylist[]) => this.call<{ playlists: HubPlaylist[] }>('PUT', '/api/me/playlists', { playlists });
   myHistory = () => this.call<{ history: { playedAt: number; track: Track }[] }>('GET', '/api/me/history');
+  /** One song's file and tags (Navidrome song id; its album id helps a Hub whose catalog hasn't matched it yet). */
+  tagSong = (id: string, albumId?: string) => this.call<HubTagSong>('GET', `/api/admin/tags/song/${encodeURIComponent(id)}${albumId ? `?album=${encodeURIComponent(albumId)}` : ''}`);
   tagAlbum = (albumId: string) => this.call<{ songs: HubTagSong[] }>('GET', `/api/admin/tags/album/${encodeURIComponent(albumId)}`);
   tagMatches = (artist: string, album: string) => this.call<{ candidates: HubTagMatch[] }>('GET', `/api/admin/tags/match?${new URLSearchParams({ artist, album })}`);
   /** One Save; pass the same `batch` id with each part of a big one so it stays one Save (lib/tagSave.ts). */

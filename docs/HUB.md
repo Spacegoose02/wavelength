@@ -357,6 +357,12 @@ albums at once and renames the artist in their Artist and Album artist tags, als
 B" if asked, with an optional genre; it saves through the same `PUT /api/admin/tags`, so it's undone the same
 way. The editors suggest artist and genre names from Navidrome (`GET /api/admin/tags/values`).
 
+**Edit song** (`src/views/SongEditor.tsx`, from a song's menu or its row's Edit button) reads one song's file with
+`GET /api/admin/tags/song/:id?album=` (the catalog's file for that Navidrome song id, else the song among its
+album's songs) and saves only the tags that changed with the same `PUT /api/admin/tags`, so it's one entry under
+**Tag edits**. The credit is a main artist plus featured artists, written as "Main feat. A; B"
+(`src/lib/songCredit.ts`), the shape `tidyCredit` writes, which Navidrome splits on " feat. " and "; ".
+
 
 **Merging** (Albums or Artists → **Select → Merge**, or **Merge into…** on an artist or album page; `src/lib/merge.ts`) uses the same endpoints: it reads the
 ticked albums' files with `GET /api/admin/tags/albums`, works out the new tags in the app, and writes them with one
@@ -959,6 +965,7 @@ with a 4xx status.
 | `POST /api/radar/check` | signed in | look your followed artists up now (ones looked at in the last 10 minutes are skipped) |
 | `GET /api/radar/suggestions[?fresh=1]`, `POST /api/radar/suggestions/:id/hide` | signed in | artists you might like (`{ id, name, picture, fans, because, plays? }`) / never suggest this one again |
 | `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
+| `GET /api/admin/tags/song/:id?album=` | `library.edit` | one Navidrome song's file and its tags (`{ id, path, tags }`), for Edit song. `album` (the song's Navidrome album id) finds it when the catalog hasn't matched it yet |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
 | `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }], batch? }` writes tags (only those given), four files at a time → `{ batch, changed, failed }`. Pass the same 16-hex `batch` with each part of a big Save to keep it one Save (`src/lib/tagSave.ts` sends 25 songs per part) |
 | `GET /api/admin/tags/numbered?offset=&limit=` | `library.edit` | Library care → Numbered titles: one page (`limit` ≤ 5000, default 2000) of Navidrome's songs → `{ fixes: [{ path, albumId, artist, album, from, to }], scanned, total }`. Reads Navidrome's list only, no files |

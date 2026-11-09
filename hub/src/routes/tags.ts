@@ -92,6 +92,20 @@ export function tagRoutes(app: FastifyInstance, { db, config, library, catalog }
   });
 
   /**
+   * One song (Navidrome song id) with the tags in its file, for the app's Edit song dialog. Found in the catalog,
+   * else among its album's songs (`?album=`, the Navidrome album id) when the catalog doesn't know it yet.
+   */
+  app.get<{ Params: { id: string }; Querystring: { album?: string } }>('/api/admin/tags/song/:id', async (req) => {
+    need(req, 'library.edit');
+    const id = req.params.id.slice(0, 100), album = (req.query.album ?? '').slice(0, 100);
+    let path = catalog.usable() ? catalog.songPath(id) : undefined;
+    if (!path && album) path = (await (await admin()).albumSongs(album)).find((s) => String(s.id) === id)?.path;
+    if (!path) throw new HttpError(404, 'The Hub can’t find that song’s file. Navidrome may not have scanned it yet');
+    const f = file(String(path));
+    return { id, path: relPath(config.musicDir, f), tags: await readTags(f) };
+  });
+
+  /**
    * Several albums' songs at once (Navidrome album ids, `?ids=a,b`), for editing an artist across all their
    * albums. Each song says which album it's on.
    */

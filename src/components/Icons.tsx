@@ -40,6 +40,7 @@ export const IconCompass = make('M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM16.2 
 export const IconBrowse = make('M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z');
 export const IconSparkle = make('M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z');
 export const IconLibrary = make('M4 4v16M9 4v16M14 5l5 14.5');
+export const IconPencil = make('M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z');
 export const IconMore = make('M5 12h.01M12 12h.01M19 12h.01');
 export const IconRefresh = make('M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6');
 export const IconShare = make('M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4');
