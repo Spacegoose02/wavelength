@@ -27,7 +27,9 @@ Type an artist, album, playlist or song. Results come in four groups: **artists*
 
 - **Browse** (or clicking an artist's name) opens the artist page.
 - Clicking an album or a playlist opens its page.
-- On a song row, the artist name and album name are links too.
+- On a song row, the artist name and album name are links too. A song with featured artists ("Future feat.
+  Drake; Travis Scott") has a link for each artist, and so does an album's artist line. A featured artist with no
+  albums in your library opens their releases on Deezer.
 - **Get** sends that album or song to deemix straight away, as before.
 
 ### 2. Artist page
@@ -303,7 +305,7 @@ In **Now Playing**, the album name above the song, the song title and the artist
 
 - **Album name** opens the album's page.
 - **Song title** opens the album's page scrolled to the song, which flashes so you can spot it.
-- **Artist** opens the artist's page.
+- **Artist** opens the artist's page. With featured artists, each name is its own link.
 - In **Up next**, a song's artist opens that artist's page too; the rest of the row still plays the song.
 
 **Up next** under the controls lists the whole rest of the queue (it scrolls), and **Played** the songs before this

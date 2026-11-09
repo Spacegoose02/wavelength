@@ -7,7 +7,7 @@ import { primaryArtist } from './match';
 import type { Album, Artist, Track } from '../sources/types';
 
 /** Tracks that come from the library (not radio, audiobooks, podcasts or Deezer previews). */
-function isLibraryTrack(t: Track) {
+export function isLibraryTrack(t: Track) {
   return t.kind === 'track' && t.sourceId !== 'preview';
 }
 
@@ -83,4 +83,44 @@ export function focusIndex(tracks: Track[], focus?: { id: string; sourceId: stri
   if (i >= 0 || !focus.title) return i;
   const title = norm(focus.title);
   return tracks.findIndex((t) => norm(t.title) === title);
+}
+
+/** One piece of an artist credit: an artist's name (`name`, with `artist` when the library has them) or the text between names. */
+export interface CreditPart {
+  text: string;
+  name?: string;
+  artist?: Artist;
+}
+
+/** What always joins two artists in a credit, kept so the credit reads as written: ";", feat./ft./featuring, " / ", "(feat. X)". */
+const STRONG = /(\s*[;；]\s*|\s*[([]\s*(?:featuring|feat\.?|ft\.?|with)\s+|\s+(?:featuring|feat\.?|ft\.?)\s+|\s+\/\s+|\s*[)\]]\s*$)/i;
+/** What sometimes joins two artists and sometimes is part of one name ("Tyler, The Creator", "Simon & Garfunkel"). */
+const WEAK = /(\s*,\s*(?:(?:and|&)\s+)?|\s+(?:&|and|x|×|with)\s+)/i;
+
+/**
+ * A song's or album's artist credit cut into its artists, so each can link to its own page: "Future feat. Drake;
+ * Travis Scott" → Future, " feat. ", Drake, "; ", Travis Scott. A credit that is itself a library artist stays
+ * whole. Commas, "&", "and", "x" and "with" only cut a name when one of the pieces is a library artist, so
+ * "Simon & Garfunkel" stays one name when the library doesn't know it.
+ */
+export function creditLinks(credit: string, artists: Artist[]): CreditPart[] {
+  const find = (name: string) => {
+    const key = norm(name);
+    return key ? artists.find((a) => norm(a.name) === key) : undefined;
+  };
+  const whole = find(credit);
+  if (whole || !credit.trim()) return credit ? [{ text: credit, name: credit.trim() || undefined, artist: whole }] : [];
+  const out: CreditPart[] = [];
+  const name = (text: string, artist?: Artist) => out.push(text.trim() ? { text, name: text.trim(), artist } : { text });
+  credit.split(STRONG).forEach((piece, i) => {
+    if (!piece) return;
+    if (i % 2) return void out.push({ text: piece });
+    const hit = find(piece);
+    if (hit) return void name(piece, hit);
+    const bits = piece.split(WEAK);
+    const found = bits.map((b, j) => (j % 2 ? undefined : find(b)));
+    if (bits.length > 1 && found.some(Boolean)) bits.forEach((b, j) => (j % 2 ? b && out.push({ text: b }) : name(b, found[j])));
+    else name(piece);
+  });
+  return out;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { PlayedButton } from './PlayedButton';
 import { EpisodeVideoChip } from './VideoButton';
 import { useSettings } from '../store/settings';
@@ -14,7 +14,7 @@ import { AddToPlaylist } from './AddToPlaylist';
 import { FavButton, QueueOnSubwave } from './TrackButtons';
 import { ShareButton } from './ShareButton';
 import { shareOfTracks } from '../lib/inbox';
-import { albumOfTrack, artistOfTrack, focusIndex } from '../lib/trackLinks';
+import { albumOfTrack, artistOfTrack, creditLinks, focusIndex, isLibraryTrack } from '../lib/trackLinks';
 import { useCatalog } from '../store/catalog';
 import { openTrackMenu } from './TrackMenu';
 import { EditSongButton } from './EditSong';
@@ -209,12 +209,49 @@ function TrackSub({ track: t, showAlbum }: { track: Track; showAlbum?: boolean }
   const go = useUi.getState().go;
   return (
     <>
-      {artist
-        ? <button className="sub-link" title="Go to artist" onClick={() => go({ view: 'artist', artist })}>{t.artist}</button>
-        : t.artist}
+      <ArtistCredit credit={t.artist} fallback={artist} linkClass="sub-link" links={isLibraryTrack(t)} discography="several" />
       {showAlbum && t.album ? <>{' — '}{album
         ? <button className="sub-link" title="Go to album" onClick={() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } })}>{t.album}</button>
         : t.album}</> : null}
+    </>
+  );
+}
+
+/**
+ * An artist credit with each artist its own link: "Future feat. Drake; Travis Scott" is three links, to Future's,
+ * Drake's and Travis Scott's library pages (lib/trackLinks.ts creditLinks). An artist the library doesn't have opens
+ * their Deezer releases when `discography` says so: "all" always, "several" only in a credit naming more than one
+ * artist (a featured artist with no album of their own). When no name is a library artist, `fallback` (the
+ * song's or album's artist, found another way) links the whole credit. `links` false shows plain text.
+ */
+export function ArtistCredit({ credit, fallback, linkClass, links = true, discography, stop }: {
+  credit: string;
+  fallback?: Artist;
+  linkClass: string;
+  links?: boolean;
+  discography?: 'all' | 'several';
+  /** Keep the click from reaching the row around the link. */
+  stop?: boolean;
+}) {
+  const artists = useCatalog((s) => s.artists);
+  if (!links || !credit) return <>{credit}</>;
+  const parts = creditLinks(credit, artists);
+  const go = (e: MouseEvent, artist: Artist, deezer?: boolean) => {
+    if (stop) e.stopPropagation();
+    useUi.getState().go(deezer ? { view: 'artistReleases', artist } : { view: 'artist', artist });
+  };
+  const named = parts.filter((p) => p.name).length;
+  if (fallback && !parts.some((p) => p.artist)) {
+    return <button className={linkClass} title="Go to artist" onClick={(e) => go(e, fallback)}>{credit}</button>;
+  }
+  const deezer = discography === 'all' || (discography === 'several' && named > 1);
+  return (
+    <>
+      {parts.map((p, i) => p.artist
+        ? <button key={i} className={linkClass} title={`Go to ${p.name}`} onClick={(e) => go(e, p.artist!)}>{p.text.trim()}</button>
+        : p.name && deezer
+          ? <button key={i} className={linkClass} title={`${p.name}'s releases`} onClick={(e) => go(e, { id: '', sourceId: '', name: p.name! }, true)}>{p.text.trim()}</button>
+          : <Fragment key={i}>{p.text}</Fragment>)}
     </>
   );
 }

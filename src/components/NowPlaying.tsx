@@ -2,7 +2,7 @@ import { isSmartPick, useSmartPicks } from '../lib/smartShuffle';
 import { ShuffleButton } from './ShuffleButton';
 import { SoundsLikeButton } from './SoundsLikeButton';
 import { trackArt, useArtworkList } from '../lib/artwork';
-import { Cover } from './common';
+import { ArtistCredit, Cover } from './common';
 import { Seek, usePlayerControls } from './PlayerClock';
 import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat } from './Icons';
 import { Visualizer } from './Visualizer';
@@ -29,7 +29,7 @@ import { useSleep } from '../lib/sleep';
 import { useSing } from '../lib/singMode';
 import { useCatalog } from '../store/catalog';
 import { useUi } from '../store/ui';
-import { albumOfTrack, artistOfTrack } from '../lib/trackLinks';
+import { albumOfTrack, artistOfTrack, isLibraryTrack } from '../lib/trackLinks';
 import type { Track } from '../sources/types';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
@@ -74,9 +74,10 @@ export function NowPlaying() {
           <h1 className="np-title">{album && !live
             ? <button className="np-link" title="Show in album" onClick={() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } })}>{t.title}</button>
             : live ? p.liveTitle ?? t.title : t.title}</h1>
-          <div className="np-artist">{artist && !live
-            ? <button className="np-link" title="Go to artist" onClick={() => go({ view: 'artist', artist })}>{t.artist}</button>
-            : live ? t.title : t.artist}</div>
+          {/* each artist in "A feat. B; C" opens their own page */}
+          <div className="np-artist">{live
+            ? t.title
+            : <ArtistCredit credit={t.artist} fallback={artist} linkClass="np-link" links={isLibraryTrack(t)} discography="several" />}</div>
           {p.error && <div className="np-error" role="status">{p.error}</div>}
           {!p.error && p.noSignal && <div className="np-note muted small" role="status">No signal · playing songs saved on this device until it's back</div>}
           {/* the actions people use most, then the rest behind More (remembered on this device) */}
@@ -200,9 +201,7 @@ function UpNextRow({ track: q, onPlay }: { track: Track; onPlay(): void }) {
         <Cover src={trackArt(q)} alt={q.title} className="tiny" />
         <span>{q.title}</span>
       </button>
-      {artist
-        ? <button className="np-link" title="Go to artist" onClick={() => useUi.getState().go({ view: 'artist', artist })}><small>{q.artist}</small></button>
-        : <small>{q.artist}</small>}
+      <small><ArtistCredit credit={q.artist} fallback={artist} linkClass="np-link" links={isLibraryTrack(q)} discography="several" /></small>
     </div>
   );
 }

@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Each artist in a credit is its own link.** "Future feat. Drake; Travis Scott; Loe Shimmy" used to be one link to
+  Future; now Future, Drake, Travis Scott and Loe Shimmy each open their own page, in Now Playing, Up next, song rows
+  and an album's header. A name the library knows with a comma or "&" in it ("Tyler, The Creator") stays whole, and
+  "&", "," and "x" only split a credit when one side is a library artist. A featured artist with no albums in the
+  library opens their Deezer releases (`creditLinks` in `src/lib/trackLinks.ts`, `ArtistCredit` in
+  `src/components/common.tsx`).
 - **Styles, moods and collections, like Plex.** Edit album's Tags tab now has **Styles** ("Christmas Pop"),
   **Moods** ("Laid-Back/Mellow") and **Collections** ("Christmas") next to its genres, and Edit artist has the
   artist's own **Genres**, Styles, Moods and Collections. They are kept on the Hub (`hub/src/itemTags.ts`, migration
