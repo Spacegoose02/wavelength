@@ -57,6 +57,7 @@ import { UpdateBanner } from './components/Updates';
 import { Spinner } from './components/common';
 import { TrackMenuHost } from './components/TrackMenu';
 import { SongEditorHost } from './views/SongEditor';
+import { VideoHost } from './components/VideoButton';
 import { groupPlaylists } from './lib/playlistFolders';
 
 /** A page loaded the first time it's opened, so startup only parses what Home needs (slow TV boxes notice). */
@@ -359,6 +360,7 @@ export default function App() {
       {nowPlayingOpen && <ErrorBoundary fallback={nowPlayingCrashed}><NowPlaying /></ErrorBoundary>}
       <TrackMenuHost />
       <SongEditorHost />
+      <VideoHost />
       <KidLockScreen />
       <KidSignedOutScreen />
       <WebSignIn />
