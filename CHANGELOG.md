@@ -1,6 +1,38 @@
 # Changelog
 
-## Unreleased
+## 0.36.0
+- **Podcasts → Latest episodes.** A new first tab lists the newest episodes from every show in one place, and
+  **Play N episodes** runs through them show to show. Pick shows with chips (each shows how many are unplayed),
+  **Unplayed only** (on by default), **This week / This month / Any time**, newest or oldest first, **Add to
+  playlist** and **Mark all played**; the choices are remembered on the device. A **Continue listening** row has every
+  episode you're part way through, with the time left (`src/lib/episodes.ts`, `src/views/Podcasts.tsx`, #244).
+- **Played and unplayed episodes.** **Mark played** on each episode, **Mark as played / unplayed** and **Go to show**
+  in the right-click menu, and **Mark all played / unplayed** on a show's page, saved on Audiobookshelf so every
+  device and ABS's own apps agree. An episode or book that plays to the end now gets a last sync at its full length,
+  so the server marks it finished, and played episodes no longer show a full progress bar (#244).
+- **Episode videos.** With a Hub and **Music videos** on, Now Playing shows **Video** for an episode the show posted
+  on YouTube, and each episode row has a **Video** chip that searches when pressed. The Hub's
+  `GET /api/videos/episode` wants the episode title in the video's, a length within about a third, and no clip,
+  trailer or reaction; it favours the show's own channel (#244).
+- **A page for each audiobook.** Tapping a book opens its page: description, narrator, year and genres, progress,
+  time left and the current chapter, **Chapters** to play from, **Resume / Start over / Mark as finished**, and **More
+  in the series** and **More by the author**. The round button on the cover still plays it straight away, and book
+  cards show time left (`src/views/Books.tsx`, #244).
+- **Radio stations live on the Hub (phase 5 of replacing Navidrome, part 1).** A minute after it starts, the Hub copies
+  Navidrome's stations once (with the Navidrome admin login, keeping their ids so each device's order and hidden
+  stations still match). The app then reads stations for the Hub's Navidrome from the Hub, and the relay answers
+  `getInternetRadioStations` and the station changes from it; only admins can change them. Navidrome's own list is
+  left alone (migration 33, `hub/src/radioStations.ts`, `POST /api/admin/radio/import`, #242).
+- **Hearts, play counts, ratings and playlists live on the Hub (phase 5, parts 2 and 3).** Off by default: **Hub keeps
+  hearts, play counts and playlists (beta)** under Settings → Server → Music catalog. The first time someone's device
+  goes through the relay with it on, the Hub copies their hearts, plays, last-played times, ratings and own playlists
+  from Navidrome (smart playlists stay on Navidrome). After that, stars, finished plays, ratings and playlist changes
+  are saved on the Hub and sent on to Navidrome in the background, and the Hub answers starred songs, the Starred,
+  Most played, Recently played and Top rated lists, and playlists whose songs it knows. The card shows how many
+  people, hearts and plays it keeps (migrations 34 and 35, `hub/src/userData.ts`, `hub/src/playlists.ts`, #243, #245).
+- **Listening now says who sent the song.** Settings → Server → Listening now shows "played by the Hub", "Navidrome via
+  the Hub" or "Navidrome directly" for each device, instead of the app's fixed "navidrome" label; hover for what each
+  means (`hub/src/playedBy.ts`, `playedBy` in `GET /api/admin/listening`, #240).
 - **Three new critter scenes: Saxophone, Harpist and Tuba.**
   - **Saxophone**, on a city rooftop at night: a beret and a roll-neck, an alto sax that sways with the beat while
     the fingers work the keys, notes floating out of the bell, the city's windows lighting up with the highs and a
@@ -8,19 +40,19 @@
   - **Harpist**, in the clouds at sunrise: a laurel wreath and a toga, plucking a golden harp under a rainbow; the
     hands take turns on the beat and each plucked string lights up and shimmers. Flourish: a glissando (`Harp.tsx`).
   - **Tuba**, in a snowy town square: a marching-band hat with a plume and a braided band jacket, oom-pahing with
-    puffs of breath and snow from the bell and a snowman nodding along. Flourish: one big blast (`Tuba.tsx`).
+    puffs of breath and snow from the bell and a snowman nodding along. Flourish: one big blast (`Tuba.tsx`, #241).
   The sax and tuba players have the mouthpiece in their mouths, so they don't sing along.
 - **Settings → Themes & critters.** One place for how Wavelength looks and who plays along, in four sub-tabs:
   **Theme** (skins, Seasonal, Random daily, Motion), **Critters**, **Scenes** (what used to be called acts) and
   **Visualizer**. The Boy / Girl switch sits on both the Critters and Scenes sub-tabs, with a line saying who's
   playing what. The visualizer and critter pickers moved here from Playback, which now points to them, and
-  Settings search opens the right sub-tab.
+  Settings search opens the right sub-tab (#241).
 - **Nine more critters: a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny and a red panda.**
   The eighteenth to twenty-sixth, drawn cute. The penguin waddles with flippers for arms; the fox has a bushy
   white-tipped tail; the axolotl's frilly gills glow with the bass; the octopus stands on six curling tentacles; the
   bunny has one ear flopped over; the red panda has a ringed tail. Three move their own way: the laid-back sloth plays
   half a beat behind the music, the frog hops on the beat, and the dragon puffs smoke on a flourish (`Figure.move`
-  and the `smoke` part, `rig.ts`). All nine play every act as a boy or a girl, with the holiday hats and theme outfits.
+  and the `smoke` part, `rig.ts`, #241). All nine play every act as a boy or a girl, with the holiday hats and theme outfits.
 - **A monkey, a flamingo and a gorilla.** The fifteenth, sixteenth and seventeenth critters, drawn cute. The monkey is
   brown with a tuft of hair, big round ears out at the sides that stay out under every hat, a peach heart of a face
   and a wide grin, on thin legs with long peach feet and a long tail curling at the tip. The flamingo chick is pink
@@ -29,7 +61,7 @@
   charcoal with a domed crown, a grey leathery face, a heavy brow and a broad nose, on a big broad body with the
   widest shoulders and longest arms of them all. All three play every act as a boy or a girl, with the holiday hats
   and theme outfits (`MonkeyFace`, `FlamingoFace`, `GorillaFace` in `faces.tsx`; `FIGURES.monkey`, `.flamingo`,
-  `.gorilla` in `bodies.tsx`).
+  `.gorilla` in `bodies.tsx`, #241).
 - **Two new critter acts: Marimba and Violinist.**
   - **Marimba**, in the jungle: a pith helmet and an explorer's khaki shirt with a neckerchief, at a wooden marimba
     in a clearing by a waterfall, with vines, big leaves, a parrot and butterflies. The low hand plays on the beat
@@ -40,7 +72,7 @@
     by a brick wall, with a cat nodding along in a lit window and the case open for coins. The bow saws down one
     beat and up the next, fuller when the band is loud; the fingers walk the neck with the melody, the rain falls
     harder with the bass and the puddles ripple on the beat. Flourish: one long sweeping stroke with the bow lifted
-    high at the end (`Violin.tsx`).
+    high at the end. The fingering arm goes behind the violin, with only its hand over the neck (`Violin.tsx`, #241, #246).
 
 ## 0.35.0
 - **The Hub plays the songs from the music folder (phase 4 of replacing Navidrome).** Off by default: **Hub plays
