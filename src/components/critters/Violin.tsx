@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { beatClock, bend } from './arm';
 import { swell, windUp } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -187,6 +187,8 @@ export function Violin({ species, still }: ActProps) {
         }
       />
 
+      {/* the fingering arm (right of picture) goes under the violin; only its hand comes over the neck */}
+      <Arm part="arm-r" d="M262 268 Q 268 352 304 302" hand={[304, 302]} handLater />
       {/* the violin, tucked under the chin and held out to the side */}
       <g data-part="violin">
         <g transform="translate(238 266) rotate(22) scale(1.4) translate(-238 -266)">
@@ -203,8 +205,8 @@ export function Violin({ species, still }: ActProps) {
         </g>
       </g>
 
-      {/* the fingering hand on the neck (right of picture) and the bow hand (left) */}
-      <Arm part="arm-r" d="M262 268 Q 268 352 304 302" hand={[304, 302]} />
+      {/* the bow hand (left of picture); the fingering hand's comes after the violin */}
+      <ArmHand part="arm-r" d="M262 268 Q 268 352 304 302" hand={[304, 302]} />
       <Arm part="arm-l" d="M138 268 Q 132 312 172 304" hand={[174, 304]}>
         {([x, y]) => (
           <g>
