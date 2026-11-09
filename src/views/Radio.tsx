@@ -73,7 +73,7 @@ export function Radio() {
       setStationHidden(keyOf(s), false);
       setReload((n) => n + 1);
     } catch (e) {
-      alert(`Couldn't delete it: ${(e as Error).message ?? e}. Navidrome only lets admin accounts delete stations; you can still hide it on this device.`);
+      alert(`Couldn't delete it: ${(e as Error).message ?? e}. Only admins can delete stations; you can still hide it on this device.`);
     }
   };
   const canDelete = (s: Station) => {

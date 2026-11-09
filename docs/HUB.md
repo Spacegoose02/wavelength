@@ -758,6 +758,14 @@ and hands out ids.
   **Settings → Server → Listening now** shows who sent each song (`playedBy`, `hub/src/playedBy.ts`, kept in memory
   for 30 minutes): "played by the Hub", "Navidrome via the Hub" (switch off or a song the catalog doesn't know), or
   "Navidrome directly" for a device that doesn't go through the Hub at all.
+- **Radio stations live on the Hub** (phase 5, `hub/src/radioStations.ts`, table `radio_stations`, migration 33).
+  A minute after the Hub starts (then every 10 minutes until it has the Navidrome admin login) it copies Navidrome's
+  internet radio stations once, keeping their ids, so each device's station order and hidden stations still match
+  (`radio.imported` in `hub_settings`). From then on the app reads and deletes the Hub's Navidrome stations through
+  `GET /api/radio/stations` (`src/sources/navidrome.ts`, only for the Navidrome the Hub hands out, `hubId`), and
+  devices going through the relay get `getInternetRadioStations` and the create / update / delete calls answered
+  from the same list (admins only, as on Navidrome). Navidrome's own list is left as it was; a Navidrome hosted on
+  its own keeps its stations.
 
 Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
 under Library updates; without it the catalog still scans.
@@ -978,6 +986,9 @@ with a 4xx status.
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
 | `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, serve, serving, stream, streaming, missing: [{ title, artist, album, path }], summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
+| `GET /api/radio/stations` | signed in | internet radio stations on the Hub: `{ imported, importedAt, stations: [{ id, name, streamUrl, homePageUrl }] }` |
+| `POST /api/admin/radio/stations` · `PUT /api/admin/radio/stations/:id` · `DELETE /api/admin/radio/stations/:id` | `library.edit` | add, change (`{ name?, streamUrl?, homePageUrl? }`) or delete a station (audited `radio.*`) |
+| `POST /api/admin/radio/import` | `library.edit` | copy Navidrome's stations again; ones the Hub has (same id or stream link) are left alone |
 | `PUT /api/admin/catalog` | `server.view` | `{ serve?, stream? }`: the Hub answers browsing, search and covers, and plays songs, for devices that go through it (audited `catalog.serve`, `catalog.stream`); answers with the status |
 | `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |
 | `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |

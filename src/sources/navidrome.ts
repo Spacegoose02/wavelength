@@ -1,4 +1,5 @@
 import { splitGenres } from '../lib/genreNames';
+import { hubClient } from '../store/hub';
 import SparkMD5 from 'spark-md5';
 import { withoutTrackNumber } from '../lib/trackTitles';
 import { getJson, http, qs, trimSlash } from '../lib/http';
@@ -282,7 +283,22 @@ export class NavidromeSource implements MusicSource {
     };
   }
 
+  /**
+   * The Hub's own Navidrome keeps its radio stations on the Hub once the Hub has copied them (hub/src/radioStations.ts),
+   * with Navidrome's ids, so the saved order and hidden stations still match. Other Navidromes, and a Hub that hasn't
+   * copied them yet, answer as before.
+   */
+  private async hubStations() {
+    if (!this.config.hubId) return null;
+    const c = hubClient();
+    if (!c) return null;
+    const r = await c.radioStations().catch(() => null);
+    return r?.imported ? { c, list: r.stations } : null;
+  }
+
   async getStations(): Promise<Station[]> {
+    const hub = await this.hubStations();
+    if (hub) return hub.list.map((s) => ({ id: s.id, sourceId: this.config.id, name: s.name, streamUrl: s.streamUrl, homepage: s.homePageUrl || undefined }));
     const r = await this.call('getInternetRadioStations');
     return (r.internetRadioStations?.internetRadioStation ?? []).map((s: any) => ({
       id: s.id,
@@ -294,6 +310,11 @@ export class NavidromeSource implements MusicSource {
   }
 
   async deleteStation(id: string) {
+    const hub = await this.hubStations();
+    if (hub) {
+      await hub.c.deleteRadioStation(id);
+      return;
+    }
     // Navidrome answers non-admins with a Subsonic error 50 ("not authorized"), which `call` throws
     await this.call('deleteInternetRadioStation', { id });
   }
