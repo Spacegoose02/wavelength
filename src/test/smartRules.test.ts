@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { albumKey, tagKey, useItemTagStore } from '../lib/itemTags';
+import { albumKey, songKey, tagKey, useItemTagStore } from '../lib/itemTags';
 import { advancedRules, describe as say, newSmartPlaylist, type SongFacts } from '../lib/smartPlaylists';
 import { describeRules, evalGroup, isEmpty, needsSongs, newRule, type RuleGroup, sortKey } from '../lib/smartRules';
 import type { Album, Track } from '../sources/types';
@@ -19,7 +19,7 @@ describe('advanced smart playlist rules', () => {
     albums: { [albumKey('NSYNC', 'Home for Christmas')]: { kind: 'album', artist: 'NSYNC', title: 'Home for Christmas', facets: { collection: ['Christmas'] }, sources: {}, updatedAt: 1 } },
     artists: { [tagKey('Lil Baby')]: { kind: 'artist', artist: 'Lil Baby', title: '', facets: { genre: ['Southern Hip Hop'], style: ['Trap'] }, sources: {}, updatedAt: 1 } },
   } as never));
-  afterEach(() => useItemTagStore.setState({ albums: {}, artists: {} } as never));
+  afterEach(() => useItemTagStore.setState({ albums: {}, artists: {}, songs: {}, songAlbums: {}, songsAt: 0 } as never));
 
   test('album genre is Country and (artist contains Lil or artist contains Luke)', () => {
     const g: RuleGroup = {
@@ -74,6 +74,22 @@ describe('advanced smart playlist rules', () => {
     const label: RuleGroup = { match: 'all', rules: [{ field: 'label', op: 'is', value: 'Quality Control' }] };
     expect(evalGroup(label, { album: rap })).toBeUndefined();
     expect(evalGroup(label, { album: rap, track: track('x', 'y'), facts: facts({ label: 'Quality Control; Motown' }) })).toBe(true);
+  });
+
+  test('a song’s own mood: albums with no song that has it are left out before reading them', () => {
+    const g: RuleGroup = { match: 'all', rules: [{ field: 'trackMood', op: 'is', value: 'reckless' }] };
+    // songs' moods not loaded yet: maybe
+    expect(evalGroup(g, { album: rap })).toBeUndefined();
+    useItemTagStore.setState({
+      songsAt: 1,
+      songs: { [songKey('Lil Baby', 'It’s Only Me', 'Heyy')]: { mood: ['Reckless'] } },
+      songAlbums: { [albumKey('Lil Baby', 'It’s Only Me')]: { mood: ['Reckless'] } },
+    } as never);
+    expect(evalGroup(g, { album: rap })).toBeUndefined();
+    expect(evalGroup(g, { album: country })).toBe(false);
+    expect(evalGroup({ match: 'all', rules: [{ field: 'trackMood', op: 'isNot', value: 'reckless' }] }, { album: country })).toBe(true);
+    expect(evalGroup(g, { album: rap, track: track('Heyy', 'Lil Baby'), facts: facts({}) })).toBe(true);
+    expect(evalGroup(g, { album: rap, track: track('California Breeze', 'Lil Baby'), facts: facts({}) })).toBe(false);
   });
 
   test('the simple rules become advanced ones', () => {

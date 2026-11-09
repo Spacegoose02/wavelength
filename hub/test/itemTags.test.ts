@@ -36,7 +36,7 @@ test('styles, moods and collections: admins set them, everyone reads them', asyn
   assert.deepEqual(all.body.artists[0].facets, { genre: ['Pop'], style: ['Teen Pop'] });
   assert.equal(all.body.albums[0].title, 'Home for Christmas');
   assert.deepEqual(all.body.values.style.map((v: { name: string }) => v.name).sort(), ['Christmas 90s', 'Christmas Pop', 'Teen Pop']);
-  assert.deepEqual(all.body.values.collection, [{ name: 'Christmas', albums: 1, artists: 0 }]);
+  assert.deepEqual(all.body.values.collection, [{ name: 'Christmas', albums: 1, artists: 0, tracks: 0 }]);
 });
 
 test('tags follow a rename, an artist’s albums too, and merge into a name that has some', async () => {

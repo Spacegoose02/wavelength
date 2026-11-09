@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArtistAbout } from '../components/ArtistAbout';
 import { useCatalog } from '../store/catalog';
-import { useCan } from '../store/hub';
+import { useCan, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { usePlayer } from '../store/player';
@@ -23,7 +23,7 @@ import { useArtistMeta } from '../lib/artistMeta';
 import { shelves } from '../lib/releaseKind';
 import { AlbumTagChips, ArtistTagChips } from '../components/TagChips';
 import { useItemTags } from '../lib/itemTags';
-import { EditAlbumButton } from './AlbumEditor';
+import { EditAlbumButton, EditAlbumTagsButton } from './AlbumEditor';
 import { EditArtistButton } from './ArtistEditor';
 import { confirmMerge, forgetAlbums, forgetArtists, MergeIntoButton } from '../components/MergeInto';
 import { SelectBar, useSelection, type Selection } from '../components/Selection';
@@ -531,6 +531,8 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
   const both = hasBoth(versions);
   const shown = versionOf(ref);
   const canEditTags = useCan('library.edit');
+  const editRef = cfgOf(ref.sourceId)?.kind === 'navidrome' ? ref : navidromeRefs(album).find((r) => versionOf(r) === shown) ?? navidromeRefs(album)[0];
+  const hubOn = useHub((s) => !!s.token);
   const kid = useIsKid();
 
   // Navidrome can list one album as two, e.g. when a song was downloaded on its own into another folder: the
@@ -602,9 +604,9 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
               </div>
             )}
             <ArtworkButton kind="album" artist={album.artist} album={album.title} current={art} />
-            {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && (
-              <EditAlbumButton album={{ ...ref, refs: [ref] }} cover={art} />
-            )}
+            {/* the copy shown can be Plex's; the editor works on the Navidrome copy, which is the files */}
+            {canEditTags && editRef && <EditAlbumButton album={{ ...editRef, refs: [editRef] }} cover={art} />}
+            {canEditTags && !editRef && hubOn && <EditAlbumTagsButton album={album} />}
             {canEditTags && !kid && navidromeRefs(album).length > 0 && <MergeIntoButton kind="album" item={album} />}
             {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && <DeleteAlbumButton album={ref} />}
             {tracks?.length ? (

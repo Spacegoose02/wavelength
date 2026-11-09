@@ -186,7 +186,10 @@ export interface HubItemTags {
   sources: Partial<Record<HubFacet, 'edit' | 'plex'>>;
   updatedAt: number | null;
 }
-export interface HubTagValue { name: string; albums: number; artists: number }
+export interface HubTagValue { name: string; albums: number; artists: number; tracks?: number }
+/** A song's own styles and moods (hub/src/trackTags.ts), by its album artist, album and title. */
+export type HubTrackFacet = 'style' | 'mood';
+export interface HubTrackTags { artist: string; album: string; title: string; facets: Partial<Record<HubTrackFacet, string[]>>; sources: Partial<Record<HubTrackFacet, 'edit' | 'plex'>> }
 export interface HubAllItemTags { artists: HubItemTags[]; albums: HubItemTags[]; values: Record<HubFacet, HubTagValue[]> }
 /** Importing styles, moods and collections from Plex (hub/src/plexImport.ts). */
 export interface HubPlexMatch { kind: 'artist' | 'album'; artist: string; title: string; facets: Partial<Record<HubFacet, string[]>>; changes: HubFacet[] }
@@ -195,7 +198,9 @@ export interface HubPlexPreview {
   server: string;
   albums: { plex: number; matched: number };
   artists: { plex: number; matched: number };
-  changes: { albums: number; artists: number };
+  /** Songs (an older Hub doesn't read them). */
+  tracks?: { plex: number; matched: number; tagged: number };
+  changes: { albums: number; artists: number; tracks?: number };
   unmatched: { artist: string; title: string }[];
   /** Albums with no genre in their files, and Plex's genre tidied by the genre rules (`id` is Navidrome's album id). */
   genres: { id: string; artist: string; title: string; plex: string; genre: string }[];
@@ -206,7 +211,7 @@ export interface HubPlexImport {
   step?: string;
   error?: string;
   preview?: HubPlexPreview;
-  imported?: { at: number; albums: number; artists: number };
+  imported?: { at: number; albums: number; artists: number; tracks?: number };
   servers: { id: number; name: string; token: boolean }[];
 }
 /** What PUT /api/admin/item-tags takes: each list sent replaces what was there (albums have no `genres` here). */
@@ -1094,6 +1099,11 @@ export class HubClient {
   itemTagsOf = (kind: 'artist' | 'album', artist: string, title = '') => this.call<HubItemTags>('GET', `/api/item-tags/one?${new URLSearchParams({ kind, artist, ...(kind === 'album' && { title }) })}`);
   setItemTags = (kind: 'artist' | 'album', artist: string, title: string, lists: HubItemTagLists) => this.call<HubItemTags>('PUT', '/api/admin/item-tags', { kind, artist, ...(kind === 'album' && { title }), ...lists });
   renameItemTags = (kind: 'artist' | 'album', from: { artist: string; title?: string }, to: { artist: string; title?: string }) => this.call<{ moved: number }>('POST', '/api/admin/item-tags/rename', { kind, from, to });
+  /** Every song with a style or mood (404 on an older Hub). */
+  trackTags = () => this.call<{ tracks: HubTrackTags[] }>('GET', '/api/item-tags/tracks');
+  trackTagsOf = (artist: string, album: string, title: string) => this.call<HubTrackTags>('GET', `/api/item-tags/track?${new URLSearchParams({ artist, album, title })}`);
+  setTrackTags = (artist: string, album: string, title: string, lists: { styles?: string[]; moods?: string[] }) => this.call<HubTrackTags>('PUT', '/api/admin/track-tags', { artist, album, title, ...lists });
+  renameTrackTags = (from: { artist: string; album: string; title: string }, to: { artist: string; album: string; title: string }) => this.call<{ moved: number }>('POST', '/api/admin/track-tags/rename', { from, to });
   tagAlbum = (albumId: string) => this.call<{ songs: HubTagSong[] }>('GET', `/api/admin/tags/album/${encodeURIComponent(albumId)}`);
   tagMatches = (artist: string, album: string) => this.call<{ candidates: HubTagMatch[] }>('GET', `/api/admin/tags/match?${new URLSearchParams({ artist, album })}`);
   /** One Save; pass the same `batch` id with each part of a big one so it stays one Save (lib/tagSave.ts). */

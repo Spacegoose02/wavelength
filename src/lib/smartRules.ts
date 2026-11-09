@@ -1,6 +1,6 @@
 import type { Album, Track } from '../sources/types';
 import { albumGenres, albumTags, decadeOf, genreKey, splitGenres } from './browse';
-import { artistFacets } from './itemTags';
+import { albumSongNames, artistFacets, songFacets, useItemTagStore } from './itemTags';
 import type { SongFacts } from './smartPlaylists';
 
 /**
@@ -56,6 +56,9 @@ export const FIELDS = [
   { id: 'title', kind: 'Track', label: 'Track title', type: 'text', get: (c: RuleCtx): Value => t(c).title },
   { id: 'trackArtist', kind: 'Track', label: 'Track artist', type: 'text', get: (c: RuleCtx): Value => t(c).artist },
   { id: 'trackGenre', kind: 'Track', label: 'Track genre', type: 'tags', get: (c: RuleCtx): Value => splitGenres(c.facts?.genre ?? '') },
+  // the song's own moods and styles on the Hub (like Plex's track moods), by its album and title
+  { id: 'trackMood', kind: 'Track', label: 'Track mood', type: 'tags', get: (c: RuleCtx): Value => songFacets(c.album.artist, c.album.title, t(c).title).mood ?? [] },
+  { id: 'trackStyle', kind: 'Track', label: 'Track style', type: 'tags', get: (c: RuleCtx): Value => songFacets(c.album.artist, c.album.title, t(c).title).style ?? [] },
   { id: 'plays', kind: 'Track', label: 'Track plays', type: 'number', get: (c: RuleCtx): Value => c.facts?.plays ?? 0 },
   { id: 'played', kind: 'Track', label: 'Track last played', type: 'days', get: (c: RuleCtx): Value => c.facts?.playedAt },
   { id: 'rating', kind: 'Track', label: 'Track rating', type: 'rating', get: (c: RuleCtx): Value => c.facts?.rating ?? 0 },
@@ -91,10 +94,28 @@ const filled = (r: Rule) => fieldOf(r.field).type === 'bool' || !!r.value.trim()
 
 const DAY = 86_400_000;
 
+/** Rows on the songs' own moods and styles (the Hub's song tags, loaded apart: `needsSongTags`). */
+const SONG_TAGS: Partial<Record<FieldId, 'mood' | 'style'>> = { trackMood: 'mood', trackStyle: 'style' };
+
+/**
+ * A song mood or style row before the songs are read: known false when none of the album's songs has the name
+ * ("is" / "contains"), known true for "is not" when none of them has any; otherwise maybe.
+ */
+function songTagOfAlbum(r: Rule, c: RuleCtx, facet: 'mood' | 'style'): boolean | undefined {
+  if (!useItemTagStore.getState().songsAt) return undefined;
+  const names = albumSongNames(c.album.artist, c.album.title, facet).map(genreKey);
+  const w = genreKey(r.value);
+  const any = r.op === 'contains' || r.op === 'notContains' ? names.some((n) => n.includes(w)) : names.includes(w);
+  if (r.op === 'is' || r.op === 'contains') return any ? undefined : false;
+  return any ? undefined : true;
+}
+
 /** One row: true, false, or undefined when it's about the song and there's no song yet. */
 export function evalRule(r: Rule, c: RuleCtx): boolean | undefined {
   if (!filled(r)) return true;
   const f = fieldOf(r.field);
+  const songTag = SONG_TAGS[r.field];
+  if (songTag && !c.track) return songTagOfAlbum(r, c, songTag);
   if (f.kind === 'Track' && !c.track) return undefined;
   const have = f.get(c);
   if (have === undefined && f.type === 'tags') return undefined; // the label before the album is read
@@ -163,6 +184,9 @@ export function evalGroup(g: RuleGroup, c: RuleCtx): boolean | undefined {
 
 /** Whether any row is about the songs (so every candidate album has to be read to know). */
 export const needsSongs = (g: RuleGroup): boolean => g.rules.some((r) => (isGroup(r) ? needsSongs(r) : filled(r) && fieldOf(r.field).kind === 'Track'));
+
+/** Whether any row is on the songs' own moods or styles (so they're loaded from the Hub first). */
+export const needsSongTags = (g: RuleGroup): boolean => g.rules.some((r) => (isGroup(r) ? needsSongTags(r) : filled(r) && !!SONG_TAGS[r.field]));
 
 /** Rules that don't say anything. */
 export const isEmpty = (g: RuleGroup): boolean => !g.rules.some((r) => (isGroup(r) ? !isEmpty(r) : filled(r)));

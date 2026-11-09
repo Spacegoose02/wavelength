@@ -4,8 +4,9 @@ import type { Album, Track } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { enabledSources } from '../store/settings';
 import { albumGenres, albumTags, type BrowseQuery, genreKey } from './browse';
-import { describeRules, evalGroup, newRule, type Rule, type RuleGroup, type SortId, sortKey } from './smartRules';
+import { describeRules, evalGroup, needsSongTags, newRule, type Rule, type RuleGroup, type SortId, sortKey } from './smartRules';
 import { featuresFor } from './sonic';
+import { useItemTagStore } from './itemTags';
 
 /**
  * Smart playlists: rules ("Rap; Hip-Hop, rated 4+, not played in 90 days") instead of a list of songs. Each time
@@ -73,6 +74,18 @@ export function albumFits(p: SmartPlaylist, a: Album): boolean {
 /** A smart playlist with the rules of a Browse slice or the Albums filters: "80s", "Christmas · Pop". */
 export function fromBrowse(q: BrowseQuery, name: string): SmartPlaylist {
   const decade = q.decade !== undefined ? { fromYear: q.decade, toYear: q.decade + 9 } : { fromYear: q.from, toYear: q.to };
+  const p = simpleFromBrowse(q, name, decade);
+  if (!q.mood && !q.style) return p;
+  // a mood or style is the album's or the song's own (as Browse shows it): advanced rules say "either"
+  const either = (r: RuleGroup['rules'][number]): RuleGroup['rules'][number] => {
+    if ('match' in r) return { ...r, rules: r.rules.map(either) };
+    if (r.field === 'mood' || r.field === 'style') return { match: 'any', rules: [r, { ...r, field: r.field === 'mood' ? 'trackMood' : 'trackStyle' }] };
+    return r;
+  };
+  return { ...p, rules: { ...advancedRules(p), rules: advancedRules(p).rules.map(either) } };
+}
+
+function simpleFromBrowse(q: BrowseQuery, name: string, decade: { fromYear?: number; toYear?: number }): SmartPlaylist {
   return {
     ...newSmartPlaylist(),
     name,
@@ -225,6 +238,7 @@ export const MAX_ALBUMS = 400;
  * sorted ("most played"), it reads every candidate album up to MAX_ALBUMS so the top ones are the real top.
  */
 async function ruleTracks(p: SmartPlaylist, rules: RuleGroup, servers: NavidromeSource[], now: number): Promise<Track[]> {
+  if (needsSongTags(rules)) await useItemTagStore.getState().loadSongs();
   const ids = new Set(servers.map((s) => s.config.id));
   const candidates: { album: Album; ref: Album }[] = [];
   for (const album of useCatalog.getState().albums) {

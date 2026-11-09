@@ -1,7 +1,7 @@
 import { norm } from '../sources/registry';
 import type { Album, Artist } from '../sources/types';
 import { genreKey, splitGenres } from './genreNames';
-import { albumFacets, artistFacets } from './itemTags';
+import { albumFacets, albumSongNames, artistFacets } from './itemTags';
 
 export { genreKey, splitGenres };
 
@@ -99,8 +99,19 @@ export function albumTags(a: Album, f: TagFacet): string[] {
 
 const hasTag = (names: string[], want: string) => names.some((n) => genreKey(n) === genreKey(want));
 
+/**
+ * An album's styles or moods with its songs' own (the Hub's song tags, once loaded): a "Melancholy" song puts its
+ * album under Melancholy too. Collections are the album's and artist's only.
+ */
+export function albumAndSongTags(a: Album, f: TagFacet): string[] {
+  const own = albumTags(a, f);
+  if (f === 'collection') return own;
+  const songs = albumSongNames(a.artist, a.title, f);
+  return songs.length ? splitGenres([...own, ...songs]) : own;
+}
+
 export function matchesAlbum(a: Album, q: BrowseQuery): boolean {
-  for (const f of TAG_FACETS) if (q[f] && !hasTag(albumTags(a, f), q[f]!)) return false;
+  for (const f of TAG_FACETS) if (q[f] && !hasTag(albumAndSongTags(a, f), q[f]!)) return false;
   if (q.genre) {
     const k = genreKey(q.genre);
     if (!albumGenres(a).some((g) => genreKey(g) === k)) return false;
@@ -160,7 +171,7 @@ export function matchesArtistTags(name: string, q: BrowseQuery): boolean {
 export function tagCounts(albums: Album[], f: TagFacet): { name: string; albums: number }[] {
   const by = new Map<string, { name: string; albums: number }>();
   for (const a of albums) {
-    for (const n of albumTags(a, f)) {
+    for (const n of albumAndSongTags(a, f)) {
       const k = genreKey(n);
       const e = by.get(k) ?? { name: n, albums: 0 };
       e.albums++;
