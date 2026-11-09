@@ -705,6 +705,25 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     PRIMARY KEY (playlist_id, pos)
   );
   `,
+  `
+  -- Styles, moods and collections of albums and artists, and artists' own genres (itemTags.ts): Plex-style
+  -- metadata that has no place in the music files. One row per album or artist and kind of tag. Albums are
+  -- keyed by album artist and title, artists by name (both compared without case, accents or punctuation), so
+  -- they don't depend on Navidrome's ids. The source column says who set it: an admin ('edit', never overwritten by an
+  -- import) or an import ('plex').
+  CREATE TABLE item_tags (
+    kind       TEXT NOT NULL CHECK (kind IN ('artist', 'album')),
+    item       TEXT NOT NULL,
+    facet      TEXT NOT NULL CHECK (facet IN ('genre', 'style', 'mood', 'collection')),
+    artist     TEXT NOT NULL,
+    title      TEXT NOT NULL DEFAULT '',
+    vals       TEXT NOT NULL,           -- JSON array of names, in order
+    source     TEXT NOT NULL DEFAULT 'edit' CHECK (source IN ('edit', 'plex')),
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (kind, item, facet)
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

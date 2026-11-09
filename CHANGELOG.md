@@ -7,6 +7,13 @@
   "&", "," and "x" only split a credit when one side is a library artist. A featured artist with no albums in the
   library opens their Deezer releases (`creditLinks` in `src/lib/trackLinks.ts`, `ArtistCredit` in
   `src/components/common.tsx`).
+- **Styles, moods and collections, like Plex.** Edit album's Tags tab now has **Styles** ("Christmas Pop"),
+  **Moods** ("Laid-Back/Mellow") and **Collections** ("Christmas") next to its genres, and Edit artist has the
+  artist's own **Genres**, Styles, Moods and Collections. They are kept on the Hub (`hub/src/itemTags.ts`, migration
+  36), follow renames, and show as chips under the title on album and artist pages.
+- **An album's genres can differ from its artist's.** Edit artist keeps the artist's genres on the Hub instead of
+  writing them into every song, so a pop group's Christmas album stays Christmas. Tick **Also write these genres into
+  every song of theirs** to do it the old way.
 
 ## 0.37.0
 - **Critters: three new scenes in place of the Saxophone, Harpist and Tuba.** **Acoustic** strums an acoustic guitar in

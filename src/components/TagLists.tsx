@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useItemTags } from '../lib/itemTags';
 import { hubClient } from '../store/hub';
 
 /**
@@ -25,6 +26,17 @@ export function TagLists({ values }: { values?: typeof cached } = {}) {
     <>
       <datalist id="tag-artists">{v?.artists.map((a) => <option key={a} value={a} />)}</datalist>
       <datalist id="tag-genres">{v?.genres.map((g) => <option key={g} value={g} />)}</datalist>
+    </>
+  );
+}
+
+/** Suggestions for the Hub's styles, moods and collections (lib/itemTags.ts): `tag-styles`, `tag-moods`, `tag-collections`, and `tag-artist-genres`. */
+export function HubTagLists() {
+  const { values } = useItemTags();
+  return (
+    <>
+      {(['style', 'mood', 'collection'] as const).map((f) => <datalist key={f} id={`tag-${f}s`}>{values[f]?.map((v) => <option key={v.name} value={v.name} />)}</datalist>)}
+      <datalist id="tag-artist-genres">{values.genre?.map((v) => <option key={v.name} value={v.name} />)}</datalist>
     </>
   );
 }

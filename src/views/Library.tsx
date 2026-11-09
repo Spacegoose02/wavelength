@@ -21,6 +21,7 @@ import { deleteAlbum, deleteAlbums } from '../lib/deleteAlbums';
 import { navidromeRefs, planAlbums, planArtists } from '../lib/merge';
 import { useArtistMeta } from '../lib/artistMeta';
 import { shelves } from '../lib/releaseKind';
+import { AlbumTagChips, ArtistTagChips } from '../components/TagChips';
 import { EditAlbumButton } from './AlbumEditor';
 import { EditArtistButton } from './ArtistEditor';
 import { confirmMerge, forgetAlbums, forgetArtists, MergeIntoButton } from '../components/MergeInto';
@@ -428,6 +429,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
             )}
             {canEditTags && !kid && navidromeRefs(artist).length > 0 && <MergeIntoButton kind="artist" item={artist} />}
           </div>
+          <ArtistTagChips name={artist.name} />
           <ArtistNews artist={artist} />
         </div>
       </header>
@@ -571,6 +573,7 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
             <ArtistCredit credit={album.artist} fallback={artistOfAlbum({ ...album, refs: [ref, ...refs] }, catalogArtists)} linkClass="link" discography="all" />
           </div>
           <div className="muted">{tracks ? `${tracks.length} tracks · ${fmtTime(total)}` : ''}</div>
+          <AlbumTagChips album={album} />
           <div className="hero-actions">
             <button className="btn primary" disabled={!tracks?.length} onClick={() => tracks && playTracks(tracks)}><IconPlay /> Play</button>
             <button className="btn" disabled={!tracks?.length} onClick={() => {

@@ -2,7 +2,8 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { ArtworkPicker } from '../components/ArtworkButton';
 import { Spinner } from '../components/common';
 import { ChipInput, EditDialog } from '../components/EditDialog';
-import { forgetTagValues, TagLists, useTagValues } from '../components/TagLists';
+import { forgetTagValues, HubTagLists, TagLists, useTagValues } from '../components/TagLists';
+import { type Facets, useItemTags, useItemTagStore } from '../lib/itemTags';
 import { RELEASE_KINDS, kindOfTag, releaseKind } from '../lib/releaseKind';
 import { joinGenres, splitGenres } from '../lib/songCredit';
 import { saveInParts } from '../lib/tagSave';
@@ -14,10 +15,13 @@ import { useUi } from '../store/ui';
 /**
  * Edit album (docs/USER-GUIDE.md, "Editing an album"): an album's own tags in one dialog, Plex style. **General**
  * has the album, album artist, sort title, release date, release type (Album / EP / Single / Compilation, which
- * puts it on the artist page's Albums or Singles & EPs shelf) and record label; **Tags** the genres and moods as
- * chips; **Poster** the cover picker; **Info** the files. A value changed here is written into every song of the
- * album through the Hub's tag editor (PUT /api/admin/tags, in parts: lib/tagSave.ts), so one Save is one entry
- * under Settings → Server → Tag edits. Values that differ from song to song stay as they are unless changed.
+ * puts it on the artist page's Albums or Singles & EPs shelf) and record label; **Tags** the genres, styles, moods
+ * and collections as chips; **Poster** the cover picker; **Info** the files. A file tag changed here is written into
+ * every song of the album through the Hub's tag editor (PUT /api/admin/tags, in parts: lib/tagSave.ts), so one Save
+ * is one entry under Settings → Server → Tag edits. Values that differ from song to song stay as they are unless
+ * changed. Styles, moods and collections have no file tag Navidrome reads (an .m4a can't even hold a mood), so they
+ * are kept on the Hub (PUT /api/admin/item-tags, hub/src/itemTags.ts) and follow the album when it's renamed; a mood
+ * the files already have is the starting value until the Hub has one.
  * Song-by-song changes are on the Edit tags page (views/TagEditor.tsx), a button away.
  */
 
@@ -25,19 +29,27 @@ type Tab = 'general' | 'tags' | 'poster' | 'info';
 const TABS = [['general', 'General'], ['tags', 'Tags'], ['poster', 'Poster'], ['info', 'Info']] as const;
 
 /** The album-wide tags this dialog edits. */
-const KEYS = ['album', 'albumArtist', 'albumSort', 'year', 'releaseType', 'label', 'genre', 'mood'] as const satisfies readonly HubTagKey[];
+const KEYS = ['album', 'albumArtist', 'albumSort', 'year', 'releaseType', 'label', 'genre'] as const satisfies readonly HubTagKey[];
 type Key = (typeof KEYS)[number];
 const LABELS: Record<Key, string> = {
-  album: 'Album', albumArtist: 'Album artist', albumSort: 'Sort album', year: 'Release date', releaseType: 'Release type', label: 'Record label', genre: 'Genres', mood: 'Moods',
+  album: 'Album', albumArtist: 'Album artist', albumSort: 'Sort album', year: 'Release date', releaseType: 'Release type', label: 'Record label', genre: 'Genres',
 };
 /** Tags an .m4a can't hold (hub/src/tags.ts canWrite). */
-const NOT_IN_M4A: Key[] = ['albumSort', 'releaseType', 'label', 'mood'];
+const NOT_IN_M4A: Key[] = ['albumSort', 'releaseType', 'label'];
+
+/** What the Hub keeps for the album (hub/src/itemTags.ts). */
+const HUB_FACETS = [['style', 'Styles', 'Add a style, like Southern Rap'], ['mood', 'Moods', 'Add a mood, like Laid-Back/Mellow'], ['collection', 'Collections', 'Add to a collection, like Christmas']] as const;
+type HubLists = Record<(typeof HUB_FACETS)[number][0], string[]>;
+const sameList = (a: string[], b: string[]) => joinGenres(a) === joinGenres(b);
+const hubChanged = (a?: HubLists, b?: HubLists) => !!a && !!b && HUB_FACETS.some(([f]) => !sameList(a[f], b[f]));
+const toLists = (f: Facets, fileMood: string): HubLists => ({ style: f.style ?? [], mood: f.mood ?? splitGenres(fileMood), collection: f.collection ?? [] });
+const listsBody = (l: HubLists) => ({ styles: l.style, moods: l.mood, collections: l.collection });
 
 const errText = (e: unknown) => String((e as Error).message ?? e);
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
 
 /** The album's value for a tag: what every song has, or '' and `mixed` when they differ. */
-function common(songs: HubTagSong[], k: Key): { value: string; mixed: boolean } {
+function common(songs: HubTagSong[], k: HubTagKey): { value: string; mixed: boolean } {
   const vals = new Set(songs.map((s) => (s.tags[k] ?? '').trim()));
   return vals.size === 1 ? { value: [...vals][0], mixed: false } : { value: '', mixed: true };
 }
@@ -52,15 +64,28 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
   const [tab, setTab] = useState<Tab>('general');
   const [msg, setMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState<{ batches: string[]; files: number }>();
+  const [saved, setSaved] = useState<{ batches: string[]; files: number; hub?: { from: { artist: string; title: string }; to: { artist: string; title: string }; lists: HubLists; hadAny: boolean } }>();
+  const hubReady = useItemTags().ready === true;
+  const [hubStart, setHubStart] = useState<HubLists>();
+  const [hub, setHub] = useState<HubLists>();
+  const [hubHad, setHubHad] = useState(false);
 
   const load = async () => {
     if (!c) return;
     try {
       const { songs } = await c.tagAlbum(ref.id);
       setSongs(songs);
-      setVals(Object.fromEntries(KEYS.map((k) => [k, common(songs, k).value])) as Record<Key, string>);
+      const v = Object.fromEntries(KEYS.map((k) => [k, common(songs, k).value])) as Record<Key, string>;
+      setVals(v);
       setTouched(new Set());
+      await useItemTagStore.getState().load();
+      if (useItemTagStore.getState().ready) {
+        const t = await c.itemTagsOf('album', v.albumArtist || album.artist, v.album || album.title);
+        const l = toLists(t.facets, common(songs, 'mood').value);
+        setHubHad(t.updatedAt !== null);
+        setHubStart(l);
+        setHub(l);
+      }
     } catch (e) {
       setMsg(errText(e));
     }
@@ -84,19 +109,35 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
     });
   }, [songs, vals, touched]);
   const changedKeys = KEYS.filter((k) => changes.some((x) => x.tags[k] !== undefined));
+  const hubDirty = hubChanged(hub, hubStart);
+  const dirty = changes.length > 0 || hubDirty;
   const m4a = (songs ?? []).filter((s) => /\.(m4a|mp4|aac)$/i.test(s.path)).length;
 
   const save = async () => {
-    if (!c || !vals || !changes.length) return;
+    if (!c || !vals || !songs || !dirty) return;
     setBusy(true);
     setMsg('Saving…');
     try {
-      const label = `Album: ${vals.albumArtist || album.artist} – ${vals.album || album.title}`;
-      const r = await saveInParts(c, label, changes, (done, total) => total > 25 && setMsg(`Saving… ${done} of ${total}`));
-      if (r.error) throw new Error(r.error);
-      forgetTagValues();
-      setSaved(r.batches.length ? { batches: r.batches, files: r.changed.length } : undefined);
-      setMsg(r.failed.length ? `${plural(r.failed.length, 'song')} failed: ${r.failed[0].error}` : r.batches.length ? undefined : 'Nothing changed in the files');
+      const from = { artist: common(songs, 'albumArtist').value || album.artist, title: common(songs, 'album').value || album.title };
+      const to = { artist: vals.albumArtist.trim() || from.artist, title: vals.album.trim() || from.title };
+      let r = { batches: [] as string[], changed: [] as string[], failed: [] as { path: string; error: string }[], error: undefined as string | undefined };
+      if (changes.length) {
+        const label = `Album: ${to.artist} – ${to.title}`;
+        r = { error: undefined, ...(await saveInParts(c, label, changes, (done, total) => total > 25 && setMsg(`Saving… ${done} of ${total}`))) };
+        if (r.error) throw new Error(r.error);
+        forgetTagValues();
+      }
+      // the Hub's styles, moods and collections follow a rename, then take what changed
+      let hubSaved: NonNullable<typeof saved>['hub'];
+      const moved = hubReady && hubHad && (from.artist !== to.artist || from.title !== to.title);
+      if (moved) await c.renameItemTags('album', from, to);
+      if (hubReady && hub && hubStart && (hubDirty || moved)) {
+        if (hubDirty) useItemTagStore.getState().put(await c.setItemTags('album', to.artist, to.title, listsBody(hub)));
+        hubSaved = { from, to, lists: hubStart, hadAny: hubHad };
+        void useItemTagStore.getState().load(true);
+      }
+      setSaved(r.batches.length || hubSaved ? { batches: r.batches, files: r.changed.length, hub: hubSaved } : undefined);
+      setMsg(r.failed.length ? `${plural(r.failed.length, 'song')} failed: ${r.failed[0].error}` : r.batches.length || hubSaved ? undefined : 'Nothing changed in the files');
       await load();
     } catch (e) {
       setMsg(errText(e));
@@ -110,8 +151,14 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
     setBusy(true);
     try {
       for (const b of saved.batches) await c.undoTags(b);
+      const h = saved.hub;
+      if (h) {
+        if (h.from.artist !== h.to.artist || h.from.title !== h.to.title) await c.renameItemTags('album', h.to, h.from);
+        await c.setItemTags('album', h.from.artist, h.from.title, h.hadAny ? listsBody(h.lists) : { styles: [], moods: [], collections: [] });
+        await useItemTagStore.getState().load(true);
+      }
       setSaved(undefined);
-      setMsg('Put the album back as it was. Navidrome shows it after its rescan, in a minute or so');
+      setMsg(saved.batches.length ? 'Put the album back as it was. Navidrome shows it after its rescan, in a minute or so' : 'Put the album back as it was');
       await load();
     } catch (e) {
       setMsg(errText(e));
@@ -141,13 +188,13 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
     <EditDialog title={`Edit ${album.artist} – ${album.title}`} tabs={TABS} tab={tab} onTab={setTab} busy={busy} onClose={onClose}
       footer={<>
         <span className="small edit-dialog-msg" role="status">
-          {saved ? <>Saved {plural(saved.files, 'song')}. Navidrome shows it after its rescan, in a minute or so.</>
-            : msg && vals ? msg : changes.length ? `${changedKeys.map((k) => LABELS[k]).join(', ')} on ${plural(changes.length, 'song')}` : ''}
+          {saved ? (saved.files ? <>Saved {plural(saved.files, 'song')}. Navidrome shows it after its rescan, in a minute or so.</> : <>Saved.</>)
+            : msg && vals ? msg : dirty ? [changes.length && `${changedKeys.map((k) => LABELS[k]).join(', ')} on ${plural(changes.length, 'song')}`, hubDirty && `${HUB_FACETS.filter(([f]) => hub && hubStart && !sameList(hub[f], hubStart[f])).map(([, l]) => l).join(', ')} on your Hub`].filter(Boolean).join('; ') : ''}
         </span>
         {saved && <button className="btn ghost" onClick={undo} disabled={busy}>Undo</button>}
         <button className="btn ghost" onClick={songsPage} disabled={busy} title="Disc, number, title and artist of each song">Edit each song…</button>
         <button className="btn" onClick={onClose} disabled={busy}>{saved ? 'Close' : 'Cancel'}</button>
-        <button className="btn primary" onClick={save} disabled={busy || !changes.length}>Save changes</button>
+        <button className="btn primary" onClick={save} disabled={busy || !dirty}>Save changes</button>
       </>}>
       <TagLists values={values} />
       {!vals || !songs ? (msg ? <div className="errors">{msg}</div> : <Spinner />) : tab === 'general' ? (
@@ -174,11 +221,15 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
             <span className="edit-field-label">Genres</span>
             <ChipInput values={splitGenres(vals.genre)} onChange={(v) => set('genre', joinGenres(v))} list="tag-genres" placeholder={mixed.has('genre') && !touched.has('genre') ? 'Differs per song' : 'Add a genre'} split={splitGenres} label="genre" />
           </div>
-          <div className="span2 edit-field">
-            <span className="edit-field-label">Moods</span>
-            <ChipInput values={splitGenres(vals.mood)} onChange={(v) => set('mood', joinGenres(v))} placeholder={mixed.has('mood') && !touched.has('mood') ? 'Differs per song' : 'Add a mood, like Dark or Energetic'} split={splitGenres} label="mood" />
-          </div>
-          <p className="span2 muted small">Each is written into one tag separated by “; ” on every song of the album, which Navidrome reads as separate genres and moods.</p>
+          <p className="span2 muted small">Genres are written into one tag separated by “; ” on every song of the album, which Navidrome reads as separate genres. They can differ from the artist’s own genres.</p>
+          {hub ? HUB_FACETS.map(([f, label, placeholder]) => (
+            <div key={f} className="span2 edit-field">
+              <span className="edit-field-label">{label}</span>
+              <ChipInput values={hub[f]} onChange={(v) => setHub((h) => (h ? { ...h, [f]: v } : h))} list={`tag-${f}s`} placeholder={placeholder} split={splitGenres} label={f} />
+            </div>
+          )) : <p className="span2 muted small">Styles, moods and collections need a Hub that keeps them (0.38 or newer).</p>}
+          {hub && <p className="span2 muted small">Styles, moods and collections are kept on your Hub, for browsing and smart playlists, and follow the album if it’s renamed.</p>}
+          <HubTagLists />
         </div>
       ) : tab === 'poster' ? (
         <ArtworkPicker inline kind="album" artist={album.artist} album={album.title} current={cover} onClose={() => undefined} />
