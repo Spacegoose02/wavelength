@@ -22,6 +22,7 @@ import { navidromeRefs, planAlbums, planArtists } from '../lib/merge';
 import { useArtistMeta } from '../lib/artistMeta';
 import { shelves } from '../lib/releaseKind';
 import { AlbumTagChips, ArtistTagChips } from '../components/TagChips';
+import { useItemTags } from '../lib/itemTags';
 import { EditAlbumButton } from './AlbumEditor';
 import { EditArtistButton } from './ArtistEditor';
 import { confirmMerge, forgetAlbums, forgetArtists, MergeIntoButton } from '../components/MergeInto';
@@ -155,13 +156,15 @@ export function Albums() {
   const [busy, setBusy] = useState<string>();
   const q = useBrowseFilters((s) => s.albums);
   const setQ = useBrowseFilters((s) => s.setAlbums);
+  // the Hub's styles, moods and collections, which the filters read
+  const tagsAt = useItemTags().albums;
   const shown = useMemo(() => {
     const f = filter.toLowerCase();
     return queryAlbums(albums.filter(
       (a) => (!f || a.title.toLowerCase().includes(f) || a.artist.toLowerCase().includes(f)) &&
         (!only || (a.refs ?? [a]).some((r) => r.sourceId === only)) && !hidden.album(a),
     ), q, q.sort);
-  }, [albums, filter, only, hidden, q]);
+  }, [albums, filter, only, hidden, q, tagsAt]); // eslint-disable-line react-hooks/exhaustive-deps
   const musicSources = sources.filter((s) => s.enabled && (s.kind === 'navidrome' || s.kind === 'plex'));
   const cardKey = (a: Album) => `${a.sourceId}:${a.id}`;
   // what can be ticked: the cards on screen (a version hidden by Settings → Playback isn't)
@@ -207,6 +210,7 @@ export function Artists() {
   const go = useUi((s) => s.go);
   const q = useBrowseFilters((s) => s.artists);
   const setQ = useBrowseFilters((s) => s.setArtists);
+  const tagsAt = useItemTags().artists;
   const [filter, setFilter] = useState('');
   const hidden = useHidden();
   const kid = useIsKid();
@@ -214,7 +218,7 @@ export function Artists() {
   const [busy, setBusy] = useState<string>();
   const shown = useMemo(
     () => queryArtists(artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()) && !hidden.artist(a)), albums, q, q.sort),
-    [artists, albums, filter, hidden, q],
+    [artists, albums, filter, hidden, q, tagsAt], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const selectable = useMemo(() => shown.slice(0, 600), [shown]);
   const sel = useSelection(selectable, (a: Artist) => `${a.sourceId}:${a.id}`);

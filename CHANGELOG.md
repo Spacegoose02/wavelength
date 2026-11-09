@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Browse and filter by style, mood and collection.** Browse has Collections tiles and Styles and Moods chips;
+  opening one shows its artists and albums with chips to narrow it (a genre, decade, style or mood), and they mix
+  ("Christmas · 90s", "Southern Rap · Reckless"). Albums and Artists get Style, Mood and Collection filters. The
+  chips on album and artist pages open Browse on them (`src/lib/browse.ts`, `src/views/Browse.tsx`).
 - **Import from Plex.** Settings → Server → Import from Plex reads your Plex server, matches its albums and artists
   to your library, shows what it found, then imports styles, moods, collections (Plex collections and labels) and
   artist genres onto the Hub. Hand edits are never overwritten. Albums with no genre get Plex's as an undoable

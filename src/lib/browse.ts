@@ -1,6 +1,7 @@
 import { norm } from '../sources/registry';
 import type { Album, Artist } from '../sources/types';
 import { genreKey, splitGenres } from './genreNames';
+import { albumFacets, artistFacets } from './itemTags';
 
 export { genreKey, splitGenres };
 
@@ -8,6 +9,8 @@ export { genreKey, splitGenres };
  * Browsing the library by genre, decade and year (views/Browse.tsx, and the filters on Albums and Artists).
  * Everything comes from the albums already loaded: Navidrome and Plex send each album's genres and year with
  * the album list, so no extra calls are needed. An artist's genres and decades are those of their albums.
+ * Styles, moods and collections come from the Hub (lib/itemTags.ts): an album's own, else its artist's
+ * (`albumTags`).
  */
 
 export type AlbumSort = 'name' | 'artist' | 'newest' | 'oldest' | 'added';
@@ -20,7 +23,14 @@ export interface BrowseQuery {
   decade?: number;
   from?: number;
   to?: number;
+  /** Styles, moods and collections kept on the Hub, matched without caring about case or punctuation. */
+  style?: string;
+  mood?: string;
+  collection?: string;
 }
+
+export const TAG_FACETS = ['style', 'mood', 'collection'] as const;
+export type TagFacet = (typeof TAG_FACETS)[number];
 
 export const ALBUM_SORTS: { id: AlbumSort; label: string }[] = [
   { id: 'name', label: 'A to Z' },
@@ -74,9 +84,23 @@ export function yearRange(albums: Album[]): { min: number; max: number } | undef
   return years.length ? { min: Math.min(...years), max: Math.max(...years) } : undefined;
 }
 
-export const isFiltered = (q: BrowseQuery) => !!(q.genre || q.decade !== undefined || q.from || q.to);
+export const isFiltered = (q: BrowseQuery) => !!(q.genre || q.decade !== undefined || q.from || q.to || q.style || q.mood || q.collection);
+
+/**
+ * An album's styles, moods or collections from the Hub. Collections add the artist's (an artist in Christmas puts
+ * their albums there); an album with no styles or moods of its own takes its artist's.
+ */
+export function albumTags(a: Album, f: TagFacet): string[] {
+  const own = albumFacets(a.artist, a.title)[f] ?? [];
+  const theirs = artistFacets(a.artist)[f] ?? [];
+  if (f === 'collection') return theirs.length ? splitGenres([...own, ...theirs]) : own;
+  return own.length ? own : theirs;
+}
+
+const hasTag = (names: string[], want: string) => names.some((n) => genreKey(n) === genreKey(want));
 
 export function matchesAlbum(a: Album, q: BrowseQuery): boolean {
+  for (const f of TAG_FACETS) if (q[f] && !hasTag(albumTags(a, f), q[f]!)) return false;
   if (q.genre) {
     const k = genreKey(q.genre);
     if (!albumGenres(a).some((g) => genreKey(g) === k)) return false;
@@ -115,12 +139,35 @@ export function queryArtists(artists: Artist[], albums: Album[], q: BrowseQuery,
   const counts = new Map<string, number>();
   if (isFiltered(q) || sort === 'albums') {
     for (const a of albums) if (!isFiltered(q) || matchesAlbum(a, q)) counts.set(artistKeyOf(a.artist), (counts.get(artistKeyOf(a.artist)) ?? 0) + 1);
-    if (isFiltered(q)) shown = artists.filter((a) => counts.has(artistKeyOf(a.name)));
+    // without a year, an artist's own genres, styles, moods and collections on the Hub count too
+    const own = (a: Artist) => q.decade === undefined && !q.from && !q.to && matchesArtistTags(a.name, q);
+    if (isFiltered(q)) shown = artists.filter((a) => counts.has(artistKeyOf(a.name)) || own(a));
   }
   const byName = (x: Artist, y: Artist) => x.name.localeCompare(y.name, undefined, { sensitivity: 'base' });
   return sort === 'albums'
     ? [...shown].sort((x, y) => (counts.get(artistKeyOf(y.name)) ?? y.albumCount ?? 0) - (counts.get(artistKeyOf(x.name)) ?? x.albumCount ?? 0) || byName(x, y))
     : [...shown].sort(byName);
+}
+
+/** Whether an artist's own tags on the Hub (genres, styles, moods, collections) match every one asked. */
+export function matchesArtistTags(name: string, q: BrowseQuery): boolean {
+  const t = artistFacets(name);
+  const asked = [['genre', q.genre], ['style', q.style], ['mood', q.mood], ['collection', q.collection]] as const;
+  return asked.some(([, v]) => v) && asked.every(([f, v]) => !v || hasTag(t[f] ?? [], v));
+}
+
+/** The styles, moods or collections of these albums, with how many albums have each, most first. */
+export function tagCounts(albums: Album[], f: TagFacet): { name: string; albums: number }[] {
+  const by = new Map<string, { name: string; albums: number }>();
+  for (const a of albums) {
+    for (const n of albumTags(a, f)) {
+      const k = genreKey(n);
+      const e = by.get(k) ?? { name: n, albums: 0 };
+      e.albums++;
+      by.set(k, e);
+    }
+  }
+  return [...by.values()].sort((x, y) => y.albums - x.albums || x.name.localeCompare(y.name));
 }
 
 /** The genres an artist plays, from their albums, most albums first. */

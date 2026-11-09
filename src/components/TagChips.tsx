@@ -6,7 +6,8 @@ import { useUi } from '../store/ui';
 
 /**
  * The genres, styles, moods and collections of an album or artist, as rows of chips under the page's title (Plex
- * shows the same on its album and artist pages). Genres open Browse; the rest come from the Hub (lib/itemTags.ts).
+ * shows the same on its album and artist pages). Each opens Browse on it; all but album genres come from the Hub
+ * (lib/itemTags.ts).
  */
 function Rows({ genres, facets }: { genres: string[]; facets: Facets }) {
   const rows: [HubFacet, string[]][] = [['genre', genres], ['style', facets.style ?? []], ['mood', facets.mood ?? []], ['collection', facets.collection ?? []]];
@@ -17,9 +18,7 @@ function Rows({ genres, facets }: { genres: string[]; facets: Facets }) {
         <div key={f}>
           <dt>{FACET_LABELS[f]}</dt>
           <dd className="chips inline">
-            {v.slice(0, 12).map((name) => f === 'genre'
-              ? <button key={name} className="chip" onClick={() => useUi.getState().go({ view: 'browse', genre: name })}>{name}</button>
-              : <span key={name} className="chip">{name}</span>)}
+            {v.slice(0, 12).map((name) => <button key={name} className="chip" onClick={() => useUi.getState().go({ view: 'browse', [f]: name })}>{name}</button>)}
             {v.length > 12 && <span className="muted small">+{v.length - 12}</span>}
           </dd>
         </div>

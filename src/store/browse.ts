@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { AlbumSort, ArtistSort, BrowseQuery } from '../lib/browse';
 
 /**
- * The genre, decade and year filters and sort on Albums and Artists (components/BrowseFilters.tsx). Kept here,
+ * The genre, decade, year, style, mood and collection filters and sort on Albums and Artists (components/BrowseFilters.tsx). Kept here,
  * not in the pages, so opening an album and coming back keeps them. Not saved between launches.
  */
 interface BrowseFilters {

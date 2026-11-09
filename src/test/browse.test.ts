@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'vitest';
-import { albumGenres, decadeCounts, decadeLabel, decadeOf, findGenre, genreCounts, genreTree, queryAlbums, queryArtists, splitGenres } from '../lib/browse';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { albumGenres, decadeCounts, decadeLabel, decadeOf, findGenre, genreCounts, genreTree, queryAlbums, queryArtists, splitGenres, tagCounts } from '../lib/browse';
+import { albumKey, tagKey, useItemTagStore } from '../lib/itemTags';
 import type { Album, Artist } from '../sources/types';
 
 let n = 0;
@@ -76,5 +77,45 @@ describe('browsing by genre, decade and year', () => {
     expect(findGenre(tree, 'Polka')).toBeUndefined();
     const metal = genreTree([album('Metallica', 'Master of Puppets', 1986, ['Metal', 'Thrash Metal'])]);
     expect(metal.map((g) => [g.label, g.subs.map((s) => s.label)])).toEqual([['Metal', ['Thrash Metal']]]);
+  });
+});
+
+describe('browsing by style, mood and collection (kept on the Hub)', () => {
+  const tag = (kind: 'album' | 'artist', artist: string, title: string, facets: Record<string, string[]>) =>
+    ({ kind, artist, title, facets, sources: {}, updatedAt: 1 });
+  const lib = [
+    album('*NSYNC', 'Home for Christmas', 1998, ['Christmas']),
+    album('NSYNC', 'Celebrity', 2001, ['Pop']),
+    album('Lil Baby', 'It’s Only Me', 2022, ['Rap']),
+    album('Mariah Carey', 'Merry Christmas', 1994, ['Pop']),
+  ];
+  beforeEach(() => {
+    useItemTagStore.setState({
+      albums: {
+        [albumKey('NSYNC', 'Home for Christmas')]: tag('album', 'NSYNC', 'Home for Christmas', { style: ['Christmas Pop'], mood: ['Warm'] }),
+        [albumKey('Lil Baby', 'Its Only Me')]: tag('album', 'Lil Baby', 'Its Only Me', { style: ['Southern Rap', 'Trap (Rap)'], mood: ['Druggy'] }),
+        [albumKey('Mariah Carey', 'Merry Christmas')]: tag('album', 'Mariah Carey', 'Merry Christmas', { collection: ['Christmas'] }),
+      },
+      artists: { [tagKey('NSYNC')]: tag('artist', 'NSYNC', '', { genre: ['Pop'], style: ['Teen Pop'], mood: ['Cheerful'], collection: ['Boy Bands'] }) },
+    } as never);
+  });
+  afterEach(() => useItemTagStore.setState({ albums: {}, artists: {} } as never));
+
+  test('albums by their own style, else their artist’s; collections add the artist’s', () => {
+    expect(queryAlbums(lib, { style: 'southern rap' }).map((a) => a.title)).toEqual(['It’s Only Me']);
+    expect(queryAlbums(lib, { style: 'Christmas Pop' }).map((a) => a.title)).toEqual(['Home for Christmas']);
+    // Celebrity has no styles of its own: it takes *NSYNC's
+    expect(queryAlbums(lib, { style: 'Teen Pop' }).map((a) => a.title)).toEqual(['Celebrity']);
+    expect(queryAlbums(lib, { collection: 'boy bands' }).map((a) => a.title)).toEqual(['Celebrity', 'Home for Christmas']);
+    expect(queryAlbums(lib, { collection: 'Christmas', decade: 1990 }).map((a) => a.title)).toEqual(['Merry Christmas']);
+    expect(queryAlbums(lib, { mood: 'Warm', genre: 'Christmas' }).map((a) => a.title)).toEqual(['Home for Christmas']);
+    expect(tagCounts(lib, 'mood')).toEqual([{ name: 'Cheerful', albums: 1 }, { name: 'Druggy', albums: 1 }, { name: 'Warm', albums: 1 }]);
+  });
+
+  test('an artist shows for their own genres from the Hub, even when their albums have others', () => {
+    const people = [artist('NSYNC'), artist('Lil Baby')];
+    expect(queryArtists(people, [album('NSYNC', 'Home for Christmas', 1998, ['Christmas'])], { genre: 'Pop' }).map((a) => a.name)).toEqual(['NSYNC']);
+    // with a year, it's their albums that count
+    expect(queryArtists(people, [album('NSYNC', 'Home for Christmas', 1998, ['Christmas'])], { genre: 'Pop', decade: 1990 })).toEqual([]);
   });
 });
