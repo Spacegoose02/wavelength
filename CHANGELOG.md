@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.39.1
+- **Fix: other music apps can use the Hub's plain address.** SUB/WAVE given `http://<hub>:7780` asked `/rest/ping`
+  there and got the web app's page back ("Unexpected token '<'"). The Hub now answers `/rest/*` at its own address
+  with the same relay and app logins as `/nd/<id>/rest` (which keeps working), and **Other music apps** shows just
+  the Hub's address (`hub/src/routes/relay.ts`, #268).
+
 ## 0.39.0
 - **Turn Navidrome off: the Hub becomes the music server (phase 6 of replacing Navidrome).** Settings → Server →
   Music catalog has **Turn Navidrome off**. Before it switches, the Hub copies what it doesn't have yet (each
