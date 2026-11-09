@@ -7,6 +7,10 @@ import { enabledSources, useSettings } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useServerPlaylists } from '../store/serverPlaylists';
 import { IconPlay, IconX } from '../components/Icons';
+import { ChipInput } from '../components/EditDialog';
+import { HubTagLists } from '../components/TagLists';
+import { splitGenres } from '../lib/genreNames';
+import { useItemTags } from '../lib/itemTags';
 
 /** Playlists → Smart playlists: rules that pick songs from your Navidrome library each time (lib/smartPlaylists.ts). */
 export function SmartPlaylists() {
@@ -73,6 +77,15 @@ function SmartEditor({ initial, onDone }: { initial: SmartPlaylist; onDone: () =
   const hasHub = useHub((st) => !!st.token);
   const sonic = sonicOn && hasHub;
   const [genres, setGenres] = useState(initial.genres.join(', '));
+  // the Hub's styles, moods and collections, when it keeps them
+  const tags = useItemTags();
+  const hubTags = tags.ready === true || !!(p.styles?.length || p.tagMoods?.length || p.collections?.length || p.notCollections?.length);
+  const list = (k: 'styles' | 'tagMoods' | 'collections' | 'notCollections', label: string, dl: string, placeholder: string) => (
+    <div className="edit-field">
+      <span className="small">{label}</span>
+      <ChipInput values={p[k] ?? []} onChange={(v) => setP({ ...p, [k]: v.length ? v : undefined })} list={dl} placeholder={placeholder} split={splitGenres} label={label.toLowerCase()} />
+    </div>
+  );
   const num = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
   const save = () => {
     useSettings.getState().saveSmartPlaylist({
@@ -99,10 +112,19 @@ function SmartEditor({ initial, onDone }: { initial: SmartPlaylist; onDone: () =
         <label>To year<input type="number" placeholder="any" value={p.toYear ?? ''} onChange={(e) => setP({ ...p, toYear: num(e.target.value) || undefined })} /></label>
         <label>At most (songs)<input type="number" min={1} max={1000} value={p.limit} onChange={(e) => setP({ ...p, limit: num(e.target.value) })} /></label>
       </div>
+      {hubTags && (
+        <div className="editor-grid">
+          <HubTagLists />
+          {list('styles', 'Styles (any of)', 'tag-styles', 'Southern Rap')}
+          {list('tagMoods', 'Moods (any of)', 'tag-moods', 'Laid-Back/Mellow')}
+          {list('collections', 'In collection', 'tag-collections', 'Christmas')}
+          {list('notCollections', 'Leave out collection', 'tag-collections', 'Christmas')}
+        </div>
+      )}
       {sonic && (
         <>
-          <div className="chips" aria-label="Mood">
-            <small className="muted">Mood:</small>
+          <div className="chips" aria-label="Sound">
+            <small className="muted">Sound:</small>
             {MOODS.map((m) => (
               <button type="button" key={m} className={`chip ${p.moods?.includes(m) ? 'on' : ''}`} onClick={() => setP({ ...p, moods: p.moods?.includes(m) ? p.moods.filter((x) => x !== m) : [...(p.moods ?? []), m] })}>{m}</button>
             ))}
@@ -114,7 +136,7 @@ function SmartEditor({ initial, onDone }: { initial: SmartPlaylist; onDone: () =
         </>
       )}
       <label className="check"><span className="switch"><input type="checkbox" checked={p.starred} onChange={(e) => setP({ ...p, starred: e.target.checked })} /><span /></span> Only songs I ♥</label>
-      <p className="muted small">Genres match your tags, so tidy genres (Settings → Server → Genres) make these work best. Ratings and plays are your own on Navidrome.</p>
+      <p className="muted small">Genres match your tags, so tidy genres (Settings → Server → Genres) make these work best. Styles, moods and collections are your Hub’s (Edit album, or Import from Plex); with any of them, songs come from the albums that fit. Ratings and plays are your own on Navidrome.</p>
       <div className="row gap">
         <button className="btn primary">Save</button>
         <button type="button" className="btn ghost" onClick={onDone}>Cancel</button>

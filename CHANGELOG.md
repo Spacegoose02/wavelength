@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Save any filter as a smart playlist.** Browse pages and the Albums and Artists filters have **Save as smart
+  playlist**: "80s", "Christmas" or "Southern Rap · Reckless" becomes a playlist that picks fresh songs each time.
+  Smart playlists gain Styles, Moods, In collection and Leave out collection rules from the Hub's tags; with any of
+  them, songs come from the albums that fit (`src/lib/smartPlaylists.ts`). The sound-analysis mood rule is now
+  called **Sound**.
 - **Browse and filter by style, mood and collection.** Browse has Collections tiles and Styles and Moods chips;
   opening one shows its artists and albums with chips to narrow it (a genre, decade, style or mood), and they mix
   ("Christmas · 90s", "Southern Rap · Reckless"). Albums and Artists get Style, Mood and Collection filters. The

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ALBUM_SORTS, decadeCounts, decadeLabel, genreTree, isFiltered, TAG_FACETS, tagCounts, yearRange, type BrowseQuery } from '../lib/browse';
 import { useItemTags } from '../lib/itemTags';
+import { SaveSmartButton } from './SaveSmartButton';
 import type { Album } from '../sources/types';
 
 /**
@@ -62,10 +63,14 @@ export function BrowseFilters<S extends string>({ albums, q, set, sorts }: {
       <select aria-label="Sort" value={q.sort} onChange={(e) => set({ sort: e.target.value as S })}>
         {sorts.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
       </select>
+      {isFiltered(q) && <SaveSmartButton key={JSON.stringify(q)} q={q} name={sliceName(q)} />}
       {isFiltered(q) && <button className="btn small ghost" onClick={() => set({ genre: undefined, decade: undefined, from: undefined, to: undefined, style: undefined, mood: undefined, collection: undefined })}>Clear</button>}
     </div>
   );
 }
+
+/** "Christmas · Pop · 90s", for a smart playlist saved from the filters. */
+const sliceName = (q: BrowseQuery) => [q.collection, q.genre, q.style, q.mood, q.decade !== undefined ? decadeLabel(q.decade) : q.from || q.to ? `${q.from ?? '…'}–${q.to ?? '…'}` : ''].filter(Boolean).join(' · ');
 
 const LABEL = { style: 'Style', mood: 'Mood', collection: 'Collection' } as const;
 

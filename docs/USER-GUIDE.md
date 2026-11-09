@@ -1123,7 +1123,7 @@ has two more buttons:
 - **↝ Journey to…** asks where you want to end up, then queues 20 songs that move step by step from this song
   to that one: from a slow ballad to a party track, say.
 
-Smart playlists get **Mood** (energetic, upbeat, chill, mellow, dark) and **Tempo** rules too, and AutoMix uses
+Smart playlists get **Sound** (energetic, upbeat, chill, mellow, dark) and **Tempo** rules too, and AutoMix uses
 the beat it found. The first analysis of a big library takes a night; songs show up as they're done.
 
 ## Smart playlists
@@ -1133,6 +1133,14 @@ played in N days, added in the last N days, a range of years, and how many songs
 Wavelength picks matching songs from your Navidrome library at random, so the playlist changes as you add, rate
 and play music. **Save copy** saves today's songs as an ordinary playlist on your server, for other apps. The
 rules follow you to every device with a Hub. Genres match your tags, so tidy genres help (below).
+
+With a Hub that keeps styles, moods and collections, the rules also take **Styles**, **Moods**, **In collection**
+and **Leave out collection** (so "Pop, but not Christmas" works). With any of those, the songs come from the albums
+that fit, picked at random each time.
+
+**Save as smart playlist** turns whatever you're looking at into one: on any Browse page ("80s", "Christmas",
+"Southern Rap · Reckless") and on Albums and Artists when a filter is on. Name it, and it's under Playlists → Smart
+playlists, where **Edit** adds more rules.
 
 ## Library care
 
