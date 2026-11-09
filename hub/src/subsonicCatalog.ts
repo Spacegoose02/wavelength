@@ -485,3 +485,18 @@ export async function cover(db: Db, musicDir: string, cacheDir: string, id: stri
   }
   return { body, type: 'image/jpeg' };
 }
+
+/**
+ * A playlist's songs in the Subsonic song shape (playlists.ts), or null when the catalog doesn't know one of them, so
+ * that Navidrome answers instead and nothing goes missing from the list.
+ */
+export function playlistEntries(db: Db, ids: string[], starred: Starred, personal: Plays | null = null): Record<string, unknown>[] | null {
+  const v = view(db);
+  if (!ids.every((id) => v.songs.has(id))) return null;
+  plays = personal;
+  try {
+    return ids.map((id) => song(v.songs.get(id)!, starred));
+  } finally {
+    plays = null;
+  }
+}
