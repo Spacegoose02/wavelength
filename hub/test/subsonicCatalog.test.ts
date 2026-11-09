@@ -37,8 +37,22 @@ async function fakeNavidrome() {
       const sort = url.searchParams.get('_sort');
       return res.end(JSON.stringify(sort === 'rating' ? [...songs].sort((a, b) => b.rating - a.rating) : songs));
     }
+    if (url.pathname === '/api/playlist') {
+      return res.end(JSON.stringify([
+        { id: 'pl1', name: 'Road trip', ownerName: 'mia', public: false, rules: null, createdAt: '2026-02-01T00:00:00Z' },
+        { id: 'pl2', name: 'Top rated', ownerName: 'mia', public: false, rules: { all: [{ gt: { rating: 3 } }] } },
+        { id: 'pl3', name: 'Dad’s', ownerName: 'dad', public: true, rules: null },
+      ]));
+    }
+    if (url.pathname === '/api/playlist/pl1/tracks') return res.end(JSON.stringify([{ id: '1', mediaFileId: 'nd1' }, { id: '2', mediaFileId: 'nd3' }]));
     if (q.u !== 'mia' || md5('mia-real-pw' + q.s) !== q.t) return res.end(JSON.stringify({ 'subsonic-response': { status: 'failed', error: { code: 40 } } }));
     if (method === 'getStarred2') return res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', starred2: { song: [{ id: 'nd2', starred: '2026-01-01T00:00:00Z' }], album: [], artist: [] } } }));
+    if (method === 'getPlaylists') {
+      return res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', playlists: { playlist: [
+        { id: 'pl1', name: 'Road trip', owner: 'mia', songCount: 2 }, { id: 'pl2', name: 'Top rated', owner: 'mia', songCount: 1 }, { id: 'pl3', name: 'Dad’s', owner: 'dad', public: true, songCount: 4 },
+      ] } } }));
+    }
+    if (method === 'createPlaylist' && !q.playlistId) return res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', playlist: { id: 'pl-new', name: q.name } } }));
     res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', from: 'navidrome', method } }));
   });
   servers.push(srv);
@@ -149,7 +163,7 @@ test('with the switch on, the Hub answers browsing and search from the catalog, 
   nd.calls.length = 0;
   assert.equal((await rest('getAlbumList2', { type: 'recent' })).body.from, 'navidrome');
   assert.equal((await rest('getAlbum', { id: 'brand-new' })).body.from, 'navidrome');
-  assert.equal((await rest('getPlaylists')).body.from, 'navidrome');
+  assert.equal((await rest('getPlaylists')).by, undefined);
   assert.equal((await rest('getAlbum', { id: 'al1', f: 'xml' })).by, undefined);
   assert.deepEqual(nd.calls, ['getAlbumList2', 'getAlbum', 'getPlaylists', 'getAlbum']);
 
@@ -279,4 +293,42 @@ test('with the hearts switch on, the Hub copies a person’s hearts and plays on
   assert.deepEqual((await rest('getAlbumList2', { type: 'highest' })).body.albumList2.album.map((a: { id: string }) => a.id), ['al2', 'al1'], 'rated 5 then 4');
   assert.equal((await rest('getSong', { id: 'nd1' })).body.song.userRating, 4);
   assert.deepEqual(nd.calls, [], 'Navidrome wasn’t asked for any of it');
+});
+
+test('with the hearts switch on, the Hub keeps a person’s own playlists, leaves smart ones on Navidrome, and tells Navidrome of changes', async () => {
+  const { app, tokens, nd, rest } = await setup();
+  await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: { serve: true, userData: true } });
+
+  // copied on first use: Road trip is Mia's own; Top rated is smart and Dad's isn't hers, so both stay on Navidrome
+  const lists = await rest('getPlaylists');
+  assert.equal(lists.by, 'hub');
+  const byId = new Map(lists.body.playlists.playlist.map((p: { id: string }) => [p.id, p]));
+  assert.deepEqual([...byId.keys()].sort(), ['pl1', 'pl2', 'pl3']);
+  const road = byId.get('pl1') as { owner: string; songCount: number; duration: number };
+  assert.match(road.owner, /~\d+$/, 'her own shows under her relay login, so the app lets her change it');
+  assert.equal(road.songCount, 2);
+  assert.equal(road.duration, 400);
+
+  const one = await rest('getPlaylist', { id: 'pl1' });
+  assert.equal(one.by, 'hub');
+  assert.deepEqual(one.body.playlist.entry.map((s: { id: string }) => s.id), ['nd1', 'nd3']);
+  assert.equal(one.body.playlist.entry[0].playCount, 7, 'with her plays');
+  nd.calls.length = 0;
+  assert.equal((await rest('getPlaylist', { id: 'pl2' })).by, undefined, 'smart playlists come from Navidrome');
+  assert.deepEqual(nd.calls, ['getPlaylist']);
+
+  // changes are made here and passed on
+  nd.calls.length = 0;
+  await rest('updatePlaylist', { playlistId: 'pl1', name: 'Long drive', songIdToAdd: 'nd4', songIndexToRemove: '0' });
+  const changed = await rest('getPlaylist', { id: 'pl1' });
+  assert.equal(changed.body.playlist.name, 'Long drive');
+  assert.deepEqual(changed.body.playlist.entry.map((s: { id: string }) => s.id), ['nd3', 'nd4']);
+  const made = await rest('createPlaylist', { name: 'Fresh', songId: 'nd2' });
+  assert.equal(made.body.playlist.id, 'pl-new', 'same id as Navidrome');
+  assert.deepEqual(made.body.playlist.entry.map((s: { id: string }) => s.id), ['nd2']);
+  await rest('deletePlaylist', { id: 'pl1' });
+  await new Promise((r) => setTimeout(r, 100));
+  assert.deepEqual(nd.calls.sort(), ['createPlaylist', 'deletePlaylist', 'updatePlaylist']);
+  const after = await rest('getPlaylists');
+  assert.deepEqual(after.body.playlists.playlist.map((p: { id: string }) => p.id).sort(), ['pl-new', 'pl2', 'pl3'], 'the deleted one stays gone even while Navidrome still lists it');
 });

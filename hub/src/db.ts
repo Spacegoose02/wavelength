@@ -686,6 +686,25 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     PRIMARY KEY (user_id, song_id)
   );
   `,
+  `
+  -- Each person's playlists, kept by the Hub (playlists.ts, phase 5 of the Hub's own music server). Copied once from
+  -- Navidrome with its ids (smart playlists stay on Navidrome); every change is made on Navidrome too.
+  CREATE TABLE server_playlists (
+    id         TEXT PRIMARY KEY,
+    owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    comment    TEXT NOT NULL DEFAULT '',
+    public     INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE server_playlist_songs (
+    playlist_id TEXT NOT NULL REFERENCES server_playlists(id) ON DELETE CASCADE,
+    pos         INTEGER NOT NULL,
+    song_id     TEXT NOT NULL,
+    PRIMARY KEY (playlist_id, pos)
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

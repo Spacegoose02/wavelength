@@ -398,15 +398,15 @@ function MusicCatalog() {
           )}
           {st.userData !== undefined && (
             <>
-              <label className="check" style={{ margin: '12px 0 4px' }} title="Hearts, play counts and ratings are kept by the Hub; Navidrome gets every change too">
+              <label className="check" style={{ margin: '12px 0 4px' }} title="Hearts, play counts, ratings and playlists are kept by the Hub; Navidrome gets every change too">
                 <span className="switch"><input type="checkbox" checked={st.userData} onChange={(e) => serve({ userData: e.target.checked })} /><span /></span>
-                <small>Hub keeps hearts and play counts (beta)</small>
+                <small>Hub keeps hearts, play counts and playlists (beta)</small>
               </label>
               <p className="muted small">
                 {st.userData && st.people ? `Kept for ${n(st.people.people)} ${st.people.people === 1 ? 'person' : 'people'}: ${n(st.people.stars)} hearts, ${n(st.people.plays)} plays. ` : ''}
-                Each person's hearts, plays and ratings are copied from Navidrome the first time they use the app through the Hub,
-                then kept here. Every change is sent on to Navidrome as well, so it stays complete. Recently played, Most played
-                and Starred lists come from the Hub while the Hub answers browsing.
+                Each person's hearts, plays, ratings and playlists are copied from Navidrome the first time they use the app through
+                the Hub, then kept here. Smart playlists stay on Navidrome. Every change is sent on to Navidrome as well, so it stays
+                complete. Recently played, Most played and Starred lists come from the Hub while the Hub answers browsing.
               </p>
             </>
           )}

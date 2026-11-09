@@ -777,6 +777,16 @@ and hands out ids.
   `played` and `userRating`, `getStarred` / `getStarred2` come from the Hub, and so do the Starred, Most played,
   Recently played and Top rated album lists. Changes made on a device that talks to Navidrome directly aren't seen
   by the Hub, so send everyone through the Hub before relying on it.
+- **Playlists live on the Hub too** (phase 5, `hub/src/playlists.ts`, tables `server_playlists` and
+  `server_playlist_songs`, migration 35), with the same switch. At the same first call the Hub copies the playlists
+  the person owns on Navidrome, with Navidrome's ids (`playlists.imported.<user id>`); smart playlists (those with
+  rules) stay on Navidrome, which keeps filling them. From then on `getPlaylists` is Navidrome's list with the Hub's
+  copies in place of its own (so smart playlists and other people's still show; the person's own carry their relay
+  login as `owner`, so the app lets them change them), and `getPlaylist` comes from the Hub when the catalog knows
+  every song in it (otherwise Navidrome answers). `createPlaylist` goes to Navidrome first so the new playlist gets
+  the same id in both (the Hub makes its own id if Navidrome is away), and `updatePlaylist` and `deletePlaylist` are
+  made on the Hub and sent on to Navidrome in the background. Only the owner may change a playlist. Covers (`pl-`
+  ids) still come from Navidrome.
 
 Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
 under Library updates; without it the catalog still scans.

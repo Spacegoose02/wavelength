@@ -15,6 +15,8 @@ import { permissionsFor } from '../roles.ts';
 import { addStation, deleteStation, radioImportedAt, readStation, subsonicStations, updateStation } from '../radioStations.ts';
 import { HttpError } from '../http.ts';
 import { importUserData, played, playsOf, rate, star, starredOf, userDataImported } from '../userData.ts';
+import { createPlaylist, deletePlaylist, getPlaylist, importPlaylists, playlistsImported, replaceSongs, updatePlaylist, visiblePlaylists, type HubPlaylist } from '../playlists.ts';
+import { playlistEntries } from '../subsonicCatalog.ts';
 
 /**
  * Navidrome through the Hub (docs/USERS-AND-ADMIN.md Phase 4). A device gets a Subsonic login for
@@ -36,6 +38,8 @@ const AUDIO = new Set(['stream', 'download', 'hls']);
 /** Response headers worth passing back (Range requests need the content-range ones to seek). */
 const PASS = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control', 'last-modified', 'etag', 'content-disposition'];
 const AUTH = new Set(['u', 'p', 't', 's', 'apiKey']);
+/** Playlist calls the Hub answers once it keeps a person's playlists (playlists.ts) */
+const PLAYLIST_CALLS = new Set(['getPlaylists', 'getPlaylist', 'createPlaylist', 'updatePlaylist', 'deletePlaylist']);
 
 const md5 = (s: string) => createHash('md5').update(s).digest('hex');
 
@@ -68,6 +72,9 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
   const stars = new Map<number, { at: number; ids: Starred }>();
   /** people whose hearts and plays are being copied from Navidrome right now (one copy each) */
   const copying = new Map<number, Promise<boolean>>();
+  /** playlists deleted on the Hub, so Navidrome's list doesn't bring them back if its delete hasn't landed yet */
+  const deleted = new Map<number, Set<string>>();
+  const wasDeleted = (userId: number, id: string) => deleted.get(userId)?.has(id) ?? false;
 
 
   /** Check a relay login (`u` is "<hub username>~<device id>") and find the real one behind it. */
@@ -164,16 +171,24 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
 
     // Hearts, plays and ratings kept on the Hub (userData.ts), when an admin turned it on: copied from Navidrome the
     // first time, then recorded here and passed on to Navidrome in the background so it stays complete.
+    // Their own playlists too (playlists.ts), copied at the same time; smart playlists stay on Navidrome.
     let mineOnHub = false;
+    let playlistsOnHub = false;
     if (catalog.keepsUserData()) {
-      if (!userDataImported(db, user.id)) {
+      if (!userDataImported(db, user.id) || !playlistsImported(db, user.id)) {
         let p = copying.get(user.id);
         if (!p) {
-          p = importUserData(db, user.id, target).then(() => true, () => false).finally(() => copying.delete(user.id));
+          p = (async () => {
+            if (!userDataImported(db, user.id)) await importUserData(db, user.id, target).catch(() => undefined);
+            if (!playlistsImported(db, user.id)) await importPlaylists(db, user.id, target).catch(() => undefined);
+            return true;
+          })().finally(() => copying.delete(user.id));
           copying.set(user.id, p);
         }
-        mineOnHub = await p;
-      } else mineOnHub = true;
+        await p;
+      }
+      mineOnHub = userDataImported(db, user.id);
+      playlistsOnHub = playlistsImported(db, user.id);
     }
     if (mineOnHub && (method === 'star' || method === 'unstar' || method === 'scrobble' || method === 'setRating')) {
       const all = (k: string) => {
@@ -195,6 +210,110 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
       search.set('s', salt);
       void fetch(`${target.url}/rest/${method}?${search}`, { signal: AbortSignal.timeout(30_000) }).catch(() => undefined);
       return reply.header('x-wavelength-answered-by', 'hub').send({ 'subsonic-response': { status: 'ok', version: '1.16.1', type: 'wavelength-hub', openSubsonic: true } });
+    }
+
+    if (playlistsOnHub && PLAYLIST_CALLS.has(method)) {
+      const all = (k: string) => {
+        const v = (req.query as Record<string, string | string[]>)[k];
+        return (Array.isArray(v) ? v : v === undefined ? [] : [v]).map(String).filter(Boolean);
+      };
+      const ownerName = (p: HubPlaylist) => (p.ownerId === user.id ? q.u : getUser(db, p.ownerId)?.username ?? '');
+      const entry = (p: HubPlaylist) => {
+        const songs = config.musicDir && catalog.serving() ? playlistEntries(db, p.songs, mineOnHub ? starredOf(db, user.id) : new Map(), mineOnHub ? playsOf(db, user.id) : null) : null;
+        return {
+          id: p.id, name: p.name, ...(p.comment && { comment: p.comment }), owner: ownerName(p), public: p.public, songCount: p.songs.length,
+          duration: songs ? songs.reduce((n, x) => n + Number(x.duration ?? 0), 0) : 0, created: new Date(p.created).toISOString(), changed: new Date(p.changed).toISOString(),
+          coverArt: `pl-${p.id}`, songs,
+        };
+      };
+      const done = (body: Record<string, unknown> = {}) => reply.header('x-wavelength-answered-by', 'hub').send({ 'subsonic-response': { status: 'ok', version: '1.16.1', type: 'wavelength-hub', openSubsonic: true, ...body } });
+      const navidromeToo = (search: URLSearchParams) => {
+        for (const k of AUTH) search.delete(k);
+        const salt = randomBytes(6).toString('hex');
+        search.set('u', target.username);
+        search.set('t', md5(target.password + salt));
+        search.set('s', salt);
+        search.set('v', q.v || '1.16.1');
+        search.set('c', q.c || 'wavelength-hub');
+        search.set('f', 'json');
+        return fetch(`${target.url}/rest/${method}?${search}`, { signal: AbortSignal.timeout(30_000) });
+      };
+      const asked = () => {
+        const s = new URLSearchParams();
+        for (const [k, v] of Object.entries(req.query as Record<string, string | string[]>)) for (const x of Array.isArray(v) ? v : [v]) s.append(k, String(x));
+        return s;
+      };
+
+      if (method === 'getPlaylists') {
+        // Navidrome's list (smart playlists, and anyone's not copied yet), with the Hub's copies in place of its own
+        const hub = visiblePlaylists(db, user.id);
+        const kept = new Set(hub.map((p) => p.id));
+        let theirs: Record<string, unknown>[] = [];
+        try {
+          const r = await call('getPlaylists', { f: 'json' }, { signal: AbortSignal.timeout(15_000) });
+          const list = ((await r.json()) as any)?.['subsonic-response']?.playlists?.playlist;
+          if (Array.isArray(list)) theirs = list.filter((x: { id?: string; owner?: string }) => x?.id && !kept.has(String(x.id)) && !wasDeleted(user.id, String(x.id)));
+        } catch {
+          // Navidrome away: the Hub's own still show
+        }
+        const mine = hub.map((p) => {
+          const { songs: _songs, ...rest } = entry(p);
+          return rest;
+        });
+        return done({ playlists: { playlist: [...mine, ...theirs].sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''))) } });
+      }
+      if (method === 'getPlaylist') {
+        const p = getPlaylist(db, q.id ?? '');
+        if (p && (p.ownerId === user.id || p.public)) {
+          const { songs, ...rest } = entry(p);
+          if (songs) return done({ playlist: { ...rest, entry: songs } });
+        }
+        // not on the Hub (a smart one), or a song the catalog doesn't know: Navidrome answers it below
+      } else if (method === 'createPlaylist') {
+        const songs = all('songId');
+        if (q.playlistId) {
+          const p = getPlaylist(db, q.playlistId);
+          if (p && p.ownerId !== user.id) return fail(reply, 50, 'That playlist belongs to someone else');
+          if (p) {
+            replaceSongs(db, p.id, songs);
+            void navidromeToo(asked()).catch(() => undefined);
+            const { songs: entries, ...rest } = entry(getPlaylist(db, p.id)!);
+            return done({ playlist: { ...rest, entry: entries ?? [] } });
+          }
+        } else {
+          // Navidrome first, so the playlist has the same id in both; the Hub alone if Navidrome is away
+          let id: string | undefined;
+          try {
+            const r = await navidromeToo(asked());
+            id = ((await r.json()) as any)?.['subsonic-response']?.playlist?.id;
+          } catch {
+            id = undefined;
+          }
+          const p = createPlaylist(db, user.id, q.name || 'New playlist', songs, id && !getPlaylist(db, String(id)) ? String(id) : undefined);
+          const { songs: entries, ...rest } = entry(p);
+          return done({ playlist: { ...rest, entry: entries ?? [] } });
+        }
+      } else if (method === 'updatePlaylist' || method === 'deletePlaylist') {
+        const id = method === 'updatePlaylist' ? q.playlistId ?? '' : q.id ?? '';
+        const p = getPlaylist(db, id);
+        if (p) {
+          if (p.ownerId !== user.id) return fail(reply, 50, 'That playlist belongs to someone else');
+          if (method === 'deletePlaylist') {
+            deletePlaylist(db, id);
+            deleted.set(user.id, new Set([...(deleted.get(user.id) ?? []), id]));
+          } else {
+            updatePlaylist(db, id, {
+              name: q.name || undefined,
+              comment: q.comment,
+              public: q.public === undefined ? undefined : q.public === 'true',
+              add: all('songIdToAdd'),
+              removeAt: all('songIndexToRemove').map(Number).filter((n) => Number.isInteger(n) && n >= 0),
+            });
+          }
+          void navidromeToo(asked()).catch(() => undefined);
+          return done();
+        }
+      }
     }
 
     // The Hub's own answers from the music catalog (subsonicCatalog.ts), when an admin turned them on: same ids, so
