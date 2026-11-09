@@ -18,7 +18,7 @@ import type { SpeciesInfo } from './species';
 export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: SpeciesInfo; label: string; children: ReactNode }>(function CritterFrame({ kind, species, label, children }, ref) {
   return (
     <SpeciesContext.Provider value={species}>
-    <svg ref={ref} className={`np-scene-canvas critter critter-${kind} species-${species.id}`} viewBox="0 0 400 400" role="img" aria-label={label}>
+    <svg ref={ref} className={`np-scene-canvas critter critter-${kind} species-${species.id}`} data-move={species.figure.move} viewBox="0 0 400 400" role="img" aria-label={label}>
       <defs>
         <radialGradient id="critter-spot">
           <stop offset="0" className="spot-stop" />

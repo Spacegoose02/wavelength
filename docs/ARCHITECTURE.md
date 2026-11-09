@@ -231,7 +231,7 @@ Tauri generates this project once; we edit it by hand and commit it.
   `html.tv` adds big focus rings. Hover-only controls also appear on `:focus-within`.
 - **Skins**: `data-skin` on `<html>`; each skin overrides the CSS variables (`--bg`, `--panel`, `--accent`,
   `--lcd-*`, `--viz-*`, `--bevel` …) and optionally a few component rules. The list lives in `SKINS`
-  (`store/settings.ts`), each with a `group` for Settings → Themes. The skin on screen is not always the saved
+  (`store/settings.ts`), each with a `group` for Settings → Themes & critters → Theme. The skin on screen is not always the saved
   one: `App.tsx` shows `useUi.previewSkin` (a hover preview) or else `activeSkin()` from `lib/seasons.ts`,
   which applies Seasonal and Random daily from the device's local date.
 - **Keeping it smooth**: `position` in `store/player.ts` changes about four times a second while a song plays.

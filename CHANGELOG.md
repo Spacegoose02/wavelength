@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased
+- **Three new critter scenes: Saxophone, Harpist and Tuba.**
+  - **Saxophone**, on a city rooftop at night: a beret and a roll-neck, an alto sax that sways with the beat while
+    the fingers work the keys, notes floating out of the bell, the city's windows lighting up with the highs and a
+    string of lights pulsing on the beat. Flourish: a lean back with the bell up (`Sax.tsx`).
+  - **Harpist**, in the clouds at sunrise: a laurel wreath and a toga, plucking a golden harp under a rainbow; the
+    hands take turns on the beat and each plucked string lights up and shimmers. Flourish: a glissando (`Harp.tsx`).
+  - **Tuba**, in a snowy town square: a marching-band hat with a plume and a braided band jacket, oom-pahing with
+    puffs of breath and snow from the bell and a snowman nodding along. Flourish: one big blast (`Tuba.tsx`).
+  The sax and tuba players have the mouthpiece in their mouths, so they don't sing along.
+- **Settings → Themes & critters.** One place for how Wavelength looks and who plays along, in four sub-tabs:
+  **Theme** (skins, Seasonal, Random daily, Motion), **Critters**, **Scenes** (what used to be called acts) and
+  **Visualizer**. The Boy / Girl switch sits on both the Critters and Scenes sub-tabs, with a line saying who's
+  playing what. The visualizer and critter pickers moved here from Playback, which now points to them, and
+  Settings search opens the right sub-tab.
+- **Nine more critters: a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny and a red panda.**
+  The eighteenth to twenty-sixth, drawn cute. The penguin waddles with flippers for arms; the fox has a bushy
+  white-tipped tail; the axolotl's frilly gills glow with the bass; the octopus stands on six curling tentacles; the
+  bunny has one ear flopped over; the red panda has a ringed tail. Three move their own way: the laid-back sloth plays
+  half a beat behind the music, the frog hops on the beat, and the dragon puffs smoke on a flourish (`Figure.move`
+  and the `smoke` part, `rig.ts`). All nine play every act as a boy or a girl, with the holiday hats and theme outfits.
+- **A monkey, a flamingo and a gorilla.** The fifteenth, sixteenth and seventeenth critters, drawn cute. The monkey is
+  brown with a tuft of hair, big round ears out at the sides that stay out under every hat, a peach heart of a face
+  and a wide grin, on thin legs with long peach feet and a long tail curling at the tip. The flamingo chick is pink
+  with a fluffy crest, golden eyes and a pale bill bending down to a black tip that opens when it sings, on a short
+  neck and long thin legs with webbed feet; its wings are its arms, with black feathered tips. The baby gorilla is
+  charcoal with a domed crown, a grey leathery face, a heavy brow and a broad nose, on a big broad body with the
+  widest shoulders and longest arms of them all. All three play every act as a boy or a girl, with the holiday hats
+  and theme outfits (`MonkeyFace`, `FlamingoFace`, `GorillaFace` in `faces.tsx`; `FIGURES.monkey`, `.flamingo`,
+  `.gorilla` in `bodies.tsx`).
+- **Two new critter acts: Marimba and Violinist.**
+  - **Marimba**, in the jungle: a pith helmet and an explorer's khaki shirt with a neckerchief, at a wooden marimba
+    in a clearing by a waterfall, with vines, big leaves, a parrot and butterflies. The low hand plays on the beat
+    and the high hand on the off-beat, each moving to the bar where the music is loudest; struck bars light up in
+    your skin's colour and dip. The waterfall pours faster with the bass and the parrot bobs on the beat. Flourish:
+    a fast roll with a glissando of light up the bars, then both hands up (`Marimba.tsx`).
+  - **Violinist**, busking in the rain: a long coat, a scarf and a flat cap, playing a violin under a street lamp
+    by a brick wall, with a cat nodding along in a lit window and the case open for coins. The bow saws down one
+    beat and up the next, fuller when the band is loud; the fingers walk the neck with the melody, the rain falls
+    harder with the bass and the puddles ripple on the beat. Flourish: one long sweeping stroke with the bow lifted
+    high at the end (`Violin.tsx`).
+
 ## 0.35.0
 - **The Hub plays the songs from the music folder (phase 4 of replacing Navidrome).** Off by default: **Hub plays
   the songs (beta)** under Settings → Server → Music catalog, separate from the browsing switch, and only while the

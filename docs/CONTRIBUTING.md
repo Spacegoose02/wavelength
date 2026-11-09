@@ -48,7 +48,7 @@ genre names cover it).
 ## Add a skin
 
 1. `src/store/settings.ts`: add the id to `Skin` and a `{ id, label, group }` to `SKINS`. `group` is one of
-   `SKIN_GROUPS` and decides the heading it appears under in Settings → Themes.
+   `SKIN_GROUPS` and decides the heading it appears under in Settings → Themes & critters → Theme & critters → Theme.
 2. `src/styles.css`: a `:root[data-skin='myskin'] { … }` block defining at least
    `--bg --bg-2 --panel --panel-2 --line --text --muted --accent --accent-ink --lcd-bg --lcd-text --lcd-dim --viz-low --viz-mid --viz-high --viz-peak --bevel --bevel-in` and `color-scheme`.
 3. Optional component overrides (`.btn.primary`, `.nav.on`, `.chip.on`, `.tabs button.on`, `.deck`).
@@ -86,8 +86,8 @@ genre names cover it).
 ## Add a critter, an act or an outfit
 
 The critters live in `components/critters/`. A critter on screen is a **species** (raccoon, shark, alien,
-grey alien, black or brown bear, moose, turtle, elephant, tiger, lion, panda, owl, T. rex) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
-Accordion, Driver, Reactor, Bongo, Pianist), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
+grey alien, black or brown bear, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, red panda) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
+Accordion, Driver, Reactor, Bongo, Pianist, Marimba, Violinist, Saxophone, Harpist, Tuba), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
 for how the pieces fit.
 
 Faces, hats and glasses are drawn on one head skeleton: centred on 200,178 (about 160 wide, 130 tall, top near
@@ -115,7 +115,7 @@ those parts so the pivot lands on the figure's own shoulder, tail root or foot.
      blinks don't squash them. Features that stick out (fins, antennae, antlers) go in the face too; hats are drawn over
      them. Draw them behind the head so a hat covers their roots, and hide them under the hazmat hood in
      `styles.css` if they would poke through it (the moose's `.moose-antlers`, the shark's `.shark-fin`). The style frames in `docs/critters/` are the reference drawings.
-  2. Give it a body: use one of the `FIGURES` in `bodies.tsx` (raccoon, bear, shark, alien, grey, moose, turtle, elephant, tiger, lion, panda, owl, trex) or add one in
+  2. Give it a body: use one of the `FIGURES` in `bodies.tsx` (raccoon, bear, shark, alien, grey, moose, turtle, elephant, tiger, lion, panda, owl, trex, monkey, gorilla, flamingo, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, redPanda; most of the newer ones come from `roundFigure`) or add one in
      the same style (outlined with `.ol`, shaded with `url(#critter-vinyl)` over a flat class colour, no rim
      light). `Under` draws the legs in the act's `legs` class and the feet in its `shoe` class (bare feet when
      there's none), with the right foot inside `<Pivot from={[236, 362]} … part="boot">` and a tail inside

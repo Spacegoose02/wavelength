@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl and T. rex), the **equalizer**,
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **Popular**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
@@ -459,7 +459,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
-| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear, a moose, a turtle, an elephant, a tiger, a lion, a panda, an owl or a T. rex playing along (see below) |
+| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear, a moose, a turtle, an elephant, a tiger, a lion, a panda, an owl, a T. rex, a monkey, a flamingo, a gorilla, a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny or a red panda playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -479,7 +479,7 @@ spectrum under the title does the same.
 
 <a id="raccoons"></a>
 The last visualizer is a critter who plays along with the music. You pick **who** plays and **what** they
-play, and any critter can play any act: 14 critters × 12 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
+play, and any critter can play any act: 26 critters × 17 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
 alien are all possible.
 
 <img src="screenshots/critters.png" alt="Every critter in every act in the Neon synth skin: rows are the raccoon, shark, alien, grey alien, black bear and brown bear; columns are DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth and Accordion" width="100%">
@@ -499,6 +499,18 @@ alien are all possible.
 | **Owl** | A round brown owlet with short pointed tufts, a big cream face, huge round dark eyes, a little yellow beak and pink cheeks; its wings are its arms, ending in soft feathered tips, and it stands on orange talons |
 | **T. rex** | A leaf-green baby T. rex with a big soft snout, freckles and a wide grin with two tiny teeth, short thin arms with little claws, big clawed feet and a thick tail |
 | **Panda** | A cream-white cub with round black ears, black teardrop patches round big brown eyes, a button nose and rosy cheeks, with black arms and legs and a white puff of a tail |
+| **Monkey** | A brown monkey with a tuft of hair, big round ears out at the sides (they stay out under every hat), a peach heart of a face, rosy cheeks and a wide grin, on thin legs with long peach feet and a long tail that curls at the tip |
+| **Flamingo** | A pink chick with a fluffy crest, golden eyes and a pale bill that bends down to a black tip (it opens when singing), on a short neck; its wings are its arms, with black feathered tips, and it stands on long thin pink legs with webbed feet |
+| **Gorilla** | A charcoal baby gorilla with a domed crown, a soft grey leathery face, a heavy brow, a broad nose and a gentle smile; a big broad body with the widest shoulders and longest arms of them all, and broad leathery feet |
+| **Penguin** | A round black-and-white chick with a white heart of a face, big dark eyes, an orange beak and pink cheeks; its flippers are its arms, and it waddles on orange feet |
+| **Fox** | An orange kit with tall pointed ears, a white muzzle and cheeks, amber eyes and a black button nose, in dark stockings, with a big bushy tail tipped in white |
+| **Axolotl** | A pink axolotl with a wide happy smile, little dark eyes and three frilly gills either side of its head that glow with the bass, on stubby four-toed feet with a finned tail |
+| **Sloth** | A beige shaggy sloth with dark stripes running back from its eyes, sleepy half-closed lids and a little smile, with long claws. It's so laid back it plays half a beat behind the music |
+| **Octopus** | A coral octopus with a big round speckled head, rosy cheeks and a happy grin; six curling tentacles with pale suckers are its legs, and two more are its arms |
+| **Dragon** | A teal baby dragon with two cream horns, an orange crest, a cream snout with a grin and two tiny fangs, little orange wings, claws and a spiky tail. It puffs smoke on a flourish |
+| **Frog** | A green frog with its big eyes up on top in two bumps, a pale yellow chin and the wide frog grin, on big webbed feet. It hops on the beat |
+| **Bunny** | A cream-white bunny with long pink-lined ears (one flopped over), a pink nose, whiskers and buck teeth, with a puff of a tail |
+| **Red panda** | A russet red panda with white-tipped ears, a white mask and cheek marks, dark legs and a long ringed tail |
 
 <img src="screenshots/critter-moose.png" alt="The moose in all eight acts: DJ in headphones, Country in a cowboy hat with its antlers either side of the crown, Rapper, Rocker, Drummer, Theremin, Synth and Accordion in a beanie" width="90%">
 
@@ -516,6 +528,12 @@ alien are all possible.
 
 <img src="screenshots/critter-trex.png" alt="The T. rex in all nine acts, its short clawed arms reaching the decks, banjo, guitar, drums, theremin, synth, accordion and steering wheel, its tail sweeping out behind" width="90%">
 
+<img src="screenshots/critter-monkey.png" alt="The monkey in all fourteen acts, its round ears out either side of every hat and its curly tail behind" width="100%">
+
+<img src="screenshots/critter-flamingo.png" alt="The flamingo in all fourteen acts, playing with its pink wings, its black-tipped bill under every hat" width="100%">
+
+<img src="screenshots/critter-gorilla.png" alt="The gorilla in all fourteen acts, broad-shouldered with long arms reaching every instrument" width="100%">
+
 | Act | Scene and outfit | While the music plays |
 |---|---|---|
 | **DJ** | Hoodie and headphones, behind two decks | Scratches on sharp hits, rides the mixer, the records spin |
@@ -532,11 +550,26 @@ alien are all possible.
 
 | **Reactor** | A hard hat with a radiation sticker and a white lab coat, playing a keytar in front of the glowing core of a nuclear reactor, with spinning amber beacons, radiation signs, a Geiger counter and a leaking waste barrel | The fuel rods light up with the music and the core's green glow swells with the bass, one hand plays chords and runs along the keys (they light up under it), the other slides along the ribbon on the neck, the beacons spin on the beat, the Geiger needle jumps with the highs and green motes drift up off the core |
 | **Bongo** | A straw hat, a Hawaiian shirt and a flower lei (girls: a grass skirt), slapping a pair of bongos on a sunny beach between palm trees and tiki torches | One hand slaps the small drum on every beat, the other the big one on the off-beats (a quick double when the highs are busy), both land together at the end of the bar and the heads give under each slap; the waves roll in with the bass, the palms sway, the torches flicker and a little crab scuttles side to side on the beat |
+| **Marimba** | A pith helmet with a band and an explorer's khaki shirt with flap pockets and a neckerchief (girls: a khaki skirt), at a wooden marimba in a jungle clearing by a waterfall, with vines, big leaves, a parrot on a branch and butterflies | A mallet in each hand: the low hand plays on the beat and the high hand on the off-beat (twice as fast when the highs are busy), each moving to the bar under it where the music is loudest; the bars light up and dip when struck, the waterfall pours faster with the bass, the parrot bobs on the beat, the vines and leaves sway and pollen drifts up through the light |
+| **Violinist** | A long coat with the collar up, a belt, a scarf and a flat cap (girls: the coat to the knee), busking on the violin under a street lamp in the rain, by a brick wall with a lit window where a cat sits, the violin case open for coins | The bow saws along its length, down one beat and up the next, fuller when the band is loud and with a tremolo on sharp highs; the fingers walk the neck with the melody, the rain falls harder with the bass, the puddles ripple on the beat, the lamplight swells and the cat nods along |
 | **Pianist** | A tuxedo, white shirt and bow tie at a black grand piano in a jazz lounge, between red velvet curtains under a spotlight and a neon JAZZ sign | Stride piano: the left hand jumps between a low bass note and a chord on alternate beats, the right runs along the keys with the highs; the keys light up, the lid lifts on the bass, music notes drift up, the candles flicker and the footlights chase on the beat |
+| **Saxophone** | A beret and a roll-neck jumper, playing an alto sax on a city rooftop at night under a string of lights, with the skyline and a water tower behind | The sax sways with the beat and the fingers work the keys with the melody; a note floats out of the bell on each beat, windows across the city light up and go dark with the highs and the bulbs pulse on the beat. Flourish: leans back and lifts the bell for a long note, notes pouring out. The mouthpiece is in their mouth, so they don't sing along |
+| **Harpist** | A laurel wreath and a toga with a drape over one shoulder (girls: a ruffled skirt), at a golden harp on a cloud at sunrise, under a rainbow, with little clouds drifting by and birds flapping past | The hands take turns on the beat, each going to the string the melody is on (the near hand the short strings, the far hand the long ones) and plucking it, and the string lights up in your skin's colour and shimmers; the rainbow glows with the music. Flourish: a glissando across every string |
+| **Tuba** | A marching-band hat with a plume and a band jacket with gold braid (girls: a pleated skirt), oom-pahing on a big brass tuba in a snowy town square at dusk, with a snowman nodding along | The tuba bounces on the beat, a valve goes down and a puff of breath and snow blows out of the bell; the snow falls harder with the bass and the windows glow with the mids. Flourish: one big blast, the tuba lifting and snow bursting from the bell. The mouthpiece is at their lips, so they don't sing along |
 
 <img src="screenshots/critter-reactor.png" alt="Every critter in the Reactor act, boys on the top row and girls below: each in a hard hat (or a bow) and a lab coat with a keytar slung across, in front of a round reactor core glowing green with fuel rods, radiation signs either side" width="100%">
 <img src="screenshots/critter-bongo.png" alt="Every critter in the Bongo act in the Miami nights skin, boys on top and girls below: each in a straw hat (or a bow), a Hawaiian shirt and a lei, hands on a pair of bongos on a beach with palm trees, tiki torches and a crab" width="100%">
 <img src="screenshots/critter-piano.png" alt="Every critter in the Pianist act in the Outrun skin, boys on top and girls below: each in a tuxedo and bow tie behind a black grand piano with the lid up and a candelabra, under a spotlight between red curtains and a neon JAZZ sign" width="100%">
+<img src="screenshots/critter-sax.png" alt="Ten critters in the Saxophone act, boys on top and girls below: each in a beret (or a bow) and a roll-neck, playing an alto sax on a rooftop at night with the city lights behind" width="100%">
+<img src="screenshots/critter-harp.png" alt="Ten critters in the Harpist act, boys on top and girls below: each in a laurel wreath (or a bow) and a toga, at a golden harp on a cloud under a rainbow" width="100%">
+<img src="screenshots/critter-tuba.png" alt="Ten critters in the Tuba act, boys on top and girls below: each in a marching-band hat (or a bow) and a braided jacket, holding a big brass tuba in a snowy town square by a snowman" width="100%">
+<img src="screenshots/critter-new-scenes.gif" alt="The fox playing the three newest scenes: the sax on the rooftop with notes floating out of the bell, the harp in the clouds with the plucked strings lighting up, and the tuba in the snow puffing breath from the bell" width="100%">
+<img src="screenshots/critter-marimba.png" alt="Every critter in the Marimba act, boys on top and girls below: each in a pith helmet (or a bow) and khaki, mallets over a wooden marimba in a jungle clearing with a waterfall and a parrot" width="100%">
+<img src="screenshots/critter-violin.png" alt="Every critter in the Violinist act, boys on top and girls below: each in a long coat and flat cap (or a bow), playing a violin tucked under the chin on a rainy street at night, under a street lamp by a brick wall with a lit window" width="100%">
+<img src="screenshots/critter-nine-new.png" alt="The penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda, each as the rapper between the speakers" width="100%">
+<img src="screenshots/critter-nine-acts.png" alt="The nine newest critters in a mix of acts: the penguin at the DJ decks, the fox on the banjo, the axolotl rocking a flying-V, the sloth on drums under the sea, the octopus at the synth, the dragon at the piano, the frog on bongos, the bunny on the marimba and the red panda on the violin" width="100%">
+<img src="screenshots/critter-nine-moves.gif" alt="The sloth bobbing half a beat behind the others, the frog hopping on the beat and the dragon puffing smoke on a flourish" width="100%">
+<img src="screenshots/critter-new-critters.gif" alt="The monkey, the flamingo and the gorilla playing the marimba in the jungle, bars lighting up under the mallets, and the violin in the rain, bows sawing in time" width="100%">
 <img src="screenshots/critter-new-acts.gif" alt="The three new acts playing: a moose on the keytar in front of the glowing reactor core with the beacons sweeping, a panda slapping bongos on the beach, and an owl playing the grand piano as music notes float up" width="560">
 <img src="screenshots/critter-drive.gif" alt="The moose driving: the car swerves from side to side in time, the wheel turning under one hand while the other waves, the road bending and rushing past and the moose singing" width="280">
 
@@ -555,7 +588,7 @@ lyrics move the mouth with the music rather than the voice.
 **A new look.** The critters' faces are drawn like vinyl toys: big round heads with soft shading, a dark
 outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge that takes your
 skin's colours. Their bodies match: the raccoon short and chunky with a big striped tail, the bears in puffy
-jackets, the shark one slim torpedo with its fins for arms, the aliens spindly and hovering, the moose deep-chested on long legs, the turtle round and stumpy under its shell, the elephant chunky on thick legs with toenails, the tiger and lion sturdy with long curling tails, the panda chubby on short black legs, the owl plump with its wings for arms, and the T. rex on big strong legs with a thick tail and short little clawed arms.
+jackets, the shark one slim torpedo with its fins for arms, the aliens spindly and hovering, the moose deep-chested on long legs, the turtle round and stumpy under its shell, the elephant chunky on thick legs with toenails, the tiger and lion sturdy with long curling tails, the panda chubby on short black legs, the owl plump with its wings for arms, the T. rex on big strong legs with a thick tail and short little clawed arms, the monkey slim with a long curly tail, the flamingo plump on long thin legs with its wings for arms, the gorilla big and broad with long strong arms, the penguin round with flippers, the octopus on six tentacles, the dragon with little wings and a spiky tail, the frog on big webbed feet, and the fox, axolotl, sloth, bunny and red panda round and soft with their own tails (the fox's bushy, the red panda's ringed, the bunny's a puff).
 
 <img src="screenshots/critter-new-faces.png" alt="All six critters with the new faces and bodies, each playing the DJ, Rapper and Synth acts" width="100%">
 
@@ -597,17 +630,22 @@ defaults.
 
 **Switching.** On the critter visualizer, tap **Switch critter** in its top-right corner for the next critter
 (keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
-Playback → Now Playing visualizer**: the **Critters** cards show each critter in your current act, and the
-**Act** cards show your current critter in each act. Picking either also switches Now Playing to the
-critter. The **Boy** / **Girl** switch above the cards picks the look for every critter: girls get eyelashes
+Themes & critters**, which keeps everything about how the app looks in one place, in four sub-tabs: **Theme**
+(the skin, Seasonal, Random daily and Motion), **Critters**, **Scenes** and **Visualizer**. The **Critters** cards
+show each critter in your current scene (act), and the **Scenes** cards show your current critter in each scene.
+Picking either also switches Now Playing to the critter. The line above the cards says who's playing what, with a
+link across to the other sub-tab. The **Boy** / **Girl** switch on both sub-tabs picks the look for every critter: girls get eyelashes
 and a bow in your skin's accent colour instead of the act's hat. The accordion player keeps her beanie and wears
 the bow on it in another colour, and the DJ keeps her headphones. Girls wear their own outfit in each act: a
 cowgirl denim fringe skirt, a pleated mini (Rapper), a pink tutu (Rocker), a sailor dress (Drummer), a space dress
-(Theremin) and dresses for the DJ, synth and accordion (the driver sits in the car, so only the bow and the top show), a lab-coat dress (Reactor), a grass skirt (Bongo) and a black ruffled gown, mostly behind the piano (Pianist). Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
+(Theremin) and dresses for the DJ, synth and accordion (the driver sits in the car, so only the bow and the top show), a lab-coat dress (Reactor), a grass skirt (Bongo), a black ruffled gown, mostly behind the piano (Pianist), a pleated khaki skirt (Marimba), the long coat to the knee (Violinist), a dress under the roll-neck (Saxophone), a ruffled toga skirt (Harpist) and a pleated band skirt (Tuba). Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
-**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold, panda black and white, owl brown, T. rex green),
+<img src="screenshots/settings-critters.png" alt="Settings, Themes &amp; critters, Critters sub-tab: the Theme, Critters, Scenes and Visualizer sub-tabs, the Boy and Girl switch, a line saying what Now Playing shows, and a grid of critter cards" width="80%">
+<img src="screenshots/settings-scenes.png" alt="Settings, Themes &amp; critters, Scenes sub-tab: the raccoon in each scene, DJ, Country, Rapper, Rocker, Drummer and more, each with a short description" width="80%">
+
+**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold, panda black and white, owl brown, T. rex green, monkey brown and peach, flamingo pink, gorilla charcoal, penguin black and white, fox orange, axolotl pink, sloth beige, octopus coral, dragon teal, frog green, bunny white, red panda russet),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
 Some groups of skins give them a whole outfit:
 
@@ -650,8 +688,8 @@ All the critters behave the same way around the music:
 - Everyone casts a soft shadow on the floor, and so do the stands, amps, speakers and drum kit.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ the
   headphones, the country act tips the hat, the
-  accordion player pulls the beanie straight, the driver the cap, the bongo player the straw hat, the reactor keytarist the hard hat). The rapper lowers the mic, the drummer rests the sticks, the
-  theremin hands drop, the synth hands rest on the keys, the bellows breathe slowly the car stops, ticking over at the roadside, the reactor's beacons stop and the piano's notes stop rising.
+  accordion player pulls the beanie straight, the driver the cap, the bongo player the straw hat, the reactor keytarist the hard hat, the marimba player the pith helmet, the violinist the cap). The rapper lowers the mic, the drummer rests the sticks, the
+  theremin hands drop, the synth hands rest on the keys, the bellows breathe slowly the car stops, ticking over at the roadside, the reactor's beacons stop, the piano's notes stop rising, the mallets rest on the marimba and the bow rests on the strings.
 - **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.
 
 > **Developer notes.** `src/components/critters/`. Unlike the other scenes the critters are inline SVG, not
@@ -661,7 +699,7 @@ All the critters behave the same way around the music:
 > - A critter is a **species** (who) playing an **act** (what). `species.tsx` has `SPECIES`: each is a
 >   `Face` (and maybe a `Tail`), plus skin colours in CSS (`--skin`, `--skin-dark` on `.species-<id>`) for
 >   hands and bare arms. `Critter.tsx` has `ACTS`: each act component (`DJ.tsx`, `Country.tsx`,
->   `Rapper.tsx`, `Rocker.tsx`, `Drums.tsx`, `Theremin.tsx`, `Synth.tsx`, `Accordion.tsx`, `Drive.tsx`, `Reactor.tsx`, `Bongo.tsx`, `Piano.tsx`) draws the
+>   `Rapper.tsx`, `Rocker.tsx`, `Drums.tsx`, `Theremin.tsx`, `Synth.tsx`, `Accordion.tsx`, `Drive.tsx`, `Reactor.tsx`, `Bongo.tsx`, `Piano.tsx`, `Marimba.tsx`, `Violin.tsx`) draws the
 >   scene, clothes, headwear, instrument and hands, and puts `species.Face` in `Head` and `species.Tail`
 >   behind the body. So every species can play every act with no per-pair drawing.
 > - The picks are `critter` (`Species`) and `act` (`Act`) in the settings store, both synced to the Hub.
@@ -945,7 +983,7 @@ feature off in **Settings → Features**.
 
 ## Skins and themes
 
-**Settings → Themes** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
+**Settings → Themes & critters → Theme** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
 device and applies straight away. The visualizers and the LCD follow the skin's colours too.
 Every skin works on Windows, Android phones and tablets, and Android TV.
 
@@ -1350,7 +1388,7 @@ other and with their own kids; kids only with their parents. A Hub admin can tur
   "1:02 of 3:45", and the volume reads as a percentage.
 - **Keyboard.** Tab moves through everything, with a visible outline. On a song, **Shift+F10** (or the menu key)
   opens the song menu: arrows move through it, Enter picks, Esc closes it and puts you back on the song.
-- **Less motion.** **Settings → Themes → Motion**: *Like my device* (the default) follows your system's
+- **Less motion.** **Settings → Themes & critters → Theme → Motion**: *Like my device* (the default) follows your system's
   reduce-motion setting; *Less motion* stops the scrolling song name and other animations, and the critters and
   visualizers draw a couple of still frames a second instead of moving; *Full motion* always animates. It follows
   you to your other devices with a Hub.

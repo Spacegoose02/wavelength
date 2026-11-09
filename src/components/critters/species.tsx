@@ -1,7 +1,34 @@
 import type { ComponentType } from 'react';
 import type { Species } from '../../store/settings';
 import { FIGURES, type Figure } from './bodies';
-import { AlienFace, BlackBearFace, BrownBearFace, ElephantFace, GreyFace, LionFace, MooseFace, OwlFace, PandaFace, RaccoonFace, SharkFace, TigerFace, TrexFace, TurtleFace } from './faces';
+import {
+  AlienFace,
+  AxolotlFace,
+  BlackBearFace,
+  BrownBearFace,
+  BunnyFace,
+  DragonFace,
+  ElephantFace,
+  FlamingoFace,
+  FoxFace,
+  FrogFace,
+  GorillaFace,
+  GreyFace,
+  LionFace,
+  MonkeyFace,
+  MooseFace,
+  OctopusFace,
+  OwlFace,
+  PandaFace,
+  PenguinFace,
+  RaccoonFace,
+  RedPandaFace,
+  SharkFace,
+  SlothFace,
+  TigerFace,
+  TrexFace,
+  TurtleFace,
+} from './faces';
 
 /**
  * Who plays: each species is a face (faces.tsx, drawn on the shared skeleton, see parts.tsx) and a figure
@@ -61,4 +88,16 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'panda', noun: 'panda', label: 'Panda', Face: PandaFace, figure: FIGURES.panda, fit: { eyeY: 176, eyes: [1.36, 1.2], mask: 10, bow: [166, 114, -20] } },
   { id: 'owl', noun: 'owl', label: 'Owl', Face: OwlFace, figure: FIGURES.owl, fit: { eyeY: 180, eyes: [1.52, 1.4], mask: 18, bow: [166, 118, -20] } },
   { id: 'trex', noun: 'T. rex', label: 'T. rex', Face: TrexFace, figure: FIGURES.trex, fit: { eyeY: 166, eyes: [1.3, 1.22], mask: 16, bow: [168, 114, -20] } },
+  { id: 'monkey', noun: 'monkey', label: 'Monkey', Face: MonkeyFace, figure: FIGURES.monkey, fit: { eyeY: 168, eyes: [1.3, 1.2], mask: 12, bow: [168, 112, -20] } },
+  { id: 'flamingo', noun: 'flamingo', label: 'Flamingo', Face: FlamingoFace, figure: FIGURES.flamingo, fit: { eyeY: 166, eyes: [1.32, 1.22], mask: 14, bow: [168, 114, -20] } },
+  { id: 'gorilla', noun: 'gorilla', label: 'Gorilla', Face: GorillaFace, figure: FIGURES.gorilla, fit: { w: 1.04, lift: -6, eyeY: 168, eyes: [1.26, 1.16], mask: 14, bow: [166, 106, -20] } },
+  { id: 'penguin', noun: 'penguin', label: 'Penguin', Face: PenguinFace, figure: FIGURES.penguin, fit: { eyeY: 172, eyes: [1.3, 1.2], mask: 12, bow: [168, 114, -20] } },
+  { id: 'fox', noun: 'fox', label: 'Fox', Face: FoxFace, figure: FIGURES.fox, fit: { eyeY: 170, eyes: [1.28, 1.2], mask: 10, bow: [168, 114, -20] } },
+  { id: 'axolotl', noun: 'axolotl', label: 'Axolotl', Face: AxolotlFace, figure: FIGURES.axolotl, fit: { w: 1.06, lift: 6, eyeY: 172, eyes: [1.5, 1.2], mask: 12, bow: [166, 120, -20] } },
+  { id: 'sloth', noun: 'sloth', label: 'Sloth', Face: SlothFace, figure: FIGURES.sloth, fit: { eyeY: 170, eyes: [1.26, 1.16], mask: 12, bow: [168, 114, -20] } },
+  { id: 'octopus', noun: 'octopus', label: 'Octopus', Face: OctopusFace, figure: FIGURES.octopus, fit: { lift: -10, eyeY: 176, eyes: [1.32, 1.24], mask: 14, bow: [168, 104, -20] } },
+  { id: 'dragon', noun: 'dragon', label: 'Dragon', Face: DragonFace, figure: FIGURES.dragon, fit: { eyeY: 166, eyes: [1.3, 1.22], mask: 16, bow: [168, 114, -20] } },
+  { id: 'frog', noun: 'frog', label: 'Frog', Face: FrogFace, figure: FIGURES.frog, fit: { w: 1.1, lift: -26, eyeY: 140, eyes: [1.5, 1.3], mask: 18, bow: [162, 92, -20] } },
+  { id: 'bunny', noun: 'bunny', label: 'Bunny', Face: BunnyFace, figure: FIGURES.bunny, fit: { eyeY: 170, eyes: [1.28, 1.2], mask: 10, bow: [178, 112, -10] } },
+  { id: 'red-panda', noun: 'red panda', label: 'Red panda', Face: RedPandaFace, figure: FIGURES.redPanda, fit: { eyeY: 170, eyes: [1.3, 1.2], mask: 10, bow: [168, 114, -20] } },
 ];

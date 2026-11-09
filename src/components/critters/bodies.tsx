@@ -41,6 +41,9 @@ export interface Figure {
   Skin?: () => ReactNode;
   /** the top itself; default: the silhouette in the act's `.top` */
   Top?: () => ReactNode;
+  /** how the rig moves this species differently (rig.ts): `late`, everything half a beat behind (the sloth);
+   *  `hop`, a little hop on every beat (the frog) */
+  move?: 'late' | 'hop';
 }
 
 export interface LegsStyle {
@@ -678,6 +681,429 @@ const trex: Figure = {
   ),
 };
 
+/** A bare monkey foot: a long peach sole with a little thumb-like big toe out to the side. */
+function MonkeyFoot({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const side = right ? 1 : -1;
+  const foot = (
+    <g>
+      <ellipse cx={x} cy={y} rx={20} ry={9} className="monkey-sole ol-thin" />
+      <ellipse cx={x - side * 15} cy={y - 4} rx={6} ry={5} className="monkey-sole ol-thin" />
+      <path d={`M${x - 4} ${y + 3} v 5 M${x + 4} ${y + 3} v 5 M${x + 12 * side} ${y + 2} v 5`} stroke="rgb(0 0 0 / 0.25)" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
+/**
+ * Monkey: a slim round top on thin furry legs, long peach feet (or the act's shoes) and a long thin tail
+ * reaching out behind to the right and curling round at the tip.
+ */
+const monkey: Figure = {
+  head: [190, 0.86],
+  torso: 'M176 256 Q 200 248 224 256 Q 246 266 248 292 Q 250 314 244 326 Q 200 336 156 326 Q 150 314 152 292 Q 154 266 176 256 Z',
+  shoulders: [[160, 274], [240, 274]],
+  arm: 18,
+  paw: 11,
+  reach: 66,
+  waist: [312, 46, 28],
+  chin: [252, 46],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[234, 318]} part="tail">
+        <path d="M232 318 C 290 330, 316 300, 306 262 C 300 238, 270 238, 270 258 C 270 274, 292 274, 292 260" fill="none" className="limb-outline" strokeWidth="13" strokeLinecap="round" />
+        <path d="M232 318 C 290 330, 316 300, 306 262 C 300 238, 270 238, 270 258 C 270 274, 292 274, 292 260" fill="none" className="monkey-tail" strokeWidth="8" strokeLinecap="round" />
+      </Pivot>
+      <Shaded d={tube([182, 316], [178, 338], [178, 356], 22, 18)} className={legs} />
+      <Shaded d={tube([218, 316], [222, 338], [222, 356], 22, 18)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[176, 364]} rx={20} ry={9} shoe={shoe} />
+          <Foot at={[224, 364]} rx={20} ry={9} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <MonkeyFoot at={[176, 362]} />
+          <MonkeyFoot at={[224, 362]} right />
+        </>
+      )}
+    </>
+  ),
+};
+
+/** A bare gorilla foot: a broad dark leathery foot with four short toes. */
+function GorillaFoot({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const foot = (
+    <g>
+      <ellipse cx={x} cy={y} rx={23} ry={10} className="gorilla-sole ol-thin" />
+      {[-13, -4, 5, 14].map((dx) => (
+        <ellipse key={dx} cx={x + dx} cy={y + 6} rx={4.4} ry={3.4} className="gorilla-sole ol-thin" />
+      ))}
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
+/**
+ * Gorilla: a big broad barrel of a top with the shoulders wide and high, thick long arms and big hands, short
+ * sturdy legs and broad leathery feet (or the act's shoes). No tail.
+ */
+const gorilla: Figure = {
+  head: [188, 0.86],
+  torso: 'M168 252 Q 200 242 232 252 Q 264 262 266 292 Q 268 318 258 332 Q 200 344 142 332 Q 132 318 134 292 Q 136 262 168 252 Z',
+  shoulders: [[148, 272], [252, 272]],
+  arm: 30,
+  paw: 16,
+  reach: 70,
+  waist: [318, 58, 26],
+  chin: [252, 54],
+  Under: ({ legs, shoe }) => (
+    <>
+      <g data-part="tail" />
+      <Shaded d={tube([178, 318], [174, 340], [176, 356], 36, 32)} className={legs} />
+      <Shaded d={tube([222, 318], [226, 340], [224, 356], 36, 32)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[174, 364]} rx={23} ry={10} shoe={shoe} />
+          <Foot at={[226, 364]} rx={23} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <GorillaFoot at={[175, 362]} />
+          <GorillaFoot at={[225, 362]} right />
+        </>
+      )}
+    </>
+  ),
+};
+
+/** A flamingo's foot: three pink toes webbed together, fanning forward. */
+function WebbedFoot({ at, right, className = 'bare', s = 1 }: { at: P; right?: boolean; className?: string; s?: number }) {
+  const [x, y] = at;
+  const foot = (
+    <g transform={s === 1 ? undefined : `translate(${x} ${y}) scale(${s}) translate(${-x} ${-y})`}>
+      <path d={`M${x} ${y - 6} L ${x - 18} ${y + 6} Q ${x - 12} ${y + 2} ${x - 6} ${y + 8} Q ${x} ${y + 3} ${x + 6} ${y + 8} Q ${x + 12} ${y + 2} ${x + 18} ${y + 6} Z`} className={`${className} ol-thin`} />
+      <path d={`M${x} ${y - 4} L ${x - 10} ${y + 5} M${x} ${y - 4} V ${y + 5} M${x} ${y - 4} L ${x + 10} ${y + 5}`} stroke="rgb(0 0 0 / 0.22)" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
+/**
+ * Flamingo: a plump pink egg of a top on a short neck, long thin pink legs with knobbly knees, webbed feet (or
+ * the act's shoes) and a little fan of tail feathers. Its arms are its wings, bare and pink with black
+ * feathered tips for hands (`hand: 'wing'`, `.species-flamingo` in styles.css).
+ */
+const flamingo: Figure = {
+  head: [170, 0.82],
+  torso: 'M176 254 Q 200 246 224 254 Q 252 266 254 296 Q 254 320 244 330 Q 200 340 156 330 Q 146 320 146 296 Q 148 266 176 254 Z',
+  shoulders: [[160, 276], [240, 276]],
+  arm: 22,
+  paw: 12,
+  reach: 64,
+  hand: 'wing',
+  waist: [314, 50, 26],
+  chin: [254, 30],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[236, 318]} part="tail">
+        {[-12, 0, 12].map((d) => (
+          <path key={d} d={`M236 318 Q ${262 + d * 0.3} ${300 + d} ${276} ${306 + d * 1.6} Q ${262} ${318 + d * 0.6} 236 324 Z`} className="flamingo-tail ol-thin" />
+        ))}
+      </Pivot>
+      <Shaded d={tube([186, 318], [186, 340], [184, 358], 13, 9)} className={legs} />
+      <Shaded d={tube([214, 318], [214, 340], [216, 358], 13, 9)} className={legs} />
+      {legs === 'bare' && (
+        <>
+          <ellipse cx="186" cy="340" rx="7" ry="5" className="bare ol-thin" />
+          <ellipse cx="214" cy="340" rx="7" ry="5" className="bare ol-thin" />
+        </>
+      )}
+      {shoe ? (
+        <>
+          <Foot at={[180, 364]} rx={17} ry={8} shoe={shoe} />
+          <Foot at={[220, 364]} rx={17} ry={8} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <WebbedFoot at={[182, 362]} />
+          <WebbedFoot at={[218, 362]} right />
+        </>
+      )}
+      {/* the neck, up into the head */}
+      <path d={tube([200, 214], [204, 236], [200, 258], 30, 38)} className="bare ol" />
+      <path d="M190 236 Q 200 240 212 236 M192 246 Q 200 250 210 246" fill="none" stroke="rgb(0 0 0 / 0.14)" strokeWidth="2" strokeLinecap="round" />
+    </>
+  ),
+};
+
+/** The usual round top, shared by most of the later critters. */
+const ROUND_TOP = 'M174 256 Q 200 248 226 256 Q 248 264 250 290 Q 252 312 246 324 Q 200 334 154 324 Q 148 312 150 290 Q 152 264 174 256 Z';
+
+/**
+ * A figure on the usual round top: legs `leg` wide (top, ankle), the species' own bare feet (`Foot`, or the act's
+ * shoes), and optionally a tail (drawn about its root `tailAt`, swaying with the rig) and things behind the top
+ * (`Back`: wings).
+ */
+const roundFigure = ({
+  Bare,
+  Tail,
+  tailAt = [236, 320],
+  Back,
+  leg = [26, 22],
+  socks,
+  ...f
+}: Partial<Figure> & { Bare: (p: { at: P; right?: boolean }) => ReactNode; socks?: boolean; Tail?: () => ReactNode; tailAt?: P; Back?: () => ReactNode; leg?: [number, number] }): Figure => ({
+  head: [190, 0.86],
+  torso: ROUND_TOP,
+  shoulders: [[158, 274], [242, 274]],
+  arm: 21,
+  paw: 12,
+  reach: 64,
+  waist: [312, 48, 28],
+  chin: [252, 46],
+  ...f,
+  Under: ({ legs, shoe }) => (
+    <>
+      {Back?.()}
+      {Tail ? (
+        <Pivot from={[268, 292]} to={tailAt} part="tail">
+          <Tail />
+        </Pivot>
+      ) : (
+        <g data-part="tail" />
+      )}
+      <Shaded d={tube([180, 314], [177, 336], [176, 356], leg[0], leg[1])} className={legs} />
+      <Shaded d={tube([220, 314], [223, 336], [224, 356], leg[0], leg[1])} className={legs} />
+      {socks && legs === 'bare' && <LegMarks />}
+      {shoe ? (
+        <>
+          <Foot at={[174, 364]} rx={20} ry={10} shoe={shoe} />
+          <Foot at={[226, 364]} rx={20} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <Bare at={[175, 362]} />
+          <Bare at={[225, 362]} right />
+        </>
+      )}
+    </>
+  ),
+});
+/** Dark stockings on bare legs, for species that have them (`.leg-sock`, coloured per species in styles.css). */
+function LegMarks() {
+  return (
+    <>
+      <path d={tube([177, 340], [176, 348], [176, 356], 23, 22)} className="leg-sock" />
+      <path d={tube([223, 340], [224, 348], [224, 356], 23, 22)} className="leg-sock" />
+    </>
+  );
+}
+
+/** A round bare paw in a class colour, with two toe creases. */
+const softPaw =
+  (className: string) =>
+  ({ at, right }: { at: P; right?: boolean }) => {
+    const [x, y] = at;
+    const paw = (
+      <g>
+        <ellipse cx={x} cy={y} rx={19} ry={10} className={`${className} ol-thin`} />
+        <path d={`M${x - 6} ${y + 2} v 7 M${x + 6} ${y + 2} v 7`} stroke="rgb(0 0 0 / 0.3)" strokeWidth="2" strokeLinecap="round" />
+      </g>
+    );
+    return right ? <Pivot from={[236, 362]} to={at} part="boot">{paw}</Pivot> : paw;
+  };
+
+/** Penguin: a plump round top, short black legs, orange webbed feet and a little black tail. Its arms are flippers. */
+const penguin = roundFigure({
+  head: [188, 0.88],
+  torso: 'M174 254 Q 200 246 226 254 Q 254 266 256 296 Q 256 322 246 332 Q 200 342 154 332 Q 144 322 144 296 Q 146 266 174 254 Z',
+  shoulders: [[156, 276], [244, 276]],
+  arm: 20,
+  fore: 13,
+  paw: 8,
+  leg: [22, 18],
+  waist: [316, 54, 26],
+  chin: [252, 48],
+  Bare: (p) => <WebbedFoot {...p} className="penguin-foot" s={1.15} />,
+  tailAt: [200, 330],
+  Tail: () => <path d="M190 326 L 200 350 L 210 326 Z" className="bare ol-thin" />,
+});
+
+const FOX_TAIL = 'M232 320 C 290 340, 334 310, 330 262 C 328 236, 306 226, 296 240 C 308 268, 290 300, 236 306 Z';
+/** Fox: the round top, dark stockings and paws, and a big bushy orange tail with a white tip curling up behind. */
+const fox = roundFigure({
+  leg: [24, 20],
+  socks: true,
+  Bare: softPaw('fox-paw'),
+  Tail: () => (
+    <>
+      <defs>
+        <clipPath id="critter-fox-tail">
+          <path d={FOX_TAIL} />
+        </clipPath>
+      </defs>
+      <path d={FOX_TAIL} className="bare ol" />
+      <g clipPath="url(#critter-fox-tail)">
+        <ellipse cx="316" cy="240" rx="22" ry="20" className="fox-tip" />
+      </g>
+      <path d={FOX_TAIL} fill="url(#critter-vinyl)" />
+    </>
+  ),
+});
+
+/** Axolotl: a chubby round top on short pink legs, little four-toed feet and a long tail with a soft fin. */
+const axolotl = roundFigure({
+  head: [190, 0.86],
+  leg: [24, 22],
+  Bare: ({ at, right }) => {
+    const [x, y] = at;
+    const foot = (
+      <g>
+        {[-12, -4, 4, 12].map((dx) => (
+          <ellipse key={dx} cx={x + dx} cy={y + 2} rx={5} ry={7} transform={`rotate(${dx * 2} ${x + dx} ${y + 2})`} className="bare ol-thin" />
+        ))}
+        <ellipse cx={x} cy={y - 2} rx={15} ry={7} className="bare" />
+      </g>
+    );
+    return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+  },
+  tailAt: [232, 330],
+  Tail: () => (
+    <>
+      <path d="M226 326 C 262 318, 300 330, 338 352 C 312 352, 290 350, 268 346 C 252 344, 238 342, 226 344 Z" className="axolotl-fin ol-thin" />
+      <path d={tube([226, 336], [282, 334], [334, 350], 18, 4)} className="bare ol-thin" />
+    </>
+  ),
+});
+
+/** Sloth: a shaggy round top, long arms with three-clawed hands, short legs, clawed feet and no tail to speak of. */
+const sloth = roundFigure({
+  arm: 19,
+  paw: 11,
+  reach: 68,
+  hand: 'claws',
+  leg: [24, 20],
+  Bare: DinoFoot,
+  move: 'late',
+});
+
+/** One octopus tentacle from under the top out along the floor, curling at the tip, with suckers. */
+function Tentacle({ to, curl }: { to: P; curl: number }) {
+  const [x, y] = to;
+  const d = tube([200 + (x - 200) * 0.25, 318], [200 + (x - 200) * 0.75, 350], [x, y], 18, 7);
+  return (
+    <g>
+      <path d={d} className="bare ol-thin" />
+      <path d={`M${x} ${y} q ${curl * 10} -4 ${curl * 8} -12 q -2 -6 ${-curl * 6} -2`} fill="none" className="tentacle-tip" strokeWidth="7" strokeLinecap="round" />
+      <circle cx={200 + (x - 200) * 0.6} cy={y - 2} r="2.4" className="sucker" />
+      <circle cx={200 + (x - 200) * 0.82} cy={y - 1} r="2" className="sucker" />
+    </g>
+  );
+}
+
+/**
+ * Octopus: a round top on six tentacles fanning out along the floor and curling at the tips, no legs or shoes. Its
+ * arms are two more tentacles, tapering to a soft tip.
+ */
+const octopus: Figure = {
+  head: [182, 0.86],
+  torso: 'M176 258 Q 200 250 224 258 Q 246 268 248 292 Q 250 314 242 326 Q 200 334 158 326 Q 150 314 152 292 Q 154 268 176 258 Z',
+  shoulders: [[160, 276], [240, 276]],
+  arm: 18,
+  fore: 11,
+  paw: 8,
+  reach: 66,
+  waist: [312, 46, 26],
+  chin: [252, 44],
+  Under: () => (
+    <>
+      <g data-part="tail">
+        {([[128, 362, -1], [152, 370, -1], [178, 374, -1], [222, 374, 1], [248, 370, 1], [272, 362, 1]] as const).map(([x, y, c]) => (
+          <Tentacle key={x} to={[x, y]} curl={c} />
+        ))}
+      </g>
+      <g data-part="boot" />
+    </>
+  ),
+};
+
+/** The dragon's left wing (the right is its mirror): a little bat wing behind the shoulder, three scalloped ribs. */
+const DRAGON_WING = 'M178 270 C 150 236, 118 222, 96 228 C 106 238, 108 248, 104 258 C 116 254, 124 260, 124 270 C 136 264, 146 270, 148 280 Z';
+
+/** Dragon: the round top with little wings behind it, sturdy legs, clawed feet and a spiky tail with an arrowhead tip. */
+const dragon = roundFigure({
+  leg: [28, 24],
+  hand: 'claws',
+  Bare: DinoFoot,
+  Back: () => (
+    <g className="dragon-wings">
+      {[false, true].map((r) => (
+        <g key={String(r)} transform={r ? 'translate(400 0) scale(-1 1)' : undefined}>
+          <path d={DRAGON_WING} className="dragon-wing ol" />
+          <path d="M178 270 L 104 232 M176 274 L 112 258 M170 278 L 128 270" stroke="rgb(0 0 0 / 0.25)" strokeWidth="2" fill="none" strokeLinecap="round" />
+        </g>
+      ))}
+    </g>
+  ),
+  Tail: () => (
+    <>
+      {[[258, 322], [282, 316], [304, 302]].map(([x, y]) => (
+        <path key={x} d={`M${x - 7} ${y} L ${x} ${y - 14} L ${x + 7} ${y} Z`} className="dragon-spine ol-thin" />
+      ))}
+      <path d={tube([230, 322], [300, 332], [316, 282], 18, 9)} className="bare ol" />
+      <path d="M316 284 L 304 274 L 318 256 L 330 276 Z" className="dragon-spine ol-thin" />
+    </>
+  ),
+});
+
+/** Frog: a round top on short bent green legs and big webbed feet; no tail. It hops on the beat. */
+const frog = roundFigure({
+  head: [188, 0.88],
+  leg: [28, 22],
+  Bare: (p) => <WebbedFoot {...p} s={1.35} />,
+  move: 'hop',
+});
+
+/** Bunny: a round top on short legs, long flat feet with pink pads, and a fluffy white puff of a tail. */
+const bunny = roundFigure({
+  leg: [24, 22],
+  Bare: ({ at, right }) => {
+    const [x, y] = at;
+    const foot = (
+      <g>
+        <ellipse cx={x} cy={y} rx={24} ry={9} className="bare ol-thin" />
+        <ellipse cx={x} cy={y + 2} rx={8} ry={4} className="bunny-pad" />
+      </g>
+    );
+    return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+  },
+  tailAt: [240, 318],
+  Tail: () => <circle cx="254" cy="318" r="15" className="bunny-tail ol-thin" />,
+});
+
+const RED_PANDA_TAIL = 'M234 340 C 314 344, 348 300, 342 250 C 338 214, 310 200, 296 218 C 316 240, 314 284, 260 304 Z';
+/** Red panda: the round top on short dark legs, dark paws and a big bushy tail with pale rings. */
+const redPanda = roundFigure({
+  Bare: softPaw('bare'),
+  tailAt: [234, 330],
+  Tail: () => (
+    <>
+      <defs>
+        <clipPath id="critter-red-panda-tail">
+          <path d={RED_PANDA_TAIL} />
+        </clipPath>
+      </defs>
+      <path d={RED_PANDA_TAIL} className="red-panda-tail ol" />
+      <g clipPath="url(#critter-red-panda-tail)">
+        <path d="M248 336 C 306 336, 336 296, 332 254 C 330 230, 316 214, 304 218" fill="none" className="red-panda-ring" strokeWidth="40" strokeDasharray="12 18" />
+      </g>
+      <path d={RED_PANDA_TAIL} fill="url(#critter-vinyl)" />
+    </>
+  ),
+});
+
 /**
  * How far each head sits down into its top from where the figures above place it: the chin tucks over the
  * collar so the head reads as sitting on a neck, not floating over the shoulders. The chin's shadow comes down
@@ -701,4 +1127,16 @@ export const FIGURES = {
   panda: seat(panda),
   owl: seat(owl),
   trex: seat(trex),
+  monkey: seat(monkey),
+  gorilla: seat(gorilla),
+  flamingo: seat(flamingo),
+  penguin: seat(penguin),
+  fox: seat(fox),
+  axolotl: seat(axolotl),
+  sloth: seat(sloth),
+  octopus: seat(octopus),
+  dragon: seat(dragon),
+  frog: seat(frog),
+  bunny: seat(bunny),
+  redPanda: seat(redPanda),
 } satisfies Record<string, Figure>;

@@ -142,6 +142,29 @@ the asset work and a risk on low-end phones and the iOS WebView.
   the short arm reads as bending at a little elbow, with `hand: 'claws'` adding two claws. Its shoulders sit high
   and close on the chest, but its `reach` is the usual, so its hands still land on every instrument. The T. rex
   tail sweeps along the ground to the right behind the legs, with little plates (`.dino-plate`).
+- A monkey, a flamingo and a gorilla (November 2026), drawn cute and kept clear of famous cartoon ones (no fez,
+  vest or yellow-hat friend; no necktie or initials). The monkey's round ears are `ear-l` / `ear-r` out at the sides at
+  eye level, so styles.css keeps them out under the cowboy hat like the elephant's (the hazmat hood hides them,
+  `.monkey-ears`); its figure has thin legs, long peach feet and a long tail curling at the tip. The flamingo's bill
+  is drawn over the singing mouth, which opens on the bill like a beak opening (a mouth either side of the bill's
+  tip didn't show); its head sits higher than anyone's on a short visible neck, its wings are its arms (`hand:
+  'wing'`, black tips) and it stands on long thin legs with webbed feet. The gorilla has the broadest shoulders,
+  thickest arms and longest reach, a heavy brow (the brows are drawn thick so they still act) and no tail.
+- Two acts came with them: **Marimba** (jungle, `Marimba.tsx`): each hand moves between the bars its mallet can
+  reach from where that species' hand rests, so the struck bar is always under the mallet; **Violinist** (rainy
+  street, `Violin.tsx`): the bow slides along its own length and the wrist turns against the forearm so the bow
+  keeps its slant.
+- Nine more (November 2026): a penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda. Most share
+  one soft round body (`roundFigure` in `bodies.tsx`) with their own tail, feet and markings; the octopus is its own
+  figure, six tentacles in the `tail` part with an empty boot. Three move their own way through `Figure.move`, which
+  `CritterFrame` puts on the svg as `data-move` for the rig: the sloth (`late`) runs the beat half a beat behind,
+  and off the beat grid its bob trails by a quarter second; the frog (`hop`) hops the head and body up on each beat.
+  The dragon's face has a hidden `smoke` part the rig puffs out on a flourish. The axolotl's gills, the dragon's
+  wings and the bunny's ears go under the hazmat hood.
+- Three more scenes (November 2026): **Saxophone** (`Sax.tsx`, a city rooftop), **Harpist** (`Harp.tsx`, the clouds) and
+  **Tuba** (`Tuba.tsx`, a snowy square). The wind players turn the rig's `talk` off, since their mouths are on the
+  mouthpiece. The sax tips about the mouthpiece and the hands follow the keys (`turned`); the harp's neck and
+  strings come from the same `neckY` / `boxY` lines, so the strings always meet the frame.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 
