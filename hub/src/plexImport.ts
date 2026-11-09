@@ -3,6 +3,7 @@ import type { Fetch } from './dj/voice.ts';
 import { genreLookup, getGenreSettings, normalizeGenre } from './genres.ts';
 import { cleanValues, type Facet, type Facets, itemKey, type ItemKind, readItem, setItem, tagKey } from './itemTags.ts';
 import { serviceForHub, serviceIdOfKind } from './services.ts';
+import { setTrack, readTrack, type TrackFacet, type TrackFacets, trackKey } from './trackTags.ts';
 
 /**
  * Import styles, moods, collections and genres from a Plex server (docs/HUB.md, "Importing from Plex"). Plex's music
@@ -18,11 +19,23 @@ import { serviceForHub, serviceIdOfKind } from './services.ts';
  * - **Album genres** live in the files, so the import only suggests them, for albums that have none: the genre
  *   tidied by the genre rules (genres.ts). The app applies them with the genre review's undoable Save.
  *
- * Plex is read with `Accept: application/json`: the music sections, then every album (type 9) and artist (type 8)
- * of each, 500 at a time, then their full details (where styles, moods and collections are) 50 at a time.
+ * - **Song moods and styles** (Plex gives most songs moods of their own) go to the Hub's song tags (trackTags.ts),
+ *   matched by album artist, album and title.
+ *
+ * Plex is read with `Accept: application/json`: the music sections, then every album (type 9), artist (type 8) and
+ * song (type 10) of each, 500 at a time, then their full details (where styles, moods and collections are) 50 or
+ * 100 at a time.
  */
 
 export interface PlexItem { ratingKey: string; kind: ItemKind; artist: string; title: string; genres: string[]; styles: string[]; moods: string[]; collections: string[] }
+
+/** A Plex song: its album artist, album and title, and its own styles and moods. */
+export interface PlexTrack { ratingKey: string; artist: string; album: string; title: string; styles: string[]; moods: string[] }
+
+/** A song of ours (the catalog's album artist, album and title). */
+export interface OurTrack { artist: string; album: string; title: string }
+
+export interface TrackPlan { artist: string; album: string; title: string; facets: TrackFacets; changes: TrackFacet[] }
 
 /** An album or artist of ours: the catalog's album artist and title, its Navidrome id and its genres. */
 export interface OurAlbum { artist: string; title: string; id: string | null; genres: string[] }
@@ -44,8 +57,9 @@ export interface PlexPreview {
   server: string;
   albums: { plex: number; matched: number };
   artists: { plex: number; matched: number };
-  /** Matched albums and artists that would get something new. */
-  changes: { albums: number; artists: number };
+  tracks: { plex: number; matched: number; tagged: number };
+  /** Matched albums, artists and songs that would get something new. */
+  changes: { albums: number; artists: number; tracks: number };
   /** Up to 100 Plex albums with no match in the library, to see why. */
   unmatched: { artist: string; title: string }[];
   /** Albums with no genre, and the genre Plex gives them (tidied). */
@@ -59,7 +73,7 @@ export interface PlexStatus {
   step?: string;
   error?: string;
   preview?: PlexPreview;
-  imported?: { at: number; albums: number; artists: number };
+  imported?: { at: number; albums: number; artists: number; tracks: number };
 }
 
 const tags = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => (x as { tag?: unknown })?.tag).filter((t): t is string => typeof t === 'string' && !!t.trim()) : []);
@@ -77,6 +91,16 @@ export function plexItem(m: Record<string, unknown>): PlexItem | null {
     // Plex's collections and its labels are both groups someone made: both become collections here
     collections: cleanValues([...tags(m.Collection), ...tags(m.Label)]) ?? [],
   };
+}
+
+/** A Plex song from its details (or its listing, when that has its moods). */
+export function plexTrack(m: Record<string, unknown>): PlexTrack | null {
+  if (m.type !== 'track' || (typeof m.ratingKey !== 'string' && typeof m.ratingKey !== 'number')) return null;
+  const title = String(m.title ?? '').trim();
+  const artist = String(m.grandparentTitle ?? m.originalTitle ?? '').trim();
+  const album = String(m.parentTitle ?? '').trim();
+  if (!artist || !title) return null;
+  return { ratingKey: String(m.ratingKey), artist, album, title, styles: cleanValues(tags(m.Style)) ?? [], moods: cleanValues(tags(m.Mood)) ?? [] };
 }
 
 /** A title without what an edition adds: "Celebrity (Deluxe Edition) [Remastered]" → "celebrity". */
@@ -124,14 +148,40 @@ export function matchPlex(plex: PlexItem[], ours: { albums: OurAlbum[]; artists:
   return { pairs, unmatched };
 }
 
-/** The albums of the Hub's catalog, by album artist and title, and the album artists. */
-export function ourLibrary(db: Db): { albums: OurAlbum[]; artists: string[] } {
-  const rows = db.prepare(`SELECT CASE WHEN album_artist <> '' THEN album_artist ELSE artist END AS who, album, genre, nd_album_id
-    FROM catalog_songs WHERE album <> '' AND error IS NULL`).all() as { who: string; album: string; genre: string; nd_album_id: string | null }[];
+/**
+ * Pair Plex's songs with ours: the same album artist, album and title, else the album without edition words
+ * ("(Deluxe)") when that names one song of ours.
+ */
+export function matchTracks(plex: PlexTrack[], ours: OurTrack[]): { plex: PlexTrack; ours: OurTrack }[] {
+  const exact = new Map<string, OurTrack>();
+  const loose = new Map<string, OurTrack[]>();
+  for (const t of ours) {
+    exact.set(trackKey(t.artist, t.album, t.title), t);
+    const k = `${tagKey(t.artist)}\u001f${looseTitle(t.album)}\u001f${tagKey(t.title)}`;
+    loose.set(k, [...(loose.get(k) ?? []), t]);
+  }
+  const out: { plex: PlexTrack; ours: OurTrack }[] = [];
+  for (const p of plex) {
+    let t = exact.get(trackKey(p.artist, p.album, p.title));
+    if (!t) {
+      const c = loose.get(`${tagKey(p.artist)}\u001f${looseTitle(p.album)}\u001f${tagKey(p.title)}`);
+      if (c?.length === 1) t = c[0];
+    }
+    if (t) out.push({ plex: p, ours: t });
+  }
+  return out;
+}
+
+/** The albums of the Hub's catalog, by album artist and title, the album artists, and the songs. */
+export function ourLibrary(db: Db): { albums: OurAlbum[]; artists: string[]; tracks: OurTrack[] } {
+  const rows = db.prepare(`SELECT CASE WHEN album_artist <> '' THEN album_artist ELSE artist END AS who, album, title, genre, nd_album_id
+    FROM catalog_songs WHERE album <> '' AND error IS NULL`).all() as { who: string; album: string; title: string; genre: string; nd_album_id: string | null }[];
   const by = new Map<string, OurAlbum>();
   const artists = new Map<string, string>();
+  const tracks: OurTrack[] = [];
   for (const r of rows) {
     if (!r.who) continue;
+    if (r.title) tracks.push({ artist: r.who, album: r.album, title: r.title });
     const k = itemKey('album', r.who, r.album);
     let a = by.get(k);
     if (!a) by.set(k, (a = { artist: r.who, title: r.album, id: r.nd_album_id, genres: [] }));
@@ -139,7 +189,7 @@ export function ourLibrary(db: Db): { albums: OurAlbum[]; artists: string[] } {
     for (const g of r.genre.split(/;\s*/).map((x) => x.trim()).filter(Boolean)) if (!a.genres.includes(g)) a.genres.push(g);
     if (!artists.has(tagKey(r.who))) artists.set(tagKey(r.who), r.who);
   }
-  return { albums: [...by.values()], artists: [...artists.values()] };
+  return { albums: [...by.values()], artists: [...artists.values()], tracks };
 }
 
 const same = (a: string[] = [], b: string[] = []) => JSON.stringify(a) === JSON.stringify(b);
@@ -157,6 +207,7 @@ function planOf(db: Db, kind: ItemKind, artist: string, title: string, p: PlexIt
 export class PlexImport {
   status: PlexStatus = { state: 'idle' };
   private plans: PlexMatch[] = [];
+  private trackPlans: TrackPlan[] = [];
 
   private db: Db;
   private key: Buffer;
@@ -202,13 +253,23 @@ export class PlexImport {
     const sections = ((await get('/library/sections')).Directory as Record<string, unknown>[] | undefined ?? []).filter((d) => d.type === 'artist');
     if (!sections.length) throw new Error(`${name} has no music library`);
     const keys: string[] = [];
+    const trackKeys: string[] = [];
+    const tracks: PlexTrack[] = [];
     for (const sec of sections) {
-      for (const type of [8, 9]) {
+      for (const type of [8, 9, 10]) {
         for (let start = 0; ; start += 500) {
-          this.status = { state: 'reading', step: `Listing ${type === 9 ? 'albums' : 'artists'} in ${String(sec.title ?? 'Music')}… ${keys.length}` };
+          this.status = { state: 'reading', step: `Listing ${type === 9 ? 'albums' : type === 10 ? 'songs' : 'artists'} in ${String(sec.title ?? 'Music')}… ${type === 10 ? trackKeys.length : keys.length}` };
           const page = await get(`/library/sections/${encodeURIComponent(String(sec.key))}/all`, { type, 'X-Plex-Container-Start': start, 'X-Plex-Container-Size': 500 });
           const items = (page.Metadata as Record<string, unknown>[] | undefined) ?? [];
-          for (const m of items) if (m.ratingKey !== undefined) keys.push(String(m.ratingKey));
+          for (const m of items) {
+            if (m.ratingKey === undefined) continue;
+            if (type !== 10) keys.push(String(m.ratingKey));
+            // a listing that already has the song's moods saves reading its details
+            else if (Array.isArray(m.Mood) || Array.isArray(m.Style)) {
+              const t = plexTrack({ type: 'track', ...m });
+              if (t) tracks.push(t);
+            } else trackKeys.push(String(m.ratingKey));
+          }
           const total = Number(page.totalSize ?? page.size ?? 0);
           if (items.length < 500 || (total && start + 500 >= total)) break;
         }
@@ -223,13 +284,32 @@ export class PlexImport {
         if (p) items.push(p);
       }
     }
+    for (let i = 0; i < trackKeys.length; i += 100) {
+      this.status = { state: 'reading', step: `Reading song moods… ${i} of ${trackKeys.length}` };
+      const page = await get(`/library/metadata/${trackKeys.slice(i, i + 100).join(',')}`);
+      for (const m of (page.Metadata as Record<string, unknown>[] | undefined) ?? []) {
+        const t = plexTrack(m);
+        if (t) tracks.push(t);
+      }
+    }
     this.status = { state: 'reading', step: 'Matching to your library…' };
-    this.status = { state: 'ready', preview: this.preview(name, items) };
+    this.status = { state: 'ready', preview: this.preview(name, items, tracks) };
   }
 
   /** Match what Plex has to the library and work out what importing would change. */
-  preview(server: string, items: PlexItem[]): PlexPreview {
+  preview(server: string, items: PlexItem[], tracks: PlexTrack[] = []): PlexPreview {
     const ours = ourLibrary(this.db);
+    const trackPairs = matchTracks(tracks, ours.tracks);
+    this.trackPlans = [];
+    for (const { plex, ours: t } of trackPairs) {
+      const facets: TrackFacets = {};
+      if (plex.styles.length) facets.style = plex.styles;
+      if (plex.moods.length) facets.mood = plex.moods;
+      if (!Object.keys(facets).length) continue;
+      const now = readTrack(this.db, t.artist, t.album, t.title);
+      const changes = (Object.keys(facets) as TrackFacet[]).filter((f) => now.sources[f] !== 'edit' && !same(now.facets[f], facets[f]));
+      this.trackPlans.push({ ...t, facets, changes });
+    }
     const { pairs, unmatched } = matchPlex(items, ours);
     const lookup = genreLookup(getGenreSettings(this.db).rules);
     this.plans = [];
@@ -251,7 +331,8 @@ export class PlexImport {
       server,
       albums: { plex: count('album'), matched: matched('album') },
       artists: { plex: count('artist'), matched: matched('artist') },
-      changes: { albums: changing.filter((p) => p.kind === 'album').length, artists: changing.filter((p) => p.kind === 'artist').length },
+      tracks: { plex: tracks.length, matched: trackPairs.length, tagged: this.trackPlans.length },
+      changes: { albums: changing.filter((p) => p.kind === 'album').length, artists: changing.filter((p) => p.kind === 'artist').length, tracks: this.trackPlans.filter((p) => p.changes.length).length },
       unmatched: unmatched.filter((p) => p.kind === 'album').slice(0, 100).map((p) => ({ artist: p.artist, title: p.title })),
       genres: genres.sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title)),
       sample: [...changing.filter((p) => p.kind === 'album').slice(0, 6), ...changing.filter((p) => p.kind === 'artist').slice(0, 4)],
@@ -259,12 +340,12 @@ export class PlexImport {
   }
 
   /** Write what the last read found: `facets` picks which kinds of tag (all by default). */
-  apply(o: { facets?: Facet[]; userId?: number | null } = {}): { albums: number; artists: number } {
+  apply(o: { facets?: Facet[]; userId?: number | null } = {}): { albums: number; artists: number; tracks: number } {
     if (this.status.state !== 'ready' && this.status.state !== 'done') throw new Error('Read Plex first');
     const want = new Set(o.facets ?? ['genre', 'style', 'mood', 'collection']);
     const preview = this.status.preview;
     this.status = { ...this.status, state: 'importing', step: 'Importing…' };
-    const out = { albums: 0, artists: 0 };
+    const out = { albums: 0, artists: 0, tracks: 0 };
     try {
       for (const p of this.plans) {
         const facets = Object.fromEntries(Object.entries(p.facets).filter(([f]) => want.has(f as Facet))) as Facets;
@@ -272,12 +353,18 @@ export class PlexImport {
         const changed = setItem(this.db, { kind: p.kind, artist: p.artist, title: p.title, facets, source: 'plex', userId: o.userId });
         if (changed.length) out[p.kind === 'album' ? 'albums' : 'artists']++;
       }
+      for (const p of this.trackPlans) {
+        const facets = Object.fromEntries(Object.entries(p.facets).filter(([f]) => want.has(f as Facet))) as TrackFacets;
+        if (!Object.keys(facets).length) continue;
+        if (setTrack(this.db, { artist: p.artist, album: p.album, title: p.title, facets, source: 'plex', userId: o.userId }).length) out.tracks++;
+      }
     } finally {
       this.status = { state: 'done', preview, imported: { at: Date.now(), ...out } };
     }
     // what was imported isn't a change any more
     this.plans = this.plans.map((p) => ({ ...p, changes: [] }));
-    if (this.status.preview) this.status.preview = { ...this.status.preview, changes: { albums: 0, artists: 0 }, sample: [] };
+    this.trackPlans = this.trackPlans.map((p) => ({ ...p, changes: [] }));
+    if (this.status.preview) this.status.preview = { ...this.status.preview, changes: { albums: 0, artists: 0, tracks: 0 }, sample: [] };
     return out;
   }
 }

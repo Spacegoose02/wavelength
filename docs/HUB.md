@@ -453,22 +453,37 @@ admin (`edit`) or an import (`plex`); an import never overwrites what an admin s
 The app reads the whole list once per session (`GET /api/item-tags`, one row per album or artist that has any) and
 shows them as chips under the title on album and artist pages (`src/components/TagChips.tsx`).
 
+**Songs** have styles and moods of their own too (`hub/src/trackTags.ts`, table `track_tags`, migration 37), like
+Plex's track moods: an album can be Energetic while one song on it is Melancholy. A song is keyed by album artist,
+album and title, compared the same way. They're set in Edit song's Tags tab and by the Plex import, follow renames
+of the artist, the album (both through `POST /api/admin/item-tags/rename`) and the song (Edit song calls
+`POST /api/admin/track-tags/rename`), and an import never changes an admin's. A library has tens of thousands of
+songs, so they're a separate list the app loads only when it needs them (`GET /api/item-tags/tracks`): Browse on a
+mood or style (an album shows under a mood any of its songs has, and playing it plays just those songs, or the whole
+album when the album has the mood), and smart playlist rules **Track mood** and **Track style**. The shared
+suggestions (`values`) count songs too (`tracks`).
+
+An album that's only on Plex (no Navidrome copy, so no files to edit) gets an **Edit album** with just its styles,
+moods and collections, since those go by album artist and title and apply to every copy.
+
 ### Importing from Plex
 
 **Settings → Server → Import from Plex** (`hub/src/plexImport.ts`, `hub/src/routes/plexImport.ts`,
 `src/views/PlexImport.tsx`) fills these in from a Plex server, whose music agent usually has them better filled than
 the files. It uses the first Plex server under Server logins (or the one picked) with its shared token.
 
-1. **Read Plex** (in the background): the music sections, every album (type 9) and artist (type 8), 500 per page,
-   then their full details 50 at a time (`/library/metadata/<id>,<id>,…`), which is where styles, moods, collections
-   and labels are. Nothing is written yet.
+1. **Read Plex** (in the background): the music sections, every album (type 9), artist (type 8) and song (type 10),
+   500 per page, then their full details (`/library/metadata/<id>,<id>,…`, 50 albums or artists or 100 songs at a
+   time), which is where styles, moods, collections and labels are; a song listing that already carries its moods is
+   used as it is. A big library takes a few minutes for the songs. Nothing is written yet.
 2. **Matching** is against the Hub's catalog of the music folder (Music catalog above): the same album artist and
    title without case, accents, apostrophes or punctuation, else the same title without edition words ("(Deluxe)",
    "[Remastered]") when that pairs exactly one album on each side. Artists match by name against the catalog's album
    artists. The preview shows how many matched, what a few albums and artists would get, and up to 100 Plex albums
-   with no match.
+   with no match. Songs match by album artist, album and title (the album without edition words when that names one
+   song), and the preview counts how many have moods or styles of their own.
 3. **Import** writes styles, moods, collections (Plex's collections and its labels both become collections) and
-   artist genres onto the Hub, marked `plex`. Tick boxes pick which kinds. What an admin set by hand is never
+   artist genres onto the Hub, and songs' moods and styles onto the song tags, marked `plex`. Tick boxes pick which kinds. What an admin set by hand is never
    changed, and importing again updates what came from Plex. Audited as `itemTags.imported`.
 4. **Album genres** stay in the files, so Plex's genre is only suggested for albums with none, tidied by the genre
    rules. **Write genres** sends them through `POST /api/admin/genres/apply`, the genre review's Save, so they show
@@ -1080,6 +1095,10 @@ with a 4xx status.
 | `GET /api/admin/plex-import` | `library.edit` | the Plex import: `{ state, step?, error?, preview?, imported?, servers }` (`state`: idle, reading, ready, importing, done or error) |
 | `POST /api/admin/plex-import/read` | `library.edit` | `{ serviceId? }`: read Plex in the background and match it to the library (202); nothing is written |
 | `POST /api/admin/plex-import/apply` | `library.edit` | `{ facets? }` (any of genre, style, mood, collection; all by default): write what the last read found |
+| `GET /api/item-tags/tracks` | signed in | every song with a style or mood: `{ tracks: [{ artist, album, title, facets: { style?, mood? }, sources }] }` (artist is the album artist) |
+| `GET /api/item-tags/track?artist=&album=&title=` | signed in | one song's styles and moods |
+| `PUT /api/admin/track-tags` | `library.edit` | `{ artist, album, title, styles?, moods? }`: a song's own styles and moods; each list sent replaces what was there |
+| `POST /api/admin/track-tags/rename` | `library.edit` | `{ from: { artist, album, title }, to: { … } }`: a song's styles and moods follow an edit of its title, album or album artist; answers `{ moved }` |
 | `POST /api/admin/item-tags/rename` | `library.edit` | `{ kind, from: { artist, title? }, to: { artist, title? } }`: the tags follow a rename (an artist's albums too); answers `{ moved }` |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
 | `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }], batch? }` writes tags (only those given), four files at a time → `{ batch, changed, failed }`. Pass the same 16-hex `batch` with each part of a big Save to keep it one Save (`src/lib/tagSave.ts` sends 25 songs per part) |

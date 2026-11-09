@@ -78,6 +78,8 @@ const LISTS: Partial<Record<FieldId, string>> = {
   artistGenre: 'rule-artist-genres',
   genre: 'rule-genres',
   trackGenre: 'rule-genres',
+  trackMood: 'tag-moods',
+  trackStyle: 'tag-styles',
   artistStyle: 'tag-styles',
   style: 'tag-styles',
   artistMood: 'tag-moods',

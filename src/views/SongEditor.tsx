@@ -6,6 +6,8 @@ import { addFeatured, writeCredit, joinGenres, readCredit, splitGenres, splitNam
 import type { HubTags, HubTagSong } from '../sources/hub';
 import type { Track } from '../sources/types';
 import { hubClient } from '../store/hub';
+import { HubTagLists } from '../components/TagLists';
+import { type TrackFacets, useItemTagStore } from '../lib/itemTags';
 import { useSongEditor } from '../components/EditSong';
 
 /**
@@ -18,6 +20,10 @@ import { useSongEditor } from '../components/EditSong';
  * The Hub reads the tags from the file (GET /api/admin/tags/song/:id) and writes them with the album tag editor's
  * Save (PUT /api/admin/tags), so each Save is one entry under Settings → Server → Tag edits that Undo puts back, and
  * Navidrome is asked to rescan.
+ *
+ * The Tags tab also has the song's own **styles** and **moods** (like Plex's track moods), which have no tag in the
+ * file: they're kept on the Hub (hub/src/trackTags.ts) by album artist, album and title, and follow the song when
+ * those change here.
  */
 
 /** Drawn once in App.tsx. */
@@ -85,6 +91,10 @@ function changesOf(start: Draft, d: Draft, tidy: boolean): HubTags {
 const LABELS: Partial<Record<keyof HubTags, string>> = { title: 'Title', artist: 'Artist', album: 'Album', albumArtist: 'Album artist', track: 'Track', disc: 'Disc', year: 'Year', genre: 'Genres' };
 const errText = (e: unknown) => String((e as Error).message ?? e);
 
+/** Who files the album: the album artist, else the song's main artist. */
+const keyOf = (d: Draft) => ({ artist: d.albumArtist.trim() || d.main.trim(), album: d.album.trim(), title: d.title.trim() });
+const sameList = (a: string[] = [], b: string[] = []) => a.join('\u0000') === b.join('\u0000');
+
 function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }) {
   const c = hubClient();
   const values = useTagValues();
@@ -97,6 +107,9 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
   const [msg, setMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<{ batch: string; what: string }>();
+  // the song's styles and moods on the Hub (undefined: an older Hub without them)
+  const [hubStart, setHubStart] = useState<TrackFacets>();
+  const [hub, setHub] = useState<TrackFacets>();
 
   const load = async () => {
     if (!c) return;
@@ -106,6 +119,11 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
       setDraft(draftOf(s.tags));
       setStart(draftOf(s.tags));
       setTidy(false);
+      const k = keyOf(draftOf(s.tags));
+      c.trackTagsOf(k.artist, k.album, k.title).then((r) => {
+        setHubStart(r.facets);
+        setHub(r.facets);
+      }, () => undefined);
     } catch (e) {
       setMsg(errText(e));
     }
@@ -117,6 +135,7 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => (d ? { ...d, [k]: v } : d));
   const changes = start && draft ? changesOf(start, draft, tidy) : {};
   const changed = Object.keys(changes) as (keyof HubTags)[];
+  const hubChanged = (['style', 'mood'] as const).filter((f) => hub && !sameList(hub[f], hubStart?.[f]));
   const fromTitle = draft ? titleFeatures(draft.title, known) : null;
   const credit = draft ? writeCredit(draft.main, draft.featured) : '';
   // the file's credit isn't written the way Navidrome splits it ("Lil Durk;Drake", "Lil Durk (feat. Drake)")
@@ -129,7 +148,7 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
   };
 
   const save = async () => {
-    if (!c || !song || !draft || !changed.length) return;
+    if (!c || !song || !draft || !start || (!changed.length && !hubChanged.length)) return;
     if (!draft.main.trim()) {
       setTab('general');
       return setMsg('The song needs a main artist');
@@ -137,12 +156,22 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
     setBusy(true);
     setMsg('Saving…');
     try {
-      const label = `${credit} – ${draft.title.trim() || t.title}`;
-      const r = await c.saveTags(label, [{ path: song.path, tags: changes }]);
-      if (r.failed.length) throw new Error(r.failed[0].error);
-      forgetTagValues();
-      setSaved(r.batch ? { batch: r.batch, what: changed.map((k) => LABELS[k]).join(', ') } : undefined);
-      setMsg(r.batch ? undefined : 'Nothing changed in the file');
+      const from = keyOf(start);
+      const to = keyOf(draft);
+      if (changed.length) {
+        const label = `${credit} – ${draft.title.trim() || t.title}`;
+        const r = await c.saveTags(label, [{ path: song.path, tags: changes }]);
+        if (r.failed.length) throw new Error(r.failed[0].error);
+        forgetTagValues();
+        setSaved(r.batch ? { batch: r.batch, what: changed.map((k) => LABELS[k]).join(', ') } : undefined);
+        setMsg(r.batch ? undefined : hubChanged.length ? 'Saved the styles and moods' : 'Nothing changed in the file');
+        // the song's styles and moods follow a new title, album or album artist
+        if (hubStart && (hubStart.style?.length || hubStart.mood?.length) && JSON.stringify(from) !== JSON.stringify(to)) await c.renameTrackTags(from, to).catch(() => undefined);
+      } else setMsg('Saved the styles and moods');
+      if (hub && hubChanged.length) {
+        const r = await c.setTrackTags(to.artist, to.album, to.title, Object.fromEntries(hubChanged.map((f) => [f === 'style' ? 'styles' : 'moods', hub[f] ?? []])));
+        useItemTagStore.getState().putSong(r);
+      }
       await load();
     } catch (e) {
       setMsg(errText(e));
@@ -170,11 +199,11 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
     <EditDialog title={`Edit ${t.artist} – ${t.title}`} tabs={TABS} tab={tab} onTab={setTab} busy={busy} onClose={onClose}
       footer={<>
           <span className="small edit-dialog-msg" role="status">
-            {saved ? <>Saved {saved.what}. Navidrome shows it after its rescan, in a minute or so.</> : msg && draft ? msg : changed.length ? `Changes: ${changed.map((k) => LABELS[k]).join(', ')}` : ''}
+            {saved ? <>Saved {saved.what}. Navidrome shows it after its rescan, in a minute or so.</> : msg && draft ? msg : changed.length || hubChanged.length ? `Changes: ${[...changed.map((k) => LABELS[k]), ...hubChanged.map((f) => (f === 'style' ? 'Styles' : 'Moods'))].join(', ')}` : ''}
           </span>
           {saved && <button className="btn ghost" onClick={undo} disabled={busy}>Undo</button>}
           <button className="btn" onClick={onClose} disabled={busy}>{saved ? 'Close' : 'Cancel'}</button>
-          <button className="btn primary" onClick={save} disabled={busy || !changed.length}>Save changes</button>
+          <button className="btn primary" onClick={save} disabled={busy || (!changed.length && !hubChanged.length)}>Save changes</button>
       </>}>
         <TagLists values={values} />
         {!draft ? (msg ? <div className="errors">{msg}</div> : <Spinner />) : tab === 'general' ? (
@@ -231,6 +260,20 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
               <ChipInput values={draft.genres} onChange={(v) => set('genres', v)} list="tag-genres" placeholder="Add a genre" split={splitGenres} label="genre" />
             </div>
             <p className="span2 muted small">Genres are written into one tag separated by “; ”, which Navidrome reads as separate genres.</p>
+            {hub && (
+              <>
+                <HubTagLists />
+                <div className="span2 edit-field">
+                  <span className="edit-field-label">Moods</span>
+                  <ChipInput values={hub.mood ?? []} onChange={(v) => setHub({ ...hub, mood: v })} list="tag-moods" placeholder="Add a mood" split={splitGenres} label="mood" />
+                </div>
+                <div className="span2 edit-field">
+                  <span className="edit-field-label">Styles</span>
+                  <ChipInput values={hub.style ?? []} onChange={(v) => setHub({ ...hub, style: v })} list="tag-styles" placeholder="Add a style" split={splitGenres} label="style" />
+                </div>
+                <p className="span2 muted small">This song’s own moods and styles, apart from its album’s (like Plex’s track moods). They’re kept on your Hub, not in the file, so Undo doesn’t touch them.</p>
+              </>
+            )}
           </div>
         ) : (
           <dl className="edit-info">

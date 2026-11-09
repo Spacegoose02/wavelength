@@ -1150,7 +1150,8 @@ Christmas, Track last played is not in the last 30 days". The fields:
 - **Artist:** artist, artist genre (the Hub's, else their albums' genres), artist style, mood and collection.
 - **Album:** title, year, decade, genre, plays, last played, rating, ♥, record label, style, mood, collection,
   type (album, single, EP, compilation, live…), date added.
-- **Track:** title, artist, genre, plays, last played, rating, ♥, date added, audio format, bit rate, folder.
+- **Track:** title, artist, genre, mood, style, plays, last played, rating, ♥, date added, audio format, bit rate,
+  folder.
 
 **Limit to** N songs, picked at random, most or least played, last played, recently added, highest rated, newest
 or oldest. Switching a playlist to Advanced turns its simple rules into rows. **Try it** shows how many songs
@@ -2085,6 +2086,10 @@ or press **Edit** on its row. The dialog works like Plex's:
   the main one.
 - **Tags:** the genres, as chips. They're written into one tag separated by "; ", which Navidrome reads as
   separate genres.
+  With a Hub, the Tags tab also has the song's own **Moods** and **Styles** (like Plex's track moods), apart from
+  its album's. They're kept on the Hub, not in the file, and follow the song if you change its title or album. They
+  put the song's album under that mood on Browse (playing it plays just the songs that have it), and smart
+  playlists can use them with **Track mood** and **Track style**. **Import from Plex** fills them in too.
 - **Info:** the file's path and every tag as it is in the file now.
 
 **Save changes** writes only what you changed into the file (the audio isn't touched), and Navidrome shows it after

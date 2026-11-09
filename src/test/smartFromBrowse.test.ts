@@ -22,7 +22,10 @@ describe('smart playlists from Browse', () => {
     const x = fromBrowse({ collection: 'Christmas', mood: 'Warm', style: 'Christmas Pop' }, 'Christmas');
     expect(x).toMatchObject({ collections: ['Christmas'], tagMoods: ['Warm'], styles: ['Christmas Pop'] });
     expect(byAlbum(x)).toBe(true);
-    expect(say(x)).toContain('in Christmas');
+    // a mood or style can be the album's or a song's own, so it becomes advanced rules that say either
+    expect(say(x)).toContain('Album collection is Christmas');
+    expect(say(x)).toContain('any of (Album mood is Warm, Track mood is Warm)');
+    expect(fromBrowse({ collection: 'Christmas' }, 'x').rules).toBeUndefined();
   });
 
   test('albums fit by genre, year, style, mood and collection, and a collection can be left out', () => {

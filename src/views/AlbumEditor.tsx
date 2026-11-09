@@ -262,3 +262,65 @@ export function EditAlbumButton({ album, cover }: { album: Album; cover?: string
     </>
   );
 }
+
+/**
+ * An album with no files to edit here (Plex's copy, with no Navidrome copy of the same album): only what the Hub
+ * keeps, its styles, moods and collections, which apply to every copy of the album since they go by album artist and
+ * title.
+ */
+export function EditAlbumTagsButton({ album }: { album: Album }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="btn" title="Styles, moods and collections (the files of this copy are on Plex)" onClick={() => setOpen(true)}>Edit album</button>
+      {open && <AlbumHubTags album={album} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function AlbumHubTags({ album, onClose }: { album: Album; onClose: () => void }) {
+  const c = hubClient();
+  const [start, setStart] = useState<HubLists>();
+  const [hub, setHub] = useState<HubLists>();
+  const [msg, setMsg] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    c?.itemTagsOf('album', album.artist, album.title).then((r) => {
+      setStart(toLists(r.facets, ''));
+      setHub(toLists(r.facets, ''));
+    }, (e) => setMsg(errText(e)));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const dirty = hubChanged(hub, start);
+  const save = async () => {
+    if (!c || !hub) return;
+    setBusy(true);
+    try {
+      useItemTagStore.getState().put(await c.setItemTags('album', album.artist, album.title, listsBody(hub)));
+      onClose();
+    } catch (e) {
+      setMsg(errText(e));
+      setBusy(false);
+    }
+  };
+  return (
+    <EditDialog title={`Edit ${album.artist} – ${album.title}`} tabs={[['tags', 'Tags']] as const} tab="tags" onTab={() => undefined} busy={busy} onClose={onClose}
+      footer={<>
+        <span className="small edit-dialog-msg" role="status">{msg}</span>
+        <button className="btn" onClick={onClose} disabled={busy}>Cancel</button>
+        <button className="btn primary" onClick={save} disabled={busy || !dirty}>Save changes</button>
+      </>}>
+      <HubTagLists />
+      {!hub ? (msg ? <div className="errors">{msg}</div> : <Spinner />) : (
+        <div className="edit-fields">
+          {HUB_FACETS.map(([f, label, placeholder]) => (
+            <div key={f} className="span2 edit-field">
+              <span className="edit-field-label">{label}</span>
+              <ChipInput values={hub[f]} onChange={(v) => setHub((h) => (h ? { ...h, [f]: v } : h))} list={`tag-${f}s`} placeholder={placeholder} split={splitGenres} label={f} />
+            </div>
+          ))}
+          <p className="span2 muted small">This copy of the album is Plex’s, so its title, artist, genres and cover are in Plex and can’t be changed here. Styles, moods and collections are kept on your Hub and apply to every copy.</p>
+        </div>
+      )}
+    </EditDialog>
+  );
+}

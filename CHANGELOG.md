@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+- **Moods and styles on songs.** Like Plex's track moods, a song can have moods and styles of its own, apart from
+  its album's: Edit song's Tags tab sets them, **Import from Plex** now reads every song's moods too, Browse puts an
+  album under a mood any of its songs has (and plays just those songs), and smart playlists get **Track mood** and
+  **Track style** rules. "Save as smart playlist" on a mood or style matches the album's or the song's own. Kept on
+  the Hub (`hub/src/trackTags.ts`, migration 37).
+- **Edit album on more albums.** When the copy on screen is Plex's and the same album is on Navidrome, Edit album
+  opens the Navidrome copy (it used to be hidden). An album that's only on Plex gets an Edit album for its styles,
+  moods and collections (the rest is in Plex).
+
 ## 0.38.0
 - **Advanced smart playlists.** Smart playlists get an Advanced mode like Plex's filter builder: nested "match
   all / any" groups of field, operator and value rows over artist, album and track fields (genre, style, mood,

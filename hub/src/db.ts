@@ -724,6 +724,23 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     PRIMARY KEY (kind, item, facet)
   );
   `,
+  `
+  -- Styles and moods of single songs (trackTags.ts), like Plex's track moods. Keyed by album artist, album and
+  -- title (compared like item_tags), so the same song on another album is another row. Kept apart from item_tags
+  -- because a library has tens of thousands of songs, and the app only asks for them when it needs them.
+  CREATE TABLE track_tags (
+    item       TEXT NOT NULL,
+    facet      TEXT NOT NULL CHECK (facet IN ('style', 'mood')),
+    artist     TEXT NOT NULL,
+    album      TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    vals       TEXT NOT NULL,
+    source     TEXT NOT NULL DEFAULT 'edit' CHECK (source IN ('edit', 'plex')),
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (item, facet)
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

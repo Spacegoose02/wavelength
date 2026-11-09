@@ -52,6 +52,7 @@ export function PlexImport() {
     }
   };
   const p = s.preview;
+  const changes = p ? p.changes.albums + p.changes.artists + (p.changes.tracks ?? 0) : 0;
   const running = s.state === 'reading' || s.state === 'importing';
   const suggestions = p?.genres ?? [];
   const chosen = suggestions.filter((g) => !skip.has(g.id) && genres[g.id]?.trim());
@@ -101,9 +102,10 @@ export function PlexImport() {
         <>
           <p className="small">
             {p.server}: <b>{plural(p.albums.matched, 'album')}</b> of {p.albums.plex.toLocaleString()} and{' '}
-            <b>{plural(p.artists.matched, 'artist')}</b> of {p.artists.plex.toLocaleString()} match your library.
-            {' '}{p.changes.albums + p.changes.artists > 0
-              ? <>Importing would add to {plural(p.changes.albums, 'album')} and {plural(p.changes.artists, 'artist')}.</>
+            <b>{plural(p.artists.matched, 'artist')}</b> of {p.artists.plex.toLocaleString()} match your library
+            {p.tracks ? <>, and <b>{plural(p.tracks.matched, 'song')}</b> of {p.tracks.plex.toLocaleString()} ({p.tracks.tagged.toLocaleString()} with moods or styles of their own)</> : null}.
+            {' '}{changes > 0
+              ? <>Importing would add to {plural(p.changes.albums, 'album')}, {plural(p.changes.artists, 'artist')}{p.changes.tracks ? <> and {plural(p.changes.tracks, 'song')}</> : null}.</>
               : <>Everything Plex has is already here.</>}
           </p>
           {p.sample.length > 0 && (
@@ -116,7 +118,7 @@ export function PlexImport() {
               ))}
             </ul>
           )}
-          {p.changes.albums + p.changes.artists > 0 && (
+          {changes > 0 && (
             <div className="row gap" style={{ flexWrap: 'wrap' }}>
               {ALL.map((f) => (
                 <label key={f} className="check small">
@@ -126,7 +128,8 @@ export function PlexImport() {
               ))}
               <button className="btn primary" disabled={busy || !want.size} onClick={() => run(() => c.importPlex([...want]), (r) => {
                 void useItemTagStore.getState().load(true);
-                return `Imported onto ${plural(r.imported?.albums ?? 0, 'album')} and ${plural(r.imported?.artists ?? 0, 'artist')}.`;
+                if (r.imported?.tracks) void useItemTagStore.getState().loadSongs(true);
+                return `Imported onto ${plural(r.imported?.albums ?? 0, 'album')}, ${plural(r.imported?.artists ?? 0, 'artist')} and ${plural(r.imported?.tracks ?? 0, 'song')}.`;
               })}>Import</button>
             </div>
           )}

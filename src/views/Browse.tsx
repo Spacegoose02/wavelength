@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlbumCard, ArtistCard, Empty, Grid, Spinner } from '../components/common';
 import { IconPlay, IconShuffle } from '../components/Icons';
-import { ALBUM_SORTS, type BrowseQuery, decadeCounts, decadeLabel, findGenre, genreKey, genreTree, queryAlbums, queryArtists, sample, tagCounts, type AlbumSort, type GenreNode, type TagFacet } from '../lib/browse';
-import { useItemTags } from '../lib/itemTags';
+import { ALBUM_SORTS, albumTags, type BrowseQuery, decadeCounts, decadeLabel, findGenre, genreKey, genreTree, queryAlbums, queryArtists, sample, tagCounts, type AlbumSort, type GenreNode, type TagFacet } from '../lib/browse';
+import { songFacets, useItemTags, useItemTagStore } from '../lib/itemTags';
+import { useHub } from '../store/hub';
 import { SaveSmartButton } from '../components/SaveSmartButton';
 import { useHidden } from '../lib/kids';
 import { sourceFor } from '../sources/registry';
@@ -26,13 +27,19 @@ export function Browse(slice: BrowseSlice) {
   const hidden = useHidden();
   // re-work the lists when the Hub's styles, moods and collections arrive
   const tagsAt = useItemTags().albums;
+  // and the songs' own moods and styles, which put their albums under those too
+  const songsAt = useItemTagStore((s) => s.songsAt);
+  const signedIn = useHub((s) => !!s.token);
+  useEffect(() => {
+    if (signedIn) void useItemTagStore.getState().loadSongs();
+  }, [signedIn]);
   const albums = useMemo(() => all.filter((a) => !hidden.album(a)), [all, hidden]);
   const tree = useMemo(() => genreTree(albums), [albums]);
   if (!albums.length) return loading ? <div className="page"><Spinner /></div> : <div className="page"><Empty title="Nothing to browse yet">Add a Navidrome or Plex server under Settings → Sources.</Empty></div>;
   const any = slice.genre || slice.decade !== undefined || slice.style || slice.mood || slice.collection;
   return any
-    ? <Slice key={Object.keys(tagsAt).length} albums={albums} artists={artists} tree={tree} q={slice} />
-    : <Landing key={Object.keys(tagsAt).length} albums={albums} tree={tree} />;
+    ? <Slice key={`${Object.keys(tagsAt).length}:${songsAt}`} albums={albums} artists={artists} tree={tree} q={slice} />
+    : <Landing key={`${Object.keys(tagsAt).length}:${songsAt}`} albums={albums} tree={tree} />;
 }
 
 const goTo = (q: BrowseSlice) => useUi.getState().go({ view: 'browse', ...q });
@@ -156,7 +163,9 @@ function Slice({ albums, artists, tree, q }: { albums: Album[]; artists: ReturnT
   const play = async (shuffle: boolean) => {
     setBusy(true);
     try {
-      const tracks = await tracksOf(shuffle ? sample(shown, 25) : shown.slice(0, 25));
+      const from = shuffle ? sample(shown, 25) : shown.slice(0, 25);
+      // a mood or style: an album that has it plays whole, else only its songs that have it
+      const tracks = onlyTagged(await tracksOf(from), from, q);
       if (!tracks.length) return alert('No songs found.');
       const list = shuffle ? sample(tracks, 300) : tracks;
       const p = usePlayer.getState();
@@ -228,6 +237,19 @@ function Slice({ albums, artists, tree, q }: { albums: Album[]; artists: ReturnT
       {shown.length > 600 && <p className="muted center">Showing 600 of {shown.length}. Pick a decade, sub-genre or style to narrow it down.</p>}
     </div>
   );
+}
+
+function onlyTagged(tracks: Track[], albums: Album[], q: BrowseSlice): Track[] {
+  const facets = (['mood', 'style'] as const).filter((f) => q[f]);
+  if (!facets.length) return tracks;
+  const byId = new Map<string, Album>();
+  for (const a of albums) for (const r of a.refs ?? [a]) byId.set(`${r.sourceId}:${r.id}`, a);
+  const has = (names: string[] | undefined, want: string) => !!names?.some((n) => genreKey(n) === genreKey(want));
+  return tracks.filter((t) => {
+    const a = byId.get(`${t.sourceId}:${t.albumId}`);
+    if (!a) return true;
+    return facets.every((f) => has(albumTags(a, f), q[f]!) || has(songFacets(a.artist, a.title, t.title)[f], q[f]!));
+  });
 }
 
 async function tracksOf(albums: Album[]): Promise<Track[]> {
