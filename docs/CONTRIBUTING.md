@@ -48,7 +48,7 @@ genre names cover it).
 ## Add a skin
 
 1. `src/store/settings.ts`: add the id to `Skin` and a `{ id, label, group }` to `SKINS`. `group` is one of
-   `SKIN_GROUPS` and decides the heading it appears under in Settings → Themes.
+   `SKIN_GROUPS` and decides the heading it appears under in Settings → Themes & critters → Theme & critters → Theme.
 2. `src/styles.css`: a `:root[data-skin='myskin'] { … }` block defining at least
    `--bg --bg-2 --panel --panel-2 --line --text --muted --accent --accent-ink --lcd-bg --lcd-text --lcd-dim --viz-low --viz-mid --viz-high --viz-peak --bevel --bevel-in` and `color-scheme`.
 3. Optional component overrides (`.btn.primary`, `.nav.on`, `.chip.on`, `.tabs button.on`, `.deck`).

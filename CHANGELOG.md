@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Settings → Themes & critters.** One place for how Wavelength looks and who plays along, in four sub-tabs:
+  **Theme** (skins, Seasonal, Random daily, Motion), **Critters**, **Scenes** (what used to be called acts) and
+  **Visualizer**. The Boy / Girl switch sits on both the Critters and Scenes sub-tabs, with a line saying who's
+  playing what. The visualizer and critter pickers moved here from Playback, which now points to them, and
+  Settings search opens the right sub-tab.
 - **Nine more critters: a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny and a red panda.**
   The eighteenth to twenty-sixth, drawn cute. The penguin waddles with flippers for arms; the fox has a bushy
   white-tipped tail; the axolotl's frilly gills glow with the bass; the octopus stands on six curling tentacles; the

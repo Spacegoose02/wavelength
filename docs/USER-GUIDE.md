@@ -623,15 +623,20 @@ defaults.
 
 **Switching.** On the critter visualizer, tap **Switch critter** in its top-right corner for the next critter
 (keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
-Playback → Now Playing visualizer**: the **Critters** cards show each critter in your current act, and the
-**Act** cards show your current critter in each act. Picking either also switches Now Playing to the
-critter. The **Boy** / **Girl** switch above the cards picks the look for every critter: girls get eyelashes
+Themes & critters**, which keeps everything about how the app looks in one place, in four sub-tabs: **Theme**
+(the skin, Seasonal, Random daily and Motion), **Critters**, **Scenes** and **Visualizer**. The **Critters** cards
+show each critter in your current scene (act), and the **Scenes** cards show your current critter in each scene.
+Picking either also switches Now Playing to the critter. The line above the cards says who's playing what, with a
+link across to the other sub-tab. The **Boy** / **Girl** switch on both sub-tabs picks the look for every critter: girls get eyelashes
 and a bow in your skin's accent colour instead of the act's hat. The accordion player keeps her beanie and wears
 the bow on it in another colour, and the DJ keeps her headphones. Girls wear their own outfit in each act: a
 cowgirl denim fringe skirt, a pleated mini (Rapper), a pink tutu (Rocker), a sailor dress (Drummer), a space dress
 (Theremin) and dresses for the DJ, synth and accordion (the driver sits in the car, so only the bow and the top show), a lab-coat dress (Reactor), a grass skirt (Bongo), a black ruffled gown, mostly behind the piano (Pianist), a pleated khaki skirt (Marimba) and the long coat to the knee (Violinist). Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
+
+<img src="screenshots/settings-critters.png" alt="Settings, Themes &amp; critters, Critters sub-tab: the Theme, Critters, Scenes and Visualizer sub-tabs, the Boy and Girl switch, a line saying what Now Playing shows, and a grid of critter cards" width="80%">
+<img src="screenshots/settings-scenes.png" alt="Settings, Themes &amp; critters, Scenes sub-tab: the raccoon in each scene, DJ, Country, Rapper, Rocker, Drummer and more, each with a short description" width="80%">
 
 **They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold, panda black and white, owl brown, T. rex green, monkey brown and peach, flamingo pink, gorilla charcoal, penguin black and white, fox orange, axolotl pink, sloth beige, octopus coral, dragon teal, frog green, bunny white, red panda russet),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
@@ -971,7 +976,7 @@ feature off in **Settings → Features**.
 
 ## Skins and themes
 
-**Settings → Themes** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
+**Settings → Themes & critters → Theme** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
 device and applies straight away. The visualizers and the LCD follow the skin's colours too.
 Every skin works on Windows, Android phones and tablets, and Android TV.
 
@@ -1376,7 +1381,7 @@ other and with their own kids; kids only with their parents. A Hub admin can tur
   "1:02 of 3:45", and the volume reads as a percentage.
 - **Keyboard.** Tab moves through everything, with a visible outline. On a song, **Shift+F10** (or the menu key)
   opens the song menu: arrows move through it, Enter picks, Esc closes it and puts you back on the song.
-- **Less motion.** **Settings → Themes → Motion**: *Like my device* (the default) follows your system's
+- **Less motion.** **Settings → Themes & critters → Theme → Motion**: *Like my device* (the default) follows your system's
   reduce-motion setting; *Less motion* stops the scrolling song name and other animations, and the critters and
   visualizers draw a couple of still frames a second instead of moving; *Full motion* always animates. It follows
   you to your other devices with a Hub.

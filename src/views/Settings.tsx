@@ -463,7 +463,7 @@ function SlskdSettings() {
 
 const SEASONAL_SKINS = new Set<Skin>(SEASONS.map((s) => s.skin));
 
-/** Settings → Themes: grouped skin picker with search, live preview on hover/focus, Seasonal and Random daily. */
+/** Settings → Themes & critters → Theme: grouped skin picker with search, live preview on hover/focus, Seasonal and Random daily. */
 function ThemesTab() {
   const { skin, setSkin, seasonal, randomDaily, setThemeMode } = useSettings();
   const setPreview = useUi((s) => s.setPreviewSkin);
@@ -541,29 +541,54 @@ function ThemesTab() {
   );
 }
 
+/** The sub-tabs of Settings → Themes & critters: one place for how Wavelength looks and who plays along. */
+export type LookSub = 'theme' | 'critters' | 'scenes' | 'visualizer';
+const LOOK_SUBS: { id: LookSub; label: string }[] = [
+  { id: 'theme', label: 'Theme' },
+  { id: 'critters', label: 'Critters' },
+  { id: 'scenes', label: 'Scenes' },
+  { id: 'visualizer', label: 'Visualizer' },
+];
+
+/** Boy or girl, for every critter. Shown on both the Critters and Scenes sub-tabs. */
+function CritterLookSwitch() {
+  const { critterLook, setCritterLook } = useSettings();
+  return (
+    <div className="chips" role="group" aria-label="Boy or girl critters">
+      {(['boy', 'girl'] as const).map((l) => (
+        <button key={l} className={`chip ${critterLook === l ? 'on' : ''}`} aria-pressed={critterLook === l} onClick={() => setCritterLook(l)}>{l === 'boy' ? 'Boy' : 'Girl'}</button>
+      ))}
+    </div>
+  );
+}
+
+/** One line saying who's playing what, with a link across to the other sub-tab. */
+function CritterSummary({ other, onOther }: { other: string; onOther: () => void }) {
+  const { npScene, critter, act, critterLook } = useSettings();
+  const sp = SPECIES.find((x) => x.id === critter);
+  const a = ACTS.find((x) => x.id === act);
+  return (
+    <p className="muted small">
+      Now Playing shows {npScene === 'raccoon' ? <>the <b>{sp?.label}</b> ({critterLook}) playing <b>{a?.label}</b></> : <>the <b>{SCENES.find((x) => x.id === npScene)?.label}</b> visualizer (pick a card to switch to the critters)</>}.{' '}
+      <button type="button" className="link small" onClick={onOther}>{other} →</button>
+    </p>
+  );
+}
+
 /**
- * Settings → Playback: which Now Playing visualizer, and who plays which act in the critter scene (all sync
- * to the Hub). Each critter card shows that critter in the current act; each act card shows the current
- * critter in that act. Picking either switches Now Playing to the critter scene.
+ * Themes & critters → Critters: who plays along. Each card shows that critter in the current scene (act) and
+ * look; picking one switches Now Playing to the critter scene. All of it syncs to the Hub.
  */
-function NowPlayingPicker() {
-  const { npScene, setNpScene, critter, setCritter, act, setAct, critterLook, setCritterLook } = useSettings();
+function CrittersPicker({ go }: { go: (s: LookSub) => void }) {
+  const { npScene, setNpScene, critter, setCritter, act } = useSettings();
   const on = npScene === 'raccoon';
   return (
-    <section id="visualizer">
-      <h2>Now Playing visualizer</h2>
-      <p className="muted small">You can also tap the artwork in Now Playing to step through these.</p>
-      <div className="chips">
-        {SCENES.map((s) => (
-          <button key={s.id} className={`chip ${npScene === s.id ? 'on' : ''}`} onClick={() => setNpScene(s.id)}>{s.label}</button>
-        ))}
-      </div>
-      <h3>Critters</h3>
-      <p className="muted small">Pick who plays along, then what they play: any critter can do any act. They sing along with the vocals and dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
-      <div className="chips" role="group" aria-label="Boy or girl critters">
-        {(['boy', 'girl'] as const).map((l) => (
-          <button key={l} className={`chip ${critterLook === l ? 'on' : ''}`} aria-pressed={critterLook === l} onClick={() => setCritterLook(l)}>{l === 'boy' ? 'Boy' : 'Girl'}</button>
-        ))}
+    <section id="critters">
+      <h2>Critters</h2>
+      <p className="muted small">Pick who plays along: any critter can play any scene. They sing along with the vocals and dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
+      <div className="critter-look">
+        <CritterLookSwitch />
+        <CritterSummary other="Pick a scene" onOther={() => go('scenes')} />
       </div>
       <div className="critter-picks">
         {SPECIES.map((sp) => (
@@ -580,7 +605,22 @@ function NowPlayingPicker() {
           </button>
         ))}
       </div>
-      <h3>Act</h3>
+    </section>
+  );
+}
+
+/** Themes & critters → Scenes: what the critter plays, and where. Each card shows your critter in that scene. */
+function ScenesPicker({ go }: { go: (s: LookSub) => void }) {
+  const { npScene, setNpScene, critter, act, setAct } = useSettings();
+  const on = npScene === 'raccoon';
+  return (
+    <section id="scenes">
+      <h2>Scenes</h2>
+      <p className="muted small">Each scene is an instrument, an outfit and a place. The critter you picked plays whichever one you choose.</p>
+      <div className="critter-look">
+        <CritterLookSwitch />
+        <CritterSummary other="Pick a critter" onOther={() => go('critters')} />
+      </div>
       <div className="critter-picks">
         {ACTS.map((a) => (
           <button
@@ -601,7 +641,28 @@ function NowPlayingPicker() {
   );
 }
 
-/** Settings → Playback → Tune mouths, with a live critter beside it to watch while a song plays. */
+/** Themes & critters → Visualizer: what Now Playing shows behind the music. */
+function VisualizerPicker({ go }: { go: (s: LookSub) => void }) {
+  const { npScene, setNpScene } = useSettings();
+  return (
+    <section id="visualizer">
+      <h2>Now Playing visualizer</h2>
+      <p className="muted small">You can also tap the artwork in Now Playing to step through these.</p>
+      <div className="chips">
+        {SCENES.map((s) => (
+          <button key={s.id} className={`chip ${npScene === s.id ? 'on' : ''}`} onClick={() => setNpScene(s.id)}>{s.label}</button>
+        ))}
+      </div>
+      {npScene === 'raccoon' && (
+        <p className="muted small">
+          <button type="button" className="link" onClick={() => go('critters')}>Choose the critter</button> and <button type="button" className="link" onClick={() => go('scenes')}>the scene</button>.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** Settings → Themes & critters → Critters → Critter mouths, with a live critter beside it to watch while a song plays. */
 function MouthTunerSection() {
   const on = useFeature('mouthTuner');
   const { critter, act } = useSettings();
@@ -617,13 +678,52 @@ function MouthTunerSection() {
   );
 }
 
+/** Settings → Themes & critters: the theme, the critters and their scenes, and the visualizer, in sub-tabs. */
+function LookTab({ sub, setSub }: { sub: LookSub; setSub: (s: LookSub) => void }) {
+  return (
+    <>
+      <div className="chips subtabs" role="tablist" aria-label="Themes and critters">
+        {LOOK_SUBS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={sub === t.id} className={`chip ${sub === t.id ? 'on' : ''}`} onClick={() => setSub(t.id)}>{t.label}</button>
+        ))}
+      </div>
+      {sub === 'theme' && (
+        <>
+          <ThemesTab />
+          <MotionSettings />
+        </>
+      )}
+      {sub === 'critters' && (
+        <>
+          <CrittersPicker go={setSub} />
+          <MouthTunerSection />
+        </>
+      )}
+      {sub === 'scenes' && <ScenesPicker go={setSub} />}
+      {sub === 'visualizer' && <VisualizerPicker go={setSub} />}
+    </>
+  );
+}
+
+/** Where the visualizer and critter pickers used to be on Playback: a pointer to their new home. */
+function LookMovedNote({ open }: { open: (s: LookSub) => void }) {
+  return (
+    <section id="visualizer-moved">
+      <p className="muted small">
+        The Now Playing visualizer, critters and scenes are under{' '}
+        <button type="button" className="link small" onClick={() => open('critters')}>Themes &amp; critters</button>.
+      </p>
+    </section>
+  );
+}
+
 /** Personal settings first, then the Hub's (admins and family managers only), set apart in the tab row. */
 const TABS: { id: SettingsTab; label: string; admin?: boolean; manager?: boolean }[] = [
   { id: 'account', label: 'Account' },
   { id: 'sources', label: 'Sources' },
   { id: 'playback', label: 'Playback' },
+  { id: 'themes', label: 'Themes & critters' },
   { id: 'downloads', label: 'Downloads' },
-  { id: 'themes', label: 'Themes' },
   { id: 'discover', label: 'Discover' },
   { id: 'updates', label: 'Updates' },
   { id: 'family', label: 'My family', manager: true },
@@ -637,15 +737,17 @@ const TABS: { id: SettingsTab; label: string; admin?: boolean; manager?: boolean
  * What the settings search finds: each section's heading on its tab (plus a few other words people search for).
  * Picking one opens the tab and scrolls to the heading. Keep in step with the <h2>s when adding a section.
  */
-const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string }[] = [
+const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string; sub?: LookSub }[] = [
   { tab: 'account', heading: 'Wavelength Hub', also: 'sign in sign out password two-step 2fa pin profile' },
   { tab: 'account', heading: 'Signed-in devices', also: 'devices sessions' },
   { tab: 'account', heading: 'Devices', also: 'listening now house activity share what i play privacy remote control' },
   { tab: 'account', heading: 'Home Assistant', also: 'home assistant smart home automation hass token' },
   { tab: 'sources', heading: 'Sources', also: 'servers navidrome plex audiobookshelf login add server' },
-  { tab: 'themes', heading: 'Motion', also: 'reduce motion animation accessibility vestibular calm still' },
-  { tab: 'playback', heading: 'Now Playing visualizer', also: 'scene critter act boy girl' },
-  { tab: 'playback', heading: 'Critter mouths', also: 'mouth tuner singing' },
+  { tab: 'themes', sub: 'theme', heading: 'Motion', also: 'reduce motion animation accessibility vestibular calm still' },
+  { tab: 'themes', sub: 'visualizer', heading: 'Now Playing visualizer', also: 'scene halo oscilloscope starfield spectrum rings artwork' },
+  { tab: 'themes', sub: 'critters', heading: 'Critters', also: 'critter animal boy girl species' },
+  { tab: 'themes', sub: 'scenes', heading: 'Scenes', also: 'scene act instrument boy girl' },
+  { tab: 'themes', sub: 'critters', heading: 'Critter mouths', also: 'mouth tuner singing' },
   { tab: 'playback', heading: 'Volume levelling and crossfade', also: 'replaygain loudness crossfade gapless automix' },
   { tab: 'playback', heading: 'Streaming quality', also: 'mobile data cellular bitrate data saver flac opus transcode wifi' },
   { tab: 'playback', heading: 'Wake-up alarm', also: 'alarm clock wake morning snooze' },
@@ -663,7 +765,7 @@ const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string }[] = [
   { tab: 'downloads', heading: 'deemix' },
   { tab: 'downloads', heading: 'yt-dlp', also: 'youtube' },
   { tab: 'downloads', heading: 'Soulseek', also: 'slskd' },
-  { tab: 'themes', heading: 'Theme', also: 'skin dark light seasonal colors' },
+  { tab: 'themes', sub: 'theme', heading: 'Theme', also: 'skin dark light seasonal colors' },
   { tab: 'discover', heading: 'Discover charts', also: 'charts billboard apple deezer genres' },
   { tab: 'updates', heading: 'Updates', also: 'version install' },
   { tab: 'users', heading: 'People', also: 'users accounts roles admin kid' },
@@ -764,6 +866,7 @@ function VersionsPicker() {
 export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   const tabsRef = useTabStrip();
   const [tab, setTab] = useState<SettingsTab>(initial ?? 'sources');
+  const [lookSub, setLookSub] = useState<LookSub>('theme');
   // Users is for Hub admins only (the Hub refuses its calls from anyone else anyway)
   const isAdmin = useHub((s) => !!s.token && s.permissions.includes('users.manage'));
   // My family is for a family's managers who aren't Hub admins (admins run every family under Users)
@@ -784,7 +887,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       setJump(undefined);
     }, 120);
     return () => window.clearTimeout(h);
-  }, [jump, tab]);
+  }, [jump, tab, lookSub]);
   const personal = tabs.filter((t) => !t.admin && !t.manager);
   const hubTabs = tabs.filter((t) => t.admin || t.manager);
 
@@ -797,7 +900,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           {q.trim() && (
             <div className="menu settings-found">
               {found.length ? found.map((e) => (
-                <button type="button" key={`${e.tab}:${e.heading}`} className="menu-item" onClick={() => { setTab(e.tab); setJump(e.heading); setQ(''); }}>
+                <button type="button" key={`${e.tab}:${e.heading}`} className="menu-item" onClick={() => { setTab(e.tab); if (e.sub) setLookSub(e.sub); setJump(e.heading); setQ(''); }}>
                   {e.heading}<small>{TABS.find((t) => t.id === e.tab)?.label}</small>
                 </button>
               )) : <div className="menu-hint">Nothing called that</div>}
@@ -824,8 +927,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'sources' && <SourcesTab />}
       {tab === 'playback' && (
         <>
-          <NowPlayingPicker />
-          <MouthTunerSection />
+          <LookMovedNote open={(sub) => { setLookSub(sub); setTab('themes'); }} />
           <PlaybackOptions />
           <StreamingSettings />
           <AlarmSettings />
@@ -848,12 +950,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <DownloadsTab />
         </>
       )}
-      {tab === 'themes' && (
-        <>
-          <ThemesTab />
-          <MotionSettings />
-        </>
-      )}
+      {tab === 'themes' && <LookTab sub={lookSub} setSub={setLookSub} />}
       {tab === 'discover' && <DiscoverCharts />}
       {tab === 'updates' && <UpdatesTab />}
     </div>
