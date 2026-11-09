@@ -531,6 +531,7 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
   const both = hasBoth(versions);
   const shown = versionOf(ref);
   const canEditTags = useCan('library.edit');
+  const editRef = cfgOf(ref.sourceId)?.kind === 'navidrome' ? ref : navidromeRefs(album).find((r) => versionOf(r) === shown) ?? navidromeRefs(album)[0];
   const kid = useIsKid();
 
   // Navidrome can list one album as two, e.g. when a song was downloaded on its own into another folder: the
@@ -602,9 +603,8 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
               </div>
             )}
             <ArtworkButton kind="album" artist={album.artist} album={album.title} current={art} />
-            {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && (
-              <EditAlbumButton album={{ ...ref, refs: [ref] }} cover={art} />
-            )}
+            {/* the copy shown can be Plex's; the editor works on the Navidrome copy, which is the files */}
+            {canEditTags && editRef && <EditAlbumButton album={{ ...editRef, refs: [editRef] }} cover={art} />}
             {canEditTags && !kid && navidromeRefs(album).length > 0 && <MergeIntoButton kind="album" item={album} />}
             {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && <DeleteAlbumButton album={ref} />}
             {tracks?.length ? (
