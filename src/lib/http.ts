@@ -91,3 +91,18 @@ export function gatewayHint(msg: string) {
   if (!/^50[234]\b/.test(msg)) return msg;
   return `${msg}. The web proxy in front of this server answered, but couldn't reach the server behind it. Check the server is running, and that the proxy points at the right address and port (Audiobookshelf's own port is 13378 unless you changed it). Opening the address in a browser should show the same error until it's fixed.`;
 }
+
+/**
+ * In a browser, a server that's down and a server that won't answer this page (no CORS) look the same: fetch
+ * throws "NetworkError when attempting to fetch resource." (Firefox), "Failed to fetch" (Chrome) or "Load failed"
+ * (Safari), with no status. Name both causes, and for Audiobookshelf the setting that fixes the second.
+ * `origin` is the page's own address, the one the server has to allow. Inside the apps there's no CORS, so it's left alone.
+ */
+export function browserFetchHint(msg: string, kind: string, origin: string | undefined) {
+  if (!origin || !/NetworkError when attempting|Failed to fetch|^Load failed/i.test(msg)) return msg;
+  const fix =
+    kind === 'audiobookshelf'
+      ? ` If it opens fine in another tab, Audiobookshelf is refusing this page: in Audiobookshelf go to Settings, add ${origin} under Allowed CORS Origins, save, and test again.`
+      : ` If it opens fine in another tab, the server isn't allowing requests from ${origin}; allow that origin in its CORS settings.`;
+  return `${msg} The browser couldn't get a reply. Either the server isn't reachable from here (open its address in another tab to check), or it doesn't allow requests from this page.${fix}`;
+}
