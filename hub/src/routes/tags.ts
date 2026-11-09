@@ -5,7 +5,7 @@ import { audit } from '../audit.ts';
 import { tx, type Db } from '../db.ts';
 import { clientIp, HttpError, need, str } from '../http.ts';
 import { getScanSettings } from '../library.ts';
-import { findMatches, libraryFile, readTags, relPath, TAG_KEYS, writeTags, type Tags } from '../tags.ts';
+import { canWrite, findMatches, libraryFile, readTags, relPath, TAG_KEYS, writeTags, type Tags } from '../tags.ts';
 import { numberedTitle } from '../trackTitles.ts';
 import { libraryAdmin } from '../libraryAdmin.ts';
 import { catalogWrote } from '../catalog.ts';
@@ -50,7 +50,7 @@ export async function saveTagChanges(db: Db, musicDir: string, plan: { file: str
       const cur = await readTags(p.file);
       const after: Tags = {}, before: Tags = {};
       for (const k of TAG_KEYS) {
-        if (p.tags[k] === undefined || (p.tags[k] ?? '') === (cur[k] ?? '')) continue;
+        if (p.tags[k] === undefined || (p.tags[k] ?? '') === (cur[k] ?? '') || !canWrite(p.file, k)) continue;
         after[k] = p.tags[k];
         before[k] = cur[k] ?? '';
       }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { artistBio, type ArtistBio } from '../lib/artistInfo';
+import { useArtistMeta } from '../lib/artistMeta';
 import { useFeature } from '../lib/features';
 import type { HubTourEvent } from '../sources/hub';
 import { hubClient, useHub } from '../store/hub';
@@ -27,19 +28,22 @@ export function ArtistAbout({ name }: { name: string }) {
     bio.began ? `${bio.type === 'Person' ? 'Born' : 'Started'} ${bio.began.slice(0, 4)}` : undefined,
     bio.ended ? `${bio.type === 'Person' ? 'Died' : 'Ended'} ${bio.ended.slice(0, 4)}` : undefined,
   ].filter(Boolean) : [];
-  const hasBio = !!bio && (!!bio.summary || facts.length > 0 || bio.members.length > 0);
+  // a biography an admin wrote in Edit artist comes first, and shows even with artist info turned off
+  const own = useArtistMeta(name)?.bio;
+  const summary = own || bio?.summary;
+  const hasBio = !!own || (info && !!bio && (!!bio.summary || facts.length > 0 || bio.members.length > 0));
 
   return (
     <>
-      {info && hasBio && (
+      {hasBio && (
         <section className="artist-about">
           <h2>About</h2>
-          {bio.summary && <>
-            <p className={`bio ${more ? '' : 'short'}`}>{bio.summary}</p>
-            {bio.summary.length > 420 && <button className="link small" onClick={() => setMore(!more)}>{more ? 'Less' : 'Read more'}</button>}
+          {summary && <>
+            <p className={`bio ${more ? '' : 'short'}`}>{summary}</p>
+            {summary.length > 420 && <button className="link small" onClick={() => setMore(!more)}>{more ? 'Less' : 'Read more'}</button>}
           </>}
-          {facts.length > 0 && <div className="facts muted small">{facts.map((f) => <span key={f}>{f}</span>)}</div>}
-          {bio.members.length > 0 && (
+          {bio && facts.length > 0 && <div className="facts muted small">{facts.map((f) => <span key={f}>{f}</span>)}</div>}
+          {bio && bio.members.length > 0 && (
             <div className="members small">
               <b>Members:</b>{' '}
               {bio.members.slice(0, 16).map((m, i) => (
@@ -47,13 +51,13 @@ export function ArtistAbout({ name }: { name: string }) {
               ))}
             </div>
           )}
-          {(bio.links.length > 0 || bio.wikipedia) && (
+          {bio && (bio.links.length > 0 || bio.wikipedia) && (
             <div className="row gap wrap small">
               {bio.links.map((l) => <a key={l.url} className="chip" href={l.url} target="_blank" rel="noreferrer">{l.label}</a>)}
               {bio.wikipedia && <a className="chip" href={bio.wikipedia} target="_blank" rel="noreferrer">Wikipedia</a>}
             </div>
           )}
-          <p className="muted small credit-src">From Wikipedia and MusicBrainz.</p>
+          {bio && <p className="muted small credit-src">{own ? 'Facts and links from MusicBrainz.' : 'From Wikipedia and MusicBrainz.'}</p>}
         </section>
       )}
       <TourDates name={name} />

@@ -82,6 +82,9 @@ export class NavidromeSource implements MusicSource {
     addedAt: a.created ? Date.parse(a.created) : undefined,
     // OpenSubsonic lists every genre; plain Subsonic gives one tag, which may hold several ("Pop; Dance")
     genres: splitGenres(Array.isArray(a.genres) && a.genres.length ? a.genres.map((g: { name?: string }) => g.name ?? '') : a.genre),
+    // OpenSubsonic: the release type tags (lib/releaseKind.ts splits an artist's albums into Albums / Singles & EPs)
+    releaseTypes: Array.isArray(a.releaseTypes) && a.releaseTypes.length ? a.releaseTypes.map(String) : undefined,
+    compilation: a.isCompilation === true || undefined,
   });
 
   private artist = (a: any): Artist => ({

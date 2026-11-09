@@ -15,6 +15,7 @@ import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { familyRoutes } from './routes/families.ts';
 import { artworkRoutes } from './routes/artwork.ts';
+import { artistMetaRoutes } from './routes/artistMeta.ts';
 import { playlistCoverRoutes } from './routes/playlistCovers.ts';
 import { authRoutes } from './routes/auth.ts';
 import { listeningRoutes } from './routes/listening.ts';
@@ -256,6 +257,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   kidRoutes(app, ctx);
   ratingRoutes(app, ctx);
   artworkRoutes(app, ctx);
+  artistMetaRoutes(app, ctx);
   playlistCoverRoutes(app, ctx);
   listeningRoutes(app, ctx);
   remoteRoutes(app, ctx);

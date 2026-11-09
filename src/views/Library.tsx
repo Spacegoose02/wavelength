@@ -19,6 +19,10 @@ import { cleanSide, hasBoth, preferredRef, useVersionHidden, useVersionPref, ver
 import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { deleteAlbum, deleteAlbums } from '../lib/deleteAlbums';
 import { navidromeRefs, planAlbums, planArtists } from '../lib/merge';
+import { useArtistMeta } from '../lib/artistMeta';
+import { shelves } from '../lib/releaseKind';
+import { EditAlbumButton } from './AlbumEditor';
+import { EditArtistButton } from './ArtistEditor';
 import { confirmMerge, forgetAlbums, forgetArtists, MergeIntoButton } from '../components/MergeInto';
 import { SelectBar, useSelection, type Selection } from '../components/Selection';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
@@ -388,6 +392,9 @@ export function ArtistView({ artist }: { artist: Artist }) {
     };
   }, [artist]);
   const appearsOn = useAppearsOn(artist, albums);
+  // Albums / Singles & EPs / Compilations, in the order Edit artist → Advanced sets (lib/releaseKind.ts)
+  const albumSort = useArtistMeta(artist.name)?.albumSort ?? '';
+  const albumShelves = useMemo(() => shelves(albums ?? [], albumSort), [albums, albumSort]);
   const hidden = useHidden();
   useArtworkList();
   const [busy, setBusy] = useState<string>();
@@ -418,7 +425,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
             <KidFlagButton kind="artist" artist={artist.name} />
             <ArtworkButton kind="artist" artist={artist.name} current={artistArt(artist)} />
             {canEditTags && (artist.refs ?? [artist]).some((r) => cfgOf(r.sourceId)?.kind === 'navidrome') && (
-              <button className="btn" title="Rename this artist, or merge two spellings, in all their songs' tags" onClick={() => useUi.getState().go({ view: 'artistTags', artist })}>Edit artist</button>
+              <EditArtistButton artist={artist} picture={artistArt(artist)} />
             )}
             {canEditTags && !kid && navidromeRefs(artist).length > 0 && <MergeIntoButton kind="artist" item={artist} />}
           </div>
@@ -437,12 +444,15 @@ export function ArtistView({ artist }: { artist: Artist }) {
         </SelectBar>
       )}
       <ErrorList errors={errors} />
-      {!albums ? <Spinner /> : (
-        <Grid>{albums.map((a) => (
-          <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
-            selected={sel.isPicked(a)} badge={sel.badge(a)} />
-        ))}</Grid>
-      )}
+      {!albums ? <Spinner /> : albumShelves.map((shelf) => (
+        <section key={shelf.title} className="artist-shelf">
+          {albumShelves.length > 1 && <h2>{shelf.title}</h2>}
+          <Grid>{shelf.albums.map((a) => (
+            <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
+              selected={sel.isPicked(a)} badge={sel.badge(a)} />
+          ))}</Grid>
+        </section>
+      ))}
       {featured.length > 0 && (
         <section className="appears-on">
           <h2>Appears On</h2>
@@ -587,7 +597,7 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
             )}
             <ArtworkButton kind="album" artist={album.artist} album={album.title} current={art} />
             {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && (
-              <button className="btn" title="Fix this album's tags in its files" onClick={() => useUi.getState().go({ view: 'tags', album: { ...ref, refs: [ref] } })}>Edit tags</button>
+              <EditAlbumButton album={{ ...ref, refs: [ref] }} cover={art} />
             )}
             {canEditTags && !kid && navidromeRefs(album).length > 0 && <MergeIntoButton kind="album" item={album} />}
             {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && <DeleteAlbumButton album={ref} />}

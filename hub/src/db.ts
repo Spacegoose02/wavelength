@@ -645,6 +645,17 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   ALTER TABLE catalog_songs ADD COLUMN created INTEGER;
   UPDATE catalog_songs SET created = mtime, mtime = 0;
   `,
+  `
+  -- What an admin sets on an artist that has no tag in the music files (routes/artistMeta.ts, the app's Edit
+  -- artist): a biography shown instead of Wikipedia's, and how the artist page orders their albums.
+  CREATE TABLE artist_meta (
+    name       TEXT PRIMARY KEY COLLATE NOCASE,
+    bio        TEXT NOT NULL DEFAULT '',
+    album_sort TEXT NOT NULL DEFAULT '' CHECK (album_sort IN ('', 'newest', 'oldest', 'title')),
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
