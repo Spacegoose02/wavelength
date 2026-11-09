@@ -23,32 +23,53 @@ export function userDataImported(db: Db, userId: number): boolean {
   return !!db.prepare('SELECT 1 FROM hub_settings WHERE key = ?').get(importedKey(userId));
 }
 
+/**
+ * Each person's hearts and plays as last read, so browsing doesn't read them all again on every call (about 10 ms
+ * for someone with thousands of plays). Dropped whenever they change here; the maps handed out are only read.
+ */
+const kept = new WeakMap<Db, Map<number, { stars?: Starred; plays?: Plays }>>();
+const keptFor = (db: Db, userId: number) => {
+  let m = kept.get(db);
+  if (!m) kept.set(db, (m = new Map()));
+  let k = m.get(userId);
+  if (!k) m.set(userId, (k = {}));
+  return k;
+};
+const changed = (db: Db, userId: number) => kept.get(db)?.delete(userId);
+
 export function starredOf(db: Db, userId: number): Starred {
+  const k = keptFor(db, userId);
+  if (k.stars) return k.stars;
   const rows = db.prepare('SELECT item_id, starred_at FROM user_stars WHERE user_id = ?').all(userId) as { item_id: string; starred_at: number }[];
-  return new Map(rows.map((r) => [r.item_id, new Date(r.starred_at).toISOString()]));
+  return (k.stars = new Map(rows.map((r) => [r.item_id, new Date(r.starred_at).toISOString()])));
 }
 
 export function playsOf(db: Db, userId: number): Plays {
+  const k = keptFor(db, userId);
+  if (k.plays) return k.plays;
   const rows = db.prepare('SELECT song_id, play_count, last_played, rating FROM user_song_plays WHERE user_id = ?').all(userId) as { song_id: string; play_count: number; last_played: number | null; rating: number }[];
-  return new Map(rows.map((r) => [r.song_id, { count: r.play_count, last: r.last_played, rating: r.rating }]));
+  return (k.plays = new Map(rows.map((r) => [r.song_id, { count: r.play_count, last: r.last_played, rating: r.rating }])));
 }
 
 export function star(db: Db, userId: number, ids: string[], on: boolean, at = Date.now()) {
   const add = db.prepare('INSERT OR IGNORE INTO user_stars (user_id, item_id, starred_at) VALUES (?, ?, ?)');
   const del = db.prepare('DELETE FROM user_stars WHERE user_id = ? AND item_id = ?');
   tx(db, () => ids.forEach((id) => (on ? add.run(userId, id, at) : del.run(userId, id))));
+  changed(db, userId);
 }
 
 /** A finished play (Subsonic `scrobble` with submission): one more play, played at `at`. */
 export function played(db: Db, userId: number, songId: string, at = Date.now()) {
   db.prepare(`INSERT INTO user_song_plays (user_id, song_id, play_count, last_played) VALUES (?, ?, 1, ?)
     ON CONFLICT (user_id, song_id) DO UPDATE SET play_count = play_count + 1, last_played = MAX(COALESCE(last_played, 0), excluded.last_played)`).run(userId, songId, at);
+  changed(db, userId);
 }
 
 /** 0 clears it; 1 to 5 stars. */
 export function rate(db: Db, userId: number, songId: string, rating: number) {
   db.prepare(`INSERT INTO user_song_plays (user_id, song_id, rating) VALUES (?, ?, ?)
     ON CONFLICT (user_id, song_id) DO UPDATE SET rating = excluded.rating`).run(userId, songId, Math.max(0, Math.min(5, Math.round(rating))));
+  changed(db, userId);
 }
 
 const md5 = (s: string) => createHash('md5').update(s).digest('hex');
@@ -101,6 +122,7 @@ export async function importUserData(db: Db, userId: number, nd: NavidromeLogin)
     for (const p of plays) addPlay.run(userId, p.id, p.count, p.last, p.rating);
     db.prepare('INSERT INTO hub_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value').run(importedKey(userId), JSON.stringify({ at: Date.now(), stars: starred.length, plays: plays.length }));
   });
+  changed(db, userId);
   return { stars: starred.length, plays: new Set(plays.map((p) => p.id)).size };
 }
 

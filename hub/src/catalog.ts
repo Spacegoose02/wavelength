@@ -58,9 +58,28 @@ export interface NavidromeFile {
 }
 
 let version = 0;
-/** Goes up whenever catalog_songs changes, so copies of it in memory (subsonicCatalog.ts) know to rebuild. */
+/** what each recent version changed: some files (by path), or null for anything */
+let changes: { version: number; paths: string[] | null }[] = [];
+/** Goes up whenever catalog_songs changes, so copies of it in memory (subsonicCatalog.ts) know to update. */
 export const catalogVersion = () => version;
-export const catalogChanged = () => void version++;
+/** catalog_songs changed: these files only (an empty list changes nothing), or anything when no list is given. */
+export const catalogChanged = (paths?: string[]) => {
+  if (paths && !paths.length) return;
+  version++;
+  changes.push({ version, paths: paths ?? null });
+  if (changes.length > 50) changes = changes.slice(-50);
+};
+/**
+ * The files changed since version `since`, so a copy in memory can update just those (a tag edit, a scan that read a
+ * few files); null when it has to be built again (too many, a change of anything, or too long ago).
+ */
+export function catalogChangesSince(since: number, most = 500): string[] | null {
+  if (since === version) return [];
+  const after = changes.filter((c) => c.version > since);
+  if (!after.length || after[0].version !== since + 1 || after.some((c) => !c.paths)) return null;
+  const paths = new Set(after.flatMap((c) => c.paths!));
+  return paths.size > most ? null : [...paths];
+}
 
 export interface CatalogStatus {
   /** why it can't run, when it can't */
@@ -228,7 +247,7 @@ export function catalogWrote(db: Db, rel: string, tags: Tags) {
     }
   }
   db.prepare(`UPDATE catalog_songs SET ${sets.join(', ')} WHERE path = ?`).run(...args, rel);
-  catalogChanged();
+  catalogChanged([rel]);
 }
 
 /** A song as Library care, the tag editor and the genre review list them (Navidrome ids, path in the music folder). */
@@ -546,7 +565,8 @@ export class Catalog {
       const del = this.db.prepare('DELETE FROM catalog_songs WHERE path = ?');
       tx(this.db, () => gone.forEach((p) => del.run(p)));
     }
-    catalogChanged();
+    // only what this walk read or dropped: a walk that found nothing new leaves the Hub's answers as they are
+    catalogChanged([...todo.map(([p]) => p), ...(dropGone ? gone : [])]);
     this.lastChanges = { added, changed: todo.length - added, removed: dropGone ? gone.length : 0 };
     if (!dropGone && gone.length) throw new Error(`The music folder has only ${found.size} of the ${known.size} files the catalog knows. Is the share mounted? Nothing was removed.`);
   }
@@ -580,6 +600,7 @@ export class Catalog {
     const fileTails = new Map<string, number>();
     for (const p of files) fileTails.set(tail(p), (fileTails.get(tail(p)) ?? 0) + 1);
     const set = this.db.prepare('UPDATE catalog_songs SET nd_id = ?, nd_album_id = ?, nd_artist_id = ?, nd_album_artist_id = ? WHERE path = ?');
+    const relinked: string[] = [];
     tx(this.db, () => {
       for (const r of rows) {
         const s = byPath.get(r.path) ?? (fileTails.get(tail(r.path)) === 1 ? byTail.get(tail(r.path)) ?? undefined : undefined);
@@ -587,10 +608,13 @@ export class Catalog {
         const album = s?.albumId ?? null;
         const artist = s?.artistId ?? null;
         const albumArtist = (s && real?.get(s.id)?.albumArtistId) || null;
-        if (id !== r.nd_id || album !== r.nd_album_id || artist !== r.nd_artist_id || albumArtist !== r.nd_album_artist_id) set.run(id, album, artist, albumArtist, r.path);
+        if (id !== r.nd_id || album !== r.nd_album_id || artist !== r.nd_artist_id || albumArtist !== r.nd_album_artist_id) {
+          set.run(id, album, artist, albumArtist, r.path);
+          relinked.push(r.path);
+        }
       }
     });
-    catalogChanged();
+    catalogChanged(relinked);
     const linked = new Set((this.db.prepare('SELECT nd_id FROM catalog_songs WHERE nd_id IS NOT NULL').all() as { nd_id: string }[]).map((r) => r.nd_id));
     this.missing = songs.filter((x) => !linked.has(x.id)).slice(0, 100).map((x) => ({
       title: x.title ?? '',
