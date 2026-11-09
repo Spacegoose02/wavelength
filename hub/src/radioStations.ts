@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { navidromeOff } from './services.ts';
 import type { Db } from './db.ts';
 import { HttpError } from './http.ts';
 import { getScanSettings, navidrome } from './library.ts';
@@ -70,7 +71,7 @@ export function deleteStation(db: Db, id: string) {
  */
 export async function importFromNavidrome(db: Db, key: Buffer): Promise<{ added: number; total: number } | null> {
   const s = getScanSettings(db, key);
-  if (!s) return null;
+  if (!s || navidromeOff(db)) return null;
   const r = await navidrome(s, 'getInternetRadioStations');
   const list = (r?.internetRadioStations?.internetRadioStation ?? []) as { id?: unknown; name?: unknown; streamUrl?: unknown; homePageUrl?: unknown }[];
   const have = listStations(db);

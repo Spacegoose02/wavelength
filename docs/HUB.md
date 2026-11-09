@@ -852,6 +852,39 @@ and hands out ids.
   made on the Hub and sent on to Navidrome in the background. Only the owner may change a playlist. Covers (`pl-`
   ids) still come from Navidrome.
 
+### Without Navidrome
+
+Phase 6: **Turn Navidrome off** on the Music catalog card (`PUT /api/admin/catalog/navidrome { off: true }`,
+`catalog.standalone`, audited `catalog.navidrome_off`). Navidrome support stays for anyone who hosts their own; this is
+one household's switch, and `{ off: false }` lets Navidrome answer again.
+
+- **Before it flips**, while Navidrome can still be asked, the Hub copies what it doesn't have yet: every person's
+  hearts, plays, ratings and playlists (with their own Navidrome login, `navidromeLogins`) and the radio stations.
+  Anyone whose copy fails is listed (`notCopied`) and Navidrome stays on, unless the admin sends `force: true` ("Turn
+  it off anyway"). The catalog must be usable (scanned and matched to Navidrome's ids) first.
+- **Ids.** Navidrome's ids stay. A file Navidrome never saw gets a song id made from its path (`h` + 20 hex digits).
+  Songs are grouped into albums by album artist, title and year and into artists by name, as Navidrome's scan did,
+  and each group keeps the id most of its songs already have (`Catalog.giveIds`, after every scan): renaming an
+  album keeps its id, Merge (same title, album artist and year) folds the smaller album into the bigger one, two
+  releases with the same title but different years stay apart, and a new song on a known album lands on it. Albums
+  Navidrome split for another reason (same title, artist and year) become one.
+- **Every device goes through the Hub** (`navidromeOff` in services.ts): `/api/me/services` hands each device a relay
+  login whether or not the person has a Navidrome account, and nobody needs one any more (creating one is refused).
+- **The relay answers everything itself** and never calls Navidrome: browsing, search, covers (a playlist's is its
+  first song's, an artist's their latest album's), streaming, hearts, plays, ratings, playlists (new ones get a UUID),
+  radio stations, play history (Navidrome's native `/api/song` shape, from the Hub's plays), plus `ping`,
+  `getLicense`, `getMusicFolders`, `getOpenSubsonicExtensions`, `getScanStatus`, `startScan` (a catalog scan),
+  `getUser`, `getNowPlaying` (from scrobbles without submission), `getIndexes`, `getMusicDirectory`, `getAlbumList`,
+  `search2`, `getTopSongs` (the artist's songs this person played most), `getArtistInfo2` (artists sharing the most
+  genres, no biography), `getAlbumInfo2`, `getSimilarSongs2` (sound-alike analysis), and empty play queues,
+  bookmarks and lyrics (the app has two more lyric sources). Anything else is error 70. Answers are JSON whatever `f`
+  asks for.
+- **The Hub's own jobs** read the catalog instead: the library index (Search, Discover, Jam) lists it, sound-alike
+  analysis needs no Navidrome login, Library care and the editors use only the catalog, and rescans after downloads,
+  tag edits and deletes are catalog scans (`Library.ownScan`).
+
+Going back to Navidrome: it never saw what changed while it was off (hearts, plays, playlists, new songs' ids).
+
 **Keeping it quick.** The Hub zips JSON answers over 1 KB for clients that ask (`hub/src/compress.ts`, Brotli at a fast
 level, else gzip, off the main thread); the app asks through its HTTP plugin's `gzip` feature. A page of 500 albums is
 about 155 KB plain and a tenth of that zipped. The in-memory copy of the catalog behind the Hub's answers is updated
@@ -1083,6 +1116,7 @@ with a 4xx status.
 | `GET /api/radio/stations` | signed in | internet radio stations on the Hub: `{ imported, importedAt, stations: [{ id, name, streamUrl, homePageUrl }] }` |
 | `POST /api/admin/radio/stations` · `PUT /api/admin/radio/stations/:id` · `DELETE /api/admin/radio/stations/:id` | `library.edit` | add, change (`{ name?, streamUrl?, homePageUrl? }`) or delete a station (audited `radio.*`) |
 | `POST /api/admin/radio/import` | `library.edit` | copy Navidrome's stations again; ones the Hub has (same id or stream link) are left alone |
+| `PUT /api/admin/catalog/navidrome` | `server.view` | `{ off, force? }`: turn Navidrome off for this household after copying everyone's data from it (see "Without Navidrome"), or back on; answers with the status plus `copied` and `notCopied` |
 | `PUT /api/admin/catalog` | `server.view` | `{ serve?, stream?, userData? }`: the Hub answers browsing, search and covers, and plays songs, for devices that go through it (audited `catalog.serve`, `catalog.stream`); answers with the status |
 | `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |
 | `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |

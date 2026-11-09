@@ -309,6 +309,7 @@ function MusicCatalog() {
   const c = hubClient();
   const [st, setSt] = useState<HubCatalogStatus>();
   const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
   const load = () => c?.catalog().then(setSt).catch(() => undefined);
   useEffect(() => {
     load();
@@ -336,13 +337,25 @@ function MusicCatalog() {
       setMsg(String((e as Error).message ?? e));
     }
   };
+  const navidrome = async (off: boolean, force = false) => {
+    if (off && !force && !window.confirm('Turn Navidrome off? Everyone\'s hearts, plays and playlists are copied to the Hub first, then every device uses only the Hub.')) return;
+    setMsg('');
+    setBusy(true);
+    try {
+      setSt(await c!.setNavidromeOff(off, force));
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  };
   const p = st.progress;
   const sum = st.summary;
   return (
     <section>
       <h2>Music catalog</h2>
       <p className="muted small">
-        The Hub reads your music folder itself and keeps its own list of every song, with its tags, on the way to becoming
+        {st.standalone ? 'The Hub is your music server. ' : ''}The Hub reads your music folder itself and keeps its own list of every song, with its tags, on the way to becoming
         your music server. Navidrome still plays everything; this list is matched to Navidrome's songs. Once nearly all of
         them match, Library care, the tag editors, the genre review and Delete album read this list instead of asking
         Navidrome. The Hub looks for changes every hour and after every Navidrome scan.
@@ -367,7 +380,7 @@ function MusicCatalog() {
             {msg && <span className="errors small">{msg}</span>}
           </div>
           {st.lastError && <p className="kid-blocked small">{st.lastError}</p>}
-          {st.serve !== undefined && (
+          {st.serve !== undefined && !st.standalone && (
             <>
               <label className="check" style={{ margin: '12px 0 4px' }} title="Albums, artists, genres, search and covers come from the Hub; playing, hearts and playlists still go to Navidrome">
                 <span className="switch"><input type="checkbox" checked={st.serve} onChange={(e) => serve({ serve: e.target.checked })} /><span /></span>
@@ -382,7 +395,7 @@ function MusicCatalog() {
               </p>
             </>
           )}
-          {st.stream !== undefined && (
+          {st.stream !== undefined && !st.standalone && (
             <>
               <label className="check" style={{ margin: '12px 0 4px' }} title="Songs are read straight from the music folder; hearts, playlists and play counts still go to Navidrome">
                 <span className="switch"><input type="checkbox" checked={st.stream} onChange={(e) => serve({ stream: e.target.checked })} /><span /></span>
@@ -397,7 +410,7 @@ function MusicCatalog() {
               </p>
             </>
           )}
-          {st.userData !== undefined && (
+          {st.userData !== undefined && !st.standalone && (
             <>
               <label className="check" style={{ margin: '12px 0 4px' }} title="Hearts, play counts, ratings and playlists are kept by the Hub; Navidrome gets every change too">
                 <span className="switch"><input type="checkbox" checked={st.userData} onChange={(e) => serve({ userData: e.target.checked })} /><span /></span>
@@ -410,6 +423,37 @@ function MusicCatalog() {
                 complete. Recently played, Most played and Starred lists come from the Hub while the Hub answers browsing.
               </p>
             </>
+          )}
+          {st.standalone !== undefined && (
+            <div style={{ marginTop: 16 }}>
+              <h3 className="small">Navidrome</h3>
+              {st.standalone ? (
+                <>
+                  <p className="small"><b>Navidrome is off.</b> The Hub is your music server: it scans the music folder, plays the songs and keeps everyone's hearts, plays and playlists. New songs get ids from the Hub.</p>
+                  <p className="muted small">Turning Navidrome back on lets it answer again, but it won't know about hearts, plays, playlists or songs added while it was off.</p>
+                  <button className="btn" onClick={() => navidrome(false)}>Turn Navidrome back on</button>
+                </>
+              ) : (
+                <>
+                  <p className="muted small">
+                    When the Hub does everything above, Navidrome can be switched off. Turning it off first copies everyone's
+                    hearts, plays, ratings and playlists (and the radio stations) from Navidrome, then every device talks only to
+                    the Hub. Smart playlists stay behind. You can stop the Navidrome container afterwards; nothing changes for
+                    other households that use their own Navidrome.
+                  </p>
+                  <button className="btn" disabled={!st.inUse || busy} title={st.inUse ? undefined : 'Scan first, so the catalog matches Navidrome\'s songs'} onClick={() => navidrome(true)}>
+                    {busy ? 'Copying everyone from Navidrome…' : 'Turn Navidrome off'}
+                  </button>
+                  {!!st.notCopied?.length && (
+                    <div className="kid-blocked small" style={{ marginTop: 8 }}>
+                      <p>Some of it couldn't be copied, so Navidrome is still on:</p>
+                      <ul>{st.notCopied.map((f) => <li key={f.user}><b>{f.user}</b>: {f.error}</li>)}</ul>
+                      <button className="btn" onClick={() => navidrome(true, true)}>Turn it off anyway</button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
           {!!st.missing?.length && (
             <details className="small">

@@ -1,4 +1,5 @@
 import { SonicWorker } from './sonic/worker.ts';
+import { answer } from './subsonicCatalog.ts';
 import { compressReplies } from './compress.ts';
 import { sonicRoutes } from './routes/sonic.ts';
 import { tourRoutes, videoRoutes } from './routes/tours.ts';
@@ -171,7 +172,10 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.videos = new Videos(opts.videoSearch ?? ((q, n) => ctx.ytdlp.search(q, n)));
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
   ctx.lyrics = new LyricsCache(db);
-  ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => ctx.library.status().lastScanAt);
+  // with Navidrome off the index lists the catalog, again after each of its scans
+  ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => (ctx.catalog.standalone() ? ctx.catalog.lastScan() : ctx.library.status().lastScanAt));
+  ctx.libraryIndex.fromCatalog = () => (ctx.catalog.standalone() && ctx.catalog.usable() ? (m, p) => answer(db, m, p, new Map())?.['subsonic-response'] : null);
+  ctx.sonic.standalone = () => ctx.catalog.standalone();
   // one listing of Navidrome for the whole Hub: the catalog and sound-alike analysis take the library index's
   // sound-alike analysis reads the files: their real paths from the catalog, Subsonic's (often made up) otherwise
   ctx.sonic.listSongs = async () => {
@@ -182,7 +186,9 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.catalog = new Catalog(db, config.musicDir, config.navidromeMusicDir);
   ctx.catalog.listNavidrome = () => ctx.libraryIndex.navidromeSongs();
   ctx.catalog.listRealPaths = () => navidromeRealPaths(db, config.secretKey);
-  ctx.catalog.scannedAt = () => ctx.library.status().lastScanAt;
+  // Navidrome's scans prompt the catalog's; with Navidrome off the catalog's scan is the only one
+  ctx.catalog.scannedAt = () => (ctx.catalog.standalone() ? null : ctx.library.status().lastScanAt);
+  ctx.library.ownScan = () => (ctx.catalog.standalone() ? () => ctx.catalog.scan() : null);
   if (opts.watchLibrary ?? true) ctx.catalog.start();
   app.addHook('onClose', async () => ctx.catalog.stop());
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);

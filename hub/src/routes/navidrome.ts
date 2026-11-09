@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need } from '../http.ts';
-import { serviceForHub, setServiceUser } from '../services.ts';
+import { navidromeOff, serviceForHub, setServiceUser } from '../services.ts';
 import { getUser } from '../users.ts';
 
 /**
@@ -130,6 +130,7 @@ export function navidromeRoutes(app: FastifyInstance, { db, config }: Ctx) {
     if (!s || s.kind !== 'navidrome') throw new HttpError(404, 'No such Navidrome server');
     const target = getUser(db, Number(req.params.userId));
     if (!target) throw new HttpError(404, 'No such user');
+    if (navidromeOff(db)) throw new HttpError(409, 'Navidrome is off: the Hub serves the music itself, so nobody needs a Navidrome account');
     if (!s.secrets.adminUsername || !s.secrets.adminPassword) throw new HttpError(409, 'Add the Navidrome admin login first');
     const nd = await navidromeAdmin(s.url, s.secrets.adminUsername, s.secrets.adminPassword);
     const password = randomBytes(18).toString('base64url');
