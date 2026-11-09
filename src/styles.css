@@ -2824,3 +2824,19 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
 .edit-dialog .art-dialog.inline .art-results { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
 .edit-dialog-foot .btn.ghost { white-space: nowrap; }
 .art-results > p { grid-column: 1 / -1; }
+
+/* Smart playlists → Advanced (components/RuleBuilder.tsx): Plex-style rule groups */
+.rule-builder { display: flex; flex-direction: column; gap: 8px; }
+.rule-group { display: flex; flex-direction: column; gap: 8px; }
+.rule-group.nested { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin-left: 4px; }
+.rule-group-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.rule-row { display: grid; grid-template-columns: minmax(150px, 1.2fr) minmax(120px, 1fr) minmax(140px, 1.4fr) auto; gap: 8px; align-items: center; }
+.rule-row > * { min-width: 0; }
+.rule-days { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.rule-days input { width: 90px; }
+.rule-limit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.rule-limit input { width: 90px; }
+@media (max-width: 720px) {
+  .rule-row { grid-template-columns: 1fr 1fr auto; }
+  .rule-row > :nth-child(3) { grid-column: 1 / 3; }
+}

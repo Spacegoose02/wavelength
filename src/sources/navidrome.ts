@@ -86,6 +86,11 @@ export class NavidromeSource implements MusicSource {
     // OpenSubsonic: the release type tags (lib/releaseKind.ts splits an artist's albums into Albums / Singles & EPs)
     releaseTypes: Array.isArray(a.releaseTypes) && a.releaseTypes.length ? a.releaseTypes.map(String) : undefined,
     compilation: a.isCompilation === true || undefined,
+    plays: Number(a.playCount) || undefined,
+    playedAt: typeof a.played === 'string' && a.played ? Date.parse(a.played) || undefined : undefined,
+    rating: Number(a.userRating) || undefined,
+    starred: a.starred ? true : undefined,
+    labels: Array.isArray(a.recordLabels) && a.recordLabels.length ? a.recordLabels.map((l: { name?: string }) => l.name ?? '').filter(Boolean) : undefined,
   });
 
   private artist = (a: any): Artist => ({
@@ -182,10 +187,13 @@ export class NavidromeSource implements MusicSource {
 
   /** An album's songs with what smart playlists filter on (lib/smartPlaylists.ts, rules on styles, moods or collections). */
   async albumSongsWithFacts(albumId: string): Promise<{ track: Track; facts: SongFacts }[]> {
-    return this.withFacts((await this.call('getAlbum', { id: albumId })).album?.song ?? []);
+    const album = (await this.call('getAlbum', { id: albumId })).album;
+    // the record label is the album's (OpenSubsonic recordLabels), not each song's
+    const label = Array.isArray(album?.recordLabels) ? album.recordLabels.map((l: { name?: string }) => l.name).filter(Boolean).join('; ') : undefined;
+    return this.withFacts(album?.song ?? [], label || undefined);
   }
 
-  private withFacts(raw: any[]): { track: Track; facts: SongFacts }[] {
+  private withFacts(raw: any[], label?: string): { track: Track; facts: SongFacts }[] {
     const time = (v: unknown) => (typeof v === 'string' && v ? Date.parse(v) || undefined : undefined);
     return raw.map((s) => ({
       track: this.track(s),
@@ -197,6 +205,10 @@ export class NavidromeSource implements MusicSource {
         addedAt: time(s.created),
         year: Number(s.year) || undefined,
         genre: typeof s.genre === 'string' ? s.genre : Array.isArray(s.genres) ? s.genres.map((g: { name: string }) => g.name).join('; ') : undefined,
+        format: typeof s.suffix === 'string' ? s.suffix.toLowerCase() : undefined,
+        bitRate: Number(s.bitRate) || undefined,
+        label,
+        path: typeof s.path === 'string' ? s.path : undefined,
       },
     }));
   }

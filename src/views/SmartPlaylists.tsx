@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { describe, MOODS, newSmartPlaylist, smartTracks, type SmartPlaylist } from '../lib/smartPlaylists';
+import { advancedRules, describe, MOODS, newSmartPlaylist, smartTracks, type SmartPlaylist } from '../lib/smartPlaylists';
+import { SORTS, type SortId } from '../lib/smartRules';
+import { RuleBuilder } from '../components/RuleBuilder';
 import { useFeature } from '../lib/features';
 import { useHub } from '../store/hub';
 import { sourceFor } from '../sources/registry';
@@ -87,17 +89,83 @@ function SmartEditor({ initial, onDone }: { initial: SmartPlaylist; onDone: () =
     </div>
   );
   const num = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
-  const save = () => {
-    useSettings.getState().saveSmartPlaylist({
-      ...p,
-      name: p.name.trim() || 'Smart playlist',
-      genres: genres.split(',').map((g) => g.trim()).filter(Boolean),
-      limit: Math.min(1000, Math.max(1, p.limit || 100)),
-    });
+  const [preview, setPreview] = useState<string>();
+  const saved = useSettings((st) => st.smartPlaylists.some((x) => x.id === initial.id));
+  const final = (): SmartPlaylist => ({
+    ...p,
+    name: p.name.trim() || 'Smart playlist',
+    genres: genres.split(',').map((g) => g.trim()).filter(Boolean),
+    limit: Math.min(1000, Math.max(1, p.limit || 100)),
+  });
+  const save = (asNew = false) => {
+    const out = final();
+    useSettings.getState().saveSmartPlaylist(asNew ? { ...out, id: newSmartPlaylist().id, name: `${out.name} (copy)` } : out);
     onDone();
   };
+  const tryIt = async () => {
+    setPreview('Finding songs…');
+    try {
+      const tracks = await smartTracks(final());
+      setPreview(tracks.length ? `${tracks.length} songs, like ${tracks.slice(0, 3).map((t) => `${t.title} (${t.artist})`).join(', ')}` : 'No songs match right now');
+    } catch (e) {
+      setPreview(String((e as Error).message ?? e));
+    }
+  };
+  const sound = sonic && (
+    <>
+      <div className="chips" aria-label="Sound">
+        <small className="muted">Sound:</small>
+        {MOODS.map((m) => (
+          <button type="button" key={m} className={`chip ${p.moods?.includes(m) ? 'on' : ''}`} onClick={() => setP({ ...p, moods: p.moods?.includes(m) ? p.moods.filter((x) => x !== m) : [...(p.moods ?? []), m] })}>{m}</button>
+        ))}
+      </div>
+      <div className="editor-grid">
+        <label>Tempo from (BPM)<input type="number" min={0} placeholder="any" value={p.minBpm ?? ''} onChange={(e) => setP({ ...p, minBpm: num(e.target.value) || undefined })} /></label>
+        <label>Tempo to (BPM)<input type="number" min={0} placeholder="any" value={p.maxBpm ?? ''} onChange={(e) => setP({ ...p, maxBpm: num(e.target.value) || undefined })} /></label>
+      </div>
+    </>
+  );
+  const advanced = !!p.rules;
+  const mode = (
+    <div className="chips" role="radiogroup" aria-label="Rules">
+      <button type="button" role="radio" aria-checked={!advanced} className={`chip ${advanced ? '' : 'on'}`} onClick={() => advanced && confirm('Go back to the simple rules? The advanced rules are dropped.') && setP({ ...p, rules: undefined, sort: undefined })}>Simple</button>
+      <button type="button" role="radio" aria-checked={advanced} className={`chip ${advanced ? 'on' : ''}`} onClick={() => !advanced && setP({ ...final(), rules: advancedRules(final()) })}>Advanced</button>
+    </div>
+  );
+  const buttons = (
+    <div className="row gap" style={{ flexWrap: 'wrap' }}>
+      <button className="btn primary">Save</button>
+      {saved && <button type="button" className="btn" onClick={() => save(true)}>Save as new</button>}
+      <button type="button" className="btn ghost" onClick={() => void tryIt()}>Try it</button>
+      <button type="button" className="btn ghost" onClick={onDone}>Cancel</button>
+      {preview && <span className="muted small">{preview}</span>}
+    </div>
+  );
+  if (p.rules) {
+    return (
+      <form className="editor" onSubmit={(e) => { e.preventDefault(); save(); }}>
+        {mode}
+        <div className="editor-grid">
+          <label className="span2">Name<input value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} /></label>
+        </div>
+        <RuleBuilder value={p.rules} onChange={(rules) => setP({ ...p, rules })} />
+        <div className="rule-limit">
+          <span>Limit to</span>
+          <input aria-label="Songs" type="number" min={1} max={1000} value={p.limit} onChange={(e) => setP({ ...p, limit: num(e.target.value) })} />
+          <span>songs, picked</span>
+          <select aria-label="Picked" value={p.sort ?? 'random'} onChange={(e) => setP({ ...p, sort: e.target.value as SortId })}>
+            {SORTS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+          </select>
+        </div>
+        {sound}
+        <p className="muted small">Album and artist rules are checked on the whole library; track rules (plays, ratings, format…) on the songs of up to 400 albums that fit the rest, read fresh each time. Styles, moods and collections are your Hub’s; ratings and plays are your own on Navidrome.</p>
+        {buttons}
+      </form>
+    );
+  }
   return (
     <form className="editor" onSubmit={(e) => { e.preventDefault(); save(); }}>
+      {mode}
       <div className="editor-grid">
         <label>Name<input value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} /></label>
         <label>Genres (comma between, empty = any)<input placeholder="Rap; Hip-Hop, R&B" value={genres} onChange={(e) => setGenres(e.target.value)} /></label>
@@ -121,26 +189,10 @@ function SmartEditor({ initial, onDone }: { initial: SmartPlaylist; onDone: () =
           {list('notCollections', 'Leave out collection', 'tag-collections', 'Christmas')}
         </div>
       )}
-      {sonic && (
-        <>
-          <div className="chips" aria-label="Sound">
-            <small className="muted">Sound:</small>
-            {MOODS.map((m) => (
-              <button type="button" key={m} className={`chip ${p.moods?.includes(m) ? 'on' : ''}`} onClick={() => setP({ ...p, moods: p.moods?.includes(m) ? p.moods.filter((x) => x !== m) : [...(p.moods ?? []), m] })}>{m}</button>
-            ))}
-          </div>
-          <div className="editor-grid">
-            <label>Tempo from (BPM)<input type="number" min={0} placeholder="any" value={p.minBpm ?? ''} onChange={(e) => setP({ ...p, minBpm: num(e.target.value) || undefined })} /></label>
-            <label>Tempo to (BPM)<input type="number" min={0} placeholder="any" value={p.maxBpm ?? ''} onChange={(e) => setP({ ...p, maxBpm: num(e.target.value) || undefined })} /></label>
-          </div>
-        </>
-      )}
+      {sound}
       <label className="check"><span className="switch"><input type="checkbox" checked={p.starred} onChange={(e) => setP({ ...p, starred: e.target.checked })} /><span /></span> Only songs I ♥</label>
       <p className="muted small">Genres match your tags, so tidy genres (Settings → Server → Genres) make these work best. Styles, moods and collections are your Hub’s (Edit album, or Import from Plex); with any of them, songs come from the albums that fit. Ratings and plays are your own on Navidrome.</p>
-      <div className="row gap">
-        <button className="btn primary">Save</button>
-        <button type="button" className="btn ghost" onClick={onDone}>Cancel</button>
-      </div>
+      {buttons}
     </form>
   );
 }

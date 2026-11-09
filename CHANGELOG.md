@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Advanced smart playlists.** Smart playlists get an Advanced mode like Plex's filter builder: nested "match
+  all / any" groups of field, operator and value rows over artist, album and track fields (genre, style, mood,
+  collection, year, decade, record label, album type, plays, rating, last played, added, format, bit rate,
+  folder…), a limit with a sort (random, most played, highest rated, newest…), **Try it** and **Save as new**
+  (`src/lib/smartRules.ts`, `src/components/RuleBuilder.tsx`). Navidrome albums now carry their plays, rating, ♥
+  and record labels.
 - **Save any filter as a smart playlist.** Browse pages and the Albums and Artists filters have **Save as smart
   playlist**: "80s", "Christmas" or "Southern Rap · Reckless" becomes a playlist that picks fresh songs each time.
   Smart playlists gain Styles, Moods, In collection and Leave out collection rules from the Hub's tags; with any of

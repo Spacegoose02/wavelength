@@ -135,6 +135,12 @@ export interface Album {
   releaseTypes?: string[];
   /** Navidrome: a compilation of several artists. */
   compilation?: boolean;
+  /** Navidrome: your plays, last play (ms), star rating and ♥ for the album, and its record labels (smart playlist rules, lib/smartRules.ts). */
+  plays?: number;
+  playedAt?: number;
+  rating?: number;
+  starred?: boolean;
+  labels?: string[];
   /** Same album found on several sources (first = preferred). */
   refs?: Album[];
 }
