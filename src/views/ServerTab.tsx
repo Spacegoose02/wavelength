@@ -319,10 +319,10 @@ function MusicCatalog() {
       setMsg(String((e as Error).message ?? e));
     }
   };
-  const serve = async (on: boolean) => {
+  const serve = async (b: { serve?: boolean; stream?: boolean }) => {
     setMsg('');
     try {
-      setSt(await c!.setCatalogServe(on));
+      setSt(await c!.setCatalogServe(b));
     } catch (e) {
       setMsg(String((e as Error).message ?? e));
     }
@@ -361,7 +361,7 @@ function MusicCatalog() {
           {st.serve !== undefined && (
             <>
               <label className="check" style={{ margin: '12px 0 4px' }} title="Albums, artists, genres, search and covers come from the Hub; playing, hearts and playlists still go to Navidrome">
-                <span className="switch"><input type="checkbox" checked={st.serve} onChange={(e) => serve(e.target.checked)} /><span /></span>
+                <span className="switch"><input type="checkbox" checked={st.serve} onChange={(e) => serve({ serve: e.target.checked })} /><span /></span>
                 <small>Hub answers browsing, search and covers (beta)</small>
               </label>
               <p className="muted small">
@@ -370,6 +370,21 @@ function MusicCatalog() {
                 Only devices that reach Navidrome through the Hub (kids, or everyone with “Send everyone through the Hub”) are
                 affected. Songs still play from Navidrome, by the same ids, and hearts and playlists stay there. A new download shows
                 up here after the catalog's next look, a few minutes after Navidrome's scan.
+              </p>
+            </>
+          )}
+          {st.stream !== undefined && (
+            <>
+              <label className="check" style={{ margin: '12px 0 4px' }} title="Songs are read straight from the music folder; hearts, playlists and play counts still go to Navidrome">
+                <span className="switch"><input type="checkbox" checked={st.stream} onChange={(e) => serve({ stream: e.target.checked })} /><span /></span>
+                <small>Hub plays the songs (beta)</small>
+              </label>
+              <p className="muted small">
+                {st.stream && !st.streaming ? 'Waiting until the catalog matches nearly all of Navidrome\'s songs; Navidrome plays until then. '
+                  : st.streaming ? 'On for devices that reach Navidrome through the Hub. ' : ''}
+                The Hub sends the music file itself, with seeking, instead of fetching it from Navidrome. When a device asks
+                for a lower quality it converts as it plays. Plays still count in Navidrome, and a song the catalog doesn't
+                know yet plays from Navidrome.
               </p>
             </>
           )}

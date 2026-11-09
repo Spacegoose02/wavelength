@@ -89,6 +89,10 @@ export interface CatalogStatus {
   serve: boolean;
   /** serve is on and the catalog is usable(): the Hub answers browsing for devices that go through it */
   serving: boolean;
+  /** an admin turned on playing songs from the music folder (phase 4) */
+  stream: boolean;
+  /** stream is on and the catalog is usable(): the Hub plays songs for devices that go through it */
+  streaming: boolean;
 }
 
 /** Turn ffprobe's tag names (any case, ID3 / Vorbis / MP4) into FileTags. */
@@ -305,17 +309,34 @@ export class Catalog {
     return linked >= this.navidromeSongs * 0.95;
   }
 
-  /** Whether an admin turned on answering browsing from the catalog. */
-  serve(): boolean {
-    const row = this.db.prepare("SELECT value FROM hub_settings WHERE key = 'catalog.serve'").get() as { value: string } | undefined;
+  private flag(key: string): boolean {
+    const row = this.db.prepare('SELECT value FROM hub_settings WHERE key = ?').get(key) as { value: string } | undefined;
     return row?.value === 'true';
   }
+  private setFlag(key: string, on: boolean) {
+    this.db.prepare('INSERT INTO hub_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value').run(key, String(on));
+  }
+  /** Whether an admin turned on answering browsing from the catalog. */
+  serve(): boolean {
+    return this.flag('catalog.serve');
+  }
   setServe(on: boolean) {
-    this.db.prepare("INSERT INTO hub_settings (key, value) VALUES ('catalog.serve', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(String(on));
+    this.setFlag('catalog.serve', on);
   }
   /** The Hub answers browsing itself (routes/relay.ts): turned on, and the catalog matches Navidrome. */
   serving(): boolean {
     return this.serve() && this.usable();
+  }
+  /** Whether an admin turned on playing songs from the music folder (phase 4, catalogStream.ts). */
+  stream(): boolean {
+    return this.flag('catalog.stream');
+  }
+  setStream(on: boolean) {
+    this.setFlag('catalog.stream', on);
+  }
+  /** The Hub plays songs itself (routes/relay.ts): turned on, and the catalog matches Navidrome. */
+  streaming(): boolean {
+    return this.stream() && this.usable();
   }
 
   /** The file of each matched Navidrome song id (paths relative to the music folder). */
@@ -392,6 +413,8 @@ export class Catalog {
       lastError: this.lastError,
       serve: this.serve(),
       serving: this.serving(),
+      stream: this.stream(),
+      streaming: this.streaming(),
     };
   }
 

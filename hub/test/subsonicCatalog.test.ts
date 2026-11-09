@@ -170,3 +170,55 @@ test('covers come from the album folder, sized, and from the file when there is 
   await rest('getCoverArt', { id: 'ar-ar1' });
   assert.deepEqual(nd.calls, ['getCoverArt', 'getCoverArt']);
 });
+
+test('with the play switch on, the Hub sends the files itself, with seeking, and converts when asked', { skip: !hasFfmpeg && 'needs ffmpeg' }, async () => {
+  const { app, tokens, musicDir, nd, rest } = await setup();
+  // a real song for the converting part
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=3', '-c:a', 'flac', '-y', join(musicDir, 'The Beatles/Abbey Road/01.flac')]);
+
+  // off: Navidrome plays
+  nd.calls.length = 0;
+  await rest('stream', { id: 'nd1' });
+  assert.deepEqual(nd.calls, ['stream']);
+
+  const on = await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: { stream: true } });
+  assert.equal(on.body.stream, true);
+  assert.equal(on.body.streaming, true);
+  assert.equal(on.body.serve, false, 'the two switches are separate');
+  assert.equal((await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: {} })).status, 400);
+  nd.calls.length = 0;
+
+  const whole = await rest('stream', { id: 'nd1' });
+  assert.equal(whole.by, 'hub');
+  assert.equal(whole.type, 'audio/mpeg');
+  assert.equal((whole.body as Buffer).toString(), 'not really audio');
+
+  // seeking: a Range request gets that part
+  const url = (await (async () => {
+    const services = (await json(app, 'GET', '/api/me/services', { token: tokens.member })).body.services[0];
+    const salt = 'zz';
+    return `/nd/${services.id}/rest/stream?${new URLSearchParams({ u: services.secrets.username, t: md5(services.secrets.password + salt), s: salt, v: '1.16.1', c: 't', id: 'nd1' })}`;
+  })());
+  const part = await app.inject({ method: 'GET', url, headers: { range: 'bytes=4-7' } });
+  assert.equal(part.statusCode, 206);
+  assert.equal(part.headers['content-range'], 'bytes 4-7/16');
+  assert.equal(part.body, 'real');
+  assert.equal((await app.inject({ method: 'GET', url, headers: { range: 'bytes=99-' } })).statusCode, 416);
+  const etag = part.headers.etag as string;
+  assert.equal((await app.inject({ method: 'GET', url, headers: { 'if-none-match': etag } })).statusCode, 304);
+
+  const dl = await app.inject({ method: 'GET', url: url.replace('/rest/stream?', '/rest/download?') });
+  assert.match(String(dl.headers['content-disposition']), /attachment; filename\*=UTF-8''01\.mp3/);
+
+  // a lower bitrate: converted to mp3 as it plays
+  const low = await rest('stream', { id: 'nd3', maxBitRate: '128' });
+  assert.equal(low.by, 'hub');
+  assert.equal(low.type, 'audio/mpeg');
+  assert.ok((low.body as Buffer).length > 1000, 'some mp3 came out');
+  assert.deepEqual(nd.calls, [], 'Navidrome wasn’t asked for any of it');
+
+  // a song the catalog doesn't know, and a format the Hub doesn't make: Navidrome's
+  await rest('stream', { id: 'brand-new' });
+  await rest('stream', { id: 'nd3', format: 'wma' });
+  assert.deepEqual(nd.calls, ['stream', 'stream']);
+});
