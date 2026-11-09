@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { PlayedButton } from './PlayedButton';
+import { EpisodeVideoChip } from './VideoButton';
 import { useSettings } from '../store/settings';
 import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
 import { explicitOfAlbum, explicitOfTrack, trackVersion, useHidden, useRatings } from '../lib/kids';
@@ -168,7 +170,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
           <div className="track-main">
             <div className="track-title"><Rating explicit={explicitOfTrack(t)} />{t.title}</div>
             <div className="track-sub">{sub ? sub(t) : <TrackSub track={t} showAlbum={showAlbum} />}</div>
-            {t.progress ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
+            {t.progress && t.progress < 1 ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
           </div>
           <SourceDots sourceIds={[t.sourceId]} />
           <div className="track-actions">
@@ -177,6 +179,8 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <button className="chip" onClick={() => playNext([t])}>Next</button>
             <button className="chip" onClick={() => enqueue([t])}>+ Queue</button>
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} />}
+            {t.kind === 'episode' && <PlayedButton track={t} />}
+            {t.kind === 'episode' && <EpisodeVideoChip track={t} />}
             <QueueOnSubwave track={t} />
             {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} version={trackVersion(t)} explicit={explicitOfTrack(t) === 'explicit'} className="chip" />}
             {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}

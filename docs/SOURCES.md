@@ -25,7 +25,10 @@ Every external system Wavelength talks to, how, and what bites. All HTTP goes th
 - Auth: `Authorization: Bearer <API key>`. Book and podcast libraries are kept separate (`mediaType`).
 - Playback opens a **session**: `POST /api/items/<id>/play` (books) or `/play/<episodeId>` (podcasts) with `forceDirectPlay`. Audio files come back in `audioTracks[]` (`contentUrl` + `?token=`), multi-file books carry `startOffset`.
 - Progress: `POST /api/session/<id>/sync { currentTime, timeListened }` every 15 s. Resume point = session `currentTime`.
-- Progress per item/episode: `GET /api/me` → `mediaProgress[]`.
+- Progress per item/episode: `GET /api/me` → `mediaProgress[]`. When a book file or an episode plays to the end, one last sync at its full length makes the server mark it finished.
+- Podcasts → Latest episodes: `GET /api/libraries/<podcast lib>/recent-episodes?limit=200` (each episode carries `libraryItemId` and `podcast.metadata.title`). Continue listening: `GET /api/me/items-in-progress` → podcast items with `recentEpisode`.
+- Played / unplayed and book finished: `PATCH /api/me/progress/<itemId>[/<episodeId>]` with `{ isFinished: true }`, or `{ isFinished: false, progress: 0, currentTime: 0 }` to go back to the start; several at once with `PATCH /api/me/progress/batch/update` and an array of `{ libraryItemId, episodeId, … }`.
+- A book's page: `GET /api/items/<id>?expanded=1` → `media.metadata.description`, `genres`, `publisher` and `media.chapters`.
 
 ## SUB/WAVE AI radio — `src/sources/subwave.ts`, `views/SubWave*.tsx`
 Project: <https://github.com/perminder-klair/subwave>. Ports: web `:7700` (API mounted at `/api` behind Caddy), controller `:7701`, Icecast `:7702`.

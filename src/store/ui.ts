@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Album, Artist, Podcast, ServerPlaylist } from '../sources/types';
+import type { Album, Artist, Book, Podcast, ServerPlaylist } from '../sources/types';
 import type { Skin } from './settings';
 import type { Browse } from '../views/DeezerBrowse';
 
@@ -17,6 +17,7 @@ export type Route =
   | { view: 'search'; q?: string }
   | { view: 'radio' }
   | { view: 'books' }
+  | { view: 'book'; book: Book }
   | { view: 'podcasts' }
   | { view: 'podcast'; podcast: Podcast }
   | { view: 'history' }

@@ -1,5 +1,5 @@
 import { getJson, http, qs, trimSlash } from '../lib/http';
-import type { Book, BookPlayback, Chapter, MusicSource, Podcast, SearchResults, SourceConfig, Track } from './types';
+import type { Book, BookDetails, BookPlayback, Chapter, MusicSource, Podcast, SearchResults, SourceConfig, Track } from './types';
 
 type Progress = Map<string, { progress: number; currentTime: number; finished: boolean; lastUpdate?: number }>;
 
@@ -111,24 +111,86 @@ export class AudiobookshelfSource implements MusicSource {
   async getEpisodes(podcastId: string): Promise<Track[]> {
     const [item, progress] = await Promise.all([this.get(`/api/items/${podcastId}?expanded=1`), this.progressMap()]);
     const show = item.media?.metadata?.title ?? '';
-    return (item.media?.episodes ?? [])
-      .map((e: any) => ({
-        id: `${podcastId}:${e.id}`,
-        sourceId: this.config.id,
-        kind: 'episode' as const,
-        title: e.title,
-        artist: show,
-        album: show,
-        duration: e.audioFile?.duration ?? e.duration,
-        coverUrl: this.cover(podcastId),
-        bookId: podcastId,
-        episodeId: e.id,
-        publishedAt: e.publishedAt,
-        description: e.subtitle || stripHtml(e.description ?? '').slice(0, 220),
-        progress: progress.get(`${podcastId}:${e.id}`)?.progress,
-        chapters: chapters(e.chapters),
+    return (item.media?.episodes ?? []).map((e: any) => this.episode(e, podcastId, show, progress)).sort(newestFirst);
+  }
+
+  /** Audiobookshelf's own "latest episodes" list for each podcast library, put together newest first. */
+  async getLatestEpisodes(limit = 200): Promise<Track[]> {
+    const [libs, progress] = await Promise.all([this.libraries('podcast'), this.progressMap()]);
+    const lists = await Promise.all(libs.map((l: any) => this.get(`/api/libraries/${l.id}/recent-episodes?${qs({ limit, page: 0 })}`)));
+    return lists
+      .flatMap((r: any) => (r.episodes ?? []).map((e: any) => {
+        const showId = e.libraryItemId ?? e.podcast?.libraryItemId;
+        return showId ? this.episode(e, showId, e.podcast?.metadata?.title ?? '', progress) : undefined;
       }))
-      .sort((a: Track, b: Track) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0));
+      .filter((t): t is Track => !!t)
+      .sort(newestFirst)
+      .slice(0, limit);
+  }
+
+  /** Episodes you're part way through: the server's "continue listening" items that are podcasts. */
+  async getEpisodesInProgress(): Promise<Track[]> {
+    const [r, progress] = await Promise.all([this.get(`/api/me/items-in-progress?${qs({ limit: 40 })}`), this.progressMap()]);
+    return (r.libraryItems ?? [])
+      .filter((i: any) => i.mediaType === 'podcast' && i.recentEpisode)
+      .map((i: any) => this.episode(i.recentEpisode, i.id, i.media?.metadata?.title ?? '', progress))
+      .filter((t: Track) => (t.progress ?? 0) > 0 && (t.progress ?? 0) < 1)
+      .sort((a: Track, b: Track) => (b.lastPlayedAt ?? 0) - (a.lastPlayedAt ?? 0));
+  }
+
+  async setPlayed(tracks: Track[], played: boolean) {
+    const updates = tracks
+      .filter((t) => t.kind === 'episode' && t.bookId && t.episodeId)
+      .map((t) => ({ libraryItemId: t.bookId, episodeId: t.episodeId, ...progressUpdate(played) }));
+    if (!updates.length) return;
+    if (updates.length === 1) {
+      const u = updates[0];
+      await this.patch(`/api/me/progress/${u.libraryItemId}/${u.episodeId}`, progressUpdate(played));
+    } else await this.patch('/api/me/progress/batch/update', updates);
+  }
+
+  async getBookDetails(bookId: string): Promise<BookDetails> {
+    const [item, me] = await Promise.all([this.get(`/api/items/${bookId}?expanded=1`), this.get(`/api/me`).catch(() => undefined)]);
+    const meta = item.media?.metadata ?? {};
+    const p = (me?.mediaProgress ?? []).find((x: any) => x.libraryItemId === bookId && !x.episodeId);
+    return {
+      description: meta.description ? stripHtml(meta.description) : undefined,
+      chapters: chapters(item.media?.chapters),
+      publisher: meta.publisher || undefined,
+      genres: Array.isArray(meta.genres) && meta.genres.length ? meta.genres : undefined,
+      currentTime: p?.currentTime,
+    };
+  }
+
+  async setBookFinished(bookId: string, finished: boolean) {
+    await this.patch(`/api/me/progress/${bookId}`, progressUpdate(finished));
+  }
+
+  private patch(path: string, body: unknown) {
+    return http(`${this.base}${path}`, { method: 'PATCH', headers: this.headers(true), body: JSON.stringify(body) }).then((res) => {
+      if (!res.ok) throw new Error(`Audiobookshelf said ${res.status}`);
+    });
+  }
+
+  private episode(e: any, showId: string, show: string, progress: Progress): Track {
+    const p = progress.get(`${showId}:${e.id}`);
+    return {
+      id: `${showId}:${e.id}`,
+      sourceId: this.config.id,
+      kind: 'episode',
+      title: e.title,
+      artist: show,
+      album: show,
+      duration: e.audioFile?.duration ?? e.duration,
+      coverUrl: this.cover(showId),
+      bookId: showId,
+      episodeId: e.id,
+      publishedAt: e.publishedAt,
+      description: e.subtitle || stripHtml(e.description ?? '').slice(0, 220),
+      progress: p?.progress,
+      lastPlayedAt: p?.lastUpdate,
+      chapters: chapters(e.chapters),
+    };
   }
 
   async search(q: string): Promise<Partial<SearchResults>> {
@@ -194,6 +256,11 @@ export class AudiobookshelfSource implements MusicSource {
     });
   }
 }
+
+const newestFirst = (a: Track, b: Track) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0);
+
+/** Played is finished; unplayed goes back to the start, so it plays from the top next time. */
+const progressUpdate = (played: boolean) => (played ? { isFinished: true } : { isFinished: false, progress: 0, currentTime: 0 });
 
 /** The latest listen across a show's episodes (progress keys are `showId:episodeId`). */
 function lastPlayed(progress: Progress, showId: string): number | undefined {

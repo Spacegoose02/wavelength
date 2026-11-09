@@ -50,7 +50,7 @@ import { useLibrary } from './store/library';
 import { AlbumView, Albums, ArtistView, Artists, Home } from './views/Library';
 import { Search } from './views/Search';
 import { Radio } from './views/Radio';
-import { Books } from './views/Books';
+import { Books, BookView } from './views/Books';
 import { activeSkin } from './lib/seasons';
 import { startUpdateChecks } from './lib/updates';
 import { UpdateBanner } from './components/Updates';
@@ -135,6 +135,7 @@ function View({ route }: { route: Route }) {
     case 'search': return <Search initial={route.q} />;
     case 'radio': return <Radio />;
     case 'books': return <Books />;
+    case 'book': return <BookView key={route.book.id} book={route.book} />;
     case 'podcasts': return <Podcasts />;
     case 'podcast': return <PodcastView key={route.podcast.id} podcast={route.podcast} />;
     case 'history': return <History />;

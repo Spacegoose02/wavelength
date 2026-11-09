@@ -16,6 +16,7 @@ import { planTransition, toNextBeat, type SoundInfo, type Transition } from '../
 import { featuresFor } from '../lib/sonic';
 import { featureOn } from '../lib/features';
 import { onMobileData, withQuality } from '../lib/streamQuality';
+import { markEnded } from '../lib/episodes';
 
 export type Repeat = 'off' | 'all' | 'one';
 
@@ -681,7 +682,17 @@ engine.on('waiting', () => {
 });
 engine.on('pause', () => usePlayer.setState({ playing: false }));
 engine.on('error', (_, el) => failed(`Playback failed (code ${el.error?.code ?? '?'})`));
-engine.on('ended', () => {
+engine.on('ended', (_, el) => {
+  // a book's file or an episode that played to the end: tell the server now, so it's marked finished (the
+  // regular sync is every 15 s and would leave the last few seconds unheard)
+  const ended = usePlayer.getState().current();
+  if (ended && (ended.kind === 'book' || ended.kind === 'episode')) {
+    const end = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : ended.duration ?? 0;
+    sourceOf(ended)?.syncBook?.(ended, (ended.bookOffset ?? 0) + end, listened).catch(() => {});
+    listened = 0;
+    lastSync = Date.now();
+    markEnded(ended);
+  }
   if (stopAfterTrack) {
     const done = stopAfterTrack;
     stopAfterTrack = undefined;

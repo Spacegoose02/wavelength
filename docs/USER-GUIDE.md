@@ -863,6 +863,11 @@ With a Hub where **Music videos** is on (**Settings → Features**; off for kid 
 (skipping lyric videos, live versions and covers), and it plays in a YouTube player that doesn't set cookies.
 The music pauses while you watch and carries on from the same spot when you close it.
 
+**Podcast episodes** too: many shows post each episode on YouTube. Now Playing shows **Video** when the episode
+playing has one, and every episode row has **Video**, which looks when you press it (**No video** when the show
+didn't post it). The match has to be the full episode with the same title and about the same length, not a
+clip or someone else's reaction. Needs a Hub with this version or newer.
+
 ## Discord status
 
 In the desktop app, **Settings → Playback → Discord status** shows **Listening to** the song and artist on your
@@ -923,11 +928,36 @@ data; computers count as Wi-Fi. Plex streams are always the original.
 **Audiobooks** sorts by **Recently added** (the default), **Recently played**, **Title**, **Author**, **Series**,
 **Newest published**, **Longest** or **Shortest**, and the chips show **All**, **Not started**, **In progress** or
 **Finished**. The filter box also finds a series or narrator. **Continue listening** shows the book you're in first.
+The round button on a cover plays the book from where you are; tap anywhere else on it for **the book's page**:
+what it's about, the narrator, how far you are and how long is left, its **Chapters** (tap one to play from
+there), **Start over**, **Mark as finished** (or **Mark as not finished**, back to the start), and **More in the
+series** and **More by the author**.
 
-**Podcasts** sorts shows by **New episodes** (the default: shows with the latest episode first), **Recently added**,
+### Latest episodes
+
+**Podcasts** opens on **Latest episodes**: the newest episodes from all your shows in one list, outside their
+shows, newest first. **Play** runs straight through it, from one show to the next, so you can catch up on, say,
+*In the Dark* and *The Weekly Show* without opening either.
+
+- **Pick shows** with the chips (the number is how many you haven't heard); **All shows** clears them. **Every
+  show…** lists the quiet ones too. A show you pick is read in full, so older episodes aren't cut off.
+- **Unplayed only** (on to start with) leaves out what you've finished; episodes you're part way through stay,
+  with the time left.
+- **This week**, **This month** or **Any time**, and **Newest first** or **Oldest first** (a backlog in the order it
+  came out).
+- **Mark all played** clears the list when you've caught up another way. Each row also has **Mark played**, and
+  right-clicking an episode has **Mark as played** / **Mark as unplayed** and **Go to show**.
+- **Continue listening**, above the list, is every episode you're part way through; tap one to carry on.
+
+Your choices are remembered on this device. Played and unplayed are saved on Audiobookshelf, so its own apps
+and your other devices see them, and an episode that plays to the end is marked played. **Shows** is the grid of
+shows as before.
+
+**Podcasts → Shows** sorts shows by **New episodes** (the default: shows with the latest episode first), **Recently added**,
 **Recently played**, **Title**, **Author** or **Most episodes**. A show's episodes sort **Newest**, **Oldest**
 (handy for a show you listen to from the start; **Play** then plays on in that order), **Unplayed first**,
-**Shortest** or **Longest**. Each choice is remembered on this device.
+**Shortest** or **Longest**. Each choice is remembered on this device. A show's page also has **Mark all played**
+and **Mark all unplayed** (for the episodes shown), and each episode shows how much is left.
 
 While a book or episode plays, Now Playing and the player bar swap shuffle and repeat for **−15** and **+30**
 (seconds back and on, across a book's files too), and add:

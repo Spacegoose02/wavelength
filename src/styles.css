@@ -192,6 +192,34 @@ section h2 { font-size: 19px; margin-bottom: 14px; display: flex; align-items: c
 .book-cover { position: relative; }
 .book-cover .progress { position: absolute; left: 8px; right: 8px; bottom: 8px; }
 .cover-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(0 0 0 / 0.5); border-radius: var(--radius); }
+/* a book's or episode's round play button: tap the card for its page, the button to play straight away */
+.book-card { cursor: pointer; text-align: left; }
+.cover-play { position: absolute; right: 10px; bottom: 20px; z-index: 1; display: grid; place-items: center; width: 38px; height: 38px;
+  border-radius: 50%; background: var(--accent); color: var(--accent-ink, #fff); box-shadow: 0 4px 14px rgb(0 0 0 / 0.45);
+  opacity: 0.92; transition: transform 0.12s, opacity 0.12s; }
+.cover-play svg { width: 18px; height: 18px; margin-left: 2px; }
+.card:hover .cover-play, .cover-play:focus-visible { opacity: 1; transform: scale(1.06); }
+/* Podcasts → Latest episodes: pick the shows */
+.podcast-tabs { margin-left: 44px; }
+.latest-head { display: flex; align-items: center; gap: 12px; margin: 8px 0 14px; }
+.latest-head h2 { font-size: 19px; margin: 0; }
+.latest-head h2 small { font-size: 14px; font-weight: 500; margin-left: 4px; }
+.show-picker .chips { margin-bottom: 14px; }
+.show-chip { padding: 3px 12px 3px 3px; max-width: 240px; }
+.show-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.show-chip .cover.tiny { width: 24px; height: 24px; border-radius: 50%; font-size: 9px; }
+.show-chip small { padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink, #fff); font-size: 10.5px; font-weight: 700; }
+.show-chip.on small { background: var(--bg); color: var(--text); }
+.chip.ghost { background: none; color: var(--muted); border: 1px dashed var(--line); }
+.chip.played { color: var(--accent); }
+.ep-left { color: var(--accent); }
+.ep-played { opacity: 0.8; }
+/* a book's page */
+.book-status { margin-top: 4px; }
+.book-genres { margin: 12px 0 0; }
+.book-desc { white-space: pre-line; }
+.more-link { color: var(--accent); font-weight: 600; }
+.book-chapters .track-row.done .track-title { color: var(--muted); }
 
 .source-dots { display: inline-flex; gap: 3px; flex: none; }
 .source-dots i, .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
@@ -820,6 +848,8 @@ h2 .link.small { margin-left: 8px; font-weight: 600; }
   .page-head .filter, .page-head .inline-form { margin-left: 0; width: 100%; }
   .back { position: sticky; top: 8px; margin: 8px 0 -44px 8px; width: 34px; height: 34px; }
   .app.phone .back ~ * .page-head, .app.phone .back ~ * .hero { margin-left: 44px; }
+  /* tabs are full width on phones (!important above); leave room for the back button */
+  .app.phone .back ~ * .podcast-tabs { padding-left: 44px; }
   section h2 { font-size: 17px; flex-wrap: wrap; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px 12px; }
   .row-scroll { grid-auto-columns: 136px; gap: 12px; }

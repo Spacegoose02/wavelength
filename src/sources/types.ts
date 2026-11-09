@@ -51,6 +51,8 @@ export interface Track {
   episodeId?: string;
   publishedAt?: number;
   progress?: number;
+  /** Podcast episodes: when you last listened to it (ms). */
+  lastPlayedAt?: number;
   description?: string;
   /** Audiobooks and podcast episodes: chapters, in seconds from the start of the whole book or episode. */
   chapters?: Chapter[];
@@ -188,6 +190,15 @@ export interface SearchResults {
   podcasts: Podcast[];
 }
 
+export interface BookDetails {
+  description?: string;
+  chapters?: Chapter[];
+  publisher?: string;
+  genres?: string[];
+  /** Where you are in the book, seconds. */
+  currentTime?: number;
+}
+
 export interface BookPlayback {
   tracks: Track[];
   /** Absolute resume point within the book, seconds. */
@@ -218,6 +229,16 @@ export interface MusicSource {
   syncBook?(track: Track, absoluteTime: number, listened: number): Promise<void>;
   getPodcasts?(): Promise<Podcast[]>;
   getEpisodes?(podcastId: string): Promise<Track[]>;
+  /** The newest episodes across every show, newest first (Podcasts → Latest episodes). */
+  getLatestEpisodes?(limit?: number): Promise<Track[]>;
+  /** Episodes you're part way through, most recently played first (Podcasts → Continue listening). */
+  getEpisodesInProgress?(): Promise<Track[]>;
+  /** Mark episodes played (finished) or unplayed (back to the start), on the server. */
+  setPlayed?(tracks: Track[], played: boolean): Promise<void>;
+  /** A book's page: its description and chapters. */
+  getBookDetails?(bookId: string): Promise<BookDetails>;
+  /** Mark a book finished, or not started (back to the start). */
+  setBookFinished?(bookId: string, finished: boolean): Promise<void>;
   /** Server-side play history, newest first. */
   getHistory?(): Promise<HistoryEntry[]>;
   getRecentlyPlayedAlbums?(): Promise<Album[]>;

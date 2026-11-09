@@ -21,7 +21,7 @@ const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route[
   { view: 'discover', label: 'Discover', icon: <IconCompass /> },
   { view: 'search', label: 'Search', icon: <IconSearch /> },
   { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave /> },
-  { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['browse', 'albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'podcasts', 'podcast', 'radio', 'downloads', 'inbox', 'settings', 'offline', 'offlineCollection', 'dj'] },
+  { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['browse', 'albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'book', 'podcasts', 'podcast', 'radio', 'downloads', 'inbox', 'settings', 'offline', 'offlineCollection', 'dj'] },
 ];
 
 /** Phone layout: mini player + bottom tab bar (replaces the sidebar and desktop deck). */

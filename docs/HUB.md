@@ -871,6 +871,7 @@ with a 4xx status.
 | `GET /api/blend?with=<id,id>` | signed in, `blend` on | `{ mix }`; `409` until you and each of them opted in |
 | `GET /api/tours?artist=` | signed in, `tourDates` on | `{ events: [{ date, time?, venue, city, country?, url? }] }`: upcoming, this artist only, kept 6 hours; `409` until an admin saves a key |
 | `GET /api/videos?artist=&title=[&duration=]` | signed in, `musicVideos` on | `{ video: { id, title, channel, duration? } \| null }`: the official video's YouTube id, found with yt-dlp, kept a month |
+| `GET /api/videos/episode?show=&title=[&duration=]` | signed in, `musicVideos` on | Same shape: a podcast episode's video, when the show posted it. The title has to match, the length has to be within about a third, and clips, trailers and reactions don't count (`pickEpisodeVideo`) |
 | `GET /api/tours/status` | signed in | `{ available }`: the feature is on for you and a key is saved |
 | `GET`/`PUT /api/admin/tours` | `users.manage` | `{ provider: 'ticketmaster'\|'bandsintown', key? }` (`''` removes it) → `{ provider, keySet, hint }`; the key is sealed and never sent back |
 | `GET /api/sonic/similar?id=\|artist=&title=[&limit=]` | signed in, `sonic` on | `{ song, songs: [{ id, title, artist, album, duration, bpm, key, energy, mood, match }] }`: closest first, at most 3 per artist; `404` until that song is analysed |
