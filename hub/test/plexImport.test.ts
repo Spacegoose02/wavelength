@@ -56,7 +56,7 @@ function fakePlex(seen: string[]) {
   };
   return async (url: string, init?: RequestInit) => {
     seen.push(url);
-    assert.equal((init?.headers as Record<string, string>)['X-Plex-Token'], 'plex-token');
+    assert.equal((init?.headers as Record<string, string> | undefined)?.['X-Plex-Token'], 'plex-token');
     const u = new URL(url);
     const body = (MediaContainer: object) => new Response(JSON.stringify({ MediaContainer }), { headers: { 'content-type': 'application/json' } });
     if (u.pathname === '/library/sections') return body({ Directory: [{ key: '5', type: 'artist', title: 'Music' }, { key: '6', type: 'movie' }] });

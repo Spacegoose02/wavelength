@@ -99,4 +99,8 @@ export function useArtistTags(name: string): Facets {
   return t?.facets ?? EMPTY;
 }
 
+/** Outside React (lib/browse.ts): what the store has now. Components re-render on `useItemTags()`. */
+export const albumFacets = (artist: string, title: string): Facets => useItemTagStore.getState().albums[albumKey(artist, title)]?.facets ?? EMPTY;
+export const artistFacets = (name: string): Facets => useItemTagStore.getState().artists[tagKey(name)]?.facets ?? EMPTY;
+
 export const FACET_LABELS: Record<HubFacet, string> = { genre: 'Genres', style: 'Styles', mood: 'Moods', collection: 'Collections' };

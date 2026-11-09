@@ -253,16 +253,20 @@ place: **Play**, **Play next**, **Add to queue**, **Add to playlist…**, **Song
 sound-alike analysis on the Hub), **Go to artist**, **Go to album**, **Share** and **Copy song name**. Esc or a click
 outside closes it.
 
-## Browse by genre and decade
+## Browse by genre, decade, style, mood and collection
 
-**Browse** (in the sidebar, and under Library on the phone) shows your music by genre and by decade.
+**Browse** (in the sidebar, and under Library on the phone) shows your music by genre and by decade, and, with a Hub
+that has them (see "Editing an album" and "Importing styles and moods from Plex"), by collection, style and mood.
 
+- **Collections**: groups like Christmas, as tiles at the top.
 - **Decades**: 60s, 70s, 80s and so on, with how many albums each has.
 - **Genres**: every genre in your library, most albums first, with its sub-genres on the tile (Trap, Drill and Boom
   Bap on Rap / Hip-Hop; House, Techno and Drum & Bass on Electronic). Tap a sub-genre to go straight to it.
   **Find a genre** searches sub-genres too.
 - Open one to see its **Artists** and **Albums**, sorted by newest, oldest, A to Z, artist or recently added.
-  Chips narrow it down: a sub-genre, or a decade ("90s Electronic"). In a decade, chips show its genres.
+  Chips narrow it down: a sub-genre, a decade ("90s Electronic"), a style or a mood ("Southern Rap · Reckless").
+  In a decade or a collection, chips show its genres. What you picked shows as a white chip; tap it to take it off.
+- **Styles** and **Moods**: every style and mood your albums have, most albums first, under the genres.
   **Shuffle** plays a random mix of songs from 25 of its albums; **Play** plays the first 25 in order.
 
 Sub-genres come from your genre tags. A genre whose albums all also have a bigger genre counts as its sub-genre, so a
@@ -272,7 +276,11 @@ Hub that tidies genres (see "Tidying genres") gives you sub-genres by itself. Ge
 **Albums** and **Artists** have the same filters at the top: a genre (sub-genres indented under their genre), a
 decade or **Pick years…** for a from–to range, and a sort (Albums: A to Z, artist, newest, oldest, recently added;
 Artists: A to Z or most albums). **Clear** takes the filters off. They stay put while you open an album and come
-back. An artist is in a genre or decade when one of their albums is.
+back. An artist is in a genre or decade when one of their albums is. When your Hub keeps styles, moods and collections,
+**Style**, **Mood** and **Collection** filters show up too. An album with no styles or moods of its own counts its
+artist's, and an artist's collections count for all their albums. An artist's own genres on the Hub count for them
+on Artists and Browse, even when their albums have other genres. Genre, style, mood and collection chips on album
+and artist pages open Browse on that one.
 
 ## The sidebar
 

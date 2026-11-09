@@ -128,7 +128,7 @@ function View({ route }: { route: Route }) {
     case 'home': return <Home />;
     case 'albums': return <Albums />;
     case 'artists': return <Artists />;
-    case 'browse': return <Browse key={`${route.genre ?? ''}|${route.decade ?? ''}`} genre={route.genre} decade={route.decade} />;
+    case 'browse': return <Browse key={[route.genre, route.decade, route.style, route.mood, route.collection].join('|')} genre={route.genre} decade={route.decade} style={route.style} mood={route.mood} collection={route.collection} />;
     case 'artist': return <ArtistView key={route.artist.id} artist={route.artist} />;
     case 'artistReleases': return <ArtistReleases key={`${route.artist.id}:${route.open?.id ?? ''}`} artist={route.artist} open={route.open} />;
     case 'album': return <AlbumView key={route.album.id} album={route.album} focus={route.track} />;

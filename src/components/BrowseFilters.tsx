@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
-import { ALBUM_SORTS, decadeCounts, decadeLabel, genreTree, isFiltered, yearRange, type BrowseQuery } from '../lib/browse';
+import { ALBUM_SORTS, decadeCounts, decadeLabel, genreTree, isFiltered, TAG_FACETS, tagCounts, yearRange, type BrowseQuery } from '../lib/browse';
+import { useItemTags } from '../lib/itemTags';
 import type { Album } from '../sources/types';
 
 /**
- * Genre, decade / years and sort for Albums and Artists (lib/browse.ts). Genres list sub-genres under their
- * genre. "Pick years…" swaps the decade for a from–to range.
+ * Genre, decade / years, style, mood, collection and sort for Albums and Artists (lib/browse.ts). Genres list
+ * sub-genres under their genre. "Pick years…" swaps the decade for a from–to range. Style, mood and collection
+ * show only when the Hub has some (lib/itemTags.ts).
  */
 export function BrowseFilters<S extends string>({ albums, q, set, sorts }: {
   albums: Album[];
@@ -15,6 +17,8 @@ export function BrowseFilters<S extends string>({ albums, q, set, sorts }: {
   const tree = useMemo(() => genreTree(albums), [albums]);
   const decades = useMemo(() => decadeCounts(albums), [albums]);
   const range = useMemo(() => yearRange(albums), [albums]);
+  const tagsAt = useItemTags().albums;
+  const tags = useMemo(() => TAG_FACETS.map((f) => [f, tagCounts(albums, f)] as const), [albums, tagsAt]); // eslint-disable-line react-hooks/exhaustive-deps
   const years = !!(q.from || q.to);
   const when = years ? 'years' : q.decade !== undefined ? String(q.decade) : '';
   if (!tree.length && !decades.length) return null;
@@ -49,13 +53,21 @@ export function BrowseFilters<S extends string>({ albums, q, set, sorts }: {
             onChange={(e) => set({ to: Number(e.target.value) || undefined })} />
         </span>
       )}
+      {tags.map(([f, list]) => list.length > 0 && (
+        <select key={f} aria-label={LABEL[f]} value={q[f] ?? ''} onChange={(e) => set({ [f]: e.target.value || undefined })}>
+          <option value="">{`Any ${LABEL[f].toLowerCase()}`}</option>
+          {list.map((t) => <option key={t.name} value={t.name}>{t.name} ({t.albums})</option>)}
+        </select>
+      ))}
       <select aria-label="Sort" value={q.sort} onChange={(e) => set({ sort: e.target.value as S })}>
         {sorts.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
       </select>
-      {isFiltered(q) && <button className="btn small ghost" onClick={() => set({ genre: undefined, decade: undefined, from: undefined, to: undefined })}>Clear</button>}
+      {isFiltered(q) && <button className="btn small ghost" onClick={() => set({ genre: undefined, decade: undefined, from: undefined, to: undefined, style: undefined, mood: undefined, collection: undefined })}>Clear</button>}
     </div>
   );
 }
+
+const LABEL = { style: 'Style', mood: 'Mood', collection: 'Collection' } as const;
 
 export { ALBUM_SORTS };
 export const ARTIST_SORTS: { id: 'name' | 'albums'; label: string }[] = [
