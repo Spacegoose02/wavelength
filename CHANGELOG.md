@@ -1,38 +1,43 @@
 # Changelog
 
-## Unreleased
+## 0.38.0
 - **Advanced smart playlists.** Smart playlists get an Advanced mode like Plex's filter builder: nested "match
   all / any" groups of field, operator and value rows over artist, album and track fields (genre, style, mood,
   collection, year, decade, record label, album type, plays, rating, last played, added, format, bit rate,
   folder…), a limit with a sort (random, most played, highest rated, newest…), **Try it** and **Save as new**
   (`src/lib/smartRules.ts`, `src/components/RuleBuilder.tsx`). Navidrome albums now carry their plays, rating, ♥
-  and record labels.
+  and record labels (#259).
 - **Save any filter as a smart playlist.** Browse pages and the Albums and Artists filters have **Save as smart
   playlist**: "80s", "Christmas" or "Southern Rap · Reckless" becomes a playlist that picks fresh songs each time.
   Smart playlists gain Styles, Moods, In collection and Leave out collection rules from the Hub's tags; with any of
   them, songs come from the albums that fit (`src/lib/smartPlaylists.ts`). The sound-analysis mood rule is now
-  called **Sound**.
+  called **Sound** (#258).
 - **Browse and filter by style, mood and collection.** Browse has Collections tiles and Styles and Moods chips;
   opening one shows its artists and albums with chips to narrow it (a genre, decade, style or mood), and they mix
   ("Christmas · 90s", "Southern Rap · Reckless"). Albums and Artists get Style, Mood and Collection filters. The
-  chips on album and artist pages open Browse on them (`src/lib/browse.ts`, `src/views/Browse.tsx`).
+  chips on album and artist pages open Browse on them (`src/lib/browse.ts`, `src/views/Browse.tsx`, #257).
 - **Import from Plex.** Settings → Server → Import from Plex reads your Plex server, matches its albums and artists
   to your library, shows what it found, then imports styles, moods, collections (Plex collections and labels) and
   artist genres onto the Hub. Hand edits are never overwritten. Albums with no genre get Plex's as an undoable
-  suggestion (`hub/src/plexImport.ts`).
+  suggestion (`hub/src/plexImport.ts`, #256).
 - **Each artist in a credit is its own link.** "Future feat. Drake; Travis Scott; Loe Shimmy" used to be one link to
   Future; now Future, Drake, Travis Scott and Loe Shimmy each open their own page, in Now Playing, Up next, song rows
   and an album's header. A name the library knows with a comma or "&" in it ("Tyler, The Creator") stays whole, and
   "&", "," and "x" only split a credit when one side is a library artist. A featured artist with no albums in the
   library opens their Deezer releases (`creditLinks` in `src/lib/trackLinks.ts`, `ArtistCredit` in
-  `src/components/common.tsx`).
+  `src/components/common.tsx`, #255).
 - **Styles, moods and collections, like Plex.** Edit album's Tags tab now has **Styles** ("Christmas Pop"),
   **Moods** ("Laid-Back/Mellow") and **Collections** ("Christmas") next to its genres, and Edit artist has the
   artist's own **Genres**, Styles, Moods and Collections. They are kept on the Hub (`hub/src/itemTags.ts`, migration
-  36), follow renames, and show as chips under the title on album and artist pages.
+  36), follow renames, and show as chips under the title on album and artist pages (#254).
 - **An album's genres can differ from its artist's.** Edit artist keeps the artist's genres on the Hub instead of
   writing them into every song, so a pop group's Christmas album stays Christmas. Tick **Also write these genres into
-  every song of theirs** to do it the old way.
+  every song of theirs** to do it the old way (#254).
+- **Fix: Test connection explains 502, 503 and 504 errors.** Those come from a web proxy (nginx, Caddy, Traefik,
+  Cloudflare…) in front of the server, not from the server itself, and the message now says so (`gatewayHint` in
+  `src/lib/http.ts`, #253).
+- **The girl dragon is pearl white**, with sky-blue eyes and pale silver wings; the boy stays charcoal with lime-green
+  eyes (#252).
 
 ## 0.37.0
 - **Critters: three new scenes in place of the Saxophone, Harpist and Tuba.** **Acoustic** strums an acoustic guitar in
