@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { critterFromOldPick } from '../store/settings';
 
 describe('critterFromOldPick', () => {
@@ -168,5 +168,28 @@ describe('the owl and the T. rex', () => {
     const widths = [...trex.matchAll(/class="sleeve"[^>]*stroke-width="(\d+)"/g)].map((m) => Number(m[1]));
     expect(widths[1]).toBeLessThan(widths[0]);
     expect(await arm('panda')).not.toMatch(/wing-seam|hand-claw/);
+  });
+});
+
+describe('every act', () => {
+  it('draws for every species, boy and girl, including the Reactor, Bongo and Pianist acts', async () => {
+    // the player behind the rig makes an <audio> when it loads; tests run without a DOM
+    vi.stubGlobal('Audio', function Audio() {
+      return new Proxy({}, { get: () => () => {} });
+    });
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { ACTS, Critter, SPECIES } = await import('../components/critters/Critter');
+    expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano']));
+    for (const act of ACTS) {
+      for (const sp of SPECIES) {
+        for (const girl of [false, true]) {
+          const svg = renderToStaticMarkup(h(Critter, { species: sp.id, act: act.id, girl, still: true }));
+          expect(svg, `${act.id} ${sp.id}`).toContain('class="np-scene-canvas critter');
+          // both arms and the head are always there, so the rig can move them
+          for (const part of ['head', 'body', 'arm-l', 'arm-r']) expect(svg, `${act.id} ${sp.id} ${part}`).toContain(`data-part="${part}"`);
+        }
+      }
+    }
   });
 });

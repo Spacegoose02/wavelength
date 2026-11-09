@@ -1742,7 +1742,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
 /* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
-.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive) .shark-fin,
+.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano) .shark-fin,
 :root[data-skin-group='nuclear'] .critter .shark-fin,
 :root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
@@ -1850,6 +1850,114 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .cap-button { fill: color-mix(in srgb, var(--viz-high) 70%, #000); }
 .critter .scarf { fill: var(--viz-low); }
 .critter .scarf-knot { fill: color-mix(in srgb, var(--viz-low) 70%, #000); }
+
+/* the Reactor act (Reactor.tsx): the keytar, hard hat and badge follow the skin; the reactor's glow stays radioactive green */
+.critter .bunker-wall { fill: #2b3330; }
+.critter .bunker-floor { fill: #3a403d; }
+.critter .bunker-seam { stroke: rgb(0 0 0 / 0.35); }
+.critter .core-housing { fill: #4d5754; }
+.critter .core-bolt { fill: #9aa4a0; }
+.critter .core-rim { stroke: #9aa4a0; }
+.critter .core-halo { fill: #7dff5a; opacity: 0.4; }
+.critter .rod-sleeve { fill: rgb(10 40 20 / 0.55); }
+.critter .fuel-rod { fill: #e9ffd2; }
+.critter .beacon { fill: #ff9f1a; }
+.critter .beacon-beam { fill: #ffb347; }
+.critter .beacon-base { fill: #3a3a42; }
+.critter .sign { fill: #f4c20d; stroke: #1b1b1f; stroke-width: 2; }
+.critter .geiger { fill: #c8a44a; }
+.critter .geiger-dial { fill: #f2ead8; }
+.critter .geiger-lamp { fill: #ff4a3a; }
+.critter .geiger-cable { stroke: #1b1b1f; }
+.critter .barrel { fill: #e0b10a; }
+.critter .goo { fill: #8dff62; }
+.critter .mote { fill: #b8ff8a; }
+.critter-reactor .top { fill: #eef0f2; }
+.critter-reactor .sleeve { stroke: #eef0f2; }
+.critter-reactor .legs { fill: #39443c; }
+.critter .coat-lapel { fill: #dfe2e6; }
+.critter .coat-pocket { fill: rgb(0 0 0 / 0.08); stroke: rgb(0 0 0 / 0.2); stroke-width: 1.5; }
+.critter .coat-trim { stroke: rgb(0 0 0 / 0.12); }
+.critter .pen { stroke: var(--viz-mid); }
+.critter .badge { fill: var(--accent); }
+.critter .strap { stroke: color-mix(in srgb, var(--accent) 60%, #000); }
+.critter .hardhat { fill: var(--accent); }
+.critter .hardhat-ridge { stroke: color-mix(in srgb, var(--accent) 75%, #000); }
+.critter .keytar { fill: var(--accent); }
+.critter .keytar-neck { fill: #1d1d22; }
+.critter .keytar-trim { fill: rgb(0 0 0 / 0.3); }
+.critter .ribbon { fill: var(--viz-high); }
+
+/* the Bongo act (Bongo.tsx): the shirt, hat band and the bands round the drums follow the skin; the beach is fixed */
+.critter .beach-sun { fill: #fff1a8; }
+.critter .sun-ray { stroke: #fff1a8; opacity: 0.8; }
+.critter .cloud { fill: #ffffff; opacity: 0.85; }
+.critter .sea { fill: #1fa3b8; }
+.critter .sea-far { fill: #17839a; }
+.critter .wave-line { stroke: rgb(255 255 255 / 0.45); }
+.critter .island { fill: #3f8f5a; }
+.critter .island-palm { stroke: #2f6e44; }
+.critter-bongo .sand { fill: #efd8a0; }
+.critter-bongo .sand-dark { stroke: #d6bb7c; }
+.critter .foam { stroke: rgb(255 255 255 / 0.85); }
+.critter .starfish { fill: #ff8a5c; stroke: #c45a34; stroke-width: 1.5; }
+.critter .palm-trunk { stroke: #9a6a3a; }
+.critter .palm-ring { stroke: #6e4a26; }
+.critter .frond { fill: #2f9e5a; stroke: #1f6e3e; stroke-width: 1.5; }
+.critter .coconut { fill: #6b4626; }
+.critter .bamboo { fill: #c9a25a; }
+.critter .torch-cup { fill: #8a6236; }
+.critter .crab { fill: #ff6a4a; }
+.critter .crab-leg { stroke: #d44a2e; }
+.critter .shirt-flower circle { fill: color-mix(in srgb, var(--viz-high) 80%, #fff); }
+.critter .flower-eye { fill: #fff3a0; }
+.critter .leaf { fill: #2f9e5a; }
+.critter .collar { fill: color-mix(in srgb, var(--accent) 80%, #fff); }
+.critter .lei circle { fill: #ff6fa8; }
+.critter .lei-1 circle { fill: #ffd34a; }
+.critter .lei-2 circle { fill: #ffffff; }
+.critter .lei .flower-eye { fill: #f08a2c; }
+.critter .straw { fill: #e6c27a; }
+.critter .straw-weave { stroke: #b8924a; }
+.critter .grass-skirt { fill: #8fb04a; }
+.critter-bongo .fringe { stroke: #6d8a32; }
+.critter .bongo-shell { fill: #a8652e; }
+.critter .bongo-band { stroke: var(--accent); }
+.critter .bongo-block { fill: #6b4626; }
+.critter .bongo-head { fill: #f0e2c0; }
+.critter .bongo-hoop { stroke: #b9b9c2; }
+
+/* the Piano act (Piano.tsx): the bow tie, pocket square and neon sign follow the skin; the piano and the lounge are fixed */
+.critter .lounge-wall { fill: #2a1424; }
+.critter .lounge-stripe { fill: rgb(255 255 255 / 0.03); }
+.critter .neon-sign { fill: none; stroke: var(--viz-high); }
+.critter .neon-note { stroke: var(--viz-mid); }
+.critter .spotlight { fill: #fff3cf; opacity: 0.16; }
+.critter .curtain { fill: #8e1f2a; }
+.critter .curtain-fold { stroke: #5e1019; }
+.critter .tassel { stroke: #e8c15a; }
+.critter .stage-boards { fill: #5a3a22; }
+.critter .board-line { stroke: #3e2716; }
+.critter .footlight { fill: #fff1b0; }
+.critter .music-note { fill: none; stroke: var(--viz-high); }
+.critter .music-note.led-0 { fill: none; stroke: var(--viz-low); }
+.critter .music-note.led-1 { fill: none; stroke: var(--viz-mid); }
+.critter .music-note.led-2 { fill: none; stroke: var(--viz-high); }
+.critter .piano-lid, .critter .piano-case, .critter .piano-leg { fill: #121216; }
+.critter .lid-prop { stroke: #2a2a30; }
+.critter .caster { fill: #c9a24a; }
+.critter .piano-brand { fill: #c9a24a; }
+.critter .brass { fill: #c9a24a; stroke: #c9a24a; }
+.critter .candle { fill: #f4efe0; }
+.critter .candle-glow { fill: #ffcf6a; opacity: 0.35; filter: blur(3px); }
+.critter-piano .top { fill: #1b1b22; }
+.critter-piano .sleeve { stroke: #1b1b22; }
+.critter-piano .legs { fill: #1b1b22; }
+.critter .shirt-front { fill: #f4f4f6; }
+.critter .satin { fill: #2e2e38; }
+.critter .pocket-square { fill: var(--accent); }
+.critter .bowtie { fill: var(--accent); }
+.critter .bowtie-knot { fill: color-mix(in srgb, var(--accent) 70%, #000); }
 
 /* holiday hats replace the critter's own headwear */
 .critter .hat, .critter .outfit { display: none; }

@@ -1,12 +1,15 @@
 import type { ComponentType } from 'react';
 import { useSettings, type Act, type Species } from '../../store/settings';
 import { Accordion } from './Accordion';
+import { Bongo } from './Bongo';
 import { Country } from './Country';
 import { DJ } from './DJ';
 import { Drive } from './Drive';
 import { Drums } from './Drums';
 import { GirlContext } from './faces';
+import { Piano } from './Piano';
 import { Rapper } from './Rapper';
+import { Reactor } from './Reactor';
 import { Rocker } from './Rocker';
 import { SPECIES, type ActProps, type SpeciesInfo } from './species';
 import { Synth } from './Synth';
@@ -39,6 +42,9 @@ export const ACTS: ActInfo[] = [
   { id: 'synth', label: 'Synth', blurb: 'Plays a synth in a crop circle under a tractor beam', Scene: Synth },
   { id: 'accordion', label: 'Accordion', blurb: 'Beanie and sweater, squeezes an accordion by the campfire', Scene: Accordion },
   { id: 'drive', label: 'Driver', blurb: 'Cap and scarf, swerves an open-top car down the road at sunset, singing', Scene: Drive },
+  { id: 'reactor', label: 'Reactor', blurb: 'Hard hat and lab coat, rocks a keytar in front of a glowing reactor core', Scene: Reactor },
+  { id: 'bongo', label: 'Bongo', blurb: 'Hawaiian shirt, lei and straw hat, slaps bongos on the beach by the tiki torches', Scene: Bongo },
+  { id: 'piano', label: 'Pianist', blurb: 'Tuxedo and bow tie, plays stride piano on a grand in a jazz lounge', Scene: Piano },
 ];
 
 /** Unknown ids (e.g. synced from a newer app) fall back to the first entry. */

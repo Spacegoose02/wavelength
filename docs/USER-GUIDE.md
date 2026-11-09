@@ -479,7 +479,7 @@ spectrum under the title does the same.
 
 <a id="raccoons"></a>
 The last visualizer is a critter who plays along with the music. You pick **who** plays and **what** they
-play, and any critter can play any act: 14 critters × 9 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
+play, and any critter can play any act: 14 critters × 12 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
 alien are all possible.
 
 <img src="screenshots/critters.png" alt="Every critter in every act in the Neon synth skin: rows are the raccoon, shark, alien, grey alien, black bear and brown bear; columns are DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth and Accordion" width="100%">
@@ -529,6 +529,15 @@ alien are all possible.
 | **Driver** | A flat driving cap, a white racing tee and a scarf, at the wheel of a little open-top car coming down a long road at sunset | Swerves one way every two beats with the wheel turning under one hand, bounces on its springs with the bass, the free hand taps the wheel, waves, raises the roof or drums the door (a new move every bar), the road rushes by faster as the band gets louder, the headlights pulse on the beat and the scarf flaps in the wind |
 
 <img src="screenshots/critter-drive.png" alt="Every critter in the Driver act in the Outrun skin, boys on the top row and girls below: each sits up in a pink open-top car with round headlights and a grinning grille, a driving cap (or a bow) on its head and a scarf at its neck, on a road at sunset" width="100%">
+
+| **Reactor** | A hard hat with a radiation sticker and a white lab coat, playing a keytar in front of the glowing core of a nuclear reactor, with spinning amber beacons, radiation signs, a Geiger counter and a leaking waste barrel | The fuel rods light up with the music and the core's green glow swells with the bass, one hand plays chords and runs along the keys (they light up under it), the other slides along the ribbon on the neck, the beacons spin on the beat, the Geiger needle jumps with the highs and green motes drift up off the core |
+| **Bongo** | A straw hat, a Hawaiian shirt and a flower lei (girls: a grass skirt), slapping a pair of bongos on a sunny beach between palm trees and tiki torches | One hand slaps the small drum on every beat, the other the big one on the off-beats (a quick double when the highs are busy), both land together at the end of the bar and the heads give under each slap; the waves roll in with the bass, the palms sway, the torches flicker and a little crab scuttles side to side on the beat |
+| **Pianist** | A tuxedo, white shirt and bow tie at a black grand piano in a jazz lounge, between red velvet curtains under a spotlight and a neon JAZZ sign | Stride piano: the left hand jumps between a low bass note and a chord on alternate beats, the right runs along the keys with the highs; the keys light up, the lid lifts on the bass, music notes drift up, the candles flicker and the footlights chase on the beat |
+
+<img src="screenshots/critter-reactor.png" alt="Every critter in the Reactor act, boys on the top row and girls below: each in a hard hat (or a bow) and a lab coat with a keytar slung across, in front of a round reactor core glowing green with fuel rods, radiation signs either side" width="100%">
+<img src="screenshots/critter-bongo.png" alt="Every critter in the Bongo act in the Miami nights skin, boys on top and girls below: each in a straw hat (or a bow), a Hawaiian shirt and a lei, hands on a pair of bongos on a beach with palm trees, tiki torches and a crab" width="100%">
+<img src="screenshots/critter-piano.png" alt="Every critter in the Pianist act in the Outrun skin, boys on top and girls below: each in a tuxedo and bow tie behind a black grand piano with the lid up and a candelabra, under a spotlight between red curtains and a neon JAZZ sign" width="100%">
+<img src="screenshots/critter-new-acts.gif" alt="The three new acts playing: a moose on the keytar in front of the glowing reactor core with the beacons sweeping, a panda slapping bongos on the beach, and an owl playing the grand piano as music notes float up" width="560">
 <img src="screenshots/critter-drive.gif" alt="The moose driving: the car swerves from side to side in time, the wheel turning under one hand while the other waves, the road bending and rushing past and the moose singing" width="280">
 
 **They sing along.** Every critter's mouth opens when someone sings (or raps) and closes when they stop.
@@ -594,7 +603,7 @@ critter. The **Boy** / **Girl** switch above the cards picks the look for every 
 and a bow in your skin's accent colour instead of the act's hat. The accordion player keeps her beanie and wears
 the bow on it in another colour, and the DJ keeps her headphones. Girls wear their own outfit in each act: a
 cowgirl denim fringe skirt, a pleated mini (Rapper), a pink tutu (Rocker), a sailor dress (Drummer), a space dress
-(Theremin) and dresses for the DJ, synth and accordion (the driver sits in the car, so only the bow and the top show). Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
+(Theremin) and dresses for the DJ, synth and accordion (the driver sits in the car, so only the bow and the top show), a lab-coat dress (Reactor), a grass skirt (Bongo) and a black ruffled gown, mostly behind the piano (Pianist). Tapping the critter itself still moves on to the next visualizer, as on the others. If you're
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
@@ -637,12 +646,12 @@ All the critters behave the same way around the music:
   each act does its flourish, at most once every 12 seconds: the country critter spins the banjo and tips the hat,
   the DJ double-scratches with a hand in the air, the rapper throws the hype hand high, the rocker does a
   windmill strum, the drummer plays a fill into the crash, the theremin player swoops up the antenna, the synth
-  player runs a glissando down the keys, the accordion player gives the bellows one long stretch, and the driver hops the car off the road with a hand in the air.
+  player runs a glissando down the keys, the accordion player gives the bellows one long stretch, the driver hops the car off the road with a hand in the air, the reactor keytarist swings the keytar up and sweeps down the keys as the core flares, the bongo player does a fast roll and throws both hands up, and the pianist runs a glissando up the keys with the other hand in the air and a burst of notes.
 - Everyone casts a soft shadow on the floor, and so do the stands, amps, speakers and drum kit.
 - **Paused:** they sway slowly, blink, yawn now and then and set their headwear straight (the DJ the
   headphones, the country act tips the hat, the
-  accordion player pulls the beanie straight, the driver the cap). The rapper lowers the mic, the drummer rests the sticks, the
-  theremin hands drop, the synth hands rest on the keys, the bellows breathe slowly and the car stops, ticking over at the roadside.
+  accordion player pulls the beanie straight, the driver the cap, the bongo player the straw hat, the reactor keytarist the hard hat). The rapper lowers the mic, the drummer rests the sticks, the
+  theremin hands drop, the synth hands rest on the keys, the bellows breathe slowly the car stops, ticking over at the roadside, the reactor's beacons stop and the piano's notes stop rising.
 - **Streams the app can't read** (no CORS, see above): they play along to a gentle made-up rhythm instead.
 
 > **Developer notes.** `src/components/critters/`. Unlike the other scenes the critters are inline SVG, not
@@ -652,7 +661,7 @@ All the critters behave the same way around the music:
 > - A critter is a **species** (who) playing an **act** (what). `species.tsx` has `SPECIES`: each is a
 >   `Face` (and maybe a `Tail`), plus skin colours in CSS (`--skin`, `--skin-dark` on `.species-<id>`) for
 >   hands and bare arms. `Critter.tsx` has `ACTS`: each act component (`DJ.tsx`, `Country.tsx`,
->   `Rapper.tsx`, `Rocker.tsx`, `Drums.tsx`, `Theremin.tsx`, `Synth.tsx`, `Accordion.tsx`, `Drive.tsx`) draws the
+>   `Rapper.tsx`, `Rocker.tsx`, `Drums.tsx`, `Theremin.tsx`, `Synth.tsx`, `Accordion.tsx`, `Drive.tsx`, `Reactor.tsx`, `Bongo.tsx`, `Piano.tsx`) draws the
 >   scene, clothes, headwear, instrument and hands, and puts `species.Face` in `Head` and `species.Tail`
 >   behind the body. So every species can play every act with no per-pair drawing.
 > - The picks are `critter` (`Species`) and `act` (`Act`) in the settings store, both synced to the Hub.
