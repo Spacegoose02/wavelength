@@ -755,6 +755,9 @@ and hands out ids.
   player goes away). Songs the catalog doesn't know, files that have gone and other formats play from Navidrome.
   Scrobbles, stars and playlists still go to Navidrome, and kids' songs are still checked before they play.
   Navidrome support stays: every Hub phase is a switch, and a Navidrome hosted on its own works without a Hub.
+  **Settings → Server → Listening now** shows who sent each song (`playedBy`, `hub/src/playedBy.ts`, kept in memory
+  for 30 minutes): "played by the Hub", "Navidrome via the Hub" (switch off or a song the catalog doesn't know), or
+  "Navidrome directly" for a device that doesn't go through the Hub at all.
 
 Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
 under Library updates; without it the catalog still scans.

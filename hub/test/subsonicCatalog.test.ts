@@ -217,8 +217,18 @@ test('with the play switch on, the Hub sends the files itself, with seeking, and
   assert.ok((low.body as Buffer).length > 1000, 'some mp3 came out');
   assert.deepEqual(nd.calls, [], 'Navidrome wasn’t asked for any of it');
 
+  // Listening now says who sent the song
+  await json(app, 'POST', '/api/me/playing', { token: tokens.member, body: { title: 'Come Together', artist: 'The Beatles', source: 'navidrome' } });
+  const listening = async () => (await json(app, 'GET', '/api/admin/listening', { token: tokens.admin })).body.listening.find((p: { title: string }) => p.title === 'Come Together');
+  assert.equal((await listening()).playedBy, 'hub');
+
   // a song the catalog doesn't know, and a format the Hub doesn't make: Navidrome's
   await rest('stream', { id: 'brand-new' });
   await rest('stream', { id: 'nd3', format: 'wma' });
   assert.deepEqual(nd.calls, ['stream', 'stream']);
+  assert.equal((await listening()).playedBy, 'navidrome');
+  // a device that never streams through the Hub talks to Navidrome directly
+  await json(app, 'POST', '/api/me/playing', { token: tokens.admin, body: { title: 'Direct', source: 'navidrome' } });
+  const all = (await json(app, 'GET', '/api/admin/listening', { token: tokens.admin })).body.listening;
+  assert.equal(all.find((p: { title: string }) => p.title === 'Direct').playedBy, 'direct');
 });

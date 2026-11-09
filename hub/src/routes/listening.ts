@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { need, signedIn, str } from '../http.ts';
+import { lastPlayedBy } from '../playedBy.ts';
 
 /** How long a "now playing" report counts without another one (devices report every minute while playing). */
 const FRESH_MS = 3 * 60_000;
@@ -46,6 +47,8 @@ export function listeningRoutes(app: FastifyInstance, _ctx: Ctx) {
     need(req, 'users.manage');
     const cutoff = Date.now() - FRESH_MS;
     for (const [id, p] of now) if (p.at < cutoff) now.delete(id);
-    return { listening: [...now.values()].sort((a, b) => a.displayName.localeCompare(b.displayName)) };
+    // who sent the song: the Hub from the music folder, Navidrome through the Hub, or (no relay streams) Navidrome directly
+    const list = [...now.values()].map((p) => ({ ...p, playedBy: lastPlayedBy(p.deviceId) ?? (p.source === 'navidrome' ? 'direct' : null) }));
+    return { listening: list.sort((a, b) => a.displayName.localeCompare(b.displayName)) };
   });
 }

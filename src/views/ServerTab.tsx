@@ -113,7 +113,7 @@ function ListeningNow() {
             <div className="track-title">{p.displayName}{p.role === 'kid' ? <small className="muted"> · kid</small> : null}</div>
             <div className="track-sub">{p.title}{p.artist ? ` — ${p.artist}` : ''}{p.album ? ` · ${p.album}` : ''}</div>
           </div>
-          <span className="muted small">{p.deviceName}{p.source ? ` · ${p.source}` : ''}</span>
+          <span className="muted small" title={PLAYED_BY_HINT[p.playedBy ?? ''] ?? undefined}>{p.deviceName}{p.playedBy ? ` · ${PLAYED_BY[p.playedBy]}` : p.source ? ` · ${p.source}` : ''}</span>
         </div>
       ))}
     </section>
@@ -296,6 +296,14 @@ function LibraryScan() {
  * music server. Shows how far a scan got and what it found; nothing here changes what devices play. Hidden on a
  * Hub that hasn't got it yet.
  */
+/** Listening now: who sent the song (hub/src/playedBy.ts). */
+const PLAYED_BY: Record<string, string> = { hub: 'played by the Hub', navidrome: 'Navidrome via the Hub', direct: 'Navidrome directly' };
+const PLAYED_BY_HINT: Record<string, string> = {
+  hub: 'The Hub sent this song from the music folder itself (Hub plays the songs)',
+  navidrome: 'This device goes through the Hub, which fetched the song from Navidrome (Hub plays the songs is off, or the catalog doesn\'t know the song yet)',
+  direct: 'This device talks to Navidrome itself, not through the Hub. Turn on “Send everyone through the Hub” under Sources for the Hub to play its songs',
+};
+
 function MusicCatalog() {
   const c = hubClient();
   const [st, setSt] = useState<HubCatalogStatus>();

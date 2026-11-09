@@ -471,6 +471,8 @@ export interface HubListening {
   album: string;
   source: string;
   at: number;
+  /** who sent the song: the Hub from the music folder, Navidrome through the Hub, Navidrome directly (absent on older Hubs) */
+  playedBy?: 'hub' | 'navidrome' | 'direct' | null;
 }
 
 /** Rescans after downloads (GET /api/admin/library). */
