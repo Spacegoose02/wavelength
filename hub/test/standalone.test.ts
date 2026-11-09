@@ -192,6 +192,8 @@ test('other apps (SUB/WAVE and the like) get a Hub login of their own, which sto
   const subwave = as({ secrets: { username: login.username, password: login.password } });
   assert.equal((await subwave('ping')).body.status, 'ok');
   assert.equal((await subwave('getAlbum', { id: 'al1' })).body.album.song.length, 2);
+  const plain = await app.inject({ method: 'GET', url: `/rest/ping.view?${new URLSearchParams({ u: login.username, t: md5(login.password + 'salt'), s: 'salt', v: '1.16.1', c: 'test', f: 'json' })}` });
+  assert.equal(plain.json()['subsonic-response'].status, 'ok', 'the Hub’s plain address works too');
 
   assert.equal((await json(app, 'DELETE', `/api/me/devices/${login.id}`, { token: tokens.member })).status, 200);
   assert.equal((await subwave('ping')).body.error.code, 40, 'removed: signed out');
