@@ -177,6 +177,15 @@ export class NavidromeSource implements MusicSource {
         if (fresh.length < 50) break;
       }
     }
+    return this.withFacts(raw);
+  }
+
+  /** An album's songs with what smart playlists filter on (lib/smartPlaylists.ts, rules on styles, moods or collections). */
+  async albumSongsWithFacts(albumId: string): Promise<{ track: Track; facts: SongFacts }[]> {
+    return this.withFacts((await this.call('getAlbum', { id: albumId })).album?.song ?? []);
+  }
+
+  private withFacts(raw: any[]): { track: Track; facts: SongFacts }[] {
     const time = (v: unknown) => (typeof v === 'string' && v ? Date.parse(v) || undefined : undefined);
     return raw.map((s) => ({
       track: this.track(s),

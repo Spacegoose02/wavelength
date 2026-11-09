@@ -3,6 +3,7 @@ import { AlbumCard, ArtistCard, Empty, Grid, Spinner } from '../components/commo
 import { IconPlay, IconShuffle } from '../components/Icons';
 import { ALBUM_SORTS, type BrowseQuery, decadeCounts, decadeLabel, findGenre, genreKey, genreTree, queryAlbums, queryArtists, sample, tagCounts, type AlbumSort, type GenreNode, type TagFacet } from '../lib/browse';
 import { useItemTags } from '../lib/itemTags';
+import { SaveSmartButton } from '../components/SaveSmartButton';
 import { useHidden } from '../lib/kids';
 import { sourceFor } from '../sources/registry';
 import type { Album, Track } from '../sources/types';
@@ -175,6 +176,7 @@ function Slice({ albums, artists, tree, q }: { albums: Album[]; artists: ReturnT
         </h1>
         <button className="btn primary" disabled={busy || !shown.length} onClick={() => play(true)}><IconShuffle /> Shuffle</button>
         <button className="btn" disabled={busy || !shown.length} onClick={() => play(false)}><IconPlay /> Play</button>
+        <SaveSmartButton q={{ ...q, genre: pick }} name={title} />
         {busy && <Spinner />}
       </header>
       {picked.length > 0 && (
