@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+- **Three new critter acts: Reactor, Bongo and Pianist.** Every species plays them, as a boy or a girl, and the
+  holiday hats and theme outfits (the hazmat suit in the Nuclear skins) go on as usual.
+  - **Reactor**, the nuclear scene: a hard hat and lab coat, rocking a keytar in front of the glowing green core
+    of a reactor. The fuel rods light up with the spectrum, the core's glow swells with the bass, amber beacons
+    spin on the beat, a Geiger counter's needle jumps with the highs and motes drift up off the core. One hand
+    plays chords along the keys (they light up), the other bends notes on the neck's ribbon. Flourish: the keytar
+    swings up, the hand sweeps down the keys and the core flares (`Reactor.tsx`).
+  - **Bongo**: a straw hat, Hawaiian shirt and flower lei (a grass skirt for girls) on a sunny beach, slapping
+    bongos: the small drum on the beat, the big one on the off-beats, both together at the end of the bar. The
+    waves roll in with the bass, palms sway, tiki torches flicker and a crab scuttles in time. Flourish: a fast
+    roll and both hands up (`Bongo.tsx`).
+  - **Pianist**: a tuxedo and bow tie at a grand piano in a jazz lounge under a neon JAZZ sign, playing stride
+    (bass note, chord, bass note, chord) with the right hand running along the keys. The keys light up, the lid
+    lifts on the bass, music notes float up and the footlights chase on the beat. Flourish: a glissando and a
+    burst of notes (`Piano.tsx`).
+
 ## 0.33.0
 - **Edit song.** Admins can fix one song's tags, Plex style: right-click a song → **Edit song…**, or **Edit** on its
   row. **General** has the title, the main **Artist**, **Featured artists** as chips (pick from your library, paste

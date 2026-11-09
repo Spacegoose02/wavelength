@@ -142,7 +142,7 @@ export function Legs({ species, legs = 'legs', shoe, girlLegs = 'bare' }: { spec
 const narrow = (k: number) => (k === 1 ? undefined : `translate(200 0) scale(${k} 1) translate(-200 0)`);
 
 /** A radiation trefoil: three 60° blades round a dot. */
-function trefoil(cx: number, cy: number, r: number) {
+export function trefoil(cx: number, cy: number, r: number) {
   const ri = r * 0.32;
   const p = (rad: number, deg: number) => `${(cx + rad * Math.cos((deg * Math.PI) / 180)).toFixed(1)} ${(cy + rad * Math.sin((deg * Math.PI) / 180)).toFixed(1)}`;
   const blades = [-150, -30, 90].map((c) => {
