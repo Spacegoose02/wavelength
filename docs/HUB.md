@@ -358,7 +358,7 @@ B" if asked, with an optional genre; it saves through the same `PUT /api/admin/t
 way. The editors suggest artist and genre names from Navidrome (`GET /api/admin/tags/values`).
 
 
-**Merging** (Albums or Artists → **Select → Merge**, `src/lib/merge.ts`) uses the same endpoints: it reads the
+**Merging** (Albums or Artists → **Select → Merge**, or **Merge into…** on an artist or album page; `src/lib/merge.ts`) uses the same endpoints: it reads the
 ticked albums' files with `GET /api/admin/tags/albums`, works out the new tags in the app, and writes them with one
 `PUT /api/admin/tags`, labelled "Merge … into …". So a merge shows up under **Tag edits**, is undone in one go, and
 is audited as `tags.edited`.
