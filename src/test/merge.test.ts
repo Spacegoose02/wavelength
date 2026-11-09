@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { albumTarget, planAlbumMerge, planArtistMerge, renameArtist, splitCredit, splitCreditOptions } from '../lib/merge';
+import { albumKey, likeness, looseKey } from '../components/MergeInto';
+import { albumTarget, mergedName, planAlbumMerge, planArtistMerge, renameArtist, splitCredit, splitCreditOptions } from '../lib/merge';
 import type { HubTags } from '../sources/hub';
 
 const song = (path: string, tags: HubTags, albumId = 'a1') => ({ id: path, path, albumId, tags });
@@ -77,5 +78,49 @@ describe('splitting joined credits', () => {
   test('the whole joined credit renames to the chosen one', () => {
     expect(renameArtist('Lil Baby;Jeremih', 'Lil Baby;Jeremih', 'Lil Baby', true)).toBe('Lil Baby');
     expect(renameArtist('Lil Baby', 'Lil Baby;Jeremih', 'Lil Baby', true)).toBe('Lil Baby');
+  });
+});
+
+describe('merging a joined credit keeps the featured artists (Main feat. X)', () => {
+  test('into one of its own artists', () => {
+    expect(mergedName('Lil Baby;Jeremih', 'Lil Baby')).toEqual({ artist: 'Lil Baby feat. Jeremih', albumArtist: 'Lil Baby', inCredit: 'Lil Baby; Jeremih' });
+    expect(mergedName('A;B;C', 'B')).toEqual({ artist: 'B feat. A; C', albumArtist: 'B', inCredit: 'B; A; C' });
+  });
+
+  test('into someone else, or a plain name, is just the target', () => {
+    expect(mergedName('Lil Baby;Jeremih', 'Drake').artist).toBe('Drake');
+    expect(mergedName('Beatles', 'The Beatles')).toEqual({ artist: 'The Beatles', albumArtist: 'The Beatles', inCredit: 'The Beatles' });
+    expect(mergedName('Lil Durk;Lil Durk', 'Lil Durk').artist).toBe('Lil Durk');
+  });
+
+  test('songs and albums are retagged that way', () => {
+    const plan = planArtistMerge('Lil Baby', ['Lil Baby;Jeremih'], [
+      song('a.mp3', { artist: 'Lil Baby;Jeremih', albumArtist: 'Lil Baby;Jeremih' }),
+      song('b.mp3', { artist: 'Gunna feat. Lil Baby;Jeremih', albumArtist: 'Gunna' }),
+    ]);
+    expect(plan.map((c) => c.tags)).toEqual([
+      { artist: 'Lil Baby feat. Jeremih', albumArtist: 'Lil Baby' },
+      { artist: 'Gunna feat. Lil Baby; Jeremih' },
+    ]);
+  });
+
+  test('an album target without an album artist takes the main artist of its songs', () => {
+    expect(albumTarget([song('a.mp3', { artist: 'Lil Durk feat. Drake' })], { title: 'T', artist: 'x' }).albumArtist).toBe('Lil Durk');
+  });
+});
+
+describe('Merge into… finds likely duplicates', () => {
+  test('artist names alike once case, accents, "The" and "&" are put aside', () => {
+    expect(looseKey('The Beatles')).toBe(looseKey('beatles'));
+    expect(looseKey('Beyoncé')).toBe(looseKey('Beyonce'));
+    expect(looseKey('Simon & Garfunkel')).toBe(looseKey('Simon and Garfunkel'));
+    expect(likeness(looseKey('B.o.B'), looseKey('BoB'))).toBe(2);
+    expect(likeness(looseKey('Lil Baby'), looseKey('Lil Baby;Jeremih'))).toBe(1);
+    expect(likeness(looseKey('Drake'), looseKey('Future'))).toBe(0);
+  });
+
+  test('album titles without their edition', () => {
+    expect(albumKey('Underground Luxury (Deluxe)')).toBe(albumKey('Underground Luxury'));
+    expect(albumKey('Abbey Road - Remastered 2019')).toBe(albumKey('Abbey Road'));
   });
 });

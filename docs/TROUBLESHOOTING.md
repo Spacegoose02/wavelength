@@ -77,7 +77,10 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | **Merge** isn't in the select bar | Merging is for Hub admins (`library.edit`), and needs two or more ticked | Sign in to the Hub as an admin; tick at least two |
 | "…isn't on a Navidrome server, so the Hub can't merge into it" | The first album ticked is only on Plex (or another server) | Tick a Navidrome album first; it's the target |
 | Merged, but the albums still show separately after the rescan | Navidrome also tells albums apart by their MusicBrainz album id (and release date), and the files have different ones. The merge sets the year, but can't write MusicBrainz ids | Open the album, **Edit tags**, and fix it there; or clear the MusicBrainz album id with a tagger like MusicBrainz Picard. Check Navidrome's `PID.Album` setting |
-| Merged the wrong way round | The first one ticked is the target | **Settings → Server → Tag edits → Undo**, then tick the right one first |
+| **Merge into…** isn't on an artist or album page | It's for Hub admins (`library.edit`), and only for artists and albums on Navidrome | Sign in to the Hub as an admin |
+| **Merge into…** suggests nothing | Nothing else in the library has a name close enough | Type part of the other name in the box |
+| An artist still shows after merging it | Before this fix, songs where they were only featured on someone else's album weren't retagged | Merge again: it now reads their appears-on albums too |
+| Merged the wrong way round | The first one ticked is the target (with **Merge into…**, the one you picked is kept) | **Settings → Server → Tag edits → Undo**, then tick the right one first |
 | "The Hub can't find …'s files in its music folder" | The Hub's music folder isn't the one Navidrome reads, or is read-only | See the tag editor's setup in `docs/HUB.md` (`WAVELENGTH_MUSIC_DIR`, `WAVELENGTH_NAVIDROME_MUSIC_DIR`) |
 
 ## Artist credits and unmatched songs

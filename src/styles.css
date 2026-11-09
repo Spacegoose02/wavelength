@@ -501,6 +501,9 @@ input[type='range']:hover::-webkit-slider-thumb { opacity: 1; }
 .menu-item:hover { background: var(--panel); }
 .menu-item small { color: var(--muted); }
 .menu-hint { color: var(--muted); font-size: 12px; padding: 4px 8px; }
+.merge-menu { width: min(320px, calc(100vw - 32px)); }
+.merge-menu .menu-item { gap: 10px; text-align: left; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.merge-menu .menu-item small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
 .track-row:has(.menu-wrap.open) .track-actions, .station-row:has(.menu-wrap.open) .track-actions { opacity: 1; }
 .station-row .track-actions { opacity: 0; }
 .station-row:hover .track-actions { opacity: 1; }
