@@ -1,12 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.35.0
+- **The Hub plays the songs from the music folder (phase 4 of replacing Navidrome).** Off by default: **Hub plays
+  the songs (beta)** under Settings → Server → Music catalog, separate from the browsing switch, and only while the
+  catalog matches Navidrome. For devices that go through the Hub, `stream` and `download` of a song the catalog knows
+  come from the music folder: the file as it is, with seeking (Range), an ETag and a length, or converted by ffmpeg as
+  it plays when a lower bitrate or another format (mp3, opus, aac) is asked for. Songs the catalog doesn't know, files
+  that have gone and other formats still play from Navidrome; scrobbles, stars and playlists stay there, and kids'
+  songs are still checked. Navidrome support stays: every Hub phase is a switch (`hub/src/catalogStream.ts`, #238).
 - **Radio: a new look for Your stations.** The wall of identical cyan pills is now a grid of cards that follow
   your skin. Messy server names are tidied (*Energy 93@181.FM (Euro EDM)(Dance/Techno)* shows as **Energy 93**,
   *Euro EDM · Dance · Techno*), each station gets its logo or a tile in its genre's colour, and they're grouped
   by genre (**By genre** / **My order** next to the heading). The playing station is outlined with moving bars
-  instead of every card having a red dot. Edit mode uses the same cards.
-- **Fix: Radio → Favorites** showed the text "row(s)" instead of your favorite stations.
+  instead of every card having a red dot. Edit mode uses the same cards (#237).
+- **Fix: Radio → Favorites** showed the text "row(s)" instead of your favorite stations (#237).
 
 ## 0.34.0
 - **Edit album and Edit artist, Plex style.** The album page's **Edit album** opens a dialog like Edit song's:
