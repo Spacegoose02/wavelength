@@ -161,14 +161,7 @@ export function Marimba({ species, still }: ActProps) {
 
   return (
     <CritterFrame ref={root} kind="marimba" species={species} label={`A ${species.noun} playing a marimba in the jungle`}>
-      <defs>
-        <linearGradient id="jungle-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#0f3d2a" />
-          <stop offset="1" stopColor="#2d6b40" />
-        </linearGradient>
-      </defs>
       {/* the forest: far trunks, light through the canopy, the waterfall and its pool, the clearing */}
-      <rect x="0" y="0" width="400" height="340" fill="url(#jungle-sky)" />
       <path className="jungle-far" d="M0 120 Q 40 90 80 110 Q 120 70 170 100 Q 220 60 260 96 Q 310 70 350 104 Q 380 90 400 100 V340 H0 Z" />
       {[[34, 16], [140, 12], [250, 14], [376, 18]].map(([x, w]) => <rect key={x} className="jungle-trunk" x={x - w / 2} y="40" width={w} height="300" />)}
       <g data-part="shafts" className="light-shaft">

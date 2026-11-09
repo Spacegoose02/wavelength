@@ -1,23 +1,23 @@
 import type { ComponentType } from 'react';
-import { useSettings, type Act, type Species } from '../../store/settings';
+import { RETIRED_ACTS, useSettings, type Act, type Species } from '../../store/settings';
 import { Accordion } from './Accordion';
+import { Acoustic } from './Acoustic';
 import { Bongo } from './Bongo';
 import { Country } from './Country';
 import { DJ } from './DJ';
 import { Drive } from './Drive';
 import { Drums } from './Drums';
 import { GirlContext } from './faces';
-import { Harp } from './Harp';
 import { Marimba } from './Marimba';
 import { Piano } from './Piano';
 import { Rapper } from './Rapper';
 import { Reactor } from './Reactor';
 import { Rocker } from './Rocker';
-import { Sax } from './Sax';
+import { Singer } from './Singer';
 import { SPECIES, type ActProps, type SpeciesInfo } from './species';
+import { Surf } from './Surf';
 import { Synth } from './Synth';
 import { Theremin } from './Theremin';
-import { Tuba } from './Tuba';
 import { Violin } from './Violin';
 
 export { SPECIES, type SpeciesInfo };
@@ -52,14 +52,14 @@ export const ACTS: ActInfo[] = [
   { id: 'piano', label: 'Pianist', blurb: 'Tuxedo and bow tie, plays stride piano on a grand in a jazz lounge', Scene: Piano },
   { id: 'marimba', label: 'Marimba', blurb: 'Pith helmet and khaki, plays a marimba in the jungle by a waterfall', Scene: Marimba },
   { id: 'violin', label: 'Violinist', blurb: 'Long coat and flat cap, busks on the violin under a street lamp in the rain', Scene: Violin },
-  { id: 'sax', label: 'Saxophone', blurb: 'Beret and roll-neck, plays the sax on a city rooftop under a string of lights', Scene: Sax },
-  { id: 'harp', label: 'Harpist', blurb: 'Laurel wreath and toga, plays a golden harp on a cloud at sunrise under a rainbow', Scene: Harp },
-  { id: 'tuba', label: 'Tuba', blurb: 'Band hat and braided jacket, oom-pahs on a tuba in a snowy town square', Scene: Tuba },
+  { id: 'acoustic', label: 'Acoustic', blurb: 'Cardigan and tee, strums an acoustic guitar on the rug in a cosy room under fairy lights', Scene: Acoustic },
+  { id: 'surf', label: 'Surf rock', blurb: 'Tank top and shades, twangs a surf guitar barefoot on the beach by the boards', Scene: Surf },
+  { id: 'singer', label: 'Singer', blurb: 'Sequined jacket, sings at a vintage mic on stage under the spotlights', Scene: Singer },
 ];
 
 /** Unknown ids (e.g. synced from a newer app) fall back to the first entry. */
 export const findSpecies = (id: Species) => SPECIES.find((s) => s.id === id) ?? SPECIES[0];
-export const findAct = (id: Act) => ACTS.find((a) => a.id === id) ?? ACTS[0];
+export const findAct = (id: Act) => ACTS.find((a) => a.id === (RETIRED_ACTS[id] ?? id)) ?? ACTS[0];
 
 /** "Rocker shark", "DJ raccoon", "Synth grey alien" */
 export const critterLabel = (species: Species, act: Act) => `${findAct(act).label} ${findSpecies(species).noun}`;

@@ -1747,10 +1747,10 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .monkey-tail { stroke: var(--skin); }
 .critter.species-monkey .under-hat :is([data-part='ear-l'], [data-part='ear-r']) { display: inline; }
 :root[data-skin-group='nuclear'] .critter .monkey-ears { display: none; }
-/* the flamingo: pink all over, its wings are its arms (bare, with black feathered tips for hands) */
+/* the flamingo: pink all over, its wings are its arms (bare, with deeper pink feathered tips) */
 .species-flamingo { --skin: #f694b4; --skin-dark: #c4547e; --belly: #ffd0de; }
 .critter.species-flamingo .sleeve { stroke: var(--skin); }
-.critter.species-flamingo .hand { fill: #2c2430; }
+.critter.species-flamingo .hand { fill: #e8709a; }
 .critter .flamingo-tail { fill: #e57aa0; }
 /* the gorilla: charcoal fur, grey leathery hands and feet */
 .species-gorilla { --skin: #3e393b; --skin-dark: #1c191a; --belly: #7e6f68; }
@@ -1758,6 +1758,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 /* the penguin: black, with flippers for arms (bare) and orange feet */
 .species-penguin { --skin: #262a38; --skin-dark: #10121a; --belly: #f4f7fa; }
 .critter.species-penguin .sleeve { stroke: var(--skin); }
+.critter .flipper-under { stroke: #c8ced8; }
 .critter .penguin-foot { fill: #f5a024; }
 /* the fox: orange, with dark stockings and paws and a white-tipped tail */
 .species-fox { --skin: #f07a2a; --skin-dark: #2a1a12; --belly: #fff6ee; }
@@ -1768,17 +1769,22 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .species-axolotl { --skin: #f9b6cc; --skin-dark: #e0809e; --belly: #fff0f5; }
 .critter .axolotl-fin { fill: #f6a0bc; opacity: 0.85; }
 :root[data-skin-group='nuclear'] .critter .axolotl-gills { display: none; }
-/* the sloth: beige and shaggy, with long claws */
-.species-sloth { --skin: #b49674; --skin-dark: #5a4030; --belly: #f0e2c8; }
+/* the sloth: tan and shaggy, with long dark claws */
+.species-sloth { --skin: #b88e5e; --skin-dark: #5a4030; --belly: #f0e2c8; }
+.critter.species-sloth .hand-claw { stroke: #3e2c26; }
 /* the octopus: coral, its tentacles are its legs and arms (bare) */
 .species-octopus { --skin: #f2786a; --skin-dark: #b8443c; --belly: #ffd2c6; }
 .critter.species-octopus .sleeve { stroke: var(--skin); }
 .critter .tentacle-tip { stroke: var(--skin); }
+/* the Drummer gives the octopus its own two extra arms, with sticks */
+.critter-drums .octo-arms { display: none; }
 .critter .sucker { fill: #ffd2c6; }
-/* the dragon: teal with cream horns, orange spines and wings, and a puff of smoke on a flourish */
-.species-dragon { --skin: #3eb0a6; --skin-dark: #1f6e6a; --belly: #fffbe8; }
-.critter .dragon-wing { fill: #f2a43a; }
-.critter .dragon-spine { fill: #f2a43a; }
+/* the dragon: charcoal black with grey wings, ear fins and spines, lime eyes, and a puff of smoke on a flourish */
+.species-dragon { --skin: #34373f; --skin-dark: #141519; --belly: #5a5e6a; }
+.critter .dragon-wing { fill: #4a4e58; }
+.critter .dragon-spine { fill: #202228; }
+.critter.species-dragon .hand-claw { stroke: #c8ccd4; }
+.critter.species-dragon .lashes { stroke: #c8ccd4; }
 .critter .smoke { fill: #e8e8ee; opacity: 0.85; }
 :root[data-skin-group='nuclear'] .critter .dragon-wings { display: none; }
 /* the frog: bright green with big webbed feet; it hops on the beat */
@@ -1793,6 +1799,16 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .species-red-panda { --skin: #3a1a10; --skin-dark: #1e0e08; --belly: #fff6ee; }
 .critter .red-panda-tail { fill: #d0602c; }
 .critter .red-panda-ring { stroke: #f2b080; fill: none; }
+/* the turkey: maroon with an orange beak and feet, wings for arms, and a fan of maroon and orange tail feathers
+   (hidden under the hazmat suit) */
+.species-turkey { --skin: #861f3c; --skin-dark: #560f24; --belly: #f4e6d8; }
+.critter.species-turkey .sleeve { stroke: var(--skin); }
+.critter.species-turkey .hand { fill: #a8304e; }
+.critter .turkey-foot { fill: #f08a24; }
+.critter .turkey-feather { fill: #861f3c; }
+.critter .turkey-feather-alt { fill: #e8761c; }
+.critter .turkey-tip { fill: #f4e6d8; }
+:root[data-skin-group='nuclear'] .critter .turkey-fan { display: none; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }
@@ -1893,7 +1909,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
 /* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
-.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin, .critter-sax, .critter-harp, .critter-tuba) .shark-fin,
+.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin, .critter-acoustic, .critter-surf, .critter-singer) .shark-fin,
 :root[data-skin-group='nuclear'] .critter .shark-fin,
 :root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
@@ -1963,11 +1979,12 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .firefly { fill: #f4ff8a; }
 
 /* the Drive act (Drive.tsx): the car, cap, scarf and lights follow the skin; the road and the sunset are fixed */
-.critter .drive-sky { fill: #2a1c3a; }
-.critter .drive-sky-band { fill: #2a1c3a; }
+/* no sky: the album colours show through behind the sun and the hills, like the first scenes */
+.critter .drive-sky { fill: none; }
+.critter .drive-sky-band { fill: rgb(0 0 0 / 0.35); }
 .critter .drive-sun { fill: color-mix(in srgb, var(--viz-high) 55%, #ffb347); }
-.critter .hill-far { fill: #3b2a4c; }
-.critter .hill-near { fill: #2a2238; }
+.critter .hill-far { fill: #3b2a4c; opacity: 0.55; }
+.critter .hill-near { fill: #2a2238; opacity: 0.75; }
 .critter .verge { fill: #23301f; }
 .critter .road { fill: #2c2c33; }
 .critter .road-line { fill: #f2d16b; }
@@ -2003,7 +2020,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .scarf-knot { fill: color-mix(in srgb, var(--viz-low) 70%, #000); }
 
 /* the Reactor act (Reactor.tsx): the keytar, hard hat and badge follow the skin; the reactor's glow stays radioactive green */
-.critter .bunker-wall { fill: #2b3330; }
+.critter .bunker-wall { fill: #2b3330; opacity: 0.35; }
 .critter .bunker-floor { fill: #3a403d; }
 .critter .bunker-seam { stroke: rgb(0 0 0 / 0.35); }
 .critter .core-housing { fill: #4d5754; }
@@ -2043,7 +2060,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .beach-sun { fill: #fff1a8; }
 .critter .sun-ray { stroke: #fff1a8; opacity: 0.8; }
 .critter .cloud { fill: #ffffff; opacity: 0.85; }
-.critter .sea { fill: #1fa3b8; }
+.critter .sea { fill: #1fa3b8; opacity: 0.8; }
 .critter .sea-far { fill: #17839a; }
 .critter .wave-line { stroke: rgb(255 255 255 / 0.45); }
 .critter .island { fill: #3f8f5a; }
@@ -2079,7 +2096,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .bongo-hoop { stroke: #b9b9c2; }
 
 /* the Piano act (Piano.tsx): the bow tie, pocket square and neon sign follow the skin; the piano and the lounge are fixed */
-.critter .lounge-wall { fill: #2a1424; }
+.critter .lounge-wall { fill: #2a1424; opacity: 0.35; }
 .critter .lounge-stripe { fill: rgb(255 255 255 / 0.03); }
 .critter .neon-sign { fill: none; stroke: var(--viz-high); }
 .critter .neon-note { stroke: var(--viz-mid); }
@@ -2112,8 +2129,8 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 
 /* the Marimba act (Marimba.tsx): the neckerchief, hat band and the struck bars' glow follow the skin; the jungle,
    the khaki and the wood are fixed */
-.critter .jungle-far { fill: #1d4e33; }
-.critter .jungle-trunk { fill: #163826; }
+.critter .jungle-far { fill: #1d4e33; opacity: 0.55; }
+.critter .jungle-trunk { fill: #163826; opacity: 0.7; }
 .critter .light-shaft { fill: rgb(255 248 200 / 0.08); }
 .critter .cliff { fill: #4a5a4c; }
 .critter .falls { fill: #bfeaf2; opacity: 0.85; }
@@ -2155,8 +2172,8 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 /* the Violin act (Violin.tsx): the coat, scarf and the window's glow follow the skin; the street, the lamp, the
    rain and the violin are fixed */
 .critter .night-sky { fill: #141a33; }
-.critter .brick-wall { fill: #5a2e26; }
-.critter .brick-line { stroke: #3e1e18; fill: none; }
+.critter .brick-wall { fill: #5a2e26; opacity: 0.3; }
+.critter .brick-line { stroke: #3e1e18; fill: none; opacity: 0.45; }
 .critter .roof-edge { stroke: #2a1612; }
 .critter .window-frame { fill: #2a1a14; stroke: #2a1a14; }
 .critter .window-glow { fill: color-mix(in srgb, var(--viz-mid) 35%, #ffd27a); }
@@ -2194,91 +2211,70 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .bow-frog { fill: #1b1b1f; }
 
 
-/* the Saxophone act (Sax.tsx): the jumper, beret and the string of lights follow the skin; the brass, the
-   city and the roof are fixed */
-.critter .city-sky { fill: #12142c; }
-.critter .building { fill: #1d2140; }
-.critter .city-window { fill: #ffd97a; }
-.critter .water-tower .tower-leg { stroke: #2a2420; }
-.critter .tower-tank { fill: #6a4a34; }
-.critter .tower-roof { fill: #4a3426; }
-.critter .light-wire { stroke: #0b0b12; }
-.critter .parapet { fill: #5a4a44; }
-.critter .parapet-cap { stroke: #7a6a62; }
-.critter .roof-floor { fill: #2c2c33; }
-.critter .roof-seam { stroke: #23232a; }
-.critter .rollneck { fill: color-mix(in srgb, var(--accent) 80%, #000); }
-.critter .beret { fill: #1c1c24; }
-.critter-sax .beret { fill: var(--viz-mid); }
-.critter .sax-edge { stroke: #7a5414; }
-.critter .sax-brass { stroke: #e2b13c; }
-.critter .sax-bell { fill: #e2b13c; }
-.critter .sax-bell-mouth { fill: #7a5414; }
-.critter .sax-shine { stroke: #fff2c0; opacity: 0.6; }
-.critter .sax-key { fill: #f6efe0; }
-.critter .sax-guard { stroke: #7a5414; }
-.critter .sax-mouthpiece { fill: #16161a; }
-.critter .sax-note { stroke: var(--viz-high); }
-.critter .sax-note-head { fill: var(--viz-high); }
+/* the Acoustic act (Acoustic.tsx): the cardigan, the rug and the fairy lights follow the skin; the wood, the
+   lamp and the plant are fixed */
+.critter .light-wire { stroke: rgb(0 0 0 / 0.55); }
+.critter .room-floor { fill: #7a5232; }
+.critter .room-board { stroke: #5e3d22; }
+.critter .rug { fill: color-mix(in srgb, var(--accent) 55%, #3a2a22); }
+.critter .rug-ring { stroke: color-mix(in srgb, var(--viz-high) 60%, #fff); }
+.critter .lamp-glow { fill: #ffd98a; filter: blur(14px); opacity: 0.4; }
+.critter .lamp-pole { stroke: #2a2420; }
+.critter .lamp-shade { fill: #f4e2b8; }
+.critter .leaf-2 { fill: #45b06c; }
+.critter .pot { fill: #c0643a; }
+.critter .pot-rim { stroke: #a24e2a; }
+.critter .tee-under { fill: #f2ead8; }
+.critter .cardigan { fill: var(--accent); }
+.critter .cardigan-button { fill: #f2ead8; }
+.critter-acoustic .sleeve { stroke: var(--accent); }
+.critter-acoustic .legs { fill: #3a4a6a; }
+.critter .acoustic-body { fill: #e0a35a; }
+.critter .acoustic-edge { stroke: #5a3014; }
+.critter .acoustic-rosette { fill: #5a3014; }
+.critter .acoustic-hole { fill: #1e120a; }
+.critter .acoustic-guard { fill: #4a2a14; }
+.critter .acoustic-bridge { fill: #3a2010; }
 
+/* the Surf rock act (Surf.tsx): the tank top, the guitar and the boards follow the skin; the sea and the sand
+   are fixed (the sand, waves, foam and palm are the Bongo act's) */
+.critter .surf-sea { fill: #2fb4c8; opacity: 0.75; }
+.critter .surf-crest { fill: #e8fbff; opacity: 0.85; }
+.critter .gull { stroke: #f4f6fa; }
+.critter .seashell { fill: #ffd9cc; }
+.critter .board { fill: var(--viz-high); }
+.critter .board-2 { fill: var(--viz-low); }
+.critter .board-stripe { stroke: rgb(255 255 255 / 0.8); }
+.critter .tank-wave { fill: rgb(255 255 255 / 0.22); }
+.critter .shell-bead { fill: #fff4e6; }
+.critter .shades { fill: #16161c; }
+.critter .surf-axe { fill: var(--viz-low); }
+.critter .surf-guard { fill: #f4f0e6; }
+.critter .surf-head { fill: #2a1a10; }
+.critter .pickup { fill: #f4f4f6; stroke: #888; stroke-width: 1; }
 
-/* the Harp act (Harp.tsx): the toga's drape and the plucked strings follow the skin; the sky, the clouds and
-   the harp are fixed */
-.critter .harp-sun { fill: #fff1b8; }
-.critter .harp-cloud { fill: #ffffff; }
-.critter .harp-cloud-shade { fill: #f0e6f4; }
-.critter .harp-bird { stroke: #4a3a5a; }
-.critter-harp .top { fill: #f7f3ea; }
-.critter .toga-drape { fill: var(--accent); }
-.critter .brooch { fill: #e8c25a; }
-.critter .sandal { fill: #b07a3e; }
-.critter .laurel-band { stroke: #4e8a3a; }
-.critter .laurel-leaf { fill: #6fbf4f; }
-.critter .harp-wood { stroke: #a8622a; }
-.critter .harp-wood-edge { stroke: #5a3014; }
-.critter .harp-gold { fill: #e8c25a; stroke: #e8c25a; }
-.critter .harp-gold-edge { stroke: #8a6a1c; }
-.critter .harp-base { fill: #8a6a1c; }
-.critter .harp-peg { fill: #8a6a1c; }
-.critter .harp-string { stroke: #fff6dc; }
-.critter .harp-string.red { stroke: #e05a4a; }
-.critter .harp-string-lit { stroke: var(--viz-high); }
+/* the Singer act (Singer.tsx): the jacket, the beams and the footlights follow the skin; the stand and the
+   crowd are fixed */
+.critter .beam-a { fill: var(--viz-high); }
+.critter .beam-b { fill: var(--viz-low); }
+.critter .spot-can { fill: #26262c; }
+.critter .shirt-dark { fill: #1b1b22; }
+.critter .sequin-jacket { fill: var(--accent); }
+.critter-singer .sleeve { stroke: var(--accent); }
+.critter-singer .legs { fill: #1b1b22; }
+.critter .lapel { fill: color-mix(in srgb, var(--accent) 60%, #000); }
+.critter .sequin { fill: rgb(255 255 255 / 0.7); }
+.critter .star-pin { fill: #f5cf5a; }
+.critter .skirt-sequin { fill: var(--accent); }
+.critter .stand-foot { fill: #2a2a30; }
+.critter .mic-body { fill: #2a2a30; }
+.critter .mic-grille { fill: #c9c9d1; }
+.critter .fan { fill: #0e0e12; }
+.critter .fan-arm { stroke: #0e0e12; }
+.critter .phone-light { fill: #f4f8ff; }
+.critter .sing-note { stroke: var(--viz-high); }
+.critter .sing-note-head { fill: var(--viz-high); }
 
-
-/* the Tuba act (Tuba.tsx): the band jacket and the plume follow the skin; the brass, the town and the snow are
-   fixed */
-.critter .house { fill: #3a3448; }
-.critter .house-roof { fill: #5a3a3a; }
-.critter .roof-snow { fill: #f4f8ff; }
-.critter .house-window { fill: #ffd27a; }
-.critter .house-mullion { stroke: #3a3448; }
-.critter .snow-ground { fill: #eef4ff; }
-.critter .snow-shade { fill: #d8e2f4; }
-.critter .snowman { fill: #ffffff; }
-.critter .coal { fill: #1b1b22; }
-.critter .carrot { fill: #f08a24; }
-.critter .snowman-arm { stroke: #5a3a22; }
-.critter .snowman-scarf { fill: #d8384a; }
-.critter .snowman-hat { fill: #1b1b22; }
-.critter .flake { fill: #ffffff; opacity: 0.9; }
-.critter .braid { stroke: #e8c25a; }
-.critter .braid-button { fill: #e8c25a; }
-.critter .jacket-collar { fill: color-mix(in srgb, var(--accent) 70%, #000); }
-.critter .shako { fill: color-mix(in srgb, var(--accent) 60%, #000); }
-.critter .shako-band { fill: #e8c25a; }
-.critter .shako-peak { fill: #16161c; }
-.critter .shako-plume { fill: var(--viz-high); }
-.critter .tuba-edge { stroke: #7a5414; }
-.critter .tuba-brass { stroke: #e2b13c; }
-.critter .tuba-bell { fill: #e2b13c; }
-.critter .tuba-bell-mouth { fill: #e2b13c; }
-.critter .tuba-bell-inside { fill: #7a5414; }
-.critter .tuba-shine { stroke: #fff2c0; opacity: 0.6; }
-.critter .tuba-valve { fill: #c8c8d0; }
-.critter .tuba-key { fill: #f6efe0; }
-.critter .tuba-mouthpiece { fill: #c8c8d0; }
-.critter .puff { fill: #ffffff; opacity: 0.85; }
-.critter .puff-flake { stroke: #ffffff; }
 
 /* holiday hats replace the critter's own headwear */
 .critter .hat, .critter .outfit { display: none; }

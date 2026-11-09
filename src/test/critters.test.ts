@@ -206,11 +206,12 @@ describe('the monkey, the flamingo and the gorilla', () => {
     expect(await draw('monkey', true)).toContain('under-hat');
   });
 
-  it('gives the flamingo wings for arms and a bill over its singing mouth', async () => {
+  it('gives the flamingo wings for arms and a bill drawn over its singing mouth, so the mouth opens under it', async () => {
     expect(await arm('flamingo')).toContain('wing-seam');
     expect(await arm('gorilla')).not.toMatch(/wing-seam|hand-claw/);
     const svg = await draw('flamingo');
-    expect(svg.indexOf('clip-flamingo-bill')).toBeLessThan(svg.indexOf('data-part="yawn"'));
+    expect(svg.indexOf('data-part="yawn"')).toBeGreaterThan(-1);
+    expect(svg.indexOf('url(#fl-bill)')).toBeGreaterThan(svg.indexOf('data-part="yawn"'));
   });
 
   it('gives the gorilla the broadest shoulders and the longest reach, and the flamingo the longest neck', async () => {
@@ -263,6 +264,23 @@ describe('the penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red
     expect(svg('fox')).not.toContain('data-move');
   });
 
+  it('gives the penguin flippers instead of hands, and the octopus two more arms', async () => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Arm, Legs } = await import('../components/critters/parts');
+    const { SpeciesContext } = await import('../components/critters/bodies');
+    const sp = (id: string) => SPECIES.find((s) => s.id === id)!;
+    const arm = (id: string) =>
+      renderToStaticMarkup(h(SpeciesContext.Provider, { value: sp(id) }, h('svg', null, h(Arm, { part: 'arm-r', d: 'M262 268 Q 290 300 300 330', hand: [300, 330] }))));
+    expect(arm('penguin')).toContain('flipper-under');
+    expect(arm('penguin')).not.toMatch(/<circle class="hand/);
+    expect(arm('fox')).not.toContain('flipper-under');
+    const legs = renderToStaticMarkup(h(SpeciesContext.Provider, { value: sp('octopus') }, h('svg', null, h(Legs, { species: sp('octopus') }))));
+    expect(legs).toContain('data-part="tentacle-l"');
+    expect(legs).toContain('data-part="tentacle-r"');
+  });
+
   it('gives the dragon a hidden puff of smoke for a flourish, and the axolotl gills that glow', async () => {
     expect(await draw('dragon')).toMatch(/data-part="smoke" opacity="0"/);
     expect(await draw('axolotl')).toContain('axolotl-gills');
@@ -270,7 +288,7 @@ describe('the penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red
 });
 
 describe('every act', () => {
-  it('draws for every species, boy and girl, including the Reactor, Bongo, Pianist, Marimba, Violinist, Saxophone, Harpist and Tuba acts', async () => {
+  it('draws for every species, boy and girl, including the Acoustic, Surf rock and Singer acts', async () => {
     // the player behind the rig makes an <audio> when it loads; tests run without a DOM
     vi.stubGlobal('Audio', function Audio() {
       return new Proxy({}, { get: () => () => {} });
@@ -278,7 +296,9 @@ describe('every act', () => {
     const { createElement: h } = await import('react');
     const { renderToStaticMarkup } = await import('react-dom/server');
     const { ACTS, Critter, SPECIES } = await import('../components/critters/Critter');
-    expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano', 'marimba', 'violin', 'sax', 'harp', 'tuba']));
+    expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano', 'marimba', 'violin', 'acoustic', 'surf', 'singer']));
+    expect(ACTS.map((a) => a.id)).not.toEqual(expect.arrayContaining(['sax']));
+    expect(SPECIES.map((s) => s.id)).toContain('turkey');
     for (const act of ACTS) {
       for (const sp of SPECIES) {
         for (const girl of [false, true]) {
@@ -289,5 +309,18 @@ describe('every act', () => {
         }
       }
     }
+  });
+});
+
+describe('retired acts', () => {
+  it('turns a saved Saxophone, Harpist or Tuba pick into the act that replaced it', async () => {
+    vi.stubGlobal('Audio', function Audio() {
+      return new Proxy({}, { get: () => () => {} });
+    });
+    const { findAct } = await import('../components/critters/Critter');
+    expect(findAct('sax' as never).id).toBe('surf');
+    expect(findAct('harp' as never).id).toBe('acoustic');
+    expect(findAct('tuba' as never).id).toBe('singer');
+    expect(findAct('rocker').id).toBe('rocker');
   });
 });
