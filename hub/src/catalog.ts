@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readdir, stat } from 'node:fs/promises';
 import { setPriority } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
@@ -114,6 +115,8 @@ export interface CatalogStatus {
   streaming: boolean;
   /** an admin turned on keeping hearts, plays and ratings on the Hub (phase 5) */
   userData: boolean;
+  /** Navidrome is off: the Hub keeps the ids and answers everything (phase 6) */
+  standalone: boolean;
 }
 
 /** Turn ffprobe's tag names (any case, ID3 / Vorbis / MP4) into FileTags. */
@@ -325,6 +328,8 @@ export class Catalog {
    * song Navidrome has to a file. Otherwise Library care and the editors ask Navidrome as before.
    */
   usable(): boolean {
+    // without Navidrome there is nothing to match: songs that have an id are the library
+    if (this.standalone()) return !!this.db.prepare('SELECT 1 FROM catalog_songs WHERE nd_id IS NOT NULL LIMIT 1').get();
     if (this.lastLinkAt === null || !this.navidromeSongs) return false;
     const { linked } = this.db.prepare('SELECT COUNT(nd_id) AS linked FROM catalog_songs').get() as { linked: number };
     return linked >= this.navidromeSongs * 0.95;
@@ -344,9 +349,19 @@ export class Catalog {
   setServe(on: boolean) {
     this.setFlag('catalog.serve', on);
   }
+  /**
+   * Navidrome is off for this household (phase 6, docs/HUB.md "Without Navidrome"): the Hub gives new songs ids of
+   * its own, answers every call itself, and never asks Navidrome. Implies serve, stream and userData.
+   */
+  standalone(): boolean {
+    return this.flag('catalog.standalone');
+  }
+  setStandalone(on: boolean) {
+    this.setFlag('catalog.standalone', on);
+  }
   /** The Hub answers browsing itself (routes/relay.ts): turned on, and the catalog matches Navidrome. */
   serving(): boolean {
-    return this.serve() && this.usable();
+    return (this.serve() || this.standalone()) && this.usable();
   }
   /** Whether an admin turned on playing songs from the music folder (phase 4, catalogStream.ts). */
   stream(): boolean {
@@ -357,14 +372,14 @@ export class Catalog {
   }
   /** Whether an admin turned on keeping hearts, plays and ratings on the Hub (phase 5, userData.ts). */
   keepsUserData(): boolean {
-    return this.flag('catalog.userData');
+    return this.flag('catalog.userData') || this.standalone();
   }
   setKeepsUserData(on: boolean) {
     this.setFlag('catalog.userData', on);
   }
   /** The Hub plays songs itself (routes/relay.ts): turned on, and the catalog matches Navidrome. */
   streaming(): boolean {
-    return this.stream() && this.usable();
+    return (this.stream() || this.standalone()) && this.usable();
   }
 
   /** The file of each matched Navidrome song id (paths relative to the music folder). */
@@ -424,6 +439,11 @@ export class Catalog {
     return null;
   }
 
+  /** When the last scan of the folder finished. */
+  lastScan(): number | null {
+    return this.lastScanAt;
+  }
+
   status(): CatalogStatus {
     const c = this.db.prepare('SELECT COUNT(*) AS files, COUNT(error) AS failed, COUNT(nd_id) AS linked FROM catalog_songs').get() as { files: number; failed: number; linked: number };
     return {
@@ -444,6 +464,7 @@ export class Catalog {
       stream: this.stream(),
       streaming: this.streaming(),
       userData: this.keepsUserData(),
+      standalone: this.standalone(),
     };
   }
 
@@ -488,7 +509,8 @@ export class Catalog {
     this.scanning = true;
     try {
       await this.readFolder();
-      await this.link();
+      if (this.standalone()) this.giveIds();
+      else await this.link();
       this.lastError = null;
     } catch (e) {
       this.lastError = String((e as Error).message ?? e);
@@ -569,6 +591,86 @@ export class Catalog {
     catalogChanged([...todo.map(([p]) => p), ...(dropGone ? gone : [])]);
     this.lastChanges = { added, changed: todo.length - added, removed: dropGone ? gone.length : 0 };
     if (!dropGone && gone.length) throw new Error(`The music folder has only ${found.size} of the ${known.size} files the catalog knows. Is the share mounted? Nothing was removed.`);
+  }
+
+  /**
+   * Without Navidrome, the Hub keeps the ids. A file Navidrome never saw gets a song id made from its path ("h" and 20
+   * hex digits, which no Navidrome id looks like); song ids never change. Songs are grouped into albums by album
+   * artist, title and year, and into artists by name, as Navidrome's scan did, and each group keeps the id most of its
+   * songs already have: renaming an album keeps its id, merging two (same title, album artist and year, as Merge in
+   * the app writes them) keeps the bigger one's, two releases with the same title but different years stay apart,
+   * and a new song on a known album lands on it.
+   */
+  giveIds(): number {
+    type R = { path: string; artist: string; album: string; album_artist: string; year: number | null; nd_id: string | null; nd_album_id: string | null; nd_artist_id: string | null; nd_album_artist_id: string | null };
+    const rows = this.db.prepare('SELECT path, artist, album, album_artist, year, nd_id, nd_album_id, nd_artist_id, nd_album_artist_id FROM catalog_songs WHERE error IS NULL').all() as R[];
+    const fold = (x: string) => x.trim().toLowerCase();
+    const made = (kind: string, x: string) => `h${createHash('sha1').update(`${kind}\0${x}`).digest('hex').slice(0, 20)}`;
+    type Votes = Map<string, { size: number; ids: Map<string, number> }>;
+    const vote = (v: Votes, k: string, id: string | null) => {
+      let g = v.get(k);
+      if (!g) v.set(k, (g = { size: 0, ids: new Map() }));
+      g.size++;
+      if (id) g.ids.set(id, (g.ids.get(id) ?? 0) + 1);
+    };
+    /** each group's id: the one most of its songs have that a bigger group hasn't taken, else a new one */
+    const pick = (kind: string, v: Votes) => {
+      const out = new Map<string, string>();
+      const taken = new Set<string>();
+      for (const [k, g] of [...v].sort((x, y) => y[1].size - x[1].size || (x[0] < y[0] ? -1 : 1))) {
+        const best = [...g.ids].filter(([id]) => !taken.has(id)).sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1))[0]?.[0];
+        const id = best ?? made(kind, k);
+        taken.add(id);
+        out.set(k, id);
+      }
+      return out;
+    };
+
+    // an album's year is the latest of its songs' (per album id); a song without an album id yet takes a year its
+    // title already has, or the biggest one's, so a track with its own original year doesn't split an album
+    const titleOf = (r: R) => `${fold(r.album_artist || r.artist)}\0${fold(r.album)}`;
+    const yearOfId = new Map<string, number>();
+    for (const r of rows) if (r.nd_album_id) yearOfId.set(`${titleOf(r)}\0${r.nd_album_id}`, Math.max(yearOfId.get(`${titleOf(r)}\0${r.nd_album_id}`) ?? 0, r.year ?? 0));
+    const yearsOfTitle = new Map<string, Map<number, number>>();
+    for (const r of rows) {
+      if (!r.nd_album_id) continue;
+      const y = yearOfId.get(`${titleOf(r)}\0${r.nd_album_id}`)!;
+      let m = yearsOfTitle.get(titleOf(r));
+      if (!m) yearsOfTitle.set(titleOf(r), (m = new Map()));
+      m.set(y, (m.get(y) ?? 0) + 1);
+    }
+    const albumKey = (r: R) => {
+      const t = titleOf(r);
+      if (r.nd_album_id) return `${t}\0${yearOfId.get(`${t}\0${r.nd_album_id}`)}`;
+      const years = yearsOfTitle.get(t);
+      if (!years) return `${t}\0${r.year ?? 0}`;
+      const y = years.has(r.year ?? 0) ? r.year ?? 0 : [...years].sort((a, b) => b[1] - a[1])[0][0];
+      return `${t}\0${y}`;
+    };
+    const albumVotes: Votes = new Map(), artistVotes: Votes = new Map();
+    for (const r of rows) {
+      vote(albumVotes, albumKey(r), r.nd_album_id);
+      vote(artistVotes, fold(r.artist), r.nd_artist_id);
+      if (fold(r.album_artist) && fold(r.album_artist) !== fold(r.artist)) vote(artistVotes, fold(r.album_artist), r.nd_album_artist_id);
+    }
+    const albums = pick('album', albumVotes);
+    const artists = pick('artist', artistVotes);
+
+    const set = this.db.prepare('UPDATE catalog_songs SET nd_id = ?, nd_album_id = ?, nd_artist_id = ?, nd_album_artist_id = ? WHERE path = ?');
+    const changed: string[] = [];
+    tx(this.db, () => {
+      for (const r of rows) {
+        const id = r.nd_id ?? made('song', r.path);
+        const album = albums.get(albumKey(r))!;
+        const artist = artists.get(fold(r.artist))!;
+        const albumArtist = artists.get(fold(r.album_artist || r.artist))!;
+        if (id === r.nd_id && album === r.nd_album_id && artist === r.nd_artist_id && albumArtist === r.nd_album_artist_id) continue;
+        set.run(id, album, artist, albumArtist, r.path);
+        changed.push(r.path);
+      }
+    });
+    catalogChanged(changed);
+    return changed.length;
   }
 
   /** Match files to Navidrome's songs by path, from the library index's listing. */

@@ -55,7 +55,7 @@ function load() {
   return out;
 }
 
-export function serverRoutes(app: FastifyInstance, { db, config, library, restart, libraryIndex, lyrics }: Ctx) {
+export function serverRoutes(app: FastifyInstance, { db, config, library, restart, libraryIndex, lyrics, catalog }: Ctx) {
   const dbFile = join(config.dataDir, 'hub.db');
   const count = (sql: string, ...args: (string | number)[]) => (db.prepare(sql).get(...args) as { n: number }).n;
 
@@ -135,7 +135,7 @@ export function serverRoutes(app: FastifyInstance, { db, config, library, restar
   /** Scan now. Answers straight away; the scan carries on in the background. */
   app.post('/api/admin/library/scan', async (req) => {
     const { user } = need(req, 'server.view');
-    if (!getScanSettings(db, config.secretKey)) throw new HttpError(409, 'Add a Navidrome admin login first');
+    if (!getScanSettings(db, config.secretKey) && !catalog.standalone()) throw new HttpError(409, 'Add a Navidrome admin login first');
     void library.scan().catch(() => undefined);
     audit(db, { actorId: user.id, action: 'library.scan', ip: clientIp(req) });
     return { ...library.status(), scanning: true };

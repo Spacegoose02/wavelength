@@ -167,7 +167,7 @@ export function tagRoutes(app: FastifyInstance, { db, config, library, catalog }
   app.get('/api/admin/tags/values', async (req) => {
     need(req, 'library.edit');
     if (!names || Date.now() - names.at > 5 * 60_000) {
-      const got = getScanSettings(db, config.secretKey) ? await (await admin()).names().catch(() => ({ artists: [], genres: [] })) : { artists: [], genres: [] };
+      const got = getScanSettings(db, config.secretKey) || catalog.standalone() ? await (await admin()).names().catch(() => ({ artists: [], genres: [] })) : { artists: [], genres: [] };
       names = { at: Date.now(), ...got };
     }
     // names saved since Navidrome last scanned

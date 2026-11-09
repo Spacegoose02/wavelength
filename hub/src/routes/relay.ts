@@ -8,7 +8,7 @@ import { relayPassword, relayTarget } from '../services.ts';
 import { getUser } from '../users.ts';
 import { songNotForKids } from '../kidSafe.ts';
 import { join } from 'node:path';
-import { answer, cover, SERVED, type Starred } from '../subsonicCatalog.ts';
+import { ALONE, answer, cover, SERVED, songsById, type Starred } from '../subsonicCatalog.ts';
 import { sendSong } from '../catalogStream.ts';
 import { playedBy } from '../playedBy.ts';
 import { permissionsFor } from '../roles.ts';
@@ -65,13 +65,15 @@ const wrongLogin = (u: string | undefined) => /~\d+$/.test(u ?? '')
 
 const one = (v: unknown) => (Array.isArray(v) ? String(v[0] ?? '') : typeof v === 'string' ? v : '');
 
-export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) {
+export function relayRoutes(app: FastifyInstance, { db, config, catalog, sonic }: Ctx) {
   const key = config.secretKey;
   const coverCache = join(config.dataDir, 'covers');
   /** each person's Navidrome stars, for the Hub's own answers (a minute old at most; starring clears it) */
   const stars = new Map<number, { at: number; ids: Starred }>();
   /** people whose hearts and plays are being copied from Navidrome right now (one copy each) */
   const copying = new Map<number, Promise<boolean>>();
+  /** what each device last said it's playing (scrobble without submission), for getNowPlaying without Navidrome */
+  const nowPlaying = new Map<number, { userId: number; username: string; songId: string; at: number }>();
   /** playlists deleted on the Hub, so Navidrome's list doesn't bring them back if its delete hasn't landed yet */
   const deleted = new Map<number, Set<string>>();
   const wasDeleted = (userId: number, id: string) => deleted.get(userId)?.has(id) ?? false;
@@ -104,6 +106,15 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
     if (!device || !user || user.disabled || !safeEqual(token, nativeToken(deviceId))) return reply.code(401).send({ error: 'Sign in again' });
     const target = relayTarget(db, key, Number(req.params.id), user.id, user.role);
     if (!target) return reply.code(403).send({ error: 'Not shared with you any more' });
+    if (catalog.standalone()) {
+      // without Navidrome: the person's plays kept on the Hub, last played first (the only use: play history)
+      const start = Math.max(0, Number(req.query._start) || 0), end = Math.min(start + 1000, Math.max(start, Number(req.query._end) || start + 100));
+      const mine = playsOf(db, user.id);
+      const ids = [...mine].filter(([, p]) => p.last).sort((a, b) => (b[1].last ?? 0) - (a[1].last ?? 0)).map(([id]) => id);
+      const songs = songsById(db, ids.slice(start, end), starredOf(db, user.id), mine, (id) => ({ playDate: new Date(mine.get(id)!.last!).toISOString(), playCount: mine.get(id)!.count }))
+        .map((x) => ({ ...x, trackNumber: x.track, mediaFileId: x.id }));
+      return reply.header('x-total-count', String(ids.length)).send(songs);
+    }
     try {
       const login = await fetch(`${target.url}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: target.username, password: target.password }), signal: AbortSignal.timeout(15_000) });
       const nd = (await login.json()) as { token?: string };
@@ -126,9 +137,12 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
     if (who === 'login') return fail(reply, 40, wrongLogin(q.u));
     if (who === 'server') return fail(reply, 50, 'This Navidrome server isn’t shared with you through the Hub any more');
     const { user, target } = who;
+    // Navidrome is off for this household (catalog.ts standalone): everything below is answered here, nothing is
+    // passed on, and what the Hub can't answer is an error rather than a call to a server that isn't there
+    const off = catalog.standalone();
     // Radio stations live on the Hub once it has copied Navidrome's (radioStations.ts); admins change them here too
     if (method.endsWith('InternetRadioStation') || method === 'getInternetRadioStations') {
-      if (radioImportedAt(db) !== null) {
+      if (radioImportedAt(db) !== null || off) {
         const done = (body: Record<string, unknown> = {}) => reply.send({ 'subsonic-response': { status: 'ok', version: '1.16.1', type: 'wavelength-hub', openSubsonic: true, ...body } });
         if (method === 'getInternetRadioStations') return done({ internetRadioStations: { internetRadioStation: subsonicStations(db) } });
         if (!permissionsFor(user).includes('library.edit')) return fail(reply, 50, 'Only admins can change radio stations');
@@ -146,6 +160,7 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
     if (BLOCKED.has(method)) return fail(reply, 50, 'Not allowed through the Hub');
 
     const call = async (name: string, params: Record<string, string>, init: RequestInit = {}) => {
+      if (off) throw new Error('Navidrome is off');
       const salt = randomBytes(6).toString('hex');
       const search = new URLSearchParams();
       for (const [k, v] of Object.entries(params)) if (!AUTH.has(k)) search.append(k, v);
@@ -159,8 +174,8 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
 
     if (user.role === 'kid' && AUDIO.has(method) && q.id) {
       try {
-        const r = await call('getSong', { id: q.id, f: 'json' }, { signal: AbortSignal.timeout(15_000) });
-        const song = ((await r.json()) as any)?.['subsonic-response']?.song;
+        const r = off ? null : await call('getSong', { id: q.id, f: 'json' }, { signal: AbortSignal.timeout(15_000) });
+        const song = r ? ((await r.json()) as any)?.['subsonic-response']?.song : (answer(db, 'getSong', { id: q.id }, new Map()) as any)?.['subsonic-response']?.song;
         if (!song || songNotForKids(db, song)) return reply.code(403).send({ error: 'Not for kids' });
       } catch {
         return reply.code(502).send({ error: 'Couldn’t reach Navidrome' });
@@ -174,7 +189,10 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
     // Their own playlists too (playlists.ts), copied at the same time; smart playlists stay on Navidrome.
     let mineOnHub = false;
     let playlistsOnHub = false;
-    if (catalog.keepsUserData()) {
+    if (off) {
+      // whatever was copied before Navidrome went off (Settings copies everyone when it's turned off) is all there is
+      mineOnHub = playlistsOnHub = true;
+    } else if (catalog.keepsUserData()) {
       if (!userDataImported(db, user.id) || !playlistsImported(db, user.id)) {
         let p = copying.get(user.id);
         if (!p) {
@@ -201,6 +219,8 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
         const times = all('time');
         all('id').forEach((id, i) => played(db, user.id, id, Number(times[i]) || Date.now()));
       }
+      if (method === 'scrobble' && q.submission === 'false' && q.id) nowPlaying.set(who.device.id, { userId: user.id, username: user.username, songId: q.id, at: Date.now() });
+      if (off) return reply.header('x-wavelength-answered-by', 'hub').send({ 'subsonic-response': { status: 'ok', version: '1.16.1', type: 'wavelength-hub', openSubsonic: true } });
       // Navidrome gets it too, without the device waiting for it
       const search = new URLSearchParams();
       for (const [k, v] of Object.entries(req.query as Record<string, string | string[]>)) if (!AUTH.has(k)) for (const x of Array.isArray(v) ? v : [v]) search.append(k, String(x));
@@ -230,7 +250,8 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
         };
       };
       const done = (body: Record<string, unknown> = {}) => reply.header('x-wavelength-answered-by', 'hub').send({ 'subsonic-response': { status: 'ok', version: '1.16.1', type: 'wavelength-hub', openSubsonic: true, ...body } });
-      const navidromeToo = (search: URLSearchParams) => {
+      const navidromeToo = async (search: URLSearchParams) => {
+        if (off) throw new Error('Navidrome is off');
         for (const k of AUTH) search.delete(k);
         const salt = randomBytes(6).toString('hex');
         search.set('u', target.username);
@@ -323,10 +344,13 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
     // playing and starring still go to Navidrome. Anything not answered here goes on to Navidrome below.
     if (catalog.serving() && config.musicDir) {
       if (method === 'getCoverArt' && q.id) {
-        const art = await cover(db, config.musicDir, coverCache, q.id, Number(q.size) || 0).catch(() => null);
+        // artists' pictures and playlist covers stay Navidrome's while it's on; without it, an album's cover stands in
+        let id = q.id;
+        if (off && id.startsWith('pl-')) id = `mf-${getPlaylist(db, id.slice(3).replace(/_[0-9a-f]+$/, ''))?.songs[0] ?? ''}`;
+        const art = off || !id.startsWith('ar-') ? await cover(db, config.musicDir, coverCache, id, Number(q.size) || 0).catch(() => null) : null;
         if (art) return reply.header('content-type', art.type).header('cache-control', 'public, max-age=86400').header('x-wavelength-answered-by', 'hub').send(art.body);
-      } else if (SERVED.has(method) && q.f === 'json' && mineOnHub) {
-        const body = answer(db, method, q, starredOf(db, user.id), playsOf(db, user.id));
+      } else if ((SERVED.has(method) || (off && ALONE.has(method))) && (q.f === 'json' || off) && mineOnHub) {
+        const body = answer(db, method, q, starredOf(db, user.id), playsOf(db, user.id), off);
         if (body) return reply.header('x-wavelength-answered-by', 'hub').send(body);
       } else if (SERVED.has(method) && q.f === 'json') {
         let mine = stars.get(user.id);
@@ -355,6 +379,55 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
       }
     }
     if (method === 'stream') playedBy(who.device.id, 'navidrome');
+
+    if (off) {
+      const done = (body: Record<string, unknown> = {}) => reply.header('x-wavelength-answered-by', 'hub').send({ 'subsonic-response': { status: 'ok', version: '1.16.1', type: 'wavelength-hub', serverVersion: 'hub', openSubsonic: true, ...body } });
+      const status = catalog.status();
+      switch (method) {
+        case 'ping':
+          return done();
+        case 'getLicense':
+          return done({ license: { valid: true } });
+        case 'getOpenSubsonicExtensions':
+          return done({ openSubsonicExtensions: [{ name: 'songLyrics', versions: [1] }] });
+        case 'getMusicFolders':
+          return done({ musicFolders: { musicFolder: [{ id: 1, name: 'Music' }] } });
+        case 'getScanStatus':
+          return done({ scanStatus: { scanning: status.scanning, count: status.files, ...(status.lastScanAt && { lastScan: new Date(status.lastScanAt).toISOString() }) } });
+        case 'startScan':
+          void catalog.scan().catch(() => undefined);
+          return done({ scanStatus: { scanning: true, count: status.files } });
+        case 'getUser':
+          return done({ user: { username: q.u ?? '', scrobblingEnabled: true, adminRole: false, settingsRole: false, downloadRole: true, uploadRole: false, playlistRole: true, coverArtRole: false, commentRole: false, podcastRole: false, streamRole: true, jukeboxRole: false, shareRole: false, videoConversionRole: false, folder: [1] } });
+        case 'getNowPlaying': {
+          const fresh = [...nowPlaying.values()].filter((n) => Date.now() - n.at < 15 * 60_000);
+          const entry = fresh.flatMap((n) => songsById(db, [n.songId], new Map(), null, () => ({ username: n.username, minutesAgo: Math.floor((Date.now() - n.at) / 60_000), playerId: 0 })));
+          return done({ nowPlaying: { entry } });
+        }
+        case 'getLyricsBySongId':
+          return done({ lyricsList: { structuredLyrics: [] } });
+        case 'getLyrics':
+          return done({ lyrics: {} });
+        case 'getPlayQueue':
+        case 'getBookmarks':
+          return done(method === 'getBookmarks' ? { bookmarks: {} } : {});
+        case 'savePlayQueue':
+        case 'createBookmark':
+        case 'deleteBookmark':
+          return done();
+        case 'getSimilarSongs':
+        case 'getSimilarSongs2': {
+          // the Hub's own sound-alike analysis (sonic/), when it has looked at this song
+          const i = sonic?.index.find({ id: q.id });
+          const count = Math.min(500, Math.max(1, Number(q.count) || 50));
+          const ids = i === undefined ? [] : sonic!.index.similar(i, count).map((h) => h.id);
+          const song = songsById(db, ids, starredOf(db, user.id), playsOf(db, user.id));
+          return done(method === 'getSimilarSongs2' ? { similarSongs2: { song } } : { similarSongs: { song } });
+        }
+      }
+      if (AUDIO.has(method)) return reply.code(404).send({ error: 'Not in the music folder' });
+      return fail(reply, 70, `The Hub doesn’t know that (${method}), and Navidrome is off`);
+    }
 
     // stop pulling from Navidrome when the player goes away (skipping, seeking)
     const abort = new AbortController();

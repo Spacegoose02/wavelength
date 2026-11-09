@@ -56,6 +56,11 @@ export class LibraryIndex {
   private listing: Promise<void> | null = null;
   /** for tests: what Navidrome answers */
   call: typeof navidrome = navidrome;
+  /**
+   * With Navidrome off (catalog.ts standalone), the Hub's own answers to the same calls (subsonicCatalog.ts), so
+   * the songs come from the catalog instead: no calls, same ids. Set by app.ts.
+   */
+  fromCatalog: () => ((method: string, params: Record<string, string>) => any) | null = () => null;
 
   constructor(db: Db, key: Buffer, scannedAt: () => number | null = () => null, now: () => number = Date.now) {
     this.db = db;
@@ -73,7 +78,7 @@ export class LibraryIndex {
    * when the list is old or Navidrome scanned since. False when there's no scan login or the first listing failed.
    */
   async ensure(): Promise<boolean> {
-    const s = getScanSettings(this.db, this.key);
+    const s = this.settings();
     if (!s) {
       this.reset();
       return false;
@@ -100,9 +105,18 @@ export class LibraryIndex {
     this.listedAt = null;
   }
 
-  /** Every song in Navidrome, 500 at a time. */
-  async list(): Promise<void> {
+  /** Where the songs come from: Navidrome's scan login, or the catalog when Navidrome is off. */
+  private settings(): { url: string; call: (method: string, params: Record<string, string>) => Promise<any> } | null {
+    const hub = this.fromCatalog();
     const s = getScanSettings(this.db, this.key);
+    // the server name stays the Navidrome address when there was one, so the app still finds its library
+    if (hub) return { url: s?.url ?? 'hub', call: async (m, p) => hub(m, p) };
+    return s ? { url: s.url, call: (m, p) => this.call(s, m, p) } : null;
+  }
+
+  /** Every song in Navidrome (or the catalog), 500 at a time. */
+  async list(): Promise<void> {
+    const s = this.settings();
     if (!s) return this.reset();
     const songs: IndexedSong[] = [];
     const paths = new Map<string, string>();
@@ -110,7 +124,7 @@ export class LibraryIndex {
     const artistIds = new Map<string, string>();
     try {
       for (let offset = 0; offset < 1_000_000; offset += PAGE) {
-        const r = await this.call(s, 'search3', { query: '', songCount: String(PAGE), songOffset: String(offset), artistCount: '0', albumCount: '0' });
+        const r = await s.call('search3', { query: '', songCount: String(PAGE), songOffset: String(offset), artistCount: '0', albumCount: '0' });
         const page = (r?.searchResult3?.song ?? []) as Record<string, unknown>[];
         for (const x of page) {
           if (!x.id || typeof x.title !== 'string') continue;

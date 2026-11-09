@@ -111,6 +111,8 @@ export class SonicWorker {
   private current: string | null = null;
   private lastListAt: number | null = null;
   private lastError: string | null = null;
+  /** Navidrome is off (catalog.ts standalone): the songs come from the catalog, no Navidrome login needed. Set by app.ts. */
+  standalone: () => boolean = () => false;
   /** Navidrome's songs from the library index (libraryIndex.ts `navidromeSongs`), set by app.ts; null lists here. */
   listSongs: () => Promise<{ id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }[] | null> = async () => null;
   /** for tests */
@@ -129,7 +131,7 @@ export class SonicWorker {
   private blocked(): string | null {
     if (!getFeatures(this.db).sonic.on) return 'Sound-alike analysis is switched off in Settings → Features.';
     if (!this.musicDir) return 'The Hub has no music folder. Map your music share to /music (WAVELENGTH_MUSIC_DIR).';
-    if (!getScanSettings(this.db, this.key)) return 'The Hub needs a Navidrome admin login (Settings → Server → Library updates) to list the songs.';
+    if (!this.standalone() && !getScanSettings(this.db, this.key)) return 'The Hub needs a Navidrome admin login (Settings → Server → Library updates) to list the songs.';
     return null;
   }
 
@@ -164,7 +166,7 @@ export class SonicWorker {
   /** Songs from Navidrome into sonic_songs: new ones added, changed paths re-analysed, gone ones dropped. */
   async list(): Promise<number> {
     const s = getScanSettings(this.db, this.key);
-    if (!s) return 0;
+    if (!s && !this.standalone()) return 0;
     const seen = new Set<string>();
     const upsert = this.db.prepare(`INSERT INTO sonic_songs (id, path, title, artist, album, duration) VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT (id) DO UPDATE SET title = excluded.title, artist = excluded.artist, album = excluded.album, duration = excluded.duration,
@@ -179,7 +181,7 @@ export class SonicWorker {
     // the library index's listing when there is one (one listing of Navidrome for the whole Hub)
     const listed = await this.listSongs();
     if (listed) tx(this.db, () => listed.forEach(add));
-    else {
+    else if (s) {
       for (let offset = 0; offset < 500_000; offset += 500) {
         const r = await navidrome(s, 'search3', { query: '', songCount: '500', songOffset: String(offset), artistCount: '0', albumCount: '0' });
         const songs = (r?.searchResult3?.song ?? []) as { id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }[];

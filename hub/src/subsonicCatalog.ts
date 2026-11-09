@@ -327,6 +327,71 @@ function artist(ar: Artist, starred: Starred) {
   };
 }
 
+function answerAlone(db: Db, method: string, q: Record<string, string>, starred: Starred): Record<string, unknown> | null {
+  const v = view(db);
+  const inner = (m: string, query: Record<string, string>) => answerFor(db, m, query, starred)?.['subsonic-response'] as Record<string, any> | undefined;
+  switch (method) {
+    case 'getIndexes': {
+      const r = inner('getArtists', {});
+      return r ? ok({ indexes: { ...r.artists, lastModified: 0 } }) : null;
+    }
+    case 'getMusicDirectory': {
+      const ar = v.artists.get(q.id ?? '');
+      if (ar) return ok({ directory: { id: ar.id, name: ar.name, child: ar.albums.map((a) => ({ ...album(a, starred), parent: ar.id })) } });
+      const a = v.albums.get(q.id ?? '');
+      if (a) return ok({ directory: { id: a.id, name: a.name, ...(a.artistId && { parent: a.artistId }), child: a.songs.map((r) => song(r, starred)) } });
+      return null;
+    }
+    case 'getAlbumList': {
+      const r = inner('getAlbumList2', q);
+      return r ? ok({ albumList: { album: (r.albumList2?.album ?? []).map((a: Record<string, unknown>) => ({ ...a, ...(a.artistId ? { parent: a.artistId } : {}) })) } }) : null;
+    }
+    case 'search2': {
+      const r = inner('search3', q);
+      return r ? ok({ searchResult2: r.searchResult3 }) : null;
+    }
+    case 'getTopSongs': {
+      // the artist's songs this person played most, then the rest in album order
+      const name = fold(q.artist ?? '').trim();
+      const count = int(q.count, 50, 500);
+      const theirs = v.ordered.filter((r) => fold(r.artist).trim() === name || fold(r.album_artist).trim() === name);
+      const played = (r: Row) => plays?.get(r.nd_id)?.count ?? 0;
+      const top = theirs.map((r, i) => [r, i] as const).sort((a, b) => played(b[0]) - played(a[0]) || a[1] - b[1]).map(([r]) => r);
+      return ok({ topSongs: { song: top.slice(0, count).map((r) => song(r, starred)) } });
+    }
+    case 'getArtistInfo':
+    case 'getArtistInfo2': {
+      const ar = v.artists.get(q.id ?? '');
+      if (!ar) return null;
+      // other artists who share the most genres with this one
+      const mine = new Set(ar.albums.flatMap((a) => a.genres.map((g) => g.toLowerCase())));
+      const count = int(q.count, 20, 100);
+      const similar = mine.size ? [...v.artists.values()].filter((x) => x !== ar)
+        .map((x) => [x, new Set(x.albums.flatMap((a) => a.genres.map((g) => g.toLowerCase())).filter((g) => mine.has(g))).size] as const)
+        .filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || b[0].albums.length - a[0].albums.length).slice(0, count).map(([x]) => artist(x, starred)) : [];
+      const info = { biography: '', similarArtist: similar };
+      return ok(method === 'getArtistInfo2' ? { artistInfo2: info } : { artistInfo: info });
+    }
+    case 'getAlbumInfo':
+    case 'getAlbumInfo2': {
+      const a = v.albums.get(q.id ?? '') ?? v.albums.get(v.songs.get(q.id ?? '')?.nd_album_id ?? '');
+      return a ? ok({ albumInfo: { notes: '' } }) : null;
+    }
+  }
+  return null;
+}
+
+/** Songs by id in the Subsonic song shape, leaving out any the catalog doesn't know (similar songs, history). */
+export function songsById(db: Db, ids: string[], starred: Starred, personal: Plays | null = null, extra?: (id: string) => Record<string, unknown>): Record<string, unknown>[] {
+  const v = view(db);
+  plays = personal;
+  try {
+    return ids.filter((id) => v.songs.has(id)).map((id) => ({ ...song(v.songs.get(id)!, starred), ...extra?.(id) }));
+  } finally {
+    plays = null;
+  }
+}
+
 /** Does every word of the query start a word of the text? ("drak scorp" finds Drake – Scorpion) */
 function matcher(query: string) {
   const words = fold(query.replace(/["*]/g, ' ')).split(/\s+/).filter(Boolean);
@@ -341,6 +406,12 @@ export const ok = (body: Record<string, unknown>) => ({
 
 /** Calls answer() can take; the relay only fetches stars for these. */
 export const SERVED = new Set(['getArtists', 'getArtist', 'getAlbum', 'getSong', 'getGenres', 'getSongsByGenre', 'getRandomSongs', 'getAlbumList2', 'search3', 'getStarred', 'getStarred2']);
+/**
+ * Calls answer() takes only with Navidrome off (`alone`), when nothing else could: older Subsonic browsing (folders,
+ * search2, getAlbumList), and the ones Navidrome fills from Last.fm (top songs, artist and album info), which come
+ * from the library and the person's plays here.
+ */
+export const ALONE = new Set(['getIndexes', 'getMusicDirectory', 'getAlbumList', 'search2', 'getTopSongs', 'getArtistInfo', 'getArtistInfo2', 'getAlbumInfo', 'getAlbumInfo2']);
 /** getAlbumList2 types that need a person's plays, ratings or stars: Navidrome answers those unless the Hub keeps them. */
 const PERSONAL_LISTS = new Set(['recent', 'frequent', 'starred', 'highest']);
 
@@ -348,9 +419,10 @@ const PERSONAL_LISTS = new Set(['recent', 'frequent', 'starred', 'highest']);
  * Answer a Subsonic library call from the catalog, or null when Navidrome should (a call or list type not handled
  * here, an id the catalog doesn't know).
  */
-export function answer(db: Db, method: string, q: Record<string, string>, starred: Starred, personal: Plays | null = null): Record<string, unknown> | null {
+export function answer(db: Db, method: string, q: Record<string, string>, starred: Starred, personal: Plays | null = null, alone = false): Record<string, unknown> | null {
   plays = personal;
   try {
+    if (alone && ALONE.has(method)) return answerAlone(db, method, q, starred);
     return answerFor(db, method, q, starred);
   } finally {
     plays = null;
@@ -508,9 +580,11 @@ function searchArtists(v: View, query: string, match: (text: string) => boolean)
  */
 export function coverSource(db: Db, id: string): { dir: string; file: string } | null {
   const v = view(db);
-  const m = /^(al|mf)-(.+?)(_[0-9a-f]+)?$/.exec(id);
+  const m = /^(al|mf|ar)-(.+?)(_[0-9a-f]+)?$/.exec(id);
   const kind = m?.[1], key = m ? m[2] : id;
-  const r = kind === 'mf' ? v.songs.get(key) : kind === 'al' ? v.albums.get(key)?.songs[0] : v.albums.get(key)?.songs[0] ?? v.songs.get(key);
+  // an artist's picture is their latest album's cover
+  const r = kind === 'mf' ? v.songs.get(key) : kind === 'al' ? v.albums.get(key)?.songs[0] : kind === 'ar' ? v.artists.get(key)?.albums.at(-1)?.songs[0]
+    : v.albums.get(key)?.songs[0] ?? v.songs.get(key);
   return r ? { dir: dirname(r.path), file: r.path } : null;
 }
 

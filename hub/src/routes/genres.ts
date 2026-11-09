@@ -201,7 +201,7 @@ export function genreRoutes(app: FastifyInstance, { db, config, library, catalog
 
   // every 6 hours, see whether a week has gone by since the last look (needs the Navidrome admin login)
   const timer = setInterval(() => {
-    if (Date.now() - getGenreCheck(db).at < GENRE_CHECK_MS || !getScanSettings(db, config.secretKey)) return;
+    if (Date.now() - getGenreCheck(db).at < GENRE_CHECK_MS || !(getScanSettings(db, config.secretKey) || catalog.standalone())) return;
     void check().catch(() => undefined);
   }, 6 * 3_600_000);
   timer.unref();

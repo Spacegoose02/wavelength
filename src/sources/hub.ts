@@ -556,6 +556,11 @@ export interface HubCatalogStatus {
   userData?: boolean;
   /** whose hearts and plays the Hub has copied, and how many */
   people?: { people: number; stars: number; plays: number };
+  /** Navidrome is off: the Hub answers everything itself (absent on older Hubs) */
+  standalone?: boolean;
+  /** after turning Navidrome off: whose data was copied, and whose couldn't be */
+  copied?: string[];
+  notCopied?: { user: string; error: string }[];
   lastError: string | null;
   summary: {
     albums: number;
@@ -1022,6 +1027,8 @@ export class HubClient {
   catalog = () => this.call<HubCatalogStatus>('GET', '/api/admin/catalog');
   scanCatalog = () => this.call<HubCatalogStatus>('POST', '/api/admin/catalog/scan', {});
   setCatalogServe = (b: { serve?: boolean; stream?: boolean; userData?: boolean }) => this.call<HubCatalogStatus>('PUT', '/api/admin/catalog', b);
+  /** Turn Navidrome off (copying everyone's hearts and playlists first) or back on. */
+  setNavidromeOff = (off: boolean, force = false) => this.call<HubCatalogStatus>('PUT', '/api/admin/catalog/navidrome', { off, force });
   containers = () => this.call<{ enabled: boolean; containers: HubContainer[] }>('GET', '/api/admin/docker');
   container = (name: string, action: 'start' | 'stop' | 'restart') =>
     this.call<{ name: string; state: string; status: string }>('POST', `/api/admin/docker/${encodeURIComponent(name)}/${action}`, {});

@@ -23,6 +23,17 @@ export interface AdminLibrary {
 }
 
 export async function libraryAdmin(db: Db, key: Buffer, catalog: Catalog): Promise<AdminLibrary> {
+  // without Navidrome the catalog is the library (ids and all), so there's nothing else to ask
+  if (catalog.standalone()) {
+    if (!catalog.usable()) throw new HttpError(409, 'The Hub hasn’t scanned the music folder yet. Scan it under Settings → Server → Music catalog');
+    return {
+      from: 'catalog',
+      albumSongs: async (albumId) => catalog.albumSongs(albumId),
+      songs: async (start, end) => catalog.songs(start, end),
+      albums: async () => catalog.albums(),
+      names: async () => catalog.names(),
+    };
+  }
   const s = getScanSettings(db, key);
   if (!s) throw new HttpError(409, 'Add the Navidrome admin login under Settings → Server first');
   let nd: ReturnType<typeof navidromeAdmin> | undefined;

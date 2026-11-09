@@ -290,10 +290,11 @@ export function servicesFor(db: Db, key: Buffer, { user, device, permissions }: 
       : r.access === 'everyone' || user.role === 'admin' || (r.access === 'chosen' && !!mine);
     if (!allowed || !familyAllows(db, r.id, user)) continue;
     const own = open(key, mine?.secrets ?? null, aadUser(r.id, user.id)).fields;
-    // Navidrome is per person: no own login yet, nothing to hand over
-    if (r.kind === 'navidrome' && !(own.username && own.password)) continue;
+    const off = r.kind === 'navidrome' && navidromeOff(db);
+    // Navidrome is per person: no own login yet, nothing to hand over (unless the Hub answers everything itself)
+    if (r.kind === 'navidrome' && !off && !(own.username && own.password)) continue;
     const config = JSON.parse(r.config) as Config;
-    if (r.kind === 'navidrome' && relayed(user.role, config)) {
+    if (r.kind === 'navidrome' && (off || relayed(user.role, config))) {
       out.push({ id: r.id, kind: r.kind, name: r.name, url: '', config, secrets: { username: relayUsername(user.username, device.id), password: relayPassword(key, device.id) }, ownLogin: true, relay: true });
       continue;
     }
@@ -317,20 +318,41 @@ export const serviceIdOfKind = (db: Db, kind: ServiceKind) =>
 
 // ---- Navidrome relay (routes/relay.ts) ----
 
+/**
+ * Navidrome is off for this household (catalog.ts `standalone`, docs/HUB.md "Without Navidrome"): every device goes
+ * through the Hub, which answers everything itself, so nobody needs a Navidrome login any more.
+ */
+export const navidromeOff = (db: Db) =>
+  (db.prepare("SELECT value FROM hub_settings WHERE key = 'catalog.standalone'").get() as { value: string } | undefined)?.value === 'true';
+
 /** Kids always reach Navidrome through the Hub, so their login never sits on a device they hold. */
 export const relayed = (role: string, config: Config) => role === 'kid' || config.relay === 'everyone';
 /** The relay login is per device, so revoking a device ends its access straight away. */
 export const relayUsername = (username: string, deviceId: number) => `${username}~${deviceId}`;
 export const relayPassword = (key: Buffer, deviceId: number) => hmac(key, `navidrome-relay:${deviceId}`).slice(0, 32);
 
+/** Every person's own login on this Navidrome (for copying their hearts and playlists before it goes off). */
+export function navidromeLogins(db: Db, key: Buffer, id: number): { userId: number; url: string; username: string; password: string }[] {
+  const r = getRow(db, id);
+  if (!r || r.kind !== 'navidrome') return [];
+  const rows = db.prepare('SELECT user_id, secrets FROM service_users WHERE service_id = ?').all(id) as { user_id: number; secrets: string | null }[];
+  return rows.flatMap((x) => {
+    const own = open(key, x.secrets, aadUser(id, x.user_id)).fields;
+    return own.username && own.password ? [{ userId: x.user_id, url: r.url, username: own.username, password: own.password }] : [];
+  });
+}
+
 /** The real Navidrome login the relay uses for this person, if they may still use this server. */
 export function relayTarget(db: Db, key: Buffer, id: number, userId: number, role: string): { url: string; username: string; password: string } | undefined {
   const r = getRow(db, id);
-  if (!r || r.kind !== 'navidrome' || !relayed(role, JSON.parse(r.config) as Config)) return undefined;
+  const off = navidromeOff(db);
+  if (!r || r.kind !== 'navidrome' || !(off || relayed(role, JSON.parse(r.config) as Config))) return undefined;
   const mine = db.prepare('SELECT secrets FROM service_users WHERE service_id = ? AND user_id = ?').get(id, userId) as { secrets: string | null } | undefined;
   if (!(r.access === 'everyone' || role === 'admin' || (r.access === 'chosen' && mine))) return undefined;
   const familyId = (db.prepare('SELECT family_id FROM users WHERE id = ?').get(userId) as { family_id: number | null } | undefined)?.family_id ?? null;
   if (!familyAllows(db, id, { role, familyId })) return undefined;
   const own = open(key, mine?.secrets ?? null, aadUser(id, userId)).fields;
-  return own.username && own.password ? { url: r.url, username: own.username, password: own.password } : undefined;
+  if (own.username && own.password) return { url: r.url, username: own.username, password: own.password };
+  // without Navidrome the login isn't used; the Hub still checks who may use the library above
+  return off ? { url: r.url, username: '', password: '' } : undefined;
 }

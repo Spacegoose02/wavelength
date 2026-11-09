@@ -147,6 +147,11 @@ export class Library {
    * credits.ts their joined artist credits ("A;B" → "A; B"), cleanDownloads.ts marks clean versions.
    */
   onNewMusic: (() => Promise<void>)[] = [];
+  /**
+   * With Navidrome off (catalog.ts standalone), the Hub's own scan of the music folder, which takes Navidrome's place
+   * after downloads, edits and deletes; null while Navidrome scans. Set by app.ts.
+   */
+  ownScan: () => (() => Promise<void>) | null = () => null;
 
   constructor(db: Db, key: Buffer, ytdlp: YtdlpRunner) {
     this.db = db;
@@ -183,7 +188,7 @@ export class Library {
 
   /** Files in the library changed: scan soon, or mark requests ready straight away without a Navidrome login. */
   changed() {
-    if (!getScanSettings(this.db, this.key)) {
+    if (!getScanSettings(this.db, this.key) && !this.ownScan()) {
       void this.tidy();
       return this.markReady();
     }
@@ -209,6 +214,8 @@ export class Library {
 
   /** Ask Navidrome to scan, wait for it, then mark finished downloads ready. */
   async scan(): Promise<void> {
+    const own = this.ownScan();
+    if (own) return this.scanWith(own);
     const s = getScanSettings(this.db, this.key);
     if (!s) throw new HttpError(409, 'Add a Navidrome admin login under Settings → Server first');
     if (this.scanning) return;
@@ -223,6 +230,25 @@ export class Library {
         const st = await navidrome(s, 'getScanStatus');
         if (!st.scanStatus?.scanning) break;
       }
+      this.lastScanAt = Date.now();
+      this.lastError = null;
+      this.markReady(startedAt);
+    } catch (e) {
+      this.lastError = (e as Error).message;
+      throw e;
+    } finally {
+      this.scanning = false;
+    }
+  }
+
+  /** The Hub's own scan instead of Navidrome's. */
+  private async scanWith(own: () => Promise<void>) {
+    if (this.scanning) return;
+    this.scanning = true;
+    const startedAt = Date.now();
+    this.lastAttempt = startedAt;
+    try {
+      await own();
       this.lastScanAt = Date.now();
       this.lastError = null;
       this.markReady(startedAt);
