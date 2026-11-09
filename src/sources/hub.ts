@@ -458,6 +458,14 @@ export interface HubContainer {
   created: number | null;
 }
 
+/** Internet radio stations on the Hub (GET /api/radio/stations). */
+export interface HubRadioList {
+  /** the Hub copied Navidrome's stations and keeps them now */
+  imported: boolean;
+  importedAt: number | null;
+  stations: { id: string; name: string; streamUrl: string; homePageUrl: string }[];
+}
+
 /** Someone playing something right now (GET /api/admin/listening). */
 export interface HubListening {
   userId: number;
@@ -1023,6 +1031,11 @@ export class HubClient {
   createNavidromeAccount = (id: number, userId: number) => this.call<{ service: HubAdminService }>('POST', `/api/admin/services/${id}/users/${userId}/navidrome-account`, {});
   playing = (b: { title: string; artist?: string; album?: string; source?: string } | { stopped: true }) => this.call('POST', '/api/me/playing', b);
   listening = () => this.call<{ listening: HubListening[] }>('GET', '/api/admin/listening');
+  /** Internet radio stations kept on the Hub (hub/src/radioStations.ts); `imported` false while it still asks Navidrome. */
+  radioStations = () => this.call<HubRadioList>('GET', '/api/radio/stations');
+  addRadioStation = (b: { name: string; streamUrl: string; homePageUrl?: string }) => this.call<HubRadioList>('POST', '/api/admin/radio/stations', b);
+  updateRadioStation = (id: string, b: { name?: string; streamUrl?: string; homePageUrl?: string }) => this.call<HubRadioList>('PUT', `/api/admin/radio/stations/${encodeURIComponent(id)}`, b);
+  deleteRadioStation = (id: string) => this.call<HubRadioList>('DELETE', `/api/admin/radio/stations/${encodeURIComponent(id)}`);
   // this person's own Wavelength playlists and play history (lib/librarySync.ts)
   myPlaylists = () => this.call<{ playlists: HubPlaylist[] }>('GET', '/api/me/playlists');
   putMyPlaylists = (playlists: HubPlaylist[]) => this.call<{ playlists: HubPlaylist[] }>('PUT', '/api/me/playlists', { playlists });

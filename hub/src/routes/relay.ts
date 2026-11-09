@@ -11,6 +11,9 @@ import { join } from 'node:path';
 import { answer, cover, SERVED, type Starred } from '../subsonicCatalog.ts';
 import { sendSong } from '../catalogStream.ts';
 import { playedBy } from '../playedBy.ts';
+import { permissionsFor } from '../roles.ts';
+import { addStation, deleteStation, radioImportedAt, readStation, subsonicStations, updateStation } from '../radioStations.ts';
+import { HttpError } from '../http.ts';
 
 /**
  * Navidrome through the Hub (docs/USERS-AND-ADMIN.md Phase 4). A device gets a Subsonic login for
@@ -113,6 +116,23 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
     if (who === 'login') return fail(reply, 40, wrongLogin(q.u));
     if (who === 'server') return fail(reply, 50, 'This Navidrome server isn’t shared with you through the Hub any more');
     const { user, target } = who;
+    // Radio stations live on the Hub once it has copied Navidrome's (radioStations.ts); admins change them here too
+    if (method.endsWith('InternetRadioStation') || method === 'getInternetRadioStations') {
+      if (radioImportedAt(db) !== null) {
+        const done = (body: Record<string, unknown> = {}) => reply.send({ 'subsonic-response': { status: 'ok', version: '1.16.1', type: 'wavelength-hub', openSubsonic: true, ...body } });
+        if (method === 'getInternetRadioStations') return done({ internetRadioStations: { internetRadioStation: subsonicStations(db) } });
+        if (!permissionsFor(user).includes('library.edit')) return fail(reply, 50, 'Only admins can change radio stations');
+        try {
+          if (method === 'createInternetRadioStation') addStation(db, readStation({ name: q.name, streamUrl: q.streamUrl, homePageUrl: q.homepageUrl ?? q.homePageUrl }) as { name: string; streamUrl: string; homePageUrl?: string });
+          else if (method === 'updateInternetRadioStation') updateStation(db, q.id ?? '', readStation({ name: q.name, streamUrl: q.streamUrl, homePageUrl: q.homepageUrl ?? q.homePageUrl }, true));
+          else if (method === 'deleteInternetRadioStation') deleteStation(db, q.id ?? '');
+          else return fail(reply, 0, 'Unknown radio call');
+        } catch (e) {
+          return fail(reply, e instanceof HttpError && e.statusCode === 404 ? 70 : 10, (e as Error).message);
+        }
+        return done();
+      }
+    }
     if (BLOCKED.has(method)) return fail(reply, 50, 'Not allowed through the Hub');
 
     const call = async (name: string, params: Record<string, string>, init: RequestInit = {}) => {

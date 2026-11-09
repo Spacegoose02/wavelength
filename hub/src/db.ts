@@ -656,6 +656,18 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  `
+  -- Internet radio stations, kept by the Hub instead of Navidrome (radioStations.ts, phase 5 of the Hub's own music
+  -- server). Copied once from Navidrome with its ids, so each device's order and hidden stations still match.
+  CREATE TABLE radio_stations (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    stream_url   TEXT NOT NULL,
+    homepage_url TEXT NOT NULL DEFAULT '',
+    created_at   INTEGER NOT NULL,
+    updated_at   INTEGER NOT NULL
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */
