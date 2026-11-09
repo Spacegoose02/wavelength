@@ -87,7 +87,7 @@ genre names cover it).
 
 The critters live in `components/critters/`. A critter on screen is a **species** (raccoon, shark, alien,
 grey alien, black or brown bear, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, red panda) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
-Accordion, Driver, Reactor, Bongo, Pianist, Marimba, Violinist), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
+Accordion, Driver, Reactor, Bongo, Pianist, Marimba, Violinist, Saxophone, Harpist, Tuba), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
 for how the pieces fit.
 
 Faces, hats and glasses are drawn on one head skeleton: centred on 200,178 (about 160 wide, 130 tall, top near

@@ -1863,7 +1863,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
 /* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
-.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin) .shark-fin,
+.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin, .critter-sax, .critter-harp, .critter-tuba) .shark-fin,
 :root[data-skin-group='nuclear'] .critter .shark-fin,
 :root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
@@ -2162,6 +2162,93 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .bow-stick { stroke: #4a2a12; }
 .critter .bow-hair { stroke: #f4f0e4; }
 .critter .bow-frog { fill: #1b1b1f; }
+
+
+/* the Saxophone act (Sax.tsx): the jumper, beret and the string of lights follow the skin; the brass, the
+   city and the roof are fixed */
+.critter .city-sky { fill: #12142c; }
+.critter .building { fill: #1d2140; }
+.critter .city-window { fill: #ffd97a; }
+.critter .water-tower .tower-leg { stroke: #2a2420; }
+.critter .tower-tank { fill: #6a4a34; }
+.critter .tower-roof { fill: #4a3426; }
+.critter .light-wire { stroke: #0b0b12; }
+.critter .parapet { fill: #5a4a44; }
+.critter .parapet-cap { stroke: #7a6a62; }
+.critter .roof-floor { fill: #2c2c33; }
+.critter .roof-seam { stroke: #23232a; }
+.critter .rollneck { fill: color-mix(in srgb, var(--accent) 80%, #000); }
+.critter .beret { fill: #1c1c24; }
+.critter-sax .beret { fill: var(--viz-mid); }
+.critter .sax-edge { stroke: #7a5414; }
+.critter .sax-brass { stroke: #e2b13c; }
+.critter .sax-bell { fill: #e2b13c; }
+.critter .sax-bell-mouth { fill: #7a5414; }
+.critter .sax-shine { stroke: #fff2c0; opacity: 0.6; }
+.critter .sax-key { fill: #f6efe0; }
+.critter .sax-guard { stroke: #7a5414; }
+.critter .sax-mouthpiece { fill: #16161a; }
+.critter .sax-note { stroke: var(--viz-high); }
+.critter .sax-note-head { fill: var(--viz-high); }
+
+
+/* the Harp act (Harp.tsx): the toga's drape and the plucked strings follow the skin; the sky, the clouds and
+   the harp are fixed */
+.critter .harp-sun { fill: #fff1b8; }
+.critter .harp-cloud { fill: #ffffff; }
+.critter .harp-cloud-shade { fill: #f0e6f4; }
+.critter .harp-bird { stroke: #4a3a5a; }
+.critter-harp .top { fill: #f7f3ea; }
+.critter .toga-drape { fill: var(--accent); }
+.critter .brooch { fill: #e8c25a; }
+.critter .sandal { fill: #b07a3e; }
+.critter .laurel-band { stroke: #4e8a3a; }
+.critter .laurel-leaf { fill: #6fbf4f; }
+.critter .harp-wood { stroke: #a8622a; }
+.critter .harp-wood-edge { stroke: #5a3014; }
+.critter .harp-gold { fill: #e8c25a; stroke: #e8c25a; }
+.critter .harp-gold-edge { stroke: #8a6a1c; }
+.critter .harp-base { fill: #8a6a1c; }
+.critter .harp-peg { fill: #8a6a1c; }
+.critter .harp-string { stroke: #fff6dc; }
+.critter .harp-string.red { stroke: #e05a4a; }
+.critter .harp-string-lit { stroke: var(--viz-high); }
+
+
+/* the Tuba act (Tuba.tsx): the band jacket and the plume follow the skin; the brass, the town and the snow are
+   fixed */
+.critter .house { fill: #3a3448; }
+.critter .house-roof { fill: #5a3a3a; }
+.critter .roof-snow { fill: #f4f8ff; }
+.critter .house-window { fill: #ffd27a; }
+.critter .house-mullion { stroke: #3a3448; }
+.critter .snow-ground { fill: #eef4ff; }
+.critter .snow-shade { fill: #d8e2f4; }
+.critter .snowman { fill: #ffffff; }
+.critter .coal { fill: #1b1b22; }
+.critter .carrot { fill: #f08a24; }
+.critter .snowman-arm { stroke: #5a3a22; }
+.critter .snowman-scarf { fill: #d8384a; }
+.critter .snowman-hat { fill: #1b1b22; }
+.critter .flake { fill: #ffffff; opacity: 0.9; }
+.critter .braid { stroke: #e8c25a; }
+.critter .braid-button { fill: #e8c25a; }
+.critter .jacket-collar { fill: color-mix(in srgb, var(--accent) 70%, #000); }
+.critter .shako { fill: color-mix(in srgb, var(--accent) 60%, #000); }
+.critter .shako-band { fill: #e8c25a; }
+.critter .shako-peak { fill: #16161c; }
+.critter .shako-plume { fill: var(--viz-high); }
+.critter .tuba-edge { stroke: #7a5414; }
+.critter .tuba-brass { stroke: #e2b13c; }
+.critter .tuba-bell { fill: #e2b13c; }
+.critter .tuba-bell-mouth { fill: #e2b13c; }
+.critter .tuba-bell-inside { fill: #7a5414; }
+.critter .tuba-shine { stroke: #fff2c0; opacity: 0.6; }
+.critter .tuba-valve { fill: #c8c8d0; }
+.critter .tuba-key { fill: #f6efe0; }
+.critter .tuba-mouthpiece { fill: #c8c8d0; }
+.critter .puff { fill: #ffffff; opacity: 0.85; }
+.critter .puff-flake { stroke: #ffffff; }
 
 /* holiday hats replace the critter's own headwear */
 .critter .hat, .critter .outfit { display: none; }

@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- **Three new critter scenes: Saxophone, Harpist and Tuba.**
+  - **Saxophone**, on a city rooftop at night: a beret and a roll-neck, an alto sax that sways with the beat while
+    the fingers work the keys, notes floating out of the bell, the city's windows lighting up with the highs and a
+    string of lights pulsing on the beat. Flourish: a lean back with the bell up (`Sax.tsx`).
+  - **Harpist**, in the clouds at sunrise: a laurel wreath and a toga, plucking a golden harp under a rainbow; the
+    hands take turns on the beat and each plucked string lights up and shimmers. Flourish: a glissando (`Harp.tsx`).
+  - **Tuba**, in a snowy town square: a marching-band hat with a plume and a braided band jacket, oom-pahing with
+    puffs of breath and snow from the bell and a snowman nodding along. Flourish: one big blast (`Tuba.tsx`).
+  The sax and tuba players have the mouthpiece in their mouths, so they don't sing along.
 - **Settings → Themes & critters.** One place for how Wavelength looks and who plays along, in four sub-tabs:
   **Theme** (skins, Seasonal, Random daily, Motion), **Critters**, **Scenes** (what used to be called acts) and
   **Visualizer**. The Boy / Girl switch sits on both the Critters and Scenes sub-tabs, with a line saying who's

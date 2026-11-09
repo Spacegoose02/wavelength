@@ -7,14 +7,17 @@ import { DJ } from './DJ';
 import { Drive } from './Drive';
 import { Drums } from './Drums';
 import { GirlContext } from './faces';
+import { Harp } from './Harp';
 import { Marimba } from './Marimba';
 import { Piano } from './Piano';
 import { Rapper } from './Rapper';
 import { Reactor } from './Reactor';
 import { Rocker } from './Rocker';
+import { Sax } from './Sax';
 import { SPECIES, type ActProps, type SpeciesInfo } from './species';
 import { Synth } from './Synth';
 import { Theremin } from './Theremin';
+import { Tuba } from './Tuba';
 import { Violin } from './Violin';
 
 export { SPECIES, type SpeciesInfo };
@@ -49,6 +52,9 @@ export const ACTS: ActInfo[] = [
   { id: 'piano', label: 'Pianist', blurb: 'Tuxedo and bow tie, plays stride piano on a grand in a jazz lounge', Scene: Piano },
   { id: 'marimba', label: 'Marimba', blurb: 'Pith helmet and khaki, plays a marimba in the jungle by a waterfall', Scene: Marimba },
   { id: 'violin', label: 'Violinist', blurb: 'Long coat and flat cap, busks on the violin under a street lamp in the rain', Scene: Violin },
+  { id: 'sax', label: 'Saxophone', blurb: 'Beret and roll-neck, plays the sax on a city rooftop under a string of lights', Scene: Sax },
+  { id: 'harp', label: 'Harpist', blurb: 'Laurel wreath and toga, plays a golden harp on a cloud at sunrise under a rainbow', Scene: Harp },
+  { id: 'tuba', label: 'Tuba', blurb: 'Band hat and braided jacket, oom-pahs on a tuba in a snowy town square', Scene: Tuba },
 ];
 
 /** Unknown ids (e.g. synced from a newer app) fall back to the first entry. */

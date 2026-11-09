@@ -270,7 +270,7 @@ describe('the penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red
 });
 
 describe('every act', () => {
-  it('draws for every species, boy and girl, including the Reactor, Bongo, Pianist, Marimba and Violinist acts', async () => {
+  it('draws for every species, boy and girl, including the Reactor, Bongo, Pianist, Marimba, Violinist, Saxophone, Harpist and Tuba acts', async () => {
     // the player behind the rig makes an <audio> when it loads; tests run without a DOM
     vi.stubGlobal('Audio', function Audio() {
       return new Proxy({}, { get: () => () => {} });
@@ -278,7 +278,7 @@ describe('every act', () => {
     const { createElement: h } = await import('react');
     const { renderToStaticMarkup } = await import('react-dom/server');
     const { ACTS, Critter, SPECIES } = await import('../components/critters/Critter');
-    expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano', 'marimba', 'violin']));
+    expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano', 'marimba', 'violin', 'sax', 'harp', 'tuba']));
     for (const act of ACTS) {
       for (const sp of SPECIES) {
         for (const girl of [false, true]) {

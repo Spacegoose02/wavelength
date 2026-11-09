@@ -161,6 +161,10 @@ the asset work and a risk on low-end phones and the iOS WebView.
   and off the beat grid its bob trails by a quarter second; the frog (`hop`) hops the head and body up on each beat.
   The dragon's face has a hidden `smoke` part the rig puffs out on a flourish. The axolotl's gills, the dragon's
   wings and the bunny's ears go under the hazmat hood.
+- Three more scenes (November 2026): **Saxophone** (`Sax.tsx`, a city rooftop), **Harpist** (`Harp.tsx`, the clouds) and
+  **Tuba** (`Tuba.tsx`, a snowy square). The wind players turn the rig's `talk` off, since their mouths are on the
+  mouthpiece. The sax tips about the mouthpiece and the hands follow the keys (`turned`); the harp's neck and
+  strings come from the same `neckY` / `boxY` lines, so the strings always meet the frame.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

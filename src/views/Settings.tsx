@@ -887,7 +887,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       setJump(undefined);
     }, 120);
     return () => window.clearTimeout(h);
-  }, [jump, tab, lookSub]);
+  }, [jump, tab]);
   const personal = tabs.filter((t) => !t.admin && !t.manager);
   const hubTabs = tabs.filter((t) => t.admin || t.manager);
 
