@@ -1718,6 +1718,44 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 /* the gorilla: charcoal fur, grey leathery hands and feet */
 .species-gorilla { --skin: #3e393b; --skin-dark: #1c191a; --belly: #7e6f68; }
 .critter .gorilla-sole { fill: #6e605a; }
+/* the penguin: black, with flippers for arms (bare) and orange feet */
+.species-penguin { --skin: #262a38; --skin-dark: #10121a; --belly: #f4f7fa; }
+.critter.species-penguin .sleeve { stroke: var(--skin); }
+.critter .penguin-foot { fill: #f5a024; }
+/* the fox: orange, with dark stockings and paws and a white-tipped tail */
+.species-fox { --skin: #f07a2a; --skin-dark: #2a1a12; --belly: #fff6ee; }
+.critter .leg-sock { fill: #2a1a12; }
+.critter .fox-paw { fill: #2a1a12; }
+.critter .fox-tip { fill: #fff6ee; }
+/* the axolotl: pink, with frilly gills that pulse with the bass (hidden under the hazmat hood) and a finned tail */
+.species-axolotl { --skin: #f9b6cc; --skin-dark: #e0809e; --belly: #fff0f5; }
+.critter .axolotl-fin { fill: #f6a0bc; opacity: 0.85; }
+:root[data-skin-group='nuclear'] .critter .axolotl-gills { display: none; }
+/* the sloth: beige and shaggy, with long claws */
+.species-sloth { --skin: #b49674; --skin-dark: #5a4030; --belly: #f0e2c8; }
+/* the octopus: coral, its tentacles are its legs and arms (bare) */
+.species-octopus { --skin: #f2786a; --skin-dark: #b8443c; --belly: #ffd2c6; }
+.critter.species-octopus .sleeve { stroke: var(--skin); }
+.critter .tentacle-tip { stroke: var(--skin); }
+.critter .sucker { fill: #ffd2c6; }
+/* the dragon: teal with cream horns, orange spines and wings, and a puff of smoke on a flourish */
+.species-dragon { --skin: #3eb0a6; --skin-dark: #1f6e6a; --belly: #fffbe8; }
+.critter .dragon-wing { fill: #f2a43a; }
+.critter .dragon-spine { fill: #f2a43a; }
+.critter .smoke { fill: #e8e8ee; opacity: 0.85; }
+:root[data-skin-group='nuclear'] .critter .dragon-wings { display: none; }
+/* the frog: bright green with big webbed feet; it hops on the beat */
+.species-frog { --skin: #5cc04a; --skin-dark: #2e7e2c; --belly: #fffbd8; }
+/* the bunny: cream with long ears (they stand up out of most hats) and a white tail */
+.species-bunny { --skin: #efe4d8; --skin-dark: #cfc2b4; --belly: #ffffff; }
+:root[data-skin-group='nuclear'] .critter.species-bunny [data-part^='ear'] { display: none; }
+.critter .bunny-pad { fill: #ffc4cf; }
+.critter .bunny-tail { fill: #ffffff; }
+.critter .bunny-whiskers { stroke: rgb(120 100 90 / 0.6); }
+/* the red panda: rusty red, with dark arms, legs and paws and a ringed tail */
+.species-red-panda { --skin: #3a1a10; --skin-dark: #1e0e08; --belly: #fff6ee; }
+.critter .red-panda-tail { fill: #d0602c; }
+.critter .red-panda-ring { stroke: #f2b080; fill: none; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }

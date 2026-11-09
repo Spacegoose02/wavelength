@@ -154,6 +154,13 @@ the asset work and a risk on low-end phones and the iOS WebView.
   reach from where that species' hand rests, so the struck bar is always under the mallet; **Violinist** (rainy
   street, `Violin.tsx`): the bow slides along its own length and the wrist turns against the forearm so the bow
   keeps its slant.
+- Nine more (November 2026): a penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda. Most share
+  one soft round body (`roundFigure` in `bodies.tsx`) with their own tail, feet and markings; the octopus is its own
+  figure, six tentacles in the `tail` part with an empty boot. Three move their own way through `Figure.move`, which
+  `CritterFrame` puts on the svg as `data-move` for the rig: the sloth (`late`) runs the beat half a beat behind,
+  and off the beat grid its bob trails by a quarter second; the frog (`hop`) hops the head and body up on each beat.
+  The dragon's face has a hidden `smoke` part the rig puffs out on a flourish. The axolotl's gills, the dragon's
+  wings and the bunny's ears go under the hazmat hood.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

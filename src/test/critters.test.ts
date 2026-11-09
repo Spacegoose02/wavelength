@@ -224,6 +224,51 @@ describe('the monkey, the flamingo and the gorilla', () => {
   });
 });
 
+describe('the penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda', () => {
+  const NINE = ['penguin', 'fox', 'axolotl', 'sloth', 'octopus', 'dragon', 'frog', 'bunny', 'red-panda'] as const;
+  const draw = async (id: string) => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    const species = SPECIES.find((s) => s.id === id)!;
+    return renderToStaticMarkup(h('svg', null, h(Head, { species })));
+  };
+
+  it('are species with their own figures', async () => {
+    const { SPECIES } = await import('../components/critters/species');
+    const { FIGURES } = await import('../components/critters/bodies');
+    const key = (id: string) => id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()) as keyof typeof FIGURES;
+    for (const id of NINE) expect(SPECIES.find((s) => s.id === id)?.figure, id).toBe(FIGURES[key(id)]);
+  });
+
+  it('lets the sloth play half a beat late and the frog hop, and everyone else move as usual', async () => {
+    const { FIGURES } = await import('../components/critters/bodies');
+    expect(FIGURES.sloth.move).toBe('late');
+    expect(FIGURES.frog.move).toBe('hop');
+    const moving = Object.entries(FIGURES).filter(([, f]) => f.move).map(([k]) => k);
+    expect(moving.sort()).toEqual(['frog', 'sloth']);
+  });
+
+  it('marks the svg with how the species moves, for the rig', async () => {
+    vi.stubGlobal('Audio', function Audio() {
+      return new Proxy({}, { get: () => () => {} });
+    });
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { Critter } = await import('../components/critters/Critter');
+    const svg = (species: string) => renderToStaticMarkup(h(Critter, { species, act: 'dj', still: true } as never));
+    expect(svg('sloth')).toContain('data-move="late"');
+    expect(svg('frog')).toContain('data-move="hop"');
+    expect(svg('fox')).not.toContain('data-move');
+  });
+
+  it('gives the dragon a hidden puff of smoke for a flourish, and the axolotl gills that glow', async () => {
+    expect(await draw('dragon')).toMatch(/data-part="smoke" opacity="0"/);
+    expect(await draw('axolotl')).toContain('axolotl-gills');
+  });
+});
+
 describe('every act', () => {
   it('draws for every species, boy and girl, including the Reactor, Bongo, Pianist, Marimba and Violinist acts', async () => {
     // the player behind the rig makes an <audio> when it loads; tests run without a DOM

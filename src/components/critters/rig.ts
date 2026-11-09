@@ -56,6 +56,9 @@ export interface RigOptions {
  *   on loud notes and `[data-voice-glow]` antennae brighten with a high voice.
  * - Paused, the eyes blink, the critter yawns and now and then lifts `adjust` (headphones, hat, hair or
  *   beanie) as if setting it straight.
+ * - Species that move their own way (`Figure.move`, `data-move` on the svg): `late` runs the beat half a beat
+ *   behind (the sloth), `hop` springs the head and body up between beats (the frog). A `smoke` part (the dragon)
+ *   puffs on a flourish.
  * - `tail` wags, `spot` (the backlight) breathes with the bass, `[data-glow]` parts (neon and laser
  *   outfits) pulse with the bass.
  *
@@ -104,6 +107,9 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
     let nextAdjust = 11;
     let singing = 0;
     const pace = createPacer();
+    // species that move their own way (`Figure.move`, bodies.tsx): the sloth half a beat late, the frog hopping
+    const move = svg.dataset.move;
+    const late: [number, number][] = [];
 
     const loop = (now = performance.now()) => {
       if (!still) raf = requestAnimationFrame(loop);
@@ -114,7 +120,12 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       const a = read(t);
       const idle = !a.playing;
 
-      const tempo = tempoAt(t, a.beat, a.live);
+      let tempo = tempoAt(t, a.beat, a.live);
+      if (move === 'late') {
+        // the sloth: the whole grid half a beat behind
+        const phase = (tempo.phase + 0.5) % 1;
+        tempo = { ...tempo, phase, index: tempo.phase < 0.5 ? tempo.index - 1 : tempo.index };
+      }
       const grid = tempo.locked && !idle;
       if (grid) {
         // on the grid: a sharp drop on each beat easing back over ~0.1 s, like the hit-driven bob
@@ -122,6 +133,12 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       } else {
         if (a.beat && a.live) bob = 1;
         bob *= 0.86;
+        if (move === 'late') {
+          // off the grid, the bob from a quarter of a second ago
+          late.push([t, bob]);
+          while (late.length > 1 && late[1][0] <= t - 0.25) late.shift();
+          bob = late[0][0] <= t - 0.25 ? late[0][1] : 0;
+        }
       }
       // a side-to-side sway that swings one way each beat once locked on
       const beatSwing = Math.sin(Math.PI * (tempo.index + tempo.phase));
@@ -129,8 +146,17 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       const nod = a.live ? bob * nodScale : idle ? 0 : (Math.sin(t * 4) + 1) * 1.5;
       const flourish = still ? 0 : flourishAt({ t, track: trackKey(), playing: a.playing, line: singingReading.line, energy: (a.mid + a.treble) / 2 });
       const throwBack = -swell(flourish) * 6;
-      set('head', `translate(0 ${nod.toFixed(2)}) rotate(${(sway + throwBack).toFixed(2)} 200 240)`);
-      set('body', `translate(0 ${(nod * 0.3).toFixed(2)})`);
+      // the frog hops: head and body spring up off the beat and land on it
+      const hop = move === 'hop' && a.playing ? Math.sin(Math.PI * (grid ? tempo.phase : (t * 2) % 1)) * 7 : 0;
+      set('head', `translate(0 ${(nod - hop).toFixed(2)}) rotate(${(sway + throwBack).toFixed(2)} 200 240)`);
+      set('body', `translate(0 ${(nod * 0.3 - hop).toFixed(2)})`);
+      // the dragon puffs smoke on a flourish
+      const smoke = find('smoke');
+      if (smoke) {
+        const p = swell(flourish);
+        smoke.setAttribute('opacity', p.toFixed(2));
+        smoke.setAttribute('transform', `translate(206 ${(188 - p * 12).toFixed(2)}) scale(${(0.5 + p * 0.7).toFixed(2)}) translate(-206 -188)`);
+      }
 
       if (a.transient) hitUntil = t + 0.45;
       const hit = t < hitUntil;

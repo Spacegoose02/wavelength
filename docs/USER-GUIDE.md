@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo and gorilla), the **equalizer**,
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **Popular**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
@@ -459,7 +459,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
-| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear, a moose, a turtle, an elephant, a tiger, a lion, a panda, an owl, a T. rex, a monkey, a flamingo or a gorilla playing along (see below) |
+| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear, a moose, a turtle, an elephant, a tiger, a lion, a panda, an owl, a T. rex, a monkey, a flamingo, a gorilla, a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny or a red panda playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -479,7 +479,7 @@ spectrum under the title does the same.
 
 <a id="raccoons"></a>
 The last visualizer is a critter who plays along with the music. You pick **who** plays and **what** they
-play, and any critter can play any act: 17 critters × 14 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
+play, and any critter can play any act: 26 critters × 14 acts, as a boy or a girl. A rocker shark, a DJ bear and a country grey
 alien are all possible.
 
 <img src="screenshots/critters.png" alt="Every critter in every act in the Neon synth skin: rows are the raccoon, shark, alien, grey alien, black bear and brown bear; columns are DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth and Accordion" width="100%">
@@ -502,6 +502,15 @@ alien are all possible.
 | **Monkey** | A brown monkey with a tuft of hair, big round ears out at the sides (they stay out under every hat), a peach heart of a face, rosy cheeks and a wide grin, on thin legs with long peach feet and a long tail that curls at the tip |
 | **Flamingo** | A pink chick with a fluffy crest, golden eyes and a pale bill that bends down to a black tip (it opens when singing), on a short neck; its wings are its arms, with black feathered tips, and it stands on long thin pink legs with webbed feet |
 | **Gorilla** | A charcoal baby gorilla with a domed crown, a soft grey leathery face, a heavy brow, a broad nose and a gentle smile; a big broad body with the widest shoulders and longest arms of them all, and broad leathery feet |
+| **Penguin** | A round black-and-white chick with a white heart of a face, big dark eyes, an orange beak and pink cheeks; its flippers are its arms, and it waddles on orange feet |
+| **Fox** | An orange kit with tall pointed ears, a white muzzle and cheeks, amber eyes and a black button nose, in dark stockings, with a big bushy tail tipped in white |
+| **Axolotl** | A pink axolotl with a wide happy smile, little dark eyes and three frilly gills either side of its head that glow with the bass, on stubby four-toed feet with a finned tail |
+| **Sloth** | A beige shaggy sloth with dark stripes running back from its eyes, sleepy half-closed lids and a little smile, with long claws. It's so laid back it plays half a beat behind the music |
+| **Octopus** | A coral octopus with a big round speckled head, rosy cheeks and a happy grin; six curling tentacles with pale suckers are its legs, and two more are its arms |
+| **Dragon** | A teal baby dragon with two cream horns, an orange crest, a cream snout with a grin and two tiny fangs, little orange wings, claws and a spiky tail. It puffs smoke on a flourish |
+| **Frog** | A green frog with its big eyes up on top in two bumps, a pale yellow chin and the wide frog grin, on big webbed feet. It hops on the beat |
+| **Bunny** | A cream-white bunny with long pink-lined ears (one flopped over), a pink nose, whiskers and buck teeth, with a puff of a tail |
+| **Red panda** | A russet red panda with white-tipped ears, a white mask and cheek marks, dark legs and a long ringed tail |
 
 <img src="screenshots/critter-moose.png" alt="The moose in all eight acts: DJ in headphones, Country in a cowboy hat with its antlers either side of the crown, Rapper, Rocker, Drummer, Theremin, Synth and Accordion in a beanie" width="90%">
 
@@ -550,6 +559,9 @@ alien are all possible.
 <img src="screenshots/critter-piano.png" alt="Every critter in the Pianist act in the Outrun skin, boys on top and girls below: each in a tuxedo and bow tie behind a black grand piano with the lid up and a candelabra, under a spotlight between red curtains and a neon JAZZ sign" width="100%">
 <img src="screenshots/critter-marimba.png" alt="Every critter in the Marimba act, boys on top and girls below: each in a pith helmet (or a bow) and khaki, mallets over a wooden marimba in a jungle clearing with a waterfall and a parrot" width="100%">
 <img src="screenshots/critter-violin.png" alt="Every critter in the Violinist act, boys on top and girls below: each in a long coat and flat cap (or a bow), playing a violin tucked under the chin on a rainy street at night, under a street lamp by a brick wall with a lit window" width="100%">
+<img src="screenshots/critter-nine-new.png" alt="The penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda, each as the rapper between the speakers" width="100%">
+<img src="screenshots/critter-nine-acts.png" alt="The nine newest critters in a mix of acts: the penguin at the DJ decks, the fox on the banjo, the axolotl rocking a flying-V, the sloth on drums under the sea, the octopus at the synth, the dragon at the piano, the frog on bongos, the bunny on the marimba and the red panda on the violin" width="100%">
+<img src="screenshots/critter-nine-moves.gif" alt="The sloth bobbing half a beat behind the others, the frog hopping on the beat and the dragon puffing smoke on a flourish" width="100%">
 <img src="screenshots/critter-new-critters.gif" alt="The monkey, the flamingo and the gorilla playing the marimba in the jungle, bars lighting up under the mallets, and the violin in the rain, bows sawing in time" width="100%">
 <img src="screenshots/critter-new-acts.gif" alt="The three new acts playing: a moose on the keytar in front of the glowing reactor core with the beacons sweeping, a panda slapping bongos on the beach, and an owl playing the grand piano as music notes float up" width="560">
 <img src="screenshots/critter-drive.gif" alt="The moose driving: the car swerves from side to side in time, the wheel turning under one hand while the other waves, the road bending and rushing past and the moose singing" width="280">
@@ -569,7 +581,7 @@ lyrics move the mouth with the music rather than the voice.
 **A new look.** The critters' faces are drawn like vinyl toys: big round heads with soft shading, a dark
 outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge that takes your
 skin's colours. Their bodies match: the raccoon short and chunky with a big striped tail, the bears in puffy
-jackets, the shark one slim torpedo with its fins for arms, the aliens spindly and hovering, the moose deep-chested on long legs, the turtle round and stumpy under its shell, the elephant chunky on thick legs with toenails, the tiger and lion sturdy with long curling tails, the panda chubby on short black legs, the owl plump with its wings for arms, the T. rex on big strong legs with a thick tail and short little clawed arms, the monkey slim with a long curly tail, the flamingo plump on long thin legs with its wings for arms, and the gorilla big and broad with long strong arms.
+jackets, the shark one slim torpedo with its fins for arms, the aliens spindly and hovering, the moose deep-chested on long legs, the turtle round and stumpy under its shell, the elephant chunky on thick legs with toenails, the tiger and lion sturdy with long curling tails, the panda chubby on short black legs, the owl plump with its wings for arms, the T. rex on big strong legs with a thick tail and short little clawed arms, the monkey slim with a long curly tail, the flamingo plump on long thin legs with its wings for arms, the gorilla big and broad with long strong arms, the penguin round with flippers, the octopus on six tentacles, the dragon with little wings and a spiky tail, the frog on big webbed feet, and the fox, axolotl, sloth, bunny and red panda round and soft with their own tails (the fox's bushy, the red panda's ringed, the bunny's a puff).
 
 <img src="screenshots/critter-new-faces.png" alt="All six critters with the new faces and bodies, each playing the DJ, Rapper and Synth acts" width="100%">
 
@@ -621,7 +633,7 @@ cowgirl denim fringe skirt, a pleated mini (Rapper), a pink tutu (Rocker), a sai
 signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other devices. A pick from before
 0.17.9 carries over: the DJ raccoon stays the DJ raccoon, the shark keeps drumming, and so on.
 
-**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold, panda black and white, owl brown, T. rex green, monkey brown and peach, flamingo pink, gorilla charcoal),
+**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold, panda black and white, owl brown, T. rex green, monkey brown and peach, flamingo pink, gorilla charcoal, penguin black and white, fox orange, axolotl pink, sloth beige, octopus coral, dragon teal, frog green, bunny white, red panda russet),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
 Some groups of skins give them a whole outfit:
 

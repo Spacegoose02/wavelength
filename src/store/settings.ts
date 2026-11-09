@@ -24,7 +24,8 @@ export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber'
 export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' | 'raccoon';
 
 /** Who plays in the critter scene (`npScene: 'raccoon'`, named before there were other critters): components/critters/species.tsx. */
-export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown' | 'moose' | 'turtle' | 'elephant' | 'tiger' | 'lion' | 'panda' | 'owl' | 'trex' | 'monkey' | 'flamingo' | 'gorilla';
+export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown' | 'moose' | 'turtle' | 'elephant' | 'tiger' | 'lion' | 'panda' | 'owl' | 'trex' | 'monkey' | 'flamingo' | 'gorilla'
+  | 'penguin' | 'fox' | 'axolotl' | 'sloth' | 'octopus' | 'dragon' | 'frog' | 'bunny' | 'red-panda';
 
 /** Boy or girl critters (Settings → Playback → Critters). */
 export type CritterLook = 'boy' | 'girl';

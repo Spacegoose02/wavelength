@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Nine more critters: a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny and a red panda.**
+  The eighteenth to twenty-sixth, drawn cute. The penguin waddles with flippers for arms; the fox has a bushy
+  white-tipped tail; the axolotl's frilly gills glow with the bass; the octopus stands on six curling tentacles; the
+  bunny has one ear flopped over; the red panda has a ringed tail. Three move their own way: the laid-back sloth plays
+  half a beat behind the music, the frog hops on the beat, and the dragon puffs smoke on a flourish (`Figure.move`
+  and the `smoke` part, `rig.ts`). All nine play every act as a boy or a girl, with the holiday hats and theme outfits.
 - **A monkey, a flamingo and a gorilla.** The fifteenth, sixteenth and seventeenth critters, drawn cute. The monkey is
   brown with a tuft of hair, big round ears out at the sides that stay out under every hat, a peach heart of a face
   and a wide grin, on thin legs with long peach feet and a long tail curling at the tip. The flamingo chick is pink
