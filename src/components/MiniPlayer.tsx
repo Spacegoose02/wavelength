@@ -21,7 +21,7 @@ export function MiniPlayer() {
   const send = (what: RemoteAction) => () => void emitTo('main', 'remote', what);
   const pct = s.duration ? Math.min(100, (s.position / s.duration) * 100) : 0;
   return (
-    <div className="mini-player" data-tauri-drag-region>
+    <div className="mini-window" data-tauri-drag-region>
       {s.cover ? <img className="mini-cover" src={s.cover} alt="" data-tauri-drag-region /> : <div className="mini-cover" data-tauri-drag-region />}
       <div className="mini-main" data-tauri-drag-region>
         <button type="button" className="mini-title" title="Show Wavelength" onClick={() => void invoke('main_show')}>
