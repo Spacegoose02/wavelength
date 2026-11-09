@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Import from Plex.** Settings → Server → Import from Plex reads your Plex server, matches its albums and artists
+  to your library, shows what it found, then imports styles, moods, collections (Plex collections and labels) and
+  artist genres onto the Hub. Hand edits are never overwritten. Albums with no genre get Plex's as an undoable
+  suggestion (`hub/src/plexImport.ts`).
 - **Styles, moods and collections, like Plex.** Edit album's Tags tab now has **Styles** ("Christmas Pop"),
   **Moods** ("Laid-Back/Mellow") and **Collections** ("Christmas") next to its genres, and Edit artist has the
   artist's own **Genres**, Styles, Moods and Collections. They are kept on the Hub (`hub/src/itemTags.ts`, migration

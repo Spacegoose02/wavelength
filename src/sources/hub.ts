@@ -188,6 +188,27 @@ export interface HubItemTags {
 }
 export interface HubTagValue { name: string; albums: number; artists: number }
 export interface HubAllItemTags { artists: HubItemTags[]; albums: HubItemTags[]; values: Record<HubFacet, HubTagValue[]> }
+/** Importing styles, moods and collections from Plex (hub/src/plexImport.ts). */
+export interface HubPlexMatch { kind: 'artist' | 'album'; artist: string; title: string; facets: Partial<Record<HubFacet, string[]>>; changes: HubFacet[] }
+export interface HubPlexPreview {
+  at: number;
+  server: string;
+  albums: { plex: number; matched: number };
+  artists: { plex: number; matched: number };
+  changes: { albums: number; artists: number };
+  unmatched: { artist: string; title: string }[];
+  /** Albums with no genre in their files, and Plex's genre tidied by the genre rules (`id` is Navidrome's album id). */
+  genres: { id: string; artist: string; title: string; plex: string; genre: string }[];
+  sample: HubPlexMatch[];
+}
+export interface HubPlexImport {
+  state: 'idle' | 'reading' | 'ready' | 'importing' | 'done' | 'error';
+  step?: string;
+  error?: string;
+  preview?: HubPlexPreview;
+  imported?: { at: number; albums: number; artists: number };
+  servers: { id: number; name: string; token: boolean }[];
+}
 /** What PUT /api/admin/item-tags takes: each list sent replaces what was there (albums have no `genres` here). */
 export interface HubItemTagLists { genres?: string[]; styles?: string[]; moods?: string[]; collections?: string[] }
 export interface HubTagSong { id: string; path: string; tags: HubTags }
@@ -1091,6 +1112,9 @@ export class HubClient {
   /** `rules: null` goes back to the default rules. */
   saveGenreSettings = (b: { auto?: boolean; rules?: HubGenreRule[] | null }) => this.call<HubGenreSettings>('PUT', '/api/admin/genres', b);
   genreReview = () => this.call<HubGenreReview>('GET', '/api/admin/genres/review');
+  plexImport = () => this.call<HubPlexImport>('GET', '/api/admin/plex-import');
+  readPlex = (serviceId?: number) => this.call<HubPlexImport>('POST', '/api/admin/plex-import/read', serviceId === undefined ? {} : { serviceId });
+  importPlex = (facets?: HubFacet[]) => this.call<HubPlexImport>('POST', '/api/admin/plex-import/apply', facets ? { facets } : {});
   applyGenres = (albums: { id: string; genre: string }[]) =>
     this.call<{ batch: string | null; label: string; changed: string[]; failed: { path: string; error: string }[]; missing: string[] }>('POST', '/api/admin/genres/apply', { albums });
   keepGenres = (ids: string[], keep = true) => this.call<HubGenreSettings>('POST', '/api/admin/genres/keep', { ids, keep });

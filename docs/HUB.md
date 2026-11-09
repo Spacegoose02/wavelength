@@ -453,6 +453,29 @@ admin (`edit`) or an import (`plex`); an import never overwrites what an admin s
 The app reads the whole list once per session (`GET /api/item-tags`, one row per album or artist that has any) and
 shows them as chips under the title on album and artist pages (`src/components/TagChips.tsx`).
 
+### Importing from Plex
+
+**Settings → Server → Import from Plex** (`hub/src/plexImport.ts`, `hub/src/routes/plexImport.ts`,
+`src/views/PlexImport.tsx`) fills these in from a Plex server, whose music agent usually has them better filled than
+the files. It uses the first Plex server under Server logins (or the one picked) with its shared token.
+
+1. **Read Plex** (in the background): the music sections, every album (type 9) and artist (type 8), 500 per page,
+   then their full details 50 at a time (`/library/metadata/<id>,<id>,…`), which is where styles, moods, collections
+   and labels are. Nothing is written yet.
+2. **Matching** is against the Hub's catalog of the music folder (Music catalog above): the same album artist and
+   title without case, accents, apostrophes or punctuation, else the same title without edition words ("(Deluxe)",
+   "[Remastered]") when that pairs exactly one album on each side. Artists match by name against the catalog's album
+   artists. The preview shows how many matched, what a few albums and artists would get, and up to 100 Plex albums
+   with no match.
+3. **Import** writes styles, moods, collections (Plex's collections and its labels both become collections) and
+   artist genres onto the Hub, marked `plex`. Tick boxes pick which kinds. What an admin set by hand is never
+   changed, and importing again updates what came from Plex. Audited as `itemTags.imported`.
+4. **Album genres** stay in the files, so Plex's genre is only suggested for albums with none, tidied by the genre
+   rules. **Write genres** sends them through `POST /api/admin/genres/apply`, the genre review's Save, so they show
+   under Tag edits and can be undone.
+
+Needs the music catalog (the music folder mapped) and a Plex token the Hub can use.
+
 ## Joined artist credits
 
 Navidrome splits a single Artist or Album artist tag into several artists only on its own separators: `" / "`,
@@ -1054,6 +1077,9 @@ with a 4xx status.
 | `GET /api/item-tags` | signed in | every album's and artist's tags kept on the Hub: `{ artists, albums, values }`; each item is `{ kind, artist, title, facets: { genre?, style?, mood?, collection? }, sources, updatedAt }`, and `values` lists every name per facet with how many albums and artists have it |
 | `GET /api/item-tags/one?kind=&artist=&title=` | signed in | one album (`kind=album`, its album artist and title) or artist (`kind=artist`) |
 | `PUT /api/admin/item-tags` | `library.edit` | `{ kind, artist, title?, genres?, styles?, moods?, collections? }`: each list sent replaces what was there, an empty one clears it; albums take no `genres` (theirs are in the files) |
+| `GET /api/admin/plex-import` | `library.edit` | the Plex import: `{ state, step?, error?, preview?, imported?, servers }` (`state`: idle, reading, ready, importing, done or error) |
+| `POST /api/admin/plex-import/read` | `library.edit` | `{ serviceId? }`: read Plex in the background and match it to the library (202); nothing is written |
+| `POST /api/admin/plex-import/apply` | `library.edit` | `{ facets? }` (any of genre, style, mood, collection; all by default): write what the last read found |
 | `POST /api/admin/item-tags/rename` | `library.edit` | `{ kind, from: { artist, title? }, to: { artist, title? } }`: the tags follow a rename (an artist's albums too); answers `{ moved }` |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
 | `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }], batch? }` writes tags (only those given), four files at a time → `{ batch, changed, failed }`. Pass the same 16-hex `batch` with each part of a big Save to keep it one Save (`src/lib/tagSave.ts` sends 25 songs per part) |

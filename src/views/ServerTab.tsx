@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { HubError, type HubAdminService, type HubCatalogStatus, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit, type HubTrashAlbum } from '../sources/hub';
 import { hubClient } from '../store/hub';
 import { GenreReview } from './GenreReview';
+import { PlexImport } from './PlexImport';
 
 const gb = (n: number) => (n >= 1e12 ? `${(n / 1e12).toFixed(1)} TB` : n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.max(0, Math.round(n / 1e6))} MB`);
 const since = (t: number) => {
@@ -697,6 +698,7 @@ export function ServerTab() {
       <LibraryScan />
       <MusicCatalog />
       <GenreReview />
+      <PlexImport />
       <TagEdits />
       <DeletedAlbums />
       <section>

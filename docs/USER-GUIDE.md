@@ -2003,6 +2003,15 @@ writes what you changed into every song of the album, and **Undo** (or **Setting
 back. To fix titles, numbers or artists song by song, press **Edit each song…**, which opens the table described
 above. .m4a files can't hold the sort title, release type, record label or mood, so those are skipped for them.
 
+### Importing styles and moods from Plex (admins)
+
+If your household also runs Plex, **Settings → Server → Import from Plex** copies its styles, moods, collections
+and labels (a "Christmas" label becomes the Christmas collection) and artist genres onto your Hub. **Read Plex**
+first: it shows how many of Plex's albums and artists match yours and what a few would get, without changing
+anything. Then untick any kinds you don't want and press **Import**. Anything you set yourself in Edit album or Edit
+artist is kept. Albums in your library with no genre get Plex's genre as a suggestion (tidied the way your genre
+rules tidy them); check them and press **Write genres**, which you can undo under **Tag edits**.
+
 ### Editing an artist (admins)
 
 **Edit artist**, on an artist's page, opens the same kind of dialog:
