@@ -6,6 +6,7 @@ import { DontPlaySettings } from '../components/DontPlaySettings';
 import { useEffect, useState } from 'react';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid, isMobileApp } from '../lib/platform';
+import { gatewayHint } from '../lib/http';
 import { Equalizer } from '../components/Equalizer';
 import { SCENES } from '../components/Scenes';
 import { ACTS, Critter, SPECIES } from '../components/critters/Critter';
@@ -168,7 +169,7 @@ function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew
               ok: false,
               msg: isAndroid && /error sending request/i.test(msg)
                 ? `${msg} — couldn't reach the server. On Android 17+ allow Wavelength to access your local network (Settings → Apps → Wavelength → Permissions → Nearby devices / Local network), and make sure this device is on the same Wi-Fi (or VPN) as the server.`
-                : msg,
+                : gatewayHint(msg),
             });
           }
         }}>Test connection</button>

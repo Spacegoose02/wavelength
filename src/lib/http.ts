@@ -81,3 +81,13 @@ export function qs(params: Record<string, QsValue | QsValue[]>) {
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
     .join('&');
 }
+
+/**
+ * 502/503/504 come from a reverse proxy (nginx, Caddy, Traefik, Cloudflare…) in front of the server, not from
+ * the server itself or the Hub: the proxy answered but couldn't reach what's behind it. Say so, since the
+ * bare status reads like Wavelength's fault.
+ */
+export function gatewayHint(msg: string) {
+  if (!/^50[234]\b/.test(msg)) return msg;
+  return `${msg}. The web proxy in front of this server answered, but couldn't reach the server behind it. Check the server is running, and that the proxy points at the right address and port (Audiobookshelf's own port is 13378 unless you changed it). Opening the address in a browser should show the same error until it's fixed.`;
+}
