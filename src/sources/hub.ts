@@ -509,6 +509,10 @@ export interface HubCatalogStatus {
   stream?: boolean;
   /** stream is on and the catalog matches Navidrome, so it's happening */
   streaming?: boolean;
+  /** keep hearts, plays and ratings on the Hub (absent on older Hubs) */
+  userData?: boolean;
+  /** whose hearts and plays the Hub has copied, and how many */
+  people?: { people: number; stars: number; plays: number };
   lastError: string | null;
   summary: {
     albums: number;
@@ -971,7 +975,7 @@ export class HubClient {
   library = () => this.call<HubLibraryStatus>('GET', '/api/admin/library');
   catalog = () => this.call<HubCatalogStatus>('GET', '/api/admin/catalog');
   scanCatalog = () => this.call<HubCatalogStatus>('POST', '/api/admin/catalog/scan', {});
-  setCatalogServe = (b: { serve?: boolean; stream?: boolean }) => this.call<HubCatalogStatus>('PUT', '/api/admin/catalog', b);
+  setCatalogServe = (b: { serve?: boolean; stream?: boolean; userData?: boolean }) => this.call<HubCatalogStatus>('PUT', '/api/admin/catalog', b);
   containers = () => this.call<{ enabled: boolean; containers: HubContainer[] }>('GET', '/api/admin/docker');
   container = (name: string, action: 'start' | 'stop' | 'restart') =>
     this.call<{ name: string; state: string; status: string }>('POST', `/api/admin/docker/${encodeURIComponent(name)}/${action}`, {});

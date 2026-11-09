@@ -668,6 +668,24 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     updated_at   INTEGER NOT NULL
   );
   `,
+  `
+  -- Each person's hearts, plays and ratings, kept by the Hub (userData.ts, phase 5 of the Hub's own music server).
+  -- Copied once from Navidrome per person; ids are Navidrome's song, album and artist ids.
+  CREATE TABLE user_stars (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id    TEXT NOT NULL,
+    starred_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, item_id)
+  );
+  CREATE TABLE user_song_plays (
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    song_id     TEXT NOT NULL,
+    play_count  INTEGER NOT NULL DEFAULT 0,
+    last_played INTEGER,
+    rating      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, song_id)
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

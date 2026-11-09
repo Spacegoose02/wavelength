@@ -152,6 +152,26 @@ function view(db: Db): View {
 
 /** Ids a person starred on Navidrome, with when, so the Hub's answers show the hearts Navidrome's would. */
 export type Starred = Map<string, string>;
+/** A person's plays and ratings by song id, when the Hub keeps them (userData.ts); null while Navidrome does. */
+export type Plays = Map<string, { count: number; last: number | null; rating: number }>;
+/** the plays of the person answer() is answering for (answer() is synchronous, so this is set only during it) */
+let plays: Plays | null = null;
+const playFields = (id: string) => {
+  const p = plays?.get(id);
+  return p ? { ...(p.count && { playCount: p.count }), ...(p.last && { played: iso(p.last) }), ...(p.rating && { userRating: p.rating }) } : {};
+};
+const albumPlays = (a: Album) => {
+  if (!plays) return {};
+  let count = 0, last = 0;
+  for (const r of a.songs) {
+    const p = plays.get(r.nd_id);
+    if (p) {
+      count += p.count;
+      last = Math.max(last, p.last ?? 0);
+    }
+  }
+  return { ...(count && { playCount: count }), ...(last && { played: iso(last) }) };
+};
 
 function song(r: Row, starred: Starred) {
   const suffix = extname(r.path).slice(1).toLowerCase();
@@ -190,6 +210,7 @@ function song(r: Row, starred: Starred) {
     ...(replayGain && { replayGain }),
     displayAlbumArtist: r.album_artist || r.artist,
     ...(starred.has(r.nd_id) && { starred: starred.get(r.nd_id) }),
+    ...playFields(r.nd_id),
   };
 }
 
@@ -211,6 +232,7 @@ function album(a: Album, starred: Starred) {
     explicitStatus: a.explicit,
     isDir: true,
     ...(starred.has(a.id) && { starred: starred.get(a.id) }),
+    ...albumPlays(a),
   };
 }
 
@@ -237,17 +259,27 @@ export const ok = (body: Record<string, unknown>) => ({
 });
 
 /** Calls answer() can take; the relay only fetches stars for these. */
-export const SERVED = new Set(['getArtists', 'getArtist', 'getAlbum', 'getSong', 'getGenres', 'getSongsByGenre', 'getRandomSongs', 'getAlbumList2', 'search3']);
-/** getAlbumList2 types that need a person's plays, ratings or stars: Navidrome answers those. */
+export const SERVED = new Set(['getArtists', 'getArtist', 'getAlbum', 'getSong', 'getGenres', 'getSongsByGenre', 'getRandomSongs', 'getAlbumList2', 'search3', 'getStarred', 'getStarred2']);
+/** getAlbumList2 types that need a person's plays, ratings or stars: Navidrome answers those unless the Hub keeps them. */
 const PERSONAL_LISTS = new Set(['recent', 'frequent', 'starred', 'highest']);
 
 /**
  * Answer a Subsonic library call from the catalog, or null when Navidrome should (a call or list type not handled
  * here, an id the catalog doesn't know).
  */
-export function answer(db: Db, method: string, q: Record<string, string>, starred: Starred): Record<string, unknown> | null {
+export function answer(db: Db, method: string, q: Record<string, string>, starred: Starred, personal: Plays | null = null): Record<string, unknown> | null {
+  plays = personal;
+  try {
+    return answerFor(db, method, q, starred);
+  } finally {
+    plays = null;
+  }
+}
+
+function answerFor(db: Db, method: string, q: Record<string, string>, starred: Starred): Record<string, unknown> | null {
   if (!SERVED.has(method)) return null;
-  if (method === 'getAlbumList2' && PERSONAL_LISTS.has(q.type ?? '')) return null;
+  // without the person's plays and stars kept on the Hub, Navidrome answers what needs them
+  if (!plays && ((method === 'getAlbumList2' && PERSONAL_LISTS.has(q.type ?? '')) || method === 'getStarred' || method === 'getStarred2')) return null;
   const v = view(db);
   switch (method) {
     case 'getArtists': {
@@ -273,6 +305,14 @@ export function answer(db: Db, method: string, q: Record<string, string>, starre
     case 'getSong': {
       const r = v.songs.get(q.id ?? '');
       return r ? ok({ song: song(r, starred) }) : null;
+    }
+    case 'getStarred':
+    case 'getStarred2': {
+      const songs = [...starred.keys()].map((id) => v.songs.get(id)).filter((r): r is Row => !!r);
+      const albums = [...starred.keys()].map((id) => v.albums.get(id)).filter((a): a is Album => !!a);
+      const artists = [...starred.keys()].map((id) => v.artists.get(id)).filter((a): a is Artist => !!a);
+      const body = { artist: artists.map((a) => artist(a, starred)), album: albums.map((a) => album(a, starred)), song: songs.map((r) => song(r, starred)) };
+      return ok(method === 'getStarred2' ? { starred2: body } : { starred: body });
     }
     case 'getGenres': {
       const genre = [...v.genres.values()].sort((a, b) => a.name.localeCompare(b.name)).map((g) => ({ value: g.name, songCount: g.songs, albumCount: g.albums.size }));
@@ -308,6 +348,26 @@ export function answer(db: Db, method: string, q: Record<string, string>, starre
         case 'random':
           list = shuffle(list);
           break;
+        case 'starred':
+          list = list.filter((a) => starred.has(a.id)).sort((a, b) => (starred.get(b.id) ?? '').localeCompare(starred.get(a.id) ?? ''));
+          break;
+        case 'frequent':
+        case 'recent': {
+          const stat = new Map(list.map((a) => [a.id, albumPlays(a) as { playCount?: number; played?: string }]));
+          list = list.filter((a) => stat.get(a.id)?.playCount);
+          list.sort(q.type === 'frequent'
+            ? (a, b) => (stat.get(b.id)!.playCount ?? 0) - (stat.get(a.id)!.playCount ?? 0)
+            : (a, b) => (stat.get(b.id)!.played ?? '').localeCompare(stat.get(a.id)!.played ?? ''));
+          break;
+        }
+        case 'highest': {
+          const avg = (a: Album) => {
+            const r = a.songs.map((x) => plays?.get(x.nd_id)?.rating ?? 0).filter(Boolean);
+            return r.length ? r.reduce((x, y) => x + y, 0) / r.length : 0;
+          };
+          list = list.filter((a) => avg(a) > 0).sort((a, b) => avg(b) - avg(a));
+          break;
+        }
         case 'byYear': {
           const from = Number(q.fromYear) || 0, to = Number(q.toYear) || 9999;
           const lo = Math.min(from, to), hi = Math.max(from, to);

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need } from '../http.ts';
+import { userDataSummary } from '../userData.ts';
 
 /** What's in the catalog, counted from catalog_songs (for Settings → Server → Music catalog). */
 function summary(ctx: Ctx) {
@@ -26,7 +27,7 @@ function summary(ctx: Ctx) {
 export function catalogRoutes(app: FastifyInstance, ctx: Ctx) {
   app.get('/api/admin/catalog', async (req) => {
     need(req, 'server.view');
-    return { ...ctx.catalog.status(), summary: summary(ctx) };
+    return { ...ctx.catalog.status(), summary: summary(ctx), people: userDataSummary(ctx.db) };
   });
 
   /**
@@ -36,9 +37,13 @@ export function catalogRoutes(app: FastifyInstance, ctx: Ctx) {
    */
   app.put('/api/admin/catalog', async (req) => {
     const { user } = need(req, 'server.view');
-    const body = (req.body ?? {}) as { serve?: unknown; stream?: unknown };
-    for (const k of ['serve', 'stream'] as const) if (body[k] !== undefined && typeof body[k] !== 'boolean') throw new HttpError(400, `${k} must be true or false`);
-    if (body.serve === undefined && body.stream === undefined) throw new HttpError(400, 'Send serve or stream');
+    const body = (req.body ?? {}) as { serve?: unknown; stream?: unknown; userData?: unknown };
+    for (const k of ['serve', 'stream', 'userData'] as const) if (body[k] !== undefined && typeof body[k] !== 'boolean') throw new HttpError(400, `${k} must be true or false`);
+    if (body.serve === undefined && body.stream === undefined && body.userData === undefined) throw new HttpError(400, 'Send serve, stream or userData');
+    if (typeof body.userData === 'boolean') {
+      ctx.catalog.setKeepsUserData(body.userData);
+      audit(ctx.db, { actorId: user.id, action: 'catalog.userData', detail: { userData: body.userData }, ip: clientIp(req) });
+    }
     if (typeof body.serve === 'boolean') {
       ctx.catalog.setServe(body.serve);
       audit(ctx.db, { actorId: user.id, action: 'catalog.serve', detail: { serve: body.serve }, ip: clientIp(req) });
@@ -47,13 +52,13 @@ export function catalogRoutes(app: FastifyInstance, ctx: Ctx) {
       ctx.catalog.setStream(body.stream);
       audit(ctx.db, { actorId: user.id, action: 'catalog.stream', detail: { stream: body.stream }, ip: clientIp(req) });
     }
-    return { ...ctx.catalog.status(), summary: summary(ctx) };
+    return { ...ctx.catalog.status(), summary: summary(ctx), people: userDataSummary(ctx.db) };
   });
 
   app.post('/api/admin/catalog/scan', async (req) => {
     const { user } = need(req, 'server.view');
     if (!ctx.catalog.status().scanning) audit(ctx.db, { actorId: user.id, action: 'catalog.scan', ip: clientIp(req) });
     void ctx.catalog.scan().catch(() => undefined);
-    return { ...ctx.catalog.status(), summary: summary(ctx) };
+    return { ...ctx.catalog.status(), summary: summary(ctx), people: userDataSummary(ctx.db) };
   });
 }

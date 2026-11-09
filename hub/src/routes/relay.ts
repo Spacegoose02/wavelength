@@ -14,6 +14,7 @@ import { playedBy } from '../playedBy.ts';
 import { permissionsFor } from '../roles.ts';
 import { addStation, deleteStation, radioImportedAt, readStation, subsonicStations, updateStation } from '../radioStations.ts';
 import { HttpError } from '../http.ts';
+import { importUserData, played, playsOf, rate, star, starredOf, userDataImported } from '../userData.ts';
 
 /**
  * Navidrome through the Hub (docs/USERS-AND-ADMIN.md Phase 4). A device gets a Subsonic login for
@@ -65,6 +66,8 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
   const coverCache = join(config.dataDir, 'covers');
   /** each person's Navidrome stars, for the Hub's own answers (a minute old at most; starring clears it) */
   const stars = new Map<number, { at: number; ids: Starred }>();
+  /** people whose hearts and plays are being copied from Navidrome right now (one copy each) */
+  const copying = new Map<number, Promise<boolean>>();
 
 
   /** Check a relay login (`u` is "<hub username>~<device id>") and find the real one behind it. */
@@ -159,12 +162,50 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
 
     if (method === 'star' || method === 'unstar') stars.delete(user.id);
 
+    // Hearts, plays and ratings kept on the Hub (userData.ts), when an admin turned it on: copied from Navidrome the
+    // first time, then recorded here and passed on to Navidrome in the background so it stays complete.
+    let mineOnHub = false;
+    if (catalog.keepsUserData()) {
+      if (!userDataImported(db, user.id)) {
+        let p = copying.get(user.id);
+        if (!p) {
+          p = importUserData(db, user.id, target).then(() => true, () => false).finally(() => copying.delete(user.id));
+          copying.set(user.id, p);
+        }
+        mineOnHub = await p;
+      } else mineOnHub = true;
+    }
+    if (mineOnHub && (method === 'star' || method === 'unstar' || method === 'scrobble' || method === 'setRating')) {
+      const all = (k: string) => {
+        const v = (req.query as Record<string, string | string[]>)[k];
+        return (Array.isArray(v) ? v : v === undefined ? [] : [v]).map(String).filter(Boolean);
+      };
+      if (method === 'star' || method === 'unstar') star(db, user.id, [...all('id'), ...all('albumId'), ...all('artistId')], method === 'star');
+      else if (method === 'setRating') rate(db, user.id, q.id ?? '', Number(q.rating) || 0);
+      else if (q.submission !== 'false') {
+        const times = all('time');
+        all('id').forEach((id, i) => played(db, user.id, id, Number(times[i]) || Date.now()));
+      }
+      // Navidrome gets it too, without the device waiting for it
+      const search = new URLSearchParams();
+      for (const [k, v] of Object.entries(req.query as Record<string, string | string[]>)) if (!AUTH.has(k)) for (const x of Array.isArray(v) ? v : [v]) search.append(k, String(x));
+      const salt = randomBytes(6).toString('hex');
+      search.set('u', target.username);
+      search.set('t', md5(target.password + salt));
+      search.set('s', salt);
+      void fetch(`${target.url}/rest/${method}?${search}`, { signal: AbortSignal.timeout(30_000) }).catch(() => undefined);
+      return reply.header('x-wavelength-answered-by', 'hub').send({ 'subsonic-response': { status: 'ok', version: '1.16.1', type: 'wavelength-hub', openSubsonic: true } });
+    }
+
     // The Hub's own answers from the music catalog (subsonicCatalog.ts), when an admin turned them on: same ids, so
     // playing and starring still go to Navidrome. Anything not answered here goes on to Navidrome below.
     if (catalog.serving() && config.musicDir) {
       if (method === 'getCoverArt' && q.id) {
         const art = await cover(db, config.musicDir, coverCache, q.id, Number(q.size) || 0).catch(() => null);
         if (art) return reply.header('content-type', art.type).header('cache-control', 'public, max-age=86400').header('x-wavelength-answered-by', 'hub').send(art.body);
+      } else if (SERVED.has(method) && q.f === 'json' && mineOnHub) {
+        const body = answer(db, method, q, starredOf(db, user.id), playsOf(db, user.id));
+        if (body) return reply.header('x-wavelength-answered-by', 'hub').send(body);
       } else if (SERVED.has(method) && q.f === 'json') {
         let mine = stars.get(user.id);
         if (!mine || Date.now() - mine.at > 60_000) {

@@ -766,6 +766,17 @@ and hands out ids.
   devices going through the relay get `getInternetRadioStations` and the create / update / delete calls answered
   from the same list (admins only, as on Navidrome). Navidrome's own list is left as it was; a Navidrome hosted on
   its own keeps its stations.
+- **Hearts, play counts and ratings live on the Hub** (phase 5, `hub/src/userData.ts`, tables `user_stars` and
+  `user_song_plays`, migration 34), when an admin turns on **Hub keeps hearts and play counts** on the Music catalog
+  card (`catalog.userData`, off by default). The first time a person's device calls the relay after that, the Hub
+  copies their hearts (`getStarred2`) and their plays, last plays and ratings (Navidrome's own API, as them) once
+  (`userdata.imported.<user id>`); if Navidrome can't be asked, that call goes to Navidrome and the copy is tried
+  again next time. From then on `star`, `unstar`, `scrobble` (finished plays) and `setRating` are recorded on the
+  Hub and answered by it, and sent on to Navidrome in the background so Navidrome stays complete for devices that
+  talk to it directly. While the Hub answers browsing, songs and albums carry the Hub's `starred`, `playCount`,
+  `played` and `userRating`, `getStarred` / `getStarred2` come from the Hub, and so do the Starred, Most played,
+  Recently played and Top rated album lists. Changes made on a device that talks to Navidrome directly aren't seen
+  by the Hub, so send everyone through the Hub before relying on it.
 
 Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
 under Library updates; without it the catalog still scans.
@@ -989,7 +1000,7 @@ with a 4xx status.
 | `GET /api/radio/stations` | signed in | internet radio stations on the Hub: `{ imported, importedAt, stations: [{ id, name, streamUrl, homePageUrl }] }` |
 | `POST /api/admin/radio/stations` · `PUT /api/admin/radio/stations/:id` · `DELETE /api/admin/radio/stations/:id` | `library.edit` | add, change (`{ name?, streamUrl?, homePageUrl? }`) or delete a station (audited `radio.*`) |
 | `POST /api/admin/radio/import` | `library.edit` | copy Navidrome's stations again; ones the Hub has (same id or stream link) are left alone |
-| `PUT /api/admin/catalog` | `server.view` | `{ serve?, stream? }`: the Hub answers browsing, search and covers, and plays songs, for devices that go through it (audited `catalog.serve`, `catalog.stream`); answers with the status |
+| `PUT /api/admin/catalog` | `server.view` | `{ serve?, stream?, userData? }`: the Hub answers browsing, search and covers, and plays songs, for devices that go through it (audited `catalog.serve`, `catalog.stream`); answers with the status |
 | `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |
 | `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |
 | `POST /api/lyrics/translate` | signed in, `lyricsTranslate` on, the AI DJ allowed | `{ key, lines, mode: translate\|romanize, to }` → `{ lines, cached, …allowance }`: one line out for each line in, through the AI DJ's quick model; kept in memory for the house (500 songs) |
