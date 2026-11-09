@@ -76,6 +76,15 @@ export interface HubFamilyMember extends HubFamilyPerson {
   guardians?: number[];
 }
 
+export interface HubAppLogin {
+  id: number;
+  name: string;
+  createdAt: number;
+  path: string;
+  username: string;
+  password: string;
+}
+
 export interface HubDevice {
   id: number;
   userId: number;
@@ -935,6 +944,9 @@ export class HubClient {
   changePassword = (currentPassword: string, newPassword: string) => this.call('PUT', '/api/me/password', { currentPassword, newPassword });
   myDevices = () => this.call<{ devices: (HubDevice & { current: boolean })[] }>('GET', '/api/me/devices');
   signOutMyDevice = (id: number) => this.call('DELETE', `/api/me/devices/${id}`);
+  /** Logins for other music apps (SUB/WAVE, Symfonium…) on the Hub's relay; `path` goes after the Hub's address. */
+  appLogins = () => this.call<{ available: boolean; logins: HubAppLogin[] }>('GET', '/api/me/app-logins');
+  addAppLogin = (name: string) => this.call<{ login: HubAppLogin }>('POST', '/api/me/app-logins', { name });
   ssoLink = () => this.call<{ url: string; expiresIn: number }>('POST', '/api/me/sso-link', {});
   unlinkSso = () => this.call<{ user: HubUser }>('DELETE', '/api/me/sso');
   getPrefs = () => this.call<{ prefs: HubPrefs }>('GET', '/api/me/prefs');
