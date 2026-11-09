@@ -364,7 +364,7 @@ album's songs) and saves only the tags that changed with the same `PUT /api/admi
 (`src/lib/songCredit.ts`), the shape `tidyCredit` writes, which Navidrome splits on " feat. " and "; ".
 
 
-**Merging** (Albums or Artists → **Select → Merge**, `src/lib/merge.ts`) uses the same endpoints: it reads the
+**Merging** (Albums or Artists → **Select → Merge**, or **Merge into…** on an artist or album page; `src/lib/merge.ts`) uses the same endpoints: it reads the
 ticked albums' files with `GET /api/admin/tags/albums`, works out the new tags in the app, and writes them with one
 `PUT /api/admin/tags`, labelled "Merge … into …". So a merge shows up under **Tag edits**, is undone in one go, and
 is audited as `tags.edited`.

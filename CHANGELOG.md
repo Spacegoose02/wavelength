@@ -10,6 +10,13 @@
   gets a button to write it the way Navidrome splits it. Only changed tags are written; **Undo** is in the dialog and
   under Settings → Server → Tag edits (`src/views/SongEditor.tsx`, `src/lib/songCredit.ts`, Hub
   `GET /api/admin/tags/song/:id`).
+- **Merge into…** on an artist's or album's page (Hub admins), the way Plex merges: it lists the artists or albums
+  that look like the same one, or type to find another, and the page you're on merges into the one you pick. Same
+  merge as Select → Merge, one undo under Settings → Server → Tag edits (`src/components/MergeInto.tsx`).
+- **Merging artists catches every song.** Songs where the merged artist is only featured on someone else's album
+  are retagged too, and a joined credit merged into one of its artists keeps the rest featured: "Lil Wayne;Drake"
+  into Lil Wayne writes Artist "Lil Wayne feat. Drake" and Album artist "Lil Wayne". An album merged into one whose
+  songs have no Album artist takes the main artist, not "A feat. B" (`src/lib/merge.ts`).
 
 ## 0.32.1
 - **Joined artists are the main artist featuring the rest.** A tag like "Lil Durk;Drake" means Lil Durk featuring

@@ -1122,8 +1122,17 @@ press **Done** and start over.
   a single clean song that ended up as its own "Underground Luxury" next to the rest of the album, or a
   "(Deluxe)" copy you want filed with the original.
 - **Artists:** every song by the other artists is renamed to the target's name, in its **Artist** and **Album
-  artist** tags. Songs where they're credited with someone else ("Bobby Ray feat. T.I.") change too. Use it for
-  two spellings of one artist ("Beatles" and "The Beatles").
+  artist** tags. Songs where they're credited with someone else ("Bobby Ray feat. T.I.") change too, and so do
+  songs on other artists' albums where they're only featured, so no song is left under the old name. Use it for
+  two spellings of one artist ("Beatles" and "The Beatles"). A joined credit merged into one of its own artists
+  keeps the rest as featured: merging "Lil Wayne;Drake" into Lil Wayne writes the **Artist** as "Lil Wayne feat.
+  Drake" and the **Album artist** as "Lil Wayne", so the song and its album are Lil Wayne's and the song still
+  shows Drake as featured.
+
+**Merge into…** does the same from the duplicate itself, the way Plex's Merge does. On an artist's or an album's
+page (Hub admins), press **Merge into…**: it lists the artists or albums that look like the same one (the same
+name once case, accents, "The", "&" and editions like "(Deluxe)" are put aside), or type to find another. Pick the
+one to **keep**; the page you're on merges into it, and Wavelength takes you to the one you kept.
 
 Before anything changes, Wavelength reads the files and asks you to confirm, saying how many songs it will
 retag. Your Hub writes the new tags into the files; the files don't move and the audio isn't touched. The
@@ -1136,8 +1145,11 @@ at `/music`, read-write, and the Navidrome admin login (Settings → Server).
 
 > **Developer notes:** `useSelection` and `SelectBar` in `src/components/Selection.tsx` keep the ticks in the
 > order they were made (the first is the target). `src/lib/merge.ts` plans a merge from the files' tags
-> (`planAlbums`, `planArtists`; the pure parts are `albumTarget`, `planAlbumMerge` and `planArtistMerge`, tested in
-> `src/test/merge.test.ts`) and saves it through `PUT /api/admin/tags` as one batch. No Hub change was needed.
+> (`planAlbums`, `planArtists`; the pure parts are `albumTarget`, `planAlbumMerge`, `planArtistMerge` and
+> `mergedName`, tested in `src/test/merge.test.ts`) and saves it through `PUT /api/admin/tags` as one batch.
+> `planArtists` reads each artist's own albums and their appears-on albums (`getAppearsOn`). **Merge into…** is
+> `src/components/MergeInto.tsx`: it ranks the catalog by `looseKey` / `albumKey` / `likeness`, then runs the same
+> plan with the picked one first, and shares `confirmMerge` with the select bar. No Hub change was needed.
 
 ### Deleting several albums at once (admins)
 
@@ -1868,7 +1880,8 @@ Some taggers join several artists into one credit with a semicolon, so the libra
 someone else's album) and starts **Change to** as the first artist, with buttons for "Lil Baby", "Lil Baby feat.
 Jeremih" and "Lil Baby & Jeremih". To split joined credits across the whole library instead, use **Library care →
 Unmatched songs** (see [Library care](#library-care)).
-To merge several artists at once, or to merge albums, use **Select → Merge** on Albums or Artists (see
+To merge one artist or album into another, use **Merge into…** on its page; to merge several at once, use
+**Select → Merge** on Albums or Artists (see
 [Merging albums and artists](#merging-albums-and-artists-admins)).
 
 Your Hub needs your music at `/music`, read-write, and the Navidrome admin login (Settings → Server).

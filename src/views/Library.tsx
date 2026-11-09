@@ -18,7 +18,8 @@ import { albumVersion, explicitOfAlbum, explicitOfTrack, useHidden, useIsKid, us
 import { cleanSide, hasBoth, preferredRef, useVersionHidden, useVersionPref, versionOf, versionsOf } from '../lib/versions';
 import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { deleteAlbum, deleteAlbums } from '../lib/deleteAlbums';
-import { applyMerge, navidromeRefs, planAlbums, planArtists, type MergePlan } from '../lib/merge';
+import { navidromeRefs, planAlbums, planArtists } from '../lib/merge';
+import { confirmMerge, forgetAlbums, forgetArtists, MergeIntoButton } from '../components/MergeInto';
 import { SelectBar, useSelection, type Selection } from '../components/Selection';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
@@ -350,43 +351,6 @@ async function tracksOfArtists(artists: Artist[]) {
   return out;
 }
 
-/** Show what a merge will change, ask, and save it. True when it was saved. */
-async function confirmMerge(plan: MergePlan, others: string[], setBusy: (s?: string) => void) {
-  if (!plan.changes.length) {
-    alert(`Nothing to change: ${others.join(', ')} already ${others.length === 1 ? 'has' : 'have'} the same tags as ${plan.into}.${plan.missing.length ? ` (${plan.missing.length} files weren't found in the Hub's music folder.)` : ''}`);
-    return false;
-  }
-  const list = others.slice(0, 8).map((x) => `• ${x}`).join('\n') + (others.length > 8 ? `\n…and ${others.length - 8} more` : '');
-  const missing = plan.missing.length ? `\n\n${plan.missing.length} file${plan.missing.length === 1 ? ' isn’t' : 's aren’t'} in the Hub's music folder and will be left out.` : '';
-  if (!confirm(`Merge into ${plan.into}?\n\n${list}\n\nThis rewrites the tags of ${plan.changes.length} song${plan.changes.length === 1 ? '' : 's'}. The audio isn't touched, and you can undo it under Settings → Server → Tag edits.${missing}`)) return false;
-  setBusy('Merging…');
-  const r = await applyMerge(plan);
-  alert(`Merged: ${r.changed.length} song${r.changed.length === 1 ? '' : 's'} retagged${r.failed.length ? `; ${r.failed.length} failed (${r.failed[0].error})` : ''}. Navidrome rescans in a minute or two to show it.`);
-  // the library refreshes once Navidrome has had time to rescan
-  window.setTimeout(() => void useCatalog.getState().load(), 120_000);
-  return r.changed.length > 0;
-}
-
-/** Take merged albums and artists off the lists now; the refresh after the rescan shows the result. */
-function forgetAlbums(gone: Album[]) {
-  const keys = new Set(gone.flatMap((a) => navidromeRefs(a)).map((r) => `${r.sourceId}:${r.id}`));
-  const keep = (a: Album) => {
-    const refs = (a.refs ?? [a]).filter((r) => !keys.has(`${r.sourceId}:${r.id}`));
-    return refs.length === (a.refs ?? [a]).length ? [a] : refs.length ? [{ ...a, ...refs[0], refs }] : [];
-  };
-  useCatalog.setState((s) => ({ albums: s.albums.flatMap(keep), recent: s.recent.flatMap(keep) }));
-}
-
-function forgetArtists(gone: Artist[]) {
-  const keys = new Set(gone.flatMap((a) => navidromeRefs(a)).map((r) => `${r.sourceId}:${r.id}`));
-  useCatalog.setState((s) => ({
-    artists: s.artists.flatMap((a) => {
-      const refs = (a.refs ?? [a]).filter((r) => !keys.has(`${r.sourceId}:${r.id}`));
-      return refs.length === (a.refs ?? [a]).length ? [a] : refs.length ? [{ ...a, ...refs[0], refs }] : [];
-    }),
-  }));
-}
-
 function useSourceCfg() {
   const sources = useSettings((s) => s.sources);
   return (id: string) => sources.find((s) => s.id === id);
@@ -395,6 +359,7 @@ function useSourceCfg() {
 export function ArtistView({ artist }: { artist: Artist }) {
   const cfgOf = useSourceCfg();
   const canEditTags = useCan('library.edit');
+  const kid = useIsKid();
   const { canGet } = useCanGet();
   const [albums, setAlbums] = useState<Album[] | null>(null);
   // a server that couldn't list this artist's albums says so, instead of leaving the page empty
@@ -455,6 +420,7 @@ export function ArtistView({ artist }: { artist: Artist }) {
             {canEditTags && (artist.refs ?? [artist]).some((r) => cfgOf(r.sourceId)?.kind === 'navidrome') && (
               <button className="btn" title="Rename this artist, or merge two spellings, in all their songs' tags" onClick={() => useUi.getState().go({ view: 'artistTags', artist })}>Edit artist</button>
             )}
+            {canEditTags && !kid && navidromeRefs(artist).length > 0 && <MergeIntoButton kind="artist" item={artist} />}
           </div>
           <ArtistNews artist={artist} />
         </div>
@@ -623,6 +589,7 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
             {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && (
               <button className="btn" title="Fix this album's tags in its files" onClick={() => useUi.getState().go({ view: 'tags', album: { ...ref, refs: [ref] } })}>Edit tags</button>
             )}
+            {canEditTags && !kid && navidromeRefs(album).length > 0 && <MergeIntoButton kind="album" item={album} />}
             {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && <DeleteAlbumButton album={ref} />}
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}
