@@ -66,7 +66,10 @@ Everything works as in the app except downloading songs for offline play and run
 - Music servers you add under **Settings → Sources** are reached from the browser, so give them addresses
   the browser can reach. When the Hub is on `https://`, they need `https://` addresses too (for example
   through Nginx Proxy Manager), because browsers block `http://` content on a secure page. Navidrome and Plex
-  allow requests from other sites; Audiobookshelf may need its allowed origins set.
+  allow requests from other sites. Audiobookshelf only answers its own pages by default: in Audiobookshelf,
+  open **Settings** and add the Hub's address (for example `https://hub.example.com`, no trailing slash) under
+  **Allowed CORS Origins**. Until then Test connection in a browser shows "NetworkError when attempting to
+  fetch resource" (Firefox) or "Failed to fetch" (Chrome). The desktop and Android apps don't need this.
 - The page itself isn't behind tinyauth (only `/auth/sso/` is), the same as the app's API calls.
 
 ## First admin

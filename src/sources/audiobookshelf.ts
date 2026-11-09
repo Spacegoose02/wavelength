@@ -1,6 +1,11 @@
 import { getJson, http, qs, trimSlash } from '../lib/http';
 import type { Book, BookDetails, BookPlayback, Chapter, MusicSource, Podcast, SearchResults, SourceConfig, Track } from './types';
 
+/** Continue listening: how many episodes, how far back the latest list reaches, and how many older shows to read. */
+const IN_PROGRESS_MAX = 20;
+const IN_PROGRESS_LATEST = 200;
+const IN_PROGRESS_SHOW_READS = 5;
+
 type Progress = Map<string, { progress: number; currentTime: number; finished: boolean; lastUpdate?: number }>;
 
 /** Audiobookshelf: audiobooks + podcasts (kept separate), with progress synced back to the server. */
@@ -109,14 +114,22 @@ export class AudiobookshelfSource implements MusicSource {
   }
 
   async getEpisodes(podcastId: string): Promise<Track[]> {
-    const [item, progress] = await Promise.all([this.get(`/api/items/${podcastId}?expanded=1`), this.progressMap()]);
+    return this.showEpisodes(podcastId, await this.progressMap());
+  }
+
+  private async showEpisodes(podcastId: string, progress: Progress): Promise<Track[]> {
+    const item = await this.get(`/api/items/${podcastId}?expanded=1`);
     const show = item.media?.metadata?.title ?? '';
     return (item.media?.episodes ?? []).map((e: any) => this.episode(e, podcastId, show, progress)).sort(newestFirst);
   }
 
   /** Audiobookshelf's own "latest episodes" list for each podcast library, put together newest first. */
   async getLatestEpisodes(limit = 200): Promise<Track[]> {
-    const [libs, progress] = await Promise.all([this.libraries('podcast'), this.progressMap()]);
+    return this.latestEpisodes(limit, await this.progressMap());
+  }
+
+  private async latestEpisodes(limit: number, progress: Progress): Promise<Track[]> {
+    const libs = await this.libraries('podcast');
     const lists = await Promise.all(libs.map((l: any) => this.get(`/api/libraries/${l.id}/recent-episodes?${qs({ limit, page: 0 })}`)));
     return lists
       .flatMap((r: any) => (r.episodes ?? []).map((e: any) => {
@@ -128,14 +141,30 @@ export class AudiobookshelfSource implements MusicSource {
       .slice(0, limit);
   }
 
-  /** Episodes you're part way through: the server's "continue listening" items that are podcasts. */
+  /**
+   * Episodes you're part way through, most recently played first. Worked out from your saved progress (/api/me)
+   * and the latest-episodes list, never /api/me/items-in-progress: to answer that, Audiobookshelf loads every
+   * episode of every show you've part-listened to at once, which ran a server with big shows out of memory
+   * (exit 134, "JavaScript heap out of memory"). An episode too old for the latest list is read from its own show,
+   * one show at a time and only for the few most recent, so the server only ever holds one show.
+   */
   async getEpisodesInProgress(): Promise<Track[]> {
-    const [r, progress] = await Promise.all([this.get(`/api/me/items-in-progress?${qs({ limit: 40 })}`), this.progressMap()]);
-    return (r.libraryItems ?? [])
-      .filter((i: any) => i.mediaType === 'podcast' && i.recentEpisode)
-      .map((i: any) => this.episode(i.recentEpisode, i.id, i.media?.metadata?.title ?? '', progress))
-      .filter((t: Track) => (t.progress ?? 0) > 0 && (t.progress ?? 0) < 1)
-      .sort((a: Track, b: Track) => (b.lastPlayedAt ?? 0) - (a.lastPlayedAt ?? 0));
+    const progress = await this.progressMap();
+    const wanted = [...progress.entries()]
+      .filter(([key, p]) => key.includes(':') && !p.finished && p.currentTime > 0)
+      .sort(([, a], [, b]) => (b.lastUpdate ?? 0) - (a.lastUpdate ?? 0))
+      .slice(0, IN_PROGRESS_MAX)
+      .map(([key]) => key);
+    if (!wanted.length) return [];
+    const found = new Map<string, Track>();
+    const latest = await this.latestEpisodes(IN_PROGRESS_LATEST, progress).catch(() => [] as Track[]);
+    for (const t of latest) if (wanted.includes(t.id)) found.set(t.id, t);
+    const shows = [...new Set(wanted.filter((k) => !found.has(k)).map((k) => k.split(':')[0]))].slice(0, IN_PROGRESS_SHOW_READS);
+    for (const showId of shows) {
+      const episodes = await this.showEpisodes(showId, progress).catch(() => [] as Track[]);
+      for (const t of episodes) if (wanted.includes(t.id)) found.set(t.id, t);
+    }
+    return wanted.map((k) => found.get(k)).filter((t): t is Track => !!t);
   }
 
   async setPlayed(tracks: Track[], played: boolean) {
