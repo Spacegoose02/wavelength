@@ -55,7 +55,7 @@ const PARTS = /\s*[;；]\s*|\s+(?:feat\.?|ft\.?|featuring)\s+/i;
  * A joined credit as the main artist and the artists featured: "Lil Durk;Drake" → ["Lil Durk", "Drake"]. Each
  * artist once ("Lil Durk;Lil Durk" is just Lil Durk). Empty parts ("Drake;") go.
  */
-function creditParts(value: string): string[] {
+export function creditParts(value: string): string[] {
   const seen = new Set<string>();
   return value
     .split(PARTS)

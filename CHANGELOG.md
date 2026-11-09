@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+- **Edit song.** Admins can fix one song's tags, Plex style: right-click a song → **Edit song…**, or **Edit** on its
+  row. **General** has the title, the main **Artist**, **Featured artists** as chips (pick from your library, paste
+  "A, B & C" to add several), album, album artist, track, disc and year; **Tags** has the genres as chips; **Info**
+  shows the file and its tags. The credit is written as "Main feat. A; B", the same shape Split joined artists
+  writes, so Navidrome files the song under the main artist with the others featured. Features written in the title
+  ("Sticky (feat. GloRilla, Sexyy Red & Lil Wayne)") move to the chips with one button, and a "Lil Durk;Drake" credit
+  gets a button to write it the way Navidrome splits it. Only changed tags are written; **Undo** is in the dialog and
+  under Settings → Server → Tag edits (`src/views/SongEditor.tsx`, `src/lib/songCredit.ts`, Hub
+  `GET /api/admin/tags/song/:id`).
+
 ## 0.32.1
 - **Joined artists are the main artist featuring the rest.** A tag like "Lil Durk;Drake" means Lil Durk featuring
   Drake, so the song and its album now belong to Lil Durk. **Library care → Unmatched songs → Split joined

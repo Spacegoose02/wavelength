@@ -15,6 +15,7 @@ import { shareOfTracks } from '../lib/inbox';
 import { albumOfTrack, artistOfTrack, focusIndex } from '../lib/trackLinks';
 import { useCatalog } from '../store/catalog';
 import { openTrackMenu } from './TrackMenu';
+import { EditSongButton } from './EditSong';
 import { useUi } from '../store/ui';
 
 export function fmtTime(s?: number) {
@@ -179,6 +180,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <QueueOnSubwave track={t} />
             {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} version={trackVersion(t)} explicit={explicitOfTrack(t) === 'explicit'} className="chip" />}
             {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}
+            <EditSongButton track={t} />
             {onRemove && <button className="chip" onClick={() => onRemove(i)} title="Remove from playlist">✕</button>}
           </div>
           <FavButton key={`${t.sourceId}:${t.id}:${t.starred}`} track={t} />

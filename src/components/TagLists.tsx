@@ -8,12 +8,19 @@ import { hubClient } from '../store/hub';
 
 let cached: { at: number; artists: string[]; genres: string[] } | undefined;
 
-export function TagLists() {
+/** The artist and genre names in the library, fetched from the Hub at most once a minute. */
+export function useTagValues() {
   const [v, setV] = useState(cached);
   useEffect(() => {
     if (cached && Date.now() - cached.at < 60_000) return;
     hubClient()?.tagValues().then((r) => setV((cached = { at: Date.now(), ...r })), () => undefined);
   }, []);
+  return v;
+}
+
+export function TagLists({ values }: { values?: typeof cached } = {}) {
+  const own = useTagValues();
+  const v = values ?? own;
   return (
     <>
       <datalist id="tag-artists">{v?.artists.map((a) => <option key={a} value={a} />)}</datalist>

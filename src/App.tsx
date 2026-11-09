@@ -56,6 +56,7 @@ import { startUpdateChecks } from './lib/updates';
 import { UpdateBanner } from './components/Updates';
 import { Spinner } from './components/common';
 import { TrackMenuHost } from './components/TrackMenu';
+import { SongEditorHost } from './views/SongEditor';
 import { groupPlaylists } from './lib/playlistFolders';
 
 /** A page loaded the first time it's opened, so startup only parses what Home needs (slow TV boxes notice). */
@@ -356,6 +357,7 @@ export default function App() {
       <ErrorBoundary fallback={partCrashed('The player')}>{phone ? <MobileNav /> : <PlayerBar />}</ErrorBoundary>
       {nowPlayingOpen && <ErrorBoundary fallback={nowPlayingCrashed}><NowPlaying /></ErrorBoundary>}
       <TrackMenuHost />
+      <SongEditorHost />
       <KidLockScreen />
       <KidSignedOutScreen />
       <WebSignIn />

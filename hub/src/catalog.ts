@@ -324,6 +324,11 @@ export class Catalog {
     return new Map(rows.map((r) => [r.nd_id, r.path]));
   }
 
+  /** One matched Navidrome song's file (relative to the music folder), or undefined. */
+  songPath(id: string): string | undefined {
+    return (this.db.prepare('SELECT path FROM catalog_songs WHERE nd_id = ?').get(id) as { path: string } | undefined)?.path;
+  }
+
   /** An album's songs (Navidrome album id), from the catalog. */
   albumSongs(albumId: string): AdminSong[] {
     return (this.db.prepare(`SELECT nd_id, path, title, track, nd_album_id, album, artist, album_artist FROM catalog_songs

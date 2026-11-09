@@ -15,6 +15,7 @@ import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
 import { AddToPlaylist } from './AddToPlaylist';
 import { ShareButton } from './ShareButton';
+import { useCanEditSong, useSongEditor } from './EditSong';
 
 /**
  * One menu for a song, the same everywhere: right-click a song row (or press the ⋯ "Menu" item on phones) and
@@ -70,6 +71,7 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
   const album = t.album ? albumOfTrack(t, albums) : undefined;
   const artist = artistOfTrack(t, artists, album);
   const song = t.kind === 'track';
+  const canEdit = useCanEditSong()(t);
   const dontPlay = useSettings((s) => s.dontPlay);
   const setDontPlay = useSettings((s) => s.setDontPlay);
   const songOff = isSongBlocked(dontPlay, t);
@@ -140,6 +142,7 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
       {artist && <button type="button" className="menu-item" onClick={run(() => go({ view: 'artist', artist }))}>Go to artist</button>}
       {album && <button type="button" className="menu-item" onClick={run(() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } }))}>Go to album</button>}
       <div className="menu-sep" />
+      {canEdit && <button type="button" className="menu-item" onClick={run(() => useSongEditor.getState().open(t))}>Edit song…</button>}
       {song && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="menu-item" />}
       {song && (
         <>

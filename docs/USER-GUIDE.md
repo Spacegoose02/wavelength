@@ -1873,6 +1873,31 @@ To merge several artists at once, or to merge albums, use **Select → Merge** o
 
 Your Hub needs your music at `/music`, read-write, and the Navidrome admin login (Settings → Server).
 
+### Editing a song (admins)
+
+To fix one song, most often who's featured on it, right-click it (or press ⋯ on a phone) and pick **Edit song…**,
+or press **Edit** on its row. The dialog works like Plex's:
+
+- **General:** the title, the **Artist** (the main artist, who the song is filed under), **Featured artists** as
+  chips, album, album artist, track, disc and year. Type a name and press Enter, or pick one your library already
+  has; × takes one off. Pasting "GloRilla, Sexyy Red & Lil Wayne" adds all three. Under the chips you see how the
+  Artist tag will be written: **"Tyler, The Creator feat. GloRilla; Sexyy Red; Lil Wayne"**, the same way **Split
+  joined artists** in Library care writes it, so Navidrome lists the song under Tyler, The Creator with the others
+  featured.
+- When the title has the features in it ("Sticky (feat. GloRilla, Sexyy Red & Lil Wayne)"), **Move to featured
+  artists** takes them out of the title and adds them as chips.
+- When the file's credit is written in a way Navidrome doesn't split ("Lil Durk;Drake"), the dialog says so and
+  **Write it as "Lil Durk feat. Drake"** fixes it. An album artist with several names gets a button to use just
+  the main one.
+- **Tags:** the genres, as chips. They're written into one tag separated by "; ", which Navidrome reads as
+  separate genres.
+- **Info:** the file's path and every tag as it is in the file now.
+
+**Save changes** writes only what you changed into the file (the audio isn't touched), and Navidrome shows it after
+its rescan a minute later. **Undo** in the dialog puts the song back; older saves can be undone under **Settings →
+Server → Tag edits**. It needs the same setup as fixing tags: your music at `/music`, read-write, and the Navidrome
+admin login.
+
 ### Tidying genres (admins)
 
 New music often comes in with messy genres: one album says "Hip Hop", the next "Rap/Hip Hop", another "Trap". Your
