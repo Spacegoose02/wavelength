@@ -281,6 +281,19 @@ describe('the penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red
     expect(legs).toContain('data-part="tentacle-r"');
   });
 
+  it('makes the girl dragon white and the boy charcoal', async () => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { GirlContext } = await import('../components/critters/faces');
+    const boy = await draw('dragon');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    const girl = renderToStaticMarkup(h(GirlContext.Provider, { value: true }, h('svg', null, h(Head, { species: SPECIES.find((s) => s.id === 'dragon')! }))));
+    expect(boy).toContain('url(#dr-skin)');
+    expect(girl).toContain('url(#drw-skin)');
+    expect(girl).not.toContain('url(#dr-skin)');
+  });
+
   it('gives the dragon a hidden puff of smoke for a flourish, and the axolotl gills that glow', async () => {
     expect(await draw('dragon')).toMatch(/data-part="smoke" opacity="0"/);
     expect(await draw('axolotl')).toContain('axolotl-gills');

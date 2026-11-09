@@ -1201,42 +1201,49 @@ const DRAGON_FIN = 'M150 122 C 132 110, 116 92, 112 70 C 132 80, 152 96, 170 110
  * figure (`FIGURES.dragon`).
  */
 export function DragonFace() {
+  // the girl dragon is pearl white with sky-blue eyes; the boy charcoal with lime eyes (own gradient ids, so a
+  // page showing both keeps each its colours)
+  const girl = useContext(GirlContext);
+  const k = girl ? 'drw' : 'dr';
+  const c = girl
+    ? { skin: ['#ffffff', '#e6e8f0', '#a9adbd'], snout: ['#ffffff', '#d4d7e2'], fin: ['#f4f5fa', '#b4b8c8'], spines: '#c4c8d6', iris: '#5ab8f0', brow: '#8a8e9e', nose: '#7a7e8e', shine: 'rgb(255 255 255 / 0.5)' }
+    : { skin: ['#6c707c', '#34373f', '#141519'], snout: ['#7a7e8a', '#3e414a'], fin: ['#5a5e6a', '#202228'], spines: '#202228', iris: '#a6d62a', brow: '#8a8e9a', nose: '#141519', shine: 'rgb(255 255 255 / 0.16)' };
   return (
     <Placed cx={206} cy={176} s={0.84}>
       <defs>
-        <Shade id="dr-skin" hi="#6c707c" mid="#34373f" lo="#141519" />
-        <Shade id="dr-snout" hi="#7a7e8a" lo="#3e414a" />
-        <Shade id="dr-fin" hi="#5a5e6a" lo="#202228" />
+        <Shade id={`${k}-skin`} hi={c.skin[0]} mid={c.skin[1]} lo={c.skin[2]} />
+        <Shade id={`${k}-snout`} hi={c.snout[0]} lo={c.snout[1]} />
+        <Shade id={`${k}-fin`} hi={c.fin[0]} lo={c.fin[1]} />
       </defs>
       <g data-part="ear-l">
-        <path d={DRAGON_FIN} fill="url(#dr-fin)" className="ol" />
+        <path d={DRAGON_FIN} fill={`url(#${k}-fin)`} className="ol" />
       </g>
       <g data-part="ear-r">
         <g transform="translate(412 0) scale(-1 1)">
-          <path d={DRAGON_FIN} fill="url(#dr-fin)" className="ol" />
+          <path d={DRAGON_FIN} fill={`url(#${k}-fin)`} className="ol" />
         </g>
       </g>
-      <path d="M188 100 L 194 84 L 204 98 L 212 82 L 222 98 L 230 86 L 234 102 Z" fill="#202228" className="ol-thin" />
-      <HeadShape id="dragon" fill="url(#dr-skin)" d="M206 94 C 264 94, 300 128, 302 172 C 304 222, 264 256, 206 256 C 148 256, 108 222, 110 172 C 112 128, 148 94, 206 94 Z">
-        <ellipse cx="206" cy="222" rx="60" ry="34" fill="url(#dr-snout)" />
-        <ellipse cx="176" cy="114" rx="34" ry="11" fill="rgb(255 255 255 / 0.16)" transform="rotate(-14 176 114)" />
+      <path d="M188 100 L 194 84 L 204 98 L 212 82 L 222 98 L 230 86 L 234 102 Z" fill={c.spines} className="ol-thin" />
+      <HeadShape id={girl ? 'dragon-white' : 'dragon'} fill={`url(#${k}-skin)`} d="M206 94 C 264 94, 300 128, 302 172 C 304 222, 264 256, 206 256 C 148 256, 108 222, 110 172 C 112 128, 148 94, 206 94 Z">
+        <ellipse cx="206" cy="222" rx="60" ry="34" fill={`url(#${k}-snout)`} />
+        <ellipse cx="176" cy="114" rx="34" ry="11" fill={c.shine} transform="rotate(-14 176 114)" />
       </HeadShape>
       <g data-part="eyes">
         <ellipse cx={162} cy={164} rx={25} ry={23} fill="#fff" className="ol-thin" />
-        <ellipse cx={164} cy={165} rx={20} ry={19} fill="#a6d62a" />
+        <ellipse cx={164} cy={165} rx={20} ry={19} fill={c.iris} />
         <ellipse cx={165} cy={165} rx={7} ry={15} fill="#0b0b10" />
         <circle data-shine="" cx={172} cy={156} r={6} fill="#fff" />
         <circle cx={156} cy={174} r={2.4} fill="#fff" />
         <ellipse cx={250} cy={164} rx={22.5} ry={23} fill="#fff" className="ol-thin" />
-        <ellipse cx={252} cy={165} rx={18} ry={19} fill="#a6d62a" />
+        <ellipse cx={252} cy={165} rx={18} ry={19} fill={c.iris} />
         <ellipse cx={253} cy={165} rx={6.4} ry={15} fill="#0b0b10" />
         <circle data-shine="" cx={259} cy={156} r={5.5} fill="#fff" />
         <circle cx={245} cy={174} r={2.2} fill="#fff" />
         <Lashes l={[140, 152]} r={[270, 152]} />
       </g>
-      <Pair l="M140 132 Q 154 124 174 130" mid={206} stroke="#8a8e9a" width={5} />
-      <ellipse cx="194" cy="206" rx="4.4" ry="3" fill="#141519" />
-      <ellipse cx="218" cy="206" rx="4.4" ry="3" fill="#141519" />
+      <Pair l="M140 132 Q 154 124 174 130" mid={206} stroke={c.brow} width={5} />
+      <ellipse cx="194" cy="206" rx="4.4" ry="3" fill={c.nose} />
+      <ellipse cx="218" cy="206" rx="4.4" ry="3" fill={c.nose} />
       <g data-part="smile">
         <path d="M174 224 Q 206 246 238 224" fill="none" stroke="#0b0b0e" strokeWidth="2.8" strokeLinecap="round" />
         <path d="M184 230 L 188 238 L 192 232 Z M220 232 L 224 238 L 228 230 Z" fill="#fff" className="ol-thin" />

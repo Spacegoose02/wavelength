@@ -507,7 +507,7 @@ alien are all possible.
 | **Axolotl** | A pink axolotl with a wide happy smile, little dark eyes and three frilly gills either side of its head that glow with the bass, on stubby four-toed feet with a finned tail |
 | **Sloth** | A tan shaggy sloth with a tuft of fur on top, a big cream face, dark patches sweeping back from big shiny eyes, a big round dark nose and a happy open smile with a pink tongue, with long dark claws. It's so laid back it plays half a beat behind the music |
 | **Octopus** | A coral octopus with a big round speckled head, rosy cheeks and a happy grin; six curling tentacles with pale suckers are its legs, two more are its arms and two more reach out from its sides and wave with the music. As the Drummer those two take sticks too, one on the hi-hat and one on the floor tom |
-| **Dragon** | A charcoal-black baby dragon with swept-back ear fins, a row of dark spines, a grey snout with a grin and two tiny fangs, big lime-green eyes, grey bat wings, claws and a spiky tail. It puffs smoke on a flourish |
+| **Dragon** | A charcoal-black baby dragon with swept-back ear fins, a row of dark spines, a grey snout with a grin and two tiny fangs, big lime-green eyes, grey bat wings, claws and a spiky tail. The girl dragon is pearl white with sky-blue eyes and pale silver wings. It puffs smoke on a flourish |
 | **Frog** | A green frog with its big eyes up on top in two bumps, a pale yellow chin and the wide frog grin, on big webbed feet. It hops on the beat |
 | **Bunny** | A cream-white bunny with long pink-lined ears (one flopped over), a pink nose, whiskers and buck teeth, with a puff of a tail |
 | **Red panda** | A russet red panda with white-tipped ears, a white mask and cheek marks, dark legs and a long ringed tail |
@@ -646,7 +646,7 @@ signed in to a [Wavelength Hub](HUB.md), your picks follow you to your other dev
 <img src="screenshots/settings-critters.png" alt="Settings, Themes &amp; critters, Critters sub-tab: the Theme, Critters, Scenes and Visualizer sub-tabs, the Boy and Girl switch, a line saying what Now Playing shows, and a grid of critter cards" width="80%">
 <img src="screenshots/settings-scenes.png" alt="Settings, Themes &amp; critters, Scenes sub-tab: the raccoon in each scene, DJ, Country, Rapper, Rocker, Drummer and more, each with a short description" width="80%">
 
-**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold, panda black and white, owl brown, T. rex green, monkey brown and peach, flamingo pink, gorilla charcoal, penguin black and white, fox orange, axolotl pink, sloth tan, octopus coral, dragon charcoal black, frog green, bunny white, red panda russet, turkey maroon and orange),
+**They dress for your theme.** Fur and skin keep their colours (raccoon grey, shark blue-grey, alien green, grey alien grey, bear black or brown, moose brown, turtle sea-green, elephant grey, tiger orange, lion gold, panda black and white, owl brown, T. rex green, monkey brown and peach, flamingo pink, gorilla charcoal, penguin black and white, fox orange, axolotl pink, sloth tan, octopus coral, dragon charcoal black (the girl pearl white), frog green, bunny white, red panda russet, turkey maroon and orange),
 but their clothes, instruments and lights take your skin's colours, so every skin dresses them differently.
 Some groups of skins give them a whole outfit:
 

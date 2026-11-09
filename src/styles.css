@@ -1787,6 +1787,12 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter.species-dragon .lashes { stroke: #c8ccd4; }
 .critter .smoke { fill: #e8e8ee; opacity: 0.85; }
 :root[data-skin-group='nuclear'] .critter .dragon-wings { display: none; }
+/* the girl dragon is pearl white, with pale silver wings and spines and dark lashes */
+.critter.species-dragon.look-girl { --skin: #eceef4; --skin-dark: #a9adbd; --belly: #ffffff; }
+.critter.species-dragon.look-girl .dragon-wing { fill: #d4d8e4; }
+.critter.species-dragon.look-girl .dragon-spine { fill: #c4c8d6; }
+.critter.species-dragon.look-girl .hand-claw { stroke: #8a8e9e; }
+.critter.species-dragon.look-girl .lashes { stroke: #24170f; }
 /* the frog: bright green with big webbed feet; it hops on the beat */
 .species-frog { --skin: #5cc04a; --skin-dark: #2e7e2c; --belly: #fffbd8; }
 /* the bunny: cream with long ears (they stand up out of most hats) and a white tail */
