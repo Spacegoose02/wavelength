@@ -40,6 +40,7 @@ const TAGS: Record<string, Record<string, string>> = {
   'The Beatles/Abbey Road/01.mp3': { title: 'Come Together', artist: 'The Beatles', album_artist: 'The Beatles', album: 'Abbey Road', track: '1', date: '1969', genre: 'Rock' },
   'The Beatles/Help/01.mp3': { title: 'Help!', artist: 'The Beatles', album_artist: 'The Beatles', album: 'Help!', track: '1', date: '1965', genre: 'Rock' },
 };
+const ORIGINAL = structuredClone(TAGS);
 const ND: Record<string, { id: string; albumId: string; artistId: string; albumArtistId: string }> = {
   'Drake/Scorpion/01.mp3': { id: 'nd1', albumId: 'al1', artistId: 'ar1', albumArtistId: 'ar1' },
   'Drake/Scorpion/02.mp3': { id: 'nd2', albumId: 'al1', artistId: 'ar1', albumArtistId: 'ar1' },
@@ -48,6 +49,8 @@ const ND: Record<string, { id: string; albumId: string; artistId: string; albumA
 };
 
 async function setup() {
+  for (const k of Object.keys(TAGS)) delete TAGS[k];
+  Object.assign(TAGS, structuredClone(ORIGINAL));
   const musicDir = mkdtempSync(join(tmpdir(), 'wl-alone-'));
   const put = (p: string) => {
     mkdirSync(join(musicDir, p, '..'), { recursive: true });
@@ -170,4 +173,26 @@ test('Navidrome stays on while someone’s copy fails, unless the admin says oth
   const forced = await json(app, 'PUT', '/api/admin/catalog/navidrome', { token: tokens.admin, body: { off: true, force: true } });
   assert.equal(forced.body.standalone, true);
   assert.equal((await json(app, 'PUT', '/api/admin/catalog/navidrome', { token: tokens.member, body: { off: false } })).status, 403);
+});
+
+test('other apps (SUB/WAVE and the like) get a Hub login of their own, which stops when removed', async () => {
+  const { app, tokens, as } = await setup();
+  assert.equal((await json(app, 'GET', '/api/me/app-logins', { token: tokens.member })).body.available, false, 'not while devices go straight to Navidrome');
+  assert.equal((await json(app, 'POST', '/api/me/app-logins', { token: tokens.member, body: { name: 'SUB/WAVE' } })).status, 409);
+  await json(app, 'PUT', '/api/admin/catalog/navidrome', { token: tokens.admin, body: { off: true } });
+
+  const made = await json(app, 'POST', '/api/me/app-logins', { token: tokens.member, body: { name: 'SUB/WAVE' } });
+  assert.equal(made.status, 200);
+  const login = made.body.login;
+  assert.match(login.path, /^\/nd\/\d+$/);
+  const listed = await json(app, 'GET', '/api/me/app-logins', { token: tokens.member });
+  assert.deepEqual(listed.body.logins, [login], 'shown again, same password');
+  assert.equal((await json(app, 'GET', '/api/me/app-logins', { token: tokens.admin })).body.logins.length, 0, 'only your own');
+
+  const subwave = as({ secrets: { username: login.username, password: login.password } });
+  assert.equal((await subwave('ping')).body.status, 'ok');
+  assert.equal((await subwave('getAlbum', { id: 'al1' })).body.album.song.length, 2);
+
+  assert.equal((await json(app, 'DELETE', `/api/me/devices/${login.id}`, { token: tokens.member })).status, 200);
+  assert.equal((await subwave('ping')).body.error.code, 40, 'removed: signed out');
 });

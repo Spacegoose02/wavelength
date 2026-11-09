@@ -883,6 +883,13 @@ one household's switch, and `{ off: false }` lets Navidrome answer again.
   analysis needs no Navidrome login, Library care and the editors use only the catalog, and rescans after downloads,
   tag edits and deletes are catalog scans (`Library.ownScan`).
 
+- **Other music apps** (SUB/WAVE, Symfonium, Feishin…) get a login of their own under Settings → Hub → Other music
+  apps (`GET`/`POST /api/me/app-logins`, audited `device.app_login`): the Hub's Subsonic address (`<hub>/nd/<id>`)
+  and a relay login. Each is a device with platform `subsonic-app`, so its password (made from the device id) can be
+  shown again and Remove signs it out. For SUB/WAVE they go in `NAVIDROME_URL`, `NAVIDROME_USER` and
+  `NAVIDROME_PASSWORD`. Available whenever the person's devices go through the Hub (Navidrome off, or "Send everyone
+  through the Hub").
+
 Going back to Navidrome: it never saw what changed while it was off (hearts, plays, playlists, new songs' ids).
 
 **Keeping it quick.** The Hub zips JSON answers over 1 KB for clients that ask (`hub/src/compress.ts`, Brotli at a fast
@@ -1116,6 +1123,7 @@ with a 4xx status.
 | `GET /api/radio/stations` | signed in | internet radio stations on the Hub: `{ imported, importedAt, stations: [{ id, name, streamUrl, homePageUrl }] }` |
 | `POST /api/admin/radio/stations` · `PUT /api/admin/radio/stations/:id` · `DELETE /api/admin/radio/stations/:id` | `library.edit` | add, change (`{ name?, streamUrl?, homePageUrl? }`) or delete a station (audited `radio.*`) |
 | `POST /api/admin/radio/import` | `library.edit` | copy Navidrome's stations again; ones the Hub has (same id or stream link) are left alone |
+| `GET /api/me/app-logins`, `POST /api/me/app-logins` | signed in | Logins for other Subsonic apps on the Hub's relay (`{ name }` to add); remove with `DELETE /api/me/devices/:id` |
 | `PUT /api/admin/catalog/navidrome` | `server.view` | `{ off, force? }`: turn Navidrome off for this household after copying everyone's data from it (see "Without Navidrome"), or back on; answers with the status plus `copied` and `notCopied` |
 | `PUT /api/admin/catalog` | `server.view` | `{ serve?, stream?, userData? }`: the Hub answers browsing, search and covers, and plays songs, for devices that go through it (audited `catalog.serve`, `catalog.stream`); answers with the status |
 | `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |

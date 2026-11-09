@@ -2,7 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need, signedIn } from '../http.ts';
-import { createService, deleteService, getService, listServices, removeServiceUser, servicesFor, setServiceFamilies, setServiceUser, updateService } from '../services.ts';
+import { createService, deleteService, getService, listServices, relayPassword, relayTarget, relayUsername, removeServiceUser, serviceIdOfKind, servicesFor, setServiceFamilies, setServiceUser, updateService } from '../services.ts';
+import { createDevice, listDevices } from '../devices.ts';
 import { getUser } from '../users.ts';
 
 /**
@@ -14,6 +15,37 @@ export function serviceRoutes(app: FastifyInstance, { db, config }: Ctx) {
   const body = (b: unknown) => (b ?? {}) as Record<string, unknown>;
 
   app.get('/api/me/services', async (req) => ({ services: servicesFor(db, key, signedIn(req)) }));
+
+  /**
+   * Logins for other music apps (SUB/WAVE, Symfonium, Feishin…): a Subsonic address and login on the Hub's relay
+   * (routes/relay.ts), so they work with Navidrome off. Each is a device of its own (platform `subsonic-app`): the
+   * password is made from its id, so it can be shown again, and signing the device out under Your devices ends it.
+   */
+  const APP = 'subsonic-app';
+  const appLogin = (deviceId: number, name: string, createdAt: number, user: { username: string }, serviceId: number) =>
+    ({ id: deviceId, name, createdAt, path: `/nd/${serviceId}`, username: relayUsername(user.username, deviceId), password: relayPassword(key, deviceId) });
+  const relayFor = (user: { id: number; role: string }) => {
+    const id = serviceIdOfKind(db, 'navidrome');
+    return id !== undefined && relayTarget(db, key, id, user.id, user.role) ? id : undefined;
+  };
+
+  app.get('/api/me/app-logins', async (req) => {
+    const { user } = signedIn(req);
+    const id = relayFor(user);
+    if (id === undefined) return { available: false, logins: [] };
+    return { available: true, logins: listDevices(db, user.id).filter((d) => d.platform === APP).map((d) => appLogin(d.id, d.name, d.createdAt, user, id)) };
+  });
+
+  app.post('/api/me/app-logins', async (req) => {
+    const { user } = signedIn(req);
+    const name = String(body(req.body).name ?? '').trim().slice(0, 60);
+    if (!name) throw new HttpError(400, 'Name the app (SUB/WAVE, Symfonium…)');
+    const id = relayFor(user);
+    if (id === undefined) throw new HttpError(409, 'Other apps sign in through the Hub once Navidrome is off, or “Send everyone through the Hub” is on (Settings → Server)');
+    const { device } = createDevice(db, user.id, name, APP);
+    audit(db, { actorId: user.id, action: 'device.app_login', target: name, ip: clientIp(req) });
+    return { login: appLogin(device.id, device.name, device.createdAt, user, id) };
+  });
 
   app.get('/api/admin/services', async (req) => {
     need(req, 'keys.manage');

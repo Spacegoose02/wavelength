@@ -11,7 +11,7 @@ import { isAndroid } from '../lib/platform';
 import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { FamiliesAdmin, ServiceFamilies } from './Families';
 import { SwitchPinSetting } from '../components/WhosListening';
-import { HubClient, HubError, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
+import { HubClient, HubError, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubAppLogin, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
 import { hubClient, sameFamily, thisDevice, useHub } from '../store/hub';
 import { useFeature } from '../lib/features';
 import { useSettings } from '../store/settings';
@@ -647,6 +647,7 @@ function SignedIn() {
       <ScrobbleSetting />
 
       <PublicLinks />
+      <AppLogins url={url} />
 
       <SsoLink />
       {user.hasPassword && <TwoFactorSetting admin={user.role === 'admin'} />}
@@ -672,7 +673,7 @@ function SignedIn() {
       )}
 
       <h3>Your devices</h3>
-      {devices.map((d) => (
+      {devices.filter((d) => d.platform !== 'subsonic-app').map((d) => (
         <div key={d.id} className="source-row">
           <div className="track-main">
             <div className="track-title">{d.name}{d.current ? <span className="muted small"> · this device</span> : null}</div>
@@ -686,6 +687,66 @@ function SignedIn() {
       ))}
       {permissions.includes('users.manage') && <p className="muted small">You're an admin: manage people in the Users tab.</p>}
     </section>
+  );
+}
+
+/**
+ * Logins for other music apps (hub/src/routes/services.ts app-logins): SUB/WAVE, Symfonium, Feishin and the like sign
+ * in to the Hub's Subsonic address with these, so they keep working with Navidrome off.
+ */
+function AppLogins({ url }: { url: string }) {
+  const c = hubClient();
+  const [st, setSt] = useState<{ available: boolean; logins: HubAppLogin[] }>();
+  const [name, setName] = useState('');
+  const [shown, setShown] = useState<number>();
+  const [msg, setMsg] = useState('');
+  const load = () => c?.appLogins().then(setSt).catch(() => setSt(undefined));
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!st?.available) return null;
+  const base = url.replace(/\/+$/, '');
+  return (
+    <div className="editor">
+      <h3>Other music apps</h3>
+      <p className="muted small">
+        SUB/WAVE, Symfonium, Feishin and other Subsonic apps can play your library from the Hub. Make a login for each
+        app, then put the address, username and password in it (for SUB/WAVE: NAVIDROME_URL, NAVIDROME_USER and
+        NAVIDROME_PASSWORD). Remove one to sign that app out.
+      </p>
+      {st.logins.map((l) => (
+        <div key={l.id} className="source-row">
+          <div className="track-main">
+            <div className="track-title">{l.name}</div>
+            <div className="track-sub">
+              Address <code>{base}{l.path}</code> · Username <code>{l.username}</code> · Password{' '}
+              {shown === l.id ? <code>{l.password}</code> : <button className="btn small ghost" onClick={() => setShown(l.id)}>Show</button>}
+            </div>
+          </div>
+          <button className="btn small ghost" onClick={async () => {
+            if (!confirm(`Remove the login for ${l.name}? That app stops working until it gets a new one.`)) return;
+            await c!.signOutMyDevice(l.id);
+            load();
+          }}>Remove</button>
+        </div>
+      ))}
+      <form className="row gap" onSubmit={async (e) => {
+        e.preventDefault();
+        setMsg('');
+        try {
+          const r = await c!.addAppLogin(name);
+          setName('');
+          setShown(r.login.id);
+          load();
+        } catch (err) {
+          setMsg(errText(err));
+        }
+      }}>
+        <input placeholder="App name, like SUB/WAVE" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} required />
+        <button className="btn">Add login</button>
+        {msg && <span className="errors small">{msg}</span>}
+      </form>
+    </div>
   );
 }
 
