@@ -129,6 +129,8 @@ interface SettingsState {
   hiddenStations: string[];
   /** Radio → Your stations: `${sourceId}:${id}` keys in the order the user arranged them. Unknown ones go last. */
   stationOrder: string[];
+  /** Radio → Your stations: show them in genre groups (lib/stationLabel.ts) instead of one list in `stationOrder`. */
+  stationGroups: boolean;
   deemix: { url: string; arl: string; bitrate: number };
   ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string; /** Folder inside the Hub's music folder, when the Hub runs yt-dlp. */ hubFolder: string };
   /** Discover: which charts each genre uses. A genre that isn't listed uses the built-in defaults. */
@@ -222,6 +224,7 @@ interface SettingsState {
   moveStation(id: string, dir: -1 | 1): void;
   setStationHidden(key: string, hidden: boolean): void;
   setStationOrder(keys: string[]): void;
+  setStationGroups(on: boolean): void;
   setSkin(s: Skin): void;
   setThemeMode(m: Partial<Pick<SettingsState, 'seasonal' | 'randomDaily'>>): void;
   setDeemix(d: Partial<SettingsState['deemix']>): void;
@@ -286,6 +289,7 @@ export const useSettings = create<SettingsState>()(
       randomDaily: false,
       hiddenStations: [],
       stationOrder: [],
+      stationGroups: true,
       deemix: { url: 'http://localhost:6595', arl: '', bitrate: 9 },
       ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '', hubFolder: 'yt-dlp' },
       discoverCharts: {},
@@ -409,6 +413,7 @@ export const useSettings = create<SettingsState>()(
       setStationHidden: (key, hidden) =>
         set((st) => ({ hiddenStations: hidden ? [...new Set([...st.hiddenStations, key])] : st.hiddenStations.filter((k) => k !== key) })),
       setStationOrder: (stationOrder) => set({ stationOrder }),
+      setStationGroups: (stationGroups) => set({ stationGroups }),
       setSkin: (skin) => set({ skin }),
       setThemeMode: (m) => set(m),
       setDeemix: (d) => set((st) => ({ deemix: { ...st.deemix, ...d } })),

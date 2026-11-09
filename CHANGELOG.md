@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Radio: a new look for Your stations.** The wall of identical cyan pills is now a grid of cards that follow
+  your skin. Messy server names are tidied (*Energy 93@181.FM (Euro EDM)(Dance/Techno)* shows as **Energy 93**,
+  *Euro EDM · Dance · Techno*), each station gets its logo or a tile in its genre's colour, and they're grouped
+  by genre (**By genre** / **My order** next to the heading). The playing station is outlined with moving bars
+  instead of every card having a red dot. Edit mode uses the same cards.
+- **Fix: Radio → Favorites** showed the text "row(s)" instead of your favorite stations.
+
 ## 0.34.0
 - **Edit album and Edit artist, Plex style.** The album page's **Edit album** opens a dialog like Edit song's:
   **General** (album, album artist, sort title, release date, release type and record label), **Tags** (genres and
