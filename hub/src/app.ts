@@ -17,6 +17,8 @@ import { familyRoutes } from './routes/families.ts';
 import { artworkRoutes } from './routes/artwork.ts';
 import { artistMetaRoutes } from './routes/artistMeta.ts';
 import { itemTagRoutes } from './routes/itemTags.ts';
+import { plexImportRoutes } from './routes/plexImport.ts';
+import { PlexImport } from './plexImport.ts';
 import { radioStationRoutes } from './routes/radioStations.ts';
 import { playlistCoverRoutes } from './routes/playlistCovers.ts';
 import { authRoutes } from './routes/auth.ts';
@@ -100,6 +102,8 @@ export interface Ctx {
   chartHistory: ChartHistory;
   /** Every Navidrome song, kept to match Discover's charts against in one go (libraryIndex.ts). */
   libraryIndex: LibraryIndex;
+  /** Styles, moods and collections read from a Plex server (plexImport.ts). */
+  plexImport: PlexImport;
   /** The Hub's own catalog of the music folder (catalog.ts). */
   catalog: Catalog;
   /** Lyrics the house's apps found, shared and searchable (lyricsCache.ts). */
@@ -130,7 +134,7 @@ export interface Ctx {
   videos: Videos;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch; plexFetch?: Fetch } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -150,6 +154,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     sonic: new SonicWorker(db, config.secretKey, config.musicDir, config.navidromeMusicDir),
     tours: new Tours(db, config.secretKey, opts.tourFetch),
     videos: undefined as unknown as Videos,
+    plexImport: new PlexImport(db, config.secretKey, opts.plexFetch),
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.mixes = new Mixes(db, ctx.mixLookups);
   ctx.mixes.mood = (song) => {
@@ -261,6 +266,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   artworkRoutes(app, ctx);
   artistMetaRoutes(app, ctx);
   itemTagRoutes(app, ctx);
+  plexImportRoutes(app, ctx);
   radioStationRoutes(app, ctx);
   playlistCoverRoutes(app, ctx);
   listeningRoutes(app, ctx);

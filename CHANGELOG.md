@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Import from Plex.** Settings → Server → Import from Plex reads your Plex server, matches its albums and artists
+  to your library, shows what it found, then imports styles, moods, collections (Plex collections and labels) and
+  artist genres onto the Hub. Hand edits are never overwritten. Albums with no genre get Plex's as an undoable
+  suggestion (`hub/src/plexImport.ts`).
 - **Each artist in a credit is its own link.** "Future feat. Drake; Travis Scott; Loe Shimmy" used to be one link to
   Future; now Future, Drake, Travis Scott and Loe Shimmy each open their own page, in Now Playing, Up next, song rows
   and an album's header. A name the library knows with a comma or "&" in it ("Tyler, The Creator") stays whole, and
