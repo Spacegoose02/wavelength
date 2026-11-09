@@ -1527,8 +1527,22 @@ Discover opens Discover, and the Settings link in Downloads opens Downloads.
 
 ## Editing your radio stations
 
-**Radio → Your stations** lists the stations on your Navidrome and SUB/WAVE servers. Tap **Edit** next to
-the heading to change them:
+**Radio → Your stations** shows the stations on your Navidrome and SUB/WAVE servers as cards. Wavelength
+tidies the names your server stores: *Energy 93@181.FM (Euro EDM)(Dance/Techno)* shows as **Energy 93** with
+*Euro EDM · Dance · Techno* under it (the full name is in the card's tooltip). A station with a logo shows it;
+the rest get a tile with a short mark (*93*, *80s*, *CH*) in their genre's colour, tinted by your skin.
+
+<img src="screenshots/radio-stations.png" alt="Radio, Your stations grouped by genre: Pop & hits, Rock & alternative, Dance & electronic, Hip-hop & R&B, each a grid of cards with a coloured tile, clean name and genres; the playing station is outlined with moving bars and Playing" width="80%">
+
+- **By genre** (the default) groups them under *Pop & hits*, *Rock & alternative*, *Dance & electronic*,
+  *Hip-hop & R&B*, *Country* and so on, worked out from the genres in the name (or the title, like
+  *BigRigFM*). **My order** shows one grid in the order you set in Edit. Your choice is remembered.
+- The station that's playing is outlined in your accent colour with moving bars and **Playing**.
+- On a phone the cards go two across and long names wrap onto two lines.
+
+<img src="screenshots/radio-stations-phone.png" alt="Radio on a phone: two cards across, grouped by genre" width="32%">
+
+Tap **Edit** next to the heading to change them:
 
 <img src="screenshots/radio-edit.png" alt="Radio, Your stations in edit mode: move arrows, Hide and Delete on each station, and a hidden station with a Show button" width="80%">
 
@@ -1542,7 +1556,11 @@ the heading to change them:
 Your **Favorites** (stations you hearted, and streams you added by URL) have ▲ ▼ arrows to reorder them,
 and the heart removes one.
 
-> **Developer notes.** `src/views/Radio.tsx`. Hidden stations and the order are `hiddenStations` and
+> **Developer notes.** `src/views/Radio.tsx`. The tidy names, genre families, marks and grouping are
+> `src/lib/stationLabel.ts` (tests in `src/test/stationLabel.test.ts`); add words to `FAMILY_WORDS` there when a
+> station lands in the wrong group. Card colours are `--fam` on `.fam-<family>` in `styles.css`, mixed with the
+> skin's `--accent`; the one-colour skins (CRT, Amber, Game Boy, High contrast) use the accent alone. By genre /
+> My order is `stationGroups` in the settings store. Hidden stations and the order are `hiddenStations` and
 > `stationOrder` in the settings store, keyed `<sourceId>:<stationId>` because ids are only unique per
 > server. Stations the order doesn't know yet go at the end. Delete calls `deleteStation` on the source
 > (`deleteInternetRadioStation` in `sources/navidrome.ts`); Navidrome enforces the admin check. When the
