@@ -8,6 +8,7 @@ import { tx, type Db } from '../db.ts';
 import { clientIp, HttpError, need } from '../http.ts';
 import { AUDIO_EXT, libraryFile } from '../tags.ts';
 import { libraryAdmin } from '../libraryAdmin.ts';
+import { catalogChanged } from '../catalog.ts';
 
 /**
  * Deleting albums (admins, `library.edit`). Nothing is deleted straight away: the album's files move into a
@@ -122,6 +123,8 @@ export function trashRoutes(app: FastifyInstance, { db, config, library, catalog
         failed.push(`${rel}: ${(e as Error).message}`);
       }
     }
+    // the Hub's answers drop them too (subsonicCatalog.ts)
+    if (moved) catalogChanged();
     if (!moved) throw new HttpError(500, `Couldn’t move the album’s files: ${failed[0] ?? 'unknown error'}`);
     audit(db, { actorId: user.id, action: 'album.deleted', target: label, detail: { files: moved, failed: failed.length }, ip: clientIp(req) });
     library.changed();

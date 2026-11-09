@@ -834,6 +834,14 @@ and hands out ids.
   made on the Hub and sent on to Navidrome in the background. Only the owner may change a playlist. Covers (`pl-`
   ids) still come from Navidrome.
 
+**Keeping it quick.** The Hub zips JSON answers over 1 KB for clients that ask (`hub/src/compress.ts`, Brotli at a fast
+level, else gzip, off the main thread); the app asks through its HTTP plugin's `gzip` feature. A page of 500 albums is
+about 155 KB plain and a tenth of that zipped. The in-memory copy of the catalog behind the Hub's answers is updated
+song by song after a tag edit or a scan that read a few files (`catalogChanged(paths)`, `View.patch`), and built again
+only when songs come, go or change album (about a quarter of a second for 30,000 songs). A scan that finds nothing new
+leaves it alone. Each person's hearts and plays are kept in memory until they change, and the list of playlists adds up
+lengths without building every song.
+
 Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
 under Library updates; without it the catalog still scans.
 

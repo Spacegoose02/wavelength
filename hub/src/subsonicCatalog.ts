@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
-import { catalogVersion } from './catalog.ts';
+import { catalogChangesSince, catalogVersion } from './catalog.ts';
 import { creditNames } from './credits.ts';
 import type { Db } from './db.ts';
 
@@ -95,58 +95,139 @@ const shuffle = <T>(xs: T[]) => {
 };
 
 /** The catalog's matched songs, grouped into albums and album artists, kept in memory until the catalog changes. */
+const COLUMNS = `path, size, title, artist, album, album_artist, track, disc, year, genre, explicit, duration, bit_rate, created,
+  rg_track_gain, rg_album_gain, rg_track_peak, rg_album_peak, nd_id, nd_album_id, nd_artist_id, nd_album_artist_id`;
+const LISTED = 'nd_id IS NOT NULL AND nd_album_id IS NOT NULL AND error IS NULL';
+const byPlace = (a: Row, b: Row) => (a.disc ?? 0) - (b.disc ?? 0) || (a.track ?? 0) - (b.track ?? 0) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+
 class View {
   songs = new Map<string, Row>();
+  byPath = new Map<string, Row>();
   albums = new Map<string, Album>();
   artists = new Map<string, Artist>();
   genres = new Map<string, { name: string; songs: number; albums: Set<string> }>();
   /** every song, in album order */
   ordered: Row[] = [];
+  /** albums by artist, year and name */
+  private albumOrder: Album[] = [];
   words = new Map<string, string>();
 
   constructor(db: Db) {
-    const rows = db.prepare(`SELECT path, size, title, artist, album, album_artist, track, disc, year, genre, explicit, duration, bit_rate, created,
-        rg_track_gain, rg_album_gain, rg_track_peak, rg_album_peak, nd_id, nd_album_id, nd_artist_id, nd_album_artist_id
-      FROM catalog_songs WHERE nd_id IS NOT NULL AND nd_album_id IS NOT NULL AND error IS NULL
-      ORDER BY nd_album_id, disc, track, path`).all() as unknown as Row[];
+    const rows = db.prepare(`SELECT ${COLUMNS} FROM catalog_songs WHERE ${LISTED} ORDER BY nd_album_id, disc, track, path`).all() as unknown as Row[];
     for (const r of rows) {
       this.songs.set(r.nd_id, r);
+      this.byPath.set(r.path, r);
       let a = this.albums.get(r.nd_album_id);
       if (!a) {
         a = { id: r.nd_album_id, name: r.album, artist: r.album_artist || r.artist, artistId: r.nd_album_artist_id || r.nd_artist_id || '', songs: [], year: null, created: Infinity, duration: 0, genres: [], explicit: '' };
         this.albums.set(a.id, a);
       }
       a.songs.push(r);
-      a.year = Math.max(a.year ?? 0, r.year ?? 0) || null;
-      a.created = Math.min(a.created, r.created || Infinity);
-      a.duration += r.duration;
-      for (const g of genresOf(r.genre)) {
-        if (!a.genres.includes(g)) a.genres.push(g);
-        const k = g.toLowerCase();
-        const e = this.genres.get(k) ?? { name: g, songs: 0, albums: new Set<string>() };
-        e.songs++;
-        e.albums.add(a.id);
-        this.genres.set(k, e);
-      }
-      if (r.explicit === 'explicit') a.explicit = 'explicit';
-      else if (r.explicit === 'clean' && a.explicit !== 'explicit') a.explicit = 'clean';
     }
     for (const a of this.albums.values()) {
-      if (!Number.isFinite(a.created)) a.created = 0;
+      sumUp(a);
       if (!a.artistId) continue;
       let ar = this.artists.get(a.artistId);
       if (!ar) this.artists.set(a.artistId, (ar = { id: a.artistId, name: a.artist, albums: [] }));
       ar.albums.push(a);
     }
-    for (const ar of this.artists.values()) ar.albums.sort((x, y) => (x.year ?? 0) - (y.year ?? 0) || x.name.localeCompare(y.name));
-    this.ordered = [...this.albums.values()].sort((x, y) => sortName(x.artist).localeCompare(sortName(y.artist)) || (x.year ?? 0) - (y.year ?? 0) || x.name.localeCompare(y.name)).flatMap((a) => a.songs);
+    for (const ar of this.artists.values()) ar.albums.sort(byYear);
+    this.order();
     for (const r of rows) this.words.set(r.nd_id, fold(`${r.title} ${r.artist} ${r.album} ${r.album_artist}`));
   }
+
+  /** Genres with their songs and albums, and every song in album order: both follow from the albums. */
+  private order(resort = true) {
+    this.genres = new Map();
+    for (const a of this.albums.values()) {
+      for (const r of a.songs) {
+        for (const g of genresOf(r.genre)) {
+          const k = g.toLowerCase();
+          const e = this.genres.get(k) ?? { name: g, songs: 0, albums: new Set<string>() };
+          e.songs++;
+          e.albums.add(a.id);
+          this.genres.set(k, e);
+        }
+      }
+    }
+    if (resort) this.albumOrder = [...this.albums.values()].sort((x, y) => sortName(x.artist).localeCompare(sortName(y.artist)) || (x.year ?? 0) - (y.year ?? 0) || x.name.localeCompare(y.name));
+    this.ordered = this.albumOrder.flatMap((a) => a.songs);
+  }
+
+  /**
+   * Bring these files up to date without building everything again (about a quarter of a second for 30,000 songs,
+   * during which every other request waits): a tag edit, or a scan that read a few files. False when that isn't
+   * enough, because a song came, went, or moved to another album or id; the caller then builds a new View.
+   */
+  patch(db: Db, paths: string[]): boolean {
+    const now = new Map<string, Row>();
+    for (let i = 0; i < paths.length; i += 400) {
+      const part = paths.slice(i, i + 400);
+      for (const r of db.prepare(`SELECT ${COLUMNS} FROM catalog_songs WHERE ${LISTED} AND path IN (${part.map(() => '?').join(', ')})`).all(...part) as unknown as Row[]) now.set(r.path, r);
+    }
+    for (const p of paths) {
+      const was = this.byPath.get(p), is = now.get(p);
+      if (!was && !is) continue; // not listed before or now (unmatched, unreadable)
+      if (!was || !is || was.nd_id !== is.nd_id || was.nd_album_id !== is.nd_album_id || was.nd_artist_id !== is.nd_artist_id || was.nd_album_artist_id !== is.nd_album_artist_id) return false;
+    }
+    const albums = new Set<Album>();
+    for (const [p, is] of now) {
+      const was = this.byPath.get(p)!;
+      Object.assign(was, is); // the same object sits in its album's songs and in ordered
+      this.words.set(was.nd_id, fold(`${was.title} ${was.artist} ${was.album} ${was.album_artist}`));
+      albums.add(this.albums.get(was.nd_album_id)!);
+    }
+    const artists = new Set<Artist>();
+    let resort = false;
+    for (const a of albums) {
+      const key = `${a.artist}\0${a.year}\0${a.name}`;
+      a.songs.sort(byPlace);
+      a.name = a.songs[0].album;
+      a.artist = a.songs[0].album_artist || a.songs[0].artist;
+      sumUp(a);
+      if (key !== `${a.artist}\0${a.year}\0${a.name}`) resort = true;
+      const ar = this.artists.get(a.artistId);
+      if (ar) artists.add(ar);
+    }
+    for (const ar of artists) {
+      ar.name = ar.albums[0]?.artist ?? ar.name;
+      ar.albums.sort(byYear);
+    }
+    // sorted again only when an album's artist, year or name changed
+    if (albums.size) this.order(resort);
+    return true;
+  }
+}
+
+const byYear = (x: Album, y: Album) => (x.year ?? 0) - (y.year ?? 0) || x.name.localeCompare(y.name);
+
+/** An album's year, date added, length, genres and explicit status, from its songs. */
+function sumUp(a: Album) {
+  a.year = null;
+  a.created = Infinity;
+  a.duration = 0;
+  a.genres = [];
+  a.explicit = '';
+  for (const r of a.songs) {
+    a.year = Math.max(a.year ?? 0, r.year ?? 0) || null;
+    a.created = Math.min(a.created, r.created || Infinity);
+    a.duration += r.duration;
+    for (const g of genresOf(r.genre)) if (!a.genres.includes(g)) a.genres.push(g);
+    if (r.explicit === 'explicit') a.explicit = 'explicit';
+    else if (r.explicit === 'clean' && a.explicit !== 'explicit') a.explicit = 'clean';
+  }
+  if (!Number.isFinite(a.created)) a.created = 0;
 }
 
 let cached: { db: Db; version: number; view: View } | null = null;
 function view(db: Db): View {
-  if (!cached || cached.db !== db || cached.version !== catalogVersion()) cached = { db, version: catalogVersion(), view: new View(db) };
+  const version = catalogVersion();
+  if (cached?.db === db && cached.version !== version) {
+    // a few files changed (a tag edit, a small scan): update those, else build it again below
+    const paths = catalogChangesSince(cached.version);
+    if (paths && cached.view.patch(db, paths)) cached.version = version;
+  }
+  if (!cached || cached.db !== db || cached.version !== version) cached = { db, version, view: new View(db) };
   return cached.view;
 }
 
@@ -499,4 +580,12 @@ export function playlistEntries(db: Db, ids: string[], starred: Starred, persona
   } finally {
     plays = null;
   }
+}
+
+/** A playlist's length in seconds, from the catalog, without building its songs (for the list of playlists). */
+export function playlistDuration(db: Db, ids: string[]): number {
+  const v = view(db);
+  let n = 0;
+  for (const id of ids) n += Math.round(v.songs.get(id)?.duration ?? 0);
+  return n;
 }

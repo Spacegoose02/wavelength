@@ -1,4 +1,5 @@
 import { SonicWorker } from './sonic/worker.ts';
+import { compressReplies } from './compress.ts';
 import { sonicRoutes } from './routes/sonic.ts';
 import { tourRoutes, videoRoutes } from './routes/tours.ts';
 import { Videos } from './videos.ts';
@@ -215,6 +216,9 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string', bodyLimit: 16 * 1024 }, (_req, body, done) => {
     done(null, Object.fromEntries(new URLSearchParams(body as string)));
   });
+
+  // JSON answers zipped for clients that ask (compress.ts)
+  compressReplies(app);
 
   // The app's own requests go through Rust (no CORS), but the browser dev preview needs it. Auth is a
   // bearer token, never a cookie, so allowing any origin doesn't let other sites act as the user.

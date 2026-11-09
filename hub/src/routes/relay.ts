@@ -16,7 +16,7 @@ import { addStation, deleteStation, radioImportedAt, readStation, subsonicStatio
 import { HttpError } from '../http.ts';
 import { importUserData, played, playsOf, rate, star, starredOf, userDataImported } from '../userData.ts';
 import { createPlaylist, deletePlaylist, getPlaylist, importPlaylists, playlistsImported, replaceSongs, updatePlaylist, visiblePlaylists, type HubPlaylist } from '../playlists.ts';
-import { playlistEntries } from '../subsonicCatalog.ts';
+import { playlistDuration, playlistEntries } from '../subsonicCatalog.ts';
 
 /**
  * Navidrome through the Hub (docs/USERS-AND-ADMIN.md Phase 4). A device gets a Subsonic login for
@@ -218,11 +218,14 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
         return (Array.isArray(v) ? v : v === undefined ? [] : [v]).map(String).filter(Boolean);
       };
       const ownerName = (p: HubPlaylist) => (p.ownerId === user.id ? q.u : getUser(db, p.ownerId)?.username ?? '');
-      const entry = (p: HubPlaylist) => {
-        const songs = config.musicDir && catalog.serving() ? playlistEntries(db, p.songs, mineOnHub ? starredOf(db, user.id) : new Map(), mineOnHub ? playsOf(db, user.id) : null) : null;
+      const usable = !!config.musicDir && catalog.serving();
+      /** a playlist, with its songs (`withSongs`), or only their count and length (the list of playlists) */
+      const entry = (p: HubPlaylist, withSongs = true) => {
+        const songs = withSongs && usable ? playlistEntries(db, p.songs, mineOnHub ? starredOf(db, user.id) : new Map(), mineOnHub ? playsOf(db, user.id) : null) : null;
+        const duration = songs ? songs.reduce((n, x) => n + Number(x.duration ?? 0), 0) : usable ? playlistDuration(db, p.songs) : 0;
         return {
           id: p.id, name: p.name, ...(p.comment && { comment: p.comment }), owner: ownerName(p), public: p.public, songCount: p.songs.length,
-          duration: songs ? songs.reduce((n, x) => n + Number(x.duration ?? 0), 0) : 0, created: new Date(p.created).toISOString(), changed: new Date(p.changed).toISOString(),
+          duration, created: new Date(p.created).toISOString(), changed: new Date(p.changed).toISOString(),
           coverArt: `pl-${p.id}`, songs,
         };
       };
@@ -257,7 +260,7 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog }: Ctx) 
           // Navidrome away: the Hub's own still show
         }
         const mine = hub.map((p) => {
-          const { songs: _songs, ...rest } = entry(p);
+          const { songs: _songs, ...rest } = entry(p, false);
           return rest;
         });
         return done({ playlists: { playlist: [...mine, ...theirs].sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''))) } });
