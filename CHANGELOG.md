@@ -1,13 +1,20 @@
 # Changelog
 
-## Unreleased
-
+## 0.39.3
+- **Fix: DJ mode's New for you plays songs from your library.** It used to pick Deezer top songs by related artists
+  that were almost never in your library, so the segment failed with "None of the New for you songs the DJ picked
+  are in your library". With the Hub's library list it now picks songs you have and haven't played: Discover's picks
+  you own, other songs by those artists, artists you've never played, then deep cuts, at most two per artist
+  (`hub/src/dj/station.ts`, #273).
+- **Fix: DJ segments find their songs through the Hub.** The app now looks up a segment's songs the way Discover
+  does: the Hub matches them against its library at once, so segments work with Navidrome off, and the error says
+  how many songs it looked for (`src/lib/djStation.ts`, #273).
 - **Fix: Other music apps is easier to find.** It lives in Settings → Account (earlier notes wrongly said Settings → Hub).
   Settings search now finds it (try "SUB/WAVE" or "other music apps"), and the "Send everyone through the Hub" switch
-  in Settings → Server says it turns on app logins.
+  in Settings → Server says it turns on app logins (#272).
 
 ## 0.39.2
-- **Fix: Other music apps always shows in Settings → Hub.** It used to vanish when logins weren't available or the Hub
+- **Fix: Other music apps always shows in Settings → Account.** It used to vanish when logins weren't available or the Hub
   couldn't be asked, leaving no clue why. Now it always shows, with the reason: an older Hub without app logins (and
   the error), or that devices don't go through the Hub yet, with where to turn Navidrome off or turn on "Send
   everyone through the Hub" (`AppLogins` in `src/views/HubSettings.tsx`, #270).
