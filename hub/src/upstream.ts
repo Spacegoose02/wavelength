@@ -82,6 +82,47 @@ export async function subwaveAdmin(t: SubwaveTarget, method: string, path: strin
   return { status: res.status, body: await body(res) };
 }
 
+/** The parts of a station a copy keeps from the station being copied over: its own name and blurb. */
+const KEEP_ON_COPY = ['station', 'stationDescription'] as const;
+
+/**
+ * Copy one SUB/WAVE station into another: the first one's backup (settings, DJs and their pictures, shows,
+ * schedule, jingles, sound effects, voices, skills and library analysis) restored into the second, which then gets
+ * its own name back. API keys and the music server login aren't in a backup, so the second keeps its own.
+ */
+export async function subwaveCopyStation(from: SubwaveTarget, to: SubwaveTarget): Promise<{ restored: string[]; skipped: string[]; requiresRestart: boolean; kept: Record<string, unknown>; bytes: number }> {
+  const auth = (t: SubwaveTarget) => {
+    const h: Record<string, string> = { authorization: `Basic ${Buffer.from(`${t.username}:${t.password}`).toString('base64')}` };
+    if (t.token) h['x-station-auth'] = t.token;
+    return h;
+  };
+  const fail = async (res: Response, what: string) => {
+    if (res.status === 401 || res.status === 403) throw new HttpError(502, `SUB/WAVE rejected the admin login saved on the Hub (${what})`);
+    const b = (await body(res)) as { error?: string } | undefined;
+    throw new HttpError(502, `${what}: ${b?.error ?? `SUB/WAVE answered ${res.status}`}`);
+  };
+  const SLOW = 10 * 60_000;
+
+  const exp = await call(`${subwaveApi(from)}/backup/export`, { headers: { ...auth(from), accept: 'application/zip' } }, 'the SUB/WAVE being copied', SLOW);
+  if (!exp.ok) await fail(exp, 'Exporting the station');
+  const zip = Buffer.from(await exp.arrayBuffer());
+
+  const cur = await call(`${subwaveApi(to)}/settings`, { headers: { ...auth(to), accept: 'application/json' } }, 'the SUB/WAVE being copied into');
+  if (!cur.ok) await fail(cur, 'Reading the station being copied into');
+  const values = (((await body(cur)) as { values?: Record<string, unknown> } | undefined)?.values ?? {}) as Record<string, unknown>;
+  const kept = Object.fromEntries(KEEP_ON_COPY.filter((k) => values[k] !== undefined).map((k) => [k, values[k]]));
+
+  const imp = await call(`${subwaveApi(to)}/backup/import`, { method: 'POST', headers: { ...auth(to), 'content-type': 'application/zip', accept: 'application/json' }, body: zip }, 'the SUB/WAVE being copied into', SLOW);
+  if (!imp.ok) await fail(imp, 'Restoring into the station');
+  const result = ((await body(imp)) ?? {}) as { restored?: string[]; skipped?: string[]; requiresRestart?: boolean };
+
+  if (Object.keys(kept).length) {
+    const back = await call(`${subwaveApi(to)}/settings`, { method: 'POST', headers: { ...auth(to), 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(kept) }, 'the SUB/WAVE being copied into');
+    if (!back.ok) await fail(back, 'Copied, but putting the station name back');
+  }
+  return { restored: result.restored ?? [], skipped: result.skipped ?? [], requiresRestart: !!result.requiresRestart, kept, bytes: zip.length };
+}
+
 // ---- deemix ----
 
 /**

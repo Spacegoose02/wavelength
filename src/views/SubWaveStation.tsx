@@ -12,6 +12,9 @@ import {
 } from '../sources/subwave';
 import { Cover, Spinner } from '../components/common';
 import { IconRefresh } from '../components/Icons';
+import { sourceFor } from '../sources/registry';
+import { useSettings } from '../store/settings';
+import { useShallow } from 'zustand/react/shallow';
 
 /*
  * The station-running screens of SUB/WAVE's own admin, inside Wavelength: DJs (personas), what the DJ does between
@@ -709,6 +712,48 @@ export function SwStations({ sw }: { sw: SubWaveSource }) {
         {full && <p className="muted small">This SUB/WAVE has the most stations it can keep. Delete one first.</p>}
         <p className="muted small">A copy takes the DJs, shows, schedule and jingles. It doesn't take the music server login, library analysis or archive.</p>
       </form>
+      <CopyFromStation sw={sw} />
     </div>
+  );
+}
+
+/** Make this SUB/WAVE a copy of another of your SUB/WAVE servers, all but its name. */
+function CopyFromStation({ sw }: { sw: SubWaveSource }) {
+  const others = useSettings(useShallow((s) => s.sources.filter((x) => x.kind === 'subwave' && x.enabled && x.id !== sw.config.id)));
+  const [fromId, setFromId] = useState('');
+  const { run, busy, view } = useAction();
+  const from = others.find((o) => o.id === fromId) ?? others[0];
+  const here = sw.config.name || 'this station';
+
+  return (
+    <section className="panel">
+      <h3>Copy from another SUB/WAVE</h3>
+      {!others.length ? (
+        <p className="muted small">
+          Running a second SUB/WAVE? Add it under Settings → Sources, and you can copy one into the other here, all but its name.
+        </p>
+      ) : (
+        <>
+          <p className="muted small">
+            Makes {here} a copy of another of your SUB/WAVE servers: its settings, DJs and their pictures, shows, schedule, jingles, sound
+            effects, voices, skills and library analysis. {here} keeps its own name, music server login and API keys. Everything else
+            here is replaced.
+          </p>
+          {view}
+          <div className="row gap wrap">
+            <select value={from?.id ?? ''} onChange={(e) => setFromId(e.target.value)}>
+              {others.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+            <button className="btn primary" disabled={!!busy || !from} onClick={() => {
+              if (!from || !confirm(`Replace ${here}'s DJs, shows, schedule and settings with a copy of ${from.name}'s? ${here} keeps its name. This can't be undone.`)) return;
+              run('copy', async () => {
+                const r = await sw.copyFrom(sourceFor(from) as SubWaveSource);
+                if (r.requiresRestart) await sw.restartMixer().catch(() => undefined);
+              }, `${here} is now a copy of ${from.name}. Its API keys stay its own, so check AI & voice`);
+            }}>{busy === 'copy' ? 'Copying… (can take a minute)' : 'Copy it here'}</button>
+          </div>
+        </>
+      )}
+    </section>
   );
 }

@@ -80,6 +80,42 @@ test('SUB/WAVE station admin: PATCH is passed on and an archive hour comes back 
   assert.equal((await app.inject({ method: 'GET', url: `/api/admin/subwave/${id}/archives/file/2026-11-09/14.mp3`, headers: { authorization: `Bearer ${tokens.member}` } })).statusCode, 403);
 });
 
+test('copying a SUB/WAVE station restores the first one\'s backup into the second and keeps its name', async () => {
+  const zip = Buffer.from('PK\u0003\u0004 fake backup zip');
+  const a = await fake((req) => (req.url === '/api/backup/export' ? { raw: zip, headers: { 'content-type': 'application/zip' } } : { body: {} }));
+  const b = await fake((req) => {
+    if (req.method === 'GET' && req.url === '/api/settings') return { body: { values: { station: 'Side B', stationDescription: 'the other one', personas: [] } } };
+    if (req.url === '/api/backup/import') return { body: { ok: true, restored: ['settings.json', 'persona-avatars', 'library.db'], skipped: [], requiresRestart: true } };
+    return { body: { ok: true } };
+  });
+  const { app, tokens } = await seeded();
+  const add = async (name: string, url: string) => (await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body: { kind: 'subwave', name, url, secrets: { username: 'dj', password: `${name}-pass` } } })).body.service.id;
+  const from = await add('Main', a.url);
+  const to = await add('Side', b.url);
+
+  for (const who of ['member', 'kid'] as const) assert.equal((await json(app, 'POST', `/api/admin/subwave-copy/${from}/${to}`, { token: tokens[who], body: {} })).status, 403);
+  assert.equal(b.seen.length, 0);
+
+  const r = await json(app, 'POST', `/api/admin/subwave-copy/${from}/${to}`, { token: tokens.admin, body: {} });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.restored, ['settings.json', 'persona-avatars', 'library.db']);
+  assert.equal(r.body.requiresRestart, true);
+  assert.equal(a.seen[0].headers.authorization, `Basic ${Buffer.from('dj:Main-pass').toString('base64')}`);
+
+  const imp = b.seen.find((x) => x.url === '/api/backup/import')!;
+  assert.equal(imp.method, 'POST');
+  assert.equal(imp.headers['content-type'], 'application/zip');
+  assert.equal(imp.body, zip.toString(), 'the backup arrives as it left');
+  assert.equal(imp.headers.authorization, `Basic ${Buffer.from('dj:Side-pass').toString('base64')}`);
+  const last = b.seen.at(-1)!;
+  assert.equal(`${last.method} ${last.url}`, 'POST /api/settings', 'the name goes back after the restore');
+  assert.deepEqual(JSON.parse(last.body), { station: 'Side B', stationDescription: 'the other one' });
+
+  assert.equal((await json(app, 'POST', `/api/admin/subwave-copy/${to}/${to}`, { token: tokens.admin, body: {} })).status, 400);
+  const log = JSON.stringify((await json(app, 'GET', '/api/admin/audit', { token: tokens.admin })).body);
+  assert.ok(log.includes('subwave.copy'));
+});
+
 test('deemix downloads go through the Hub, which logs in with its ARL', async () => {
   const dz = await fake((req, body) => {
     const loggedIn = req.headers.cookie === 'sid=ok';
