@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Fix: Albums and Artists say why they're empty.** With every music source switched off in Settings → Sources,
+  they showed "0" and nothing else; now they say the source is off (or show the error a source gave) and link to
+  Settings. Switching off the last Navidrome or Plex source asks first, and says when that row is your library
+  through the Hub, which is easy to mistake for Navidrome itself once Navidrome is off (`src/views/Library.tsx`,
+  `src/lib/musicSources.ts`). Settings → Server → Music catalog no longer says "Navidrome still plays everything"
+  with Navidrome off.
+
 ## 0.40.0
 - **Run your SUB/WAVE station from Wavelength.** The SUB/WAVE page gets six admin tabs, so you rarely need
   SUB/WAVE's own admin: **DJs** (edit a DJ's name, tagline, talk, humour, warmth, language, voice and picture; pick

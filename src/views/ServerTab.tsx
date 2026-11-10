@@ -355,10 +355,16 @@ function MusicCatalog() {
     <section>
       <h2>Music catalog</h2>
       <p className="muted small">
-        {st.standalone ? 'The Hub is your music server. ' : ''}The Hub reads your music folder itself and keeps its own list of every song, with its tags, on the way to becoming
-        your music server. Navidrome still plays everything; this list is matched to Navidrome's songs. Once nearly all of
-        them match, Library care, the tag editors, the genre review and Delete album read this list instead of asking
-        Navidrome. The Hub looks for changes every hour and after every Navidrome scan.
+        {st.standalone ? (
+          <>The Hub is your music server. It reads your music folder, keeps its own list of every song with its tags, plays the
+          songs and keeps everyone's hearts, plays and playlists. It looks for changes every hour. Apps reach it through the
+          Navidrome source in Settings → Sources, so keep that switched on.</>
+        ) : (
+          <>The Hub reads your music folder itself and keeps its own list of every song, with its tags, on the way to becoming
+          your music server. Navidrome still plays everything; this list is matched to Navidrome's songs. Once nearly all of
+          them match, Library care, the tag editors, the genre review and Delete album read this list instead of asking
+          Navidrome. The Hub looks for changes every hour and after every Navidrome scan.</>
+        )}
       </p>
       {st.blocked ? <p className="errors small">{st.blocked}</p> : (
         <>

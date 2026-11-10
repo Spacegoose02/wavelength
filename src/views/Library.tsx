@@ -42,6 +42,7 @@ import { JumpBackIn } from '../components/JumpBackIn';
 import { ALBUM_SORTS, ARTIST_SORTS, BrowseFilters } from '../components/BrowseFilters';
 import { isFiltered, queryAlbums, queryArtists } from '../lib/browse';
 import { useBrowseFilters } from '../store/browse';
+import { isMusicSource } from '../lib/musicSources';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -196,6 +197,7 @@ export function Albums() {
         </div>
       )}
       <BrowseFilters albums={albums} q={q} set={setQ} sorts={ALBUM_SORTS} />
+      {!filter && !isFiltered(q) && <NoLibrary count={albums.length} />}
       <Grid>{shown.slice(0, 600).map((a) => (
         <AlbumCard key={cardKey(a)} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
           selected={sel.isPicked(a)} badge={sel.badge(a)} />
@@ -245,6 +247,7 @@ export function Artists() {
         </SelectBar>
       )}
       <BrowseFilters albums={albums} q={q} set={setQ} sorts={ARTIST_SORTS} />
+      {!filter && !isFiltered(q) && <NoLibrary count={artists.length} />}
       <Grid>
         {selectable.map((a) => (
           <ArtistCard key={`${a.sourceId}:${a.id}`} artist={a} onOpen={(x, e) => sel.click(x, e) || go({ view: 'artist', artist: x })} onPick={sel.pick}
@@ -253,6 +256,36 @@ export function Artists() {
       </Grid>
     </div>
   );
+}
+
+/**
+ * Why Albums or Artists is empty when nothing is filtered: every music source is switched off in Settings → Sources
+ * (with the Hub as the music server, its "Navidrome" row is the whole library), or the sources failed to answer.
+ */
+function NoLibrary({ count }: { count: number }) {
+  const { loaded, loading, errors } = useCatalog();
+  const sources = useSettings((s) => s.sources);
+  const go = useUi((s) => s.go);
+  if (count || !loaded || loading) return null;
+  const music = sources.filter(isMusicSource);
+  const off = music.filter((s) => !s.enabled);
+  const failed = Object.entries(errors);
+  if (music.length && off.length === music.length) {
+    return (
+      <Empty title="Your music source is switched off">
+        <p>{off.map((s) => s.name).join(' and ')} {off.length === 1 ? 'is' : 'are'} off in Settings → Sources, so there is no music to list. Switch {off.length === 1 ? 'it' : 'one'} back on.</p>
+        <button className="btn primary" onClick={() => go({ view: 'settings' })}>Open Settings</button>
+      </Empty>
+    );
+  }
+  if (failed.length) {
+    return (
+      <Empty title="Couldn’t load your music">
+        {failed.map(([name, e]) => <p key={name}>{name}: {e}</p>)}
+      </Empty>
+    );
+  }
+  return null;
 }
 
 // ---- what the select bar does (components/Selection.tsx) ----
