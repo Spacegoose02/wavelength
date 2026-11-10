@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.40.2
+- **SUB/WAVE: Skip on the On air card.** Admins get a **Skip** button next to **Like**, the same skip as DJ control's
+  "Skip track" (works with the admin login on the device or kept on the Hub). It says "Skipping…" while it runs and
+  "Skip failed" with the error if it fails, then refreshes now playing and the queue (`src/views/SubWave.tsx`, #280).
+
 ## 0.40.1
 - **SUB/WAVE: one "Run the station" tab.** The SUB/WAVE page's eleven tabs ran off the bar. The top row is now
   **On air · Schedule · Run the station**, with the nine station tabs (DJ control, Shows, DJs, Skills, AI & voice,
