@@ -174,6 +174,8 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ctx.lyrics = new LyricsCache(db);
   // with Navidrome off the index lists the catalog, again after each of its scans
   ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => (ctx.catalog.standalone() ? ctx.catalog.lastScan() : ctx.library.status().lastScanAt));
+  // New for you in DJ mode fills up with library songs you haven't played (dj/station.ts)
+  ctx.station.library = async () => ((await ctx.libraryIndex.ensure()) ? ctx.libraryIndex : null);
   ctx.libraryIndex.fromCatalog = () => (ctx.catalog.standalone() && ctx.catalog.usable() ? (m, p) => answer(db, m, p, new Map())?.['subsonic-response'] : null);
   ctx.sonic.standalone = () => ctx.catalog.standalone();
   // one listing of Navidrome for the whole Hub: the catalog and sound-alike analysis take the library index's
@@ -212,6 +214,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   app.decorate('hubScrobbler', ctx.scrobbler);
   app.decorate('hubSonic', ctx.sonic);
   app.decorate('hubCatalog', ctx.catalog);
+  app.decorate('hubStation', ctx.station);
 
   // database backups, for restore (routes/server.ts); the route sets how big
   app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));

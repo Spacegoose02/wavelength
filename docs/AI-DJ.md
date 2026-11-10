@@ -308,7 +308,7 @@ to the music, up to 250%; the music dips under the voice more the louder it is.
 | Segment | Where the songs come from |
 |---|---|
 | **Your favorites** | On Repeat and your own songs in the Daily Mixes |
-| **New for you** | Discover Weekly and the Daily Mixes' songs from artists like yours |
+| **New for you** | Songs in your library you've never played: first Discover Weekly's and the Daily Mixes' picks you have, then other songs by those artists (artists like your favorites), then artists you've never played, then deep cuts by artists you do play. At most two per artist. Discover's picks you don't have come after, to get. Without the Hub's list of the library (no scan login), just Discover Weekly and the Daily Mixes' songs from artists like yours |
 | **Throwbacks** | Forgotten favorites and Time Capsule. Those need months of listening; until then, pressing Throwbacks has the AI pick older songs (10 to 30 years old) that fit what you play |
 | **Top hits** | Deezer's worldwide chart (kid profiles: no explicit songs) |
 | **Your playlist** | pick one of your playlists (Wavelength's or your server's): the AI picks some of its songs plus up to 12 it knows that fit its mood and artists, then the rest of the playlist. Every segment after builds on it, until you pick something else |
@@ -319,6 +319,9 @@ in the box to change course. In the rotation, a segment whose songs aren't in yo
 and the next one is asked for with three songs to go. When no segment has anything you have (or the AI DJ's
 allowance is used up), the station keeps going with **More like <artist>**: songs from your library like the one
 playing (song radio, `src/lib/songRadio.ts`), so it never just stops when the queue runs out.
+The app finds a segment's songs the way Discover does (`src/lib/discoverMatch.ts`): songs that carry a track this
+device can play go straight through, the Hub matches the rest at once against its list of the library
+(`POST /api/discover/match`), and only songs it can't answer for are searched on your music servers one by one.
 Songs a segment wanted that aren't in your library are listed under **N songs on <segment> you don't have** in
 the panel (Top hits checks the chart's top 50), each with **Get** (deemix, or yt-dlp as a backup) or **Request**
 for people without Autodownload, plus **Get all**. Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing something else (a song in your library, an album, a playlist) stops DJ mode, even when that list
