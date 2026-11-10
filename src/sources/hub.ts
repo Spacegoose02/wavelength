@@ -957,6 +957,9 @@ export class HubClient {
   // ---- calls the Hub makes with its own saved logins ----
   /** A SUB/WAVE admin call (path relative to its API, e.g. `/dj/skip?x=1`). Needs subwave.control. */
   subwaveAdmin = <T>(serviceId: number, method: string, path: string, body?: unknown) => this.call<T>(method, `/api/admin/subwave/${serviceId}${path}`, body);
+  /** Copy SUB/WAVE server `from` into `to`: everything but `to`'s name (its backup, restored there). */
+  subwaveCopy = (from: number, to: number) =>
+    this.call<{ restored: string[]; skipped: string[]; requiresRestart: boolean; bytes: number }>('POST', `/api/admin/subwave-copy/${from}/${to}`, {});
   /** A SUB/WAVE admin file (an archive hour), fetched through the Hub with its saved login. */
   async subwaveAdminFile(serviceId: number, path: string): Promise<{ name?: string; blob: Blob }> {
     const res = await http(`${this.url}/api/admin/subwave/${serviceId}${path}`, { headers: this.token ? { authorization: `Bearer ${this.token}` } : {} });

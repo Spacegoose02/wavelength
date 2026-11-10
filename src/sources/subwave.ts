@@ -585,6 +585,39 @@ export class SubWaveSource implements MusicSource {
     return { name, blob: await res.blob() };
   }
 
+  // ---- admin: copy another SUB/WAVE into this one ----
+  /**
+   * Make this station a copy of `other` but for its name: `other`'s backup (settings, DJs and pictures, shows,
+   * schedule, jingles, sound effects, voices, skills, library analysis) restored here. API keys and the music
+   * server login stay this station's own. Through the Hub when both logins are kept there, else on this device.
+   */
+  async copyFrom(other: SubWaveSource): Promise<{ restored: string[]; skipped: string[]; requiresRestart: boolean }> {
+    const viaHub = (s: SubWaveSource) => !s.localAdmin && s.hasAdmin;
+    if (viaHub(this) && viaHub(other)) {
+      const c = hubClient();
+      if (!c) throw new Error('Sign in to your Hub to use SUB/WAVE admin controls');
+      return c.subwaveCopy(other.config.hubId!, this.config.hubId!);
+    }
+    if (!this.localAdmin || !other.localAdmin) {
+      throw new Error('Both stations need their admin login in the same place: both kept on the Hub, or both on this device');
+    }
+    const auth = (s: SubWaveSource) => {
+      const h: Record<string, string> = { Authorization: `Basic ${b64(`${s.config.username}:${s.config.password}`)}` };
+      if (s.config.token) h['x-station-auth'] = s.config.token;
+      return h;
+    };
+    const exp = await http(`${other.api}/backup/export`, { headers: { ...auth(other), Accept: 'application/zip' } });
+    if (!exp.ok) throw new Error(`Couldn't export ${other.config.name || 'that station'} (${exp.status})`);
+    const zip = await exp.arrayBuffer();
+    const values = (await this.settings()).values;
+    const kept = Object.fromEntries((['station', 'stationDescription'] as const).filter((k) => values[k] !== undefined).map((k) => [k, values[k]]));
+    const imp = await http(`${this.api}/backup/import`, { method: 'POST', headers: { ...auth(this), 'Content-Type': 'application/zip', Accept: 'application/json' }, body: new Uint8Array(zip) });
+    const r = (await imp.json().catch(() => ({}))) as { error?: string; restored?: string[]; skipped?: string[]; requiresRestart?: boolean };
+    if (!imp.ok) throw new Error(r.error ?? `Couldn't restore into this station (${imp.status})`);
+    if (Object.keys(kept).length) await this.saveSettings(kept);
+    return { restored: r.restored ?? [], skipped: r.skipped ?? [], requiresRestart: !!r.requiresRestart };
+  }
+
   // ---- admin: station profiles ----
   stations() {
     return this.req<{ multiStation?: boolean; activeId?: string | null; limit?: number; stations: SwStationProfile[] }>('GET', '/stations', { admin: true });
