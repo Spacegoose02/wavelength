@@ -13,6 +13,7 @@ import { ACTS, Critter, SPECIES } from '../components/critters/Critter';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
+import { isLastMusicSource, lastMusicSourceWarning } from '../lib/musicSources';
 import { useIsKid } from '../lib/kids';
 import { SKIN_GROUPS, SKINS, useSettings, type Skin } from '../store/settings';
 import { useUi, type SettingsTab } from '../store/ui';
@@ -217,6 +218,7 @@ function SourcesTab() {
               <button className="icon-btn" disabled={i === 0} onClick={() => moveSource(s.id, -1)}>▲</button>
               <button className="icon-btn" disabled={i === sources.length - 1} onClick={() => moveSource(s.id, 1)}>▼</button>
               <label className="switch"><input type="checkbox" checked={s.enabled} onChange={(e) => {
+                if (!e.target.checked && isLastMusicSource(sources, s) && !confirm(lastMusicSourceWarning(s))) return;
                 upsertSource({ ...s, enabled: e.target.checked });
                 useCatalog.getState().load();
               }} /><span /></label>
