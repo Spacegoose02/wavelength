@@ -1,14 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.40.1
+- **SUB/WAVE: one "Run the station" tab.** The SUB/WAVE page's eleven tabs ran off the bar. The top row is now
+  **On air · Schedule · Run the station**, with the nine station tabs (DJ control, Shows, DJs, Skills, AI & voice,
+  Health, Archive, Stations, Stats) in a row under it. It remembers the last one you opened, the "admin" tag shows
+  only when there's no admin login, and on phones the row scrolls sideways (`src/views/SubWave.tsx`, #277).
+- **Fix: copying a big SUB/WAVE station.** Copy from another SUB/WAVE failed with "Request body too large" when the
+  backup was over SUB/WAVE's upload limit. The Hub now sends it as several smaller backups (media, then settings,
+  then the library), and names any single file too big to send (`hub/src/zipSplit.ts`, #277).
 - **Fix: Albums and Artists say why they're empty.** With every music source switched off in Settings → Sources,
   they showed "0" and nothing else; now they say the source is off (or show the error a source gave) and link to
   Settings. Switching off the last Navidrome or Plex source asks first, and says when that row is your library
   through the Hub, which is easy to mistake for Navidrome itself once Navidrome is off (`src/views/Library.tsx`,
   `src/lib/musicSources.ts`). Settings → Server → Music catalog no longer says "Navidrome still plays everything"
-  with Navidrome off.
+  with Navidrome off (#276).
 
 ## 0.40.0
+- **Copy one SUB/WAVE station into another.** Stations → **Copy from another SUB/WAVE** makes this server a copy of
+  another, all but its name: settings, DJs, shows, schedule, jingles, sound effects, voices, skills and library
+  analysis. API keys and the music server login stay as they were. It runs through the Hub when both logins are kept
+  there (`POST /api/admin/subwave-copy/:from/:to`, audited as `subwave.copy`, #275).
 - **Run your SUB/WAVE station from Wavelength.** The SUB/WAVE page gets six admin tabs, so you rarely need
   SUB/WAVE's own admin: **DJs** (edit a DJ's name, tagline, talk, humour, warmth, language, voice and picture; pick
   the default DJ; add one from the catalog), **Skills** (switch each between-song skill on or off), **AI & voice**
