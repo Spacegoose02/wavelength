@@ -957,6 +957,12 @@ export class HubClient {
   // ---- calls the Hub makes with its own saved logins ----
   /** A SUB/WAVE admin call (path relative to its API, e.g. `/dj/skip?x=1`). Needs subwave.control. */
   subwaveAdmin = <T>(serviceId: number, method: string, path: string, body?: unknown) => this.call<T>(method, `/api/admin/subwave/${serviceId}${path}`, body);
+  /** A SUB/WAVE admin file (an archive hour), fetched through the Hub with its saved login. */
+  async subwaveAdminFile(serviceId: number, path: string): Promise<{ name?: string; blob: Blob }> {
+    const res = await http(`${this.url}/api/admin/subwave/${serviceId}${path}`, { headers: this.token ? { authorization: `Bearer ${this.token}` } : {} });
+    if (!res.ok) throw new HubError(res.status, ((await res.json().catch(() => ({}))) as { error?: string }).error || `${res.status} error`);
+    return { name: /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1], blob: await res.blob() };
+  }
   deemixStatus = () => this.call<{ user: string | null }>('GET', '/api/downloads/deemix');
   deemixQueue = () => this.call<any>('GET', '/api/downloads/deemix/queue');
   deemixAdd = (link: string, bitrate?: number) => this.call<any>('POST', '/api/downloads/deemix/queue', { link, bitrate });

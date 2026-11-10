@@ -11,7 +11,7 @@ const servers: Server[] = [];
 after(() => servers.forEach((s) => s.close()));
 
 /** A tiny HTTP server; returns its base URL and the requests it saw. */
-async function fake(handler: (req: IncomingMessage, body: string) => { status?: number; body?: unknown; headers?: Record<string, string> }) {
+async function fake(handler: (req: IncomingMessage, body: string) => { status?: number; body?: unknown; raw?: Buffer; headers?: Record<string, string> }) {
   const seen: { method: string; url: string; headers: IncomingMessage['headers']; body: string }[] = [];
   const srv = createServer((req, res) => {
     let body = '';
@@ -20,7 +20,7 @@ async function fake(handler: (req: IncomingMessage, body: string) => { status?: 
       seen.push({ method: req.method!, url: req.url!, headers: req.headers, body });
       const r = handler(req, body);
       res.writeHead(r.status ?? 200, { 'content-type': 'application/json', ...r.headers });
-      res.end(JSON.stringify(r.body ?? {}));
+      res.end(r.raw ?? JSON.stringify(r.body ?? {}));
     });
   });
   servers.push(srv);
@@ -54,6 +54,30 @@ test('SUB/WAVE admin calls go through the Hub with the saved login', async () =>
   const log = JSON.stringify((await json(app, 'GET', '/api/admin/audit', { token: tokens.admin })).body);
   assert.ok(log.includes('subwave.admin') && log.includes('dj/say'));
   assert.ok(!log.includes('sw-pass'));
+});
+
+test('SUB/WAVE station admin: PATCH is passed on and an archive hour comes back as audio', async () => {
+  const mp3 = Buffer.from([0xff, 0xfb, 0x90, 0x64, 1, 2, 3, 4]);
+  const sw = await fake((req) =>
+    req.url === '/api/archives/file/2026-11-09/14.mp3'
+      ? { raw: mp3, headers: { 'content-type': 'audio/mpeg', 'content-disposition': 'attachment; filename="2026-11-09_14.mp3"' } }
+      : { body: { ok: true, method: req.method } },
+  );
+  const { app, tokens } = await seeded();
+  const { body } = await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body: { kind: 'subwave', name: 'Radio', url: sw.url, secrets: { username: 'dj', password: 'sw-pass' } } });
+  const id = body.service.id;
+
+  const r = await json(app, 'PATCH', `/api/admin/subwave/${id}/stations/side`, { token: tokens.admin, body: { name: 'Side B' } });
+  assert.equal(r.status, 200);
+  assert.equal(sw.seen.at(-1)!.method, 'PATCH');
+  assert.deepEqual(JSON.parse(sw.seen.at(-1)!.body), { name: 'Side B' });
+
+  const f = await app.inject({ method: 'GET', url: `/api/admin/subwave/${id}/archives/file/2026-11-09/14.mp3`, headers: { authorization: `Bearer ${tokens.admin}` } });
+  assert.equal(f.statusCode, 200);
+  assert.match(String(f.headers['content-type']), /^audio\/mpeg/);
+  assert.match(String(f.headers['content-disposition']), /2026-11-09_14\.mp3/);
+  assert.deepEqual(f.rawPayload, mp3, 'the bytes arrive untouched');
+  assert.equal((await app.inject({ method: 'GET', url: `/api/admin/subwave/${id}/archives/file/2026-11-09/14.mp3`, headers: { authorization: `Bearer ${tokens.member}` } })).statusCode, 403);
 });
 
 test('deemix downloads go through the Hub, which logs in with its ARL', async () => {

@@ -46,6 +46,130 @@ export interface SwShow {
   [k: string]: unknown;
 }
 
+/** A DJ persona as SUB/WAVE stores it (GET /settings → values.personas). Unknown fields are kept on save. */
+export interface SwPersonaFull {
+  id?: string;
+  name: string;
+  tagline?: string;
+  avatar?: string;
+  frequency?: string;
+  scriptLength?: string;
+  humour?: number;
+  warmth?: number;
+  localColour?: number;
+  soul?: string;
+  language?: string;
+  tts?: { engine?: string; voice?: string; cloudProvider?: string; gainDb?: number; speed?: number; [k: string]: unknown };
+  [k: string]: unknown;
+}
+
+/** The slice of GET /settings the station screens use. */
+export interface SwSettings {
+  values: {
+    station?: string;
+    personas: SwPersonaFull[];
+    activePersonaId?: string;
+    llm?: { provider?: string; model?: string; dailyTokenCap?: number; [k: string]: unknown };
+    tts?: { enabled?: boolean; defaultEngine?: string; kokoro?: { voice?: string }; [k: string]: unknown };
+    archive?: { enabled?: boolean; [k: string]: unknown };
+    [k: string]: unknown;
+  };
+  defaults?: { personas?: SwPersonaFull[] };
+  onAir?: { personaId?: string; show?: { id: string; name: string } | null };
+  streamOnAir?: boolean | null;
+  budget?: { mode?: string };
+  llm?: { providers?: string[]; active?: string };
+  tts?: { engines?: string[]; available?: string[]; kokoroVoices?: string[]; frequencies?: string[] };
+  /** Which API keys SUB/WAVE has (true/false only, never the key). */
+  env?: Record<string, boolean>;
+}
+
+export interface SwSkill {
+  name: string;
+  label?: string;
+  description?: string;
+  kind?: string;
+  cooldownMs?: number;
+  enabled?: boolean;
+  custom?: boolean;
+  ready?: boolean;
+  [k: string]: unknown;
+}
+
+export interface SwFinding {
+  label: string;
+  status: 'ok' | 'warn' | 'fail' | 'skip';
+  detail?: string;
+  hint?: string;
+  fix?: { id: string; label: string };
+}
+
+export interface SwDoctorReport {
+  t?: string;
+  sections: { name: string; findings: SwFinding[] }[];
+  counts?: { ok: number; warn: number; fail: number; skip: number };
+}
+
+export interface SwArchive {
+  path: string;
+  date: string;
+  hour: number;
+  bytes: number;
+  mtime?: string;
+}
+
+export interface SwStationProfile {
+  id: string | null;
+  name: string;
+  configured?: boolean;
+  createdAt?: string | null;
+  active?: boolean;
+}
+
+/** The doctor's one-click fixes, by id → the admin route that does it. */
+export const SW_FIXES: Record<string, string> = {
+  'refresh-playlist': '/dj/refresh-playlist',
+  'restart-mixer': '/restart-mixer',
+  'generate-jingles': '/onboarding/generate-jingles',
+  'tag-library': '/tag-library',
+  'subsonic-reset': '/debug/subsonic/reset',
+};
+
+/** Archive hours grouped by day, newest day first (as SUB/WAVE lists them). */
+export function archiveDays(rows: SwArchive[]): { date: string; hours: SwArchive[]; bytes: number }[] {
+  const days = new Map<string, SwArchive[]>();
+  for (const r of rows) {
+    if (!r?.date) continue;
+    days.set(r.date, [...(days.get(r.date) ?? []), r]);
+  }
+  return [...days.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([date, hours]) => ({ date, hours: hours.sort((a, b) => b.hour - a.hour), bytes: hours.reduce((n, h) => n + (h.bytes || 0), 0) }));
+}
+
+/**
+ * The roster to save after editing one persona: the edited one replaces its stored copy field by field, so the
+ * fields this app doesn't show (voice tuning, skills, music leanings…) survive. A persona without an id is new and
+ * goes on the end; SUB/WAVE gives it an id.
+ */
+export function mergePersona(roster: SwPersonaFull[], edited: SwPersonaFull): SwPersonaFull[] {
+  if (!edited.id) return [...roster, edited];
+  let found = false;
+  const next = roster.map((p) => {
+    if (p.id !== edited.id) return p;
+    found = true;
+    return { ...p, ...edited, tts: edited.tts ? { ...(p.tts ?? {}), ...edited.tts } : p.tts };
+  });
+  return found ? next : [...next, edited];
+}
+
+/** A new persona, starting from SUB/WAVE's own default so every field it requires is there. */
+export function blankPersona(defaults?: SwPersonaFull[]): SwPersonaFull {
+  const base = defaults?.[0] ?? {};
+  const { id: _id, avatar: _avatar, ...rest } = base as SwPersonaFull;
+  return { frequency: 'moderate', scriptLength: 'concise', humour: 5, warmth: 5, localColour: 5, soul: '', language: '', tagline: '', ...rest, name: '', avatar: '' };
+}
+
 /** 7 days (0 = Sunday) × 24 hours of show ids (null = default programming). */
 export type SwGrid = (string | null)[][];
 
@@ -365,5 +489,117 @@ export class SubWaveSource implements MusicSource {
   }
   connections() {
     return this.req<{ count: number; connections: { mount?: string; userAgent?: string; connectedFor?: number }[] }>('GET', '/listeners/connections', { admin: true });
+  }
+
+  // ---- admin: station settings, personas ----
+  settings() {
+    return this.req<SwSettings>('GET', '/settings', { admin: true });
+  }
+  /** A partial settings save: only the keys given change (SUB/WAVE merges llm and tts field by field). */
+  saveSettings(patch: Record<string, unknown>) {
+    return this.req<{ requiresRestart?: boolean; managed?: string[] }>('POST', '/settings', { admin: true, body: patch });
+  }
+  /** API keys, by their environment name (ANTHROPIC_API_KEY…). Empty values keep the saved key. */
+  saveSecrets(keys: Record<string, string>) {
+    return this.req<{ saved?: string[]; managed?: string[] }>('POST', '/settings/secrets', { admin: true, body: keys });
+  }
+  llmModels(provider: string) {
+    return this.req<{ ok?: boolean; models?: string[]; error?: string }>('GET', '/settings/llm/models', { admin: true, query: { provider } });
+  }
+  /** Save one edited persona into the full roster. */
+  async savePersona(edited: SwPersonaFull) {
+    const s = await this.settings();
+    return this.saveSettings({ personas: mergePersona(s.values.personas ?? [], edited) });
+  }
+  /** The station's default DJ (a scheduled show's host still takes over during that show). */
+  setDefaultPersona(id: string) {
+    return this.saveSettings({ activePersonaId: id });
+  }
+  deletePersona(id: string) {
+    return this.req('DELETE', `/personas/${encodeURIComponent(id)}`, { admin: true });
+  }
+  /** `dataUrl`: a PNG, JPEG or WebP as a data: URL, at most 300 KB. */
+  setAvatar(id: string, dataUrl: string) {
+    return this.req('POST', `/personas/${encodeURIComponent(id)}/avatar`, { admin: true, body: { dataUrl } });
+  }
+  clearAvatar(id: string) {
+    return this.req('DELETE', `/personas/${encodeURIComponent(id)}/avatar`, { admin: true });
+  }
+  communityPersonas() {
+    return this.req<{ community: { slug: string; displayName?: string; tagline?: string; [k: string]: unknown }[] }>('GET', '/personas/community');
+  }
+  installPersona(slug: string) {
+    return this.req('POST', `/personas/community/${encodeURIComponent(slug)}/install`, { admin: true, body: {} });
+  }
+  avatarFor(p: SwPersonaFull) {
+    return p.avatar && p.id ? `${this.api}/persona-avatar/${encodeURIComponent(p.id)}?v=${encodeURIComponent(p.avatar)}` : undefined;
+  }
+
+  // ---- admin: skills ----
+  skillCatalog() {
+    return this.req<{ skills: SwSkill[] }>('GET', '/dj/skills', { admin: true });
+  }
+  toggleSkill(name: string, on: boolean) {
+    return this.req<{ skills: SwSkill[] }>('POST', '/dj/skill-toggle', { admin: true, body: { name, on } });
+  }
+
+  // ---- admin: health ----
+  doctorLast() {
+    return this.req<SwDoctorReport | null>('GET', '/doctor/last', { admin: true });
+  }
+  /** Runs every check now; can take a minute. */
+  doctor() {
+    return this.req<SwDoctorReport>('GET', '/doctor', { admin: true });
+  }
+  runFix(id: string) {
+    const route = SW_FIXES[id];
+    if (!route) return Promise.reject(new Error(`Unknown fix: ${id}`));
+    return this.req('POST', route, { admin: true, body: {} });
+  }
+  restartMixer() {
+    return this.req('POST', '/restart-mixer', { admin: true, body: {} });
+  }
+
+  // ---- admin: archives ----
+  archives() {
+    return this.req<{ archives: SwArchive[] }>('GET', '/archives', { admin: true });
+  }
+  clearArchives() {
+    return this.req<{ removed?: number; bytes?: number }>('DELETE', '/archives', { admin: true });
+  }
+  /** One archived hour's MP3. */
+  async archiveFile(a: SwArchive): Promise<{ name: string; blob: Blob }> {
+    const path = `/archives/file/${a.path.split('/').map(encodeURIComponent).join('/')}`;
+    const name = a.path.replace('/', '_');
+    if (!this.localAdmin && this.hasAdmin) {
+      const c = hubClient();
+      if (!c) throw new Error('Sign in to your Hub to use SUB/WAVE admin controls');
+      const r = await c.subwaveAdminFile(this.config.hubId!, path);
+      return { name: r.name ?? name, blob: r.blob };
+    }
+    if (!this.hasAdmin) throw new Error('Add your SubWave admin user/password in Settings to use admin controls');
+    const headers: Record<string, string> = { Authorization: `Basic ${b64(`${this.config.username}:${this.config.password}`)}` };
+    if (this.config.token) headers['x-station-auth'] = this.config.token;
+    const res = await http(`${this.api}${path}`, { headers });
+    if (!res.ok) throw new Error(res.status === 404 ? 'That hour is no longer in the archive' : `${res.status} from SubWave`);
+    return { name, blob: await res.blob() };
+  }
+
+  // ---- admin: station profiles ----
+  stations() {
+    return this.req<{ multiStation?: boolean; activeId?: string | null; limit?: number; stations: SwStationProfile[] }>('GET', '/stations', { admin: true });
+  }
+  createStation(name: string, mode: 'fresh' | 'duplicate') {
+    return this.req<{ id?: string }>('POST', '/stations', { admin: true, body: { name, mode } });
+  }
+  renameStation(id: string, name: string) {
+    return this.req('PATCH', `/stations/${encodeURIComponent(id)}`, { admin: true, body: { name } });
+  }
+  deleteStation(id: string) {
+    return this.req('DELETE', `/stations/${encodeURIComponent(id)}`, { admin: true });
+  }
+  /** Puts another profile on air: SUB/WAVE restarts its mixer and controller, so it's off air for a little while. */
+  activateStation(id: string) {
+    return this.req('POST', `/stations/${encodeURIComponent(id)}/activate`, { admin: true, body: {} });
   }
 }
