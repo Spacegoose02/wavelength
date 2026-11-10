@@ -304,8 +304,9 @@ open. A running sleep timer or Sing mode always shows.
 ## Finding a setting
 
 Type in **Search settings…** at the top of Settings ("crossfade", "kokoro", "backup") and pick the section to
-jump to it. Personal tabs come first; the Hub's own settings (My family, Users, Server, AI DJ, Features) follow
-under **Hub admin**, for admins and family managers.
+jump to it. Personal tabs come first. A family manager also gets **My family**. A Hub admin gets one **Hub admin**
+tab at the end of the row, with its own row of tabs under it for **Users**, **Server**, **AI DJ** and **Features**; it
+opens whichever of those you had open last. On a phone both rows scroll sideways.
 
 ## Getting to the song, artist and album from Now Playing and song lists
 

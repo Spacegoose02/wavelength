@@ -720,7 +720,10 @@ function LookMovedNote({ open }: { open: (s: LookSub) => void }) {
   );
 }
 
-/** Personal settings first, then the Hub's (admins and family managers only), set apart in the tab row. */
+/**
+ * Personal settings first, then the Hub's. A family manager gets one more tab (My family); a Hub admin gets one
+ * "Hub admin" tab whose own row of sub-tabs holds Users, Server, AI DJ and Features, so the bar never overflows.
+ */
 const TABS: { id: SettingsTab; label: string; admin?: boolean; manager?: boolean }[] = [
   { id: 'account', label: 'Account' },
   { id: 'sources', label: 'Sources' },
@@ -867,6 +870,12 @@ function VersionsPicker() {
   );
 }
 
+/** Where a tab sits, for the search results: admin tabs say they're under Hub admin. */
+function tabLabel(id: SettingsTab): string | undefined {
+  const t = TABS.find((x) => x.id === id);
+  return t?.admin ? `Hub admin · ${t.label}` : t?.label;
+}
+
 export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   const tabsRef = useTabStrip();
   const [tab, setTab] = useState<SettingsTab>(initial ?? 'sources');
@@ -892,8 +901,14 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
     }, 120);
     return () => window.clearTimeout(h);
   }, [jump, tab]);
-  const personal = tabs.filter((t) => !t.admin && !t.manager);
-  const hubTabs = tabs.filter((t) => t.admin || t.manager);
+  const personal = tabs.filter((t) => !t.admin);
+  const adminTabs = tabs.filter((t) => t.admin);
+  const onAdmin = adminTabs.some((t) => t.id === tab);
+  // the "Hub admin" tab reopens whichever admin sub-tab was open last
+  const [lastAdmin, setLastAdmin] = useState<SettingsTab>('users');
+  useEffect(() => {
+    if (onAdmin) setLastAdmin(tab);
+  }, [onAdmin, tab]);
 
   return (
     <div className="page narrow">
@@ -905,7 +920,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
             <div className="menu settings-found">
               {found.length ? found.map((e) => (
                 <button type="button" key={`${e.tab}:${e.heading}`} className="menu-item" onClick={() => { setTab(e.tab); if (e.sub) setLookSub(e.sub); setJump(e.heading); setQ(''); }}>
-                  {e.heading}<small>{TABS.find((t) => t.id === e.tab)?.label}</small>
+                  {e.heading}<small>{tabLabel(e.tab)}</small>
                 </button>
               )) : <div className="menu-hint">Nothing called that</div>}
             </div>
@@ -916,11 +931,17 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
         {personal.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
-        {hubTabs.length > 0 && <span className="tabs-divider" aria-hidden>Hub admin</span>}
-        {hubTabs.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} className={`admin-tab ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
-        ))}
+        {adminTabs.length > 0 && (
+          <button role="tab" aria-selected={onAdmin} className={`admin-tab ${onAdmin ? 'on' : ''}`} onClick={() => setTab(lastAdmin)}>Hub admin</button>
+        )}
       </div>
+      {onAdmin && (
+        <div className="chips subtabs row-subtabs" role="tablist" aria-label="Hub admin">
+          {adminTabs.map((t) => (
+            <button key={t.id} role="tab" aria-selected={tab === t.id} className={`chip ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+          ))}
+        </div>
+      )}
 
       {tab === 'account' && <AccountTab />}
       {tab === 'family' && isManager && <FamilyTab />}
