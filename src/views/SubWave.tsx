@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { sourceFor } from '../sources/registry';
 import { stationToTrack } from '../sources/radio';
 import { list, swTrack, txt, type SubWaveSource, type SwTrack } from '../sources/subwave';
@@ -10,9 +10,10 @@ import { Cover, Empty, Spinner, fmtTime } from '../components/common';
 import { IconHeart, IconPause, IconPlay } from '../components/Icons';
 import { QueueSearch, SwControl, SwSchedule, SwShows, SwStats } from './SubWaveAdmin';
 import { SwList, usePoll } from './subwaveShared';
+import { SwArchives, SwHealth, SwPersonas, SwSkills, SwStationSettings, SwStations } from './SubWaveStation';
 import { useTabStrip } from '../components/TabStrip';
 
-type Tab = 'air' | 'control' | 'schedule' | 'shows' | 'stats';
+type Tab = 'air' | 'control' | 'schedule' | 'shows' | 'djs' | 'skills' | 'settings' | 'health' | 'archive' | 'stations' | 'stats';
 
 export function SubWave({ sourceId }: { sourceId?: string }) {
   const tabsRef = useTabStrip();
@@ -35,8 +36,28 @@ export function SubWave({ sourceId }: { sourceId?: string }) {
     ['control', 'DJ control', true],
     ['schedule', 'Schedule', false],
     ['shows', 'Shows', true],
+    ['djs', 'DJs', true],
+    ['skills', 'Skills', true],
+    ['settings', 'AI & voice', true],
+    ['health', 'Health', true],
+    ['archive', 'Archive', true],
+    ['stations', 'Stations', true],
     ['stats', 'Stats', true],
   ];
+  const needsAdmin = tabs.find(([k]) => k === tab)?.[2] ?? false;
+  const body: Record<Tab, () => ReactNode> = {
+    air: () => <OnAir sw={sw} />,
+    control: () => <SwControl sw={sw} />,
+    schedule: () => <SwSchedule sw={sw} />,
+    shows: () => <SwShows sw={sw} />,
+    djs: () => <SwPersonas sw={sw} />,
+    skills: () => <SwSkills sw={sw} />,
+    settings: () => <SwStationSettings sw={sw} />,
+    health: () => <SwHealth sw={sw} />,
+    archive: () => <SwArchives sw={sw} />,
+    stations: () => <SwStations sw={sw} />,
+    stats: () => <SwStats sw={sw} />,
+  };
 
   return (
     <div className="page sw">
@@ -52,12 +73,14 @@ export function SubWave({ sourceId }: { sourceId?: string }) {
           </select>
         )}
       </div>
-      {(tab === 'control' || tab === 'shows' || tab === 'stats') && !sw.hasAdmin ? (
+      {needsAdmin && !sw.hasAdmin ? (
         <Empty title="Admin login needed">
           <p>Enter SubWave's <code>ADMIN_USER</code> / <code>ADMIN_PASS</code> on the SubWave source in Settings.</p>
           <button className="btn" onClick={() => useUi.getState().go({ view: 'settings' })}>Open Settings</button>
         </Empty>
-      ) : tab === 'air' ? <OnAir sw={sw} /> : tab === 'control' ? <SwControl sw={sw} /> : tab === 'schedule' ? <SwSchedule sw={sw} /> : tab === 'shows' ? <SwShows sw={sw} /> : <SwStats sw={sw} />}
+      ) : (
+        <div key={`${cfg.id}:${tab}`}>{body[tab]()}</div>
+      )}
     </div>
   );
 }

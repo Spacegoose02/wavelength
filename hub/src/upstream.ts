@@ -7,9 +7,9 @@ import { HttpError } from './http.ts';
 
 const TIMEOUT_MS = 20_000;
 
-async function call(url: string, init: RequestInit, what: string): Promise<Response> {
+async function call(url: string, init: RequestInit, what: string, timeoutMs = TIMEOUT_MS): Promise<Response> {
   try {
-    return await fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS), redirect: 'manual' });
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs), redirect: 'manual' });
   } catch {
     throw new HttpError(502, `The Hub can't reach ${what}. Check its address in Settings → Sources / Downloads`);
   }
@@ -42,7 +42,27 @@ export const subwaveApi = (t: { url: string; apiUrl?: string }) => (t.apiUrl || 
  * Forward one admin call to SUB/WAVE with the Basic login kept on the Hub. `path` is relative to the
  * API base and may not climb out of it.
  */
-export async function subwaveAdmin(t: SubwaveTarget, method: string, path: string, search: string, payload: unknown): Promise<{ status: number; body: unknown }> {
+/**
+ * How long one SUB/WAVE admin call may take. Most answer at once; a full health check (`doctor`) runs every check
+ * in turn, and an archive hour is a big MP3, so those get longer.
+ */
+export function subwaveTimeout(path: string): number {
+  const p = path.replace(/^\/+/, '');
+  if (p.startsWith('archives/file/')) return 10 * 60_000;
+  if (p === 'doctor' || p.startsWith('doctor/review') || p.startsWith('settings/llm/models')) return 120_000;
+  return TIMEOUT_MS;
+}
+
+/** An answer that isn't JSON or text (an archive hour's MP3): passed on as bytes, with its type and file name. */
+export interface SubwaveFile {
+  status: number;
+  file: Response;
+  type: string;
+  disposition?: string;
+  length?: string;
+}
+
+export async function subwaveAdmin(t: SubwaveTarget, method: string, path: string, search: string, payload: unknown): Promise<{ status: number; body: unknown } | SubwaveFile> {
   const base = subwaveApi(t);
   const target = new URL(`${base}/${path.replace(/^\/+/, '')}${search}`);
   if (!`${target.origin}${target.pathname}`.startsWith(`${base}/`) || path.split('/').includes('..')) throw new HttpError(400, 'Bad SUB/WAVE path');
@@ -53,8 +73,12 @@ export async function subwaveAdmin(t: SubwaveTarget, method: string, path: strin
   if (t.token) headers['x-station-auth'] = t.token;
   const send = payload !== undefined && method !== 'GET' && method !== 'DELETE';
   if (send) headers['content-type'] = 'application/json';
-  const res = await call(target.href, { method, headers, body: send ? JSON.stringify(payload) : undefined }, 'SUB/WAVE');
+  const res = await call(target.href, { method, headers, body: send ? JSON.stringify(payload) : undefined }, 'SUB/WAVE', subwaveTimeout(path));
   if (res.status === 401 || res.status === 403) throw new HttpError(502, 'SUB/WAVE rejected the admin login saved on the Hub');
+  const type = res.headers.get('content-type') ?? '';
+  if (res.ok && res.body && /^(audio|application\/(zip|octet-stream))\b/i.test(type)) {
+    return { status: res.status, file: res, type, disposition: res.headers.get('content-disposition') ?? undefined, length: res.headers.get('content-length') ?? undefined };
+  }
   return { status: res.status, body: await body(res) };
 }
 

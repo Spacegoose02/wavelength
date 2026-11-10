@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
@@ -18,7 +19,7 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
 
   // ---- SUB/WAVE admin: /api/admin/subwave/<server id>/<API path> ----
   app.route<{ Params: { id: string; '*': string } }>({
-    method: ['GET', 'POST', 'PUT', 'DELETE'],
+    method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     url: '/api/admin/subwave/:id/*',
     handler: async (req, reply) => {
       const { user } = need(req, 'subwave.control');
@@ -35,6 +36,13 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
       );
       // changes on air are worth knowing about; reads aren't
       if (req.method !== 'GET') audit(db, { actorId: user.id, action: 'subwave.admin', target: s.name, detail: { method: req.method, path: req.params['*'].slice(0, 200) }, ip: clientIp(req) });
+      if ('file' in r) {
+        // an archive hour: stream it on rather than holding a whole hour of MP3 in memory
+        reply.code(r.status).type(r.type);
+        if (r.disposition) reply.header('content-disposition', r.disposition);
+        if (r.length) reply.header('content-length', r.length);
+        return reply.send(Readable.fromWeb(r.file.body as any));
+      }
       return reply.code(r.status).send(r.body ?? {});
     },
   });
