@@ -1,22 +1,25 @@
 import assert from 'node:assert/strict';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { json, seeded } from './helpers.ts';
+import { makeZip, unzip } from './zipHelpers.ts';
 
 const ARL = 'arl-only-the-hub-knows';
 const servers: Server[] = [];
 after(() => servers.forEach((s) => s.close()));
 
 /** A tiny HTTP server; returns its base URL and the requests it saw. */
-async function fake(handler: (req: IncomingMessage, body: string) => { status?: number; body?: unknown; raw?: Buffer; headers?: Record<string, string> }) {
+async function fake(handler: (req: IncomingMessage, body: string) => { status?: number; body?: unknown; raw?: Buffer; headers?: Record<string, string> }, encoding: BufferEncoding = 'utf8') {
   const seen: { method: string; url: string; headers: IncomingMessage['headers']; body: string }[] = [];
   const srv = createServer((req, res) => {
-    let body = '';
-    req.on('data', (d) => (body += d));
+    const chunks: Buffer[] = [];
+    req.on('data', (d: Buffer) => chunks.push(d));
     req.on('end', () => {
+      const body = Buffer.concat(chunks).toString(encoding);
       seen.push({ method: req.method!, url: req.url!, headers: req.headers, body });
       const r = handler(req, body);
       res.writeHead(r.status ?? 200, { 'content-type': 'application/json', ...r.headers });
@@ -114,6 +117,49 @@ test('copying a SUB/WAVE station restores the first one\'s backup into the secon
   assert.equal((await json(app, 'POST', `/api/admin/subwave-copy/${to}/${to}`, { token: tokens.admin, body: {} })).status, 400);
   const log = JSON.stringify((await json(app, 'GET', '/api/admin/audit', { token: tokens.admin })).body);
   assert.ok(log.includes('subwave.copy'));
+});
+
+test('a station too big for one upload is copied in pieces, settings after media and the library last', async () => {
+  const big = (n: number) => randomBytes(n); // doesn't shrink when zipped
+  const zip = makeZip({
+    'manifest.json': '{"format":"subwave-backup","version":1}',
+    'settings.json': '{"station":"Main","personas":[]}',
+    'jingles/a.mp3': big(30_000),
+    'voices/b.wav': big(30_000),
+    'library.db': big(45_000),
+    'voices/huge.wav': big(90_000),
+  });
+  const LIMIT = 60_000;
+  const parts: string[][] = [];
+  const a = await fake((req) => (req.url === '/api/backup/export' ? { raw: zip, headers: { 'content-type': 'application/zip' } } : { body: {} }));
+  const b = await fake((req, body) => {
+    if (req.method === 'GET' && req.url === '/api/settings') return { body: { values: { station: 'SGI Space' } } };
+    if (req.url === '/api/backup/import') {
+      if (Buffer.byteLength(body, 'latin1') > LIMIT) return { status: 413, body: { error: 'Request body too large' } };
+      const names = Object.keys(unzip(Buffer.from(body, 'latin1')));
+      parts.push(names);
+      return { body: { ok: true, restored: names.filter((n) => n !== 'manifest.json').map((n) => n.split('/')[0]), skipped: [], requiresRestart: names.includes('settings.json') } };
+    }
+    return { body: { ok: true } };
+  }, 'latin1');
+  const { app, tokens } = await seeded();
+  const add = async (name: string, url: string) => (await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body: { kind: 'subwave', name, url, secrets: { username: 'dj', password: 'pw' } } })).body.service.id;
+  const from = await add('Main', a.url);
+  const to = await add('SGI Space', b.url);
+
+  const r = await json(app, 'POST', `/api/admin/subwave-copy/${from}/${to}`, { token: tokens.admin, body: {} });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  for (const p of parts) assert.equal(p[0], 'manifest.json', 'every piece is a backup of its own');
+  const order = parts.flatMap((p) => p.slice(1));
+  assert.deepEqual(new Set(order), new Set(['jingles/a.mp3', 'voices/b.wav', 'settings.json', 'library.db']));
+  assert.ok(order.indexOf('settings.json') > order.indexOf('voices/b.wav'), 'settings after the media they can name');
+  assert.equal(order.at(-1), 'library.db');
+  assert.deepEqual(new Set(r.body.restored), new Set(['jingles', 'voices', 'settings.json', 'library.db']));
+  assert.equal(r.body.requiresRestart, true);
+  assert.equal(r.body.skipped.length, 1);
+  assert.match(r.body.skipped[0], /^voices\/huge\.wav: too big/);
+  const last = b.seen.at(-1)!;
+  assert.deepEqual(JSON.parse(last.body), { station: 'SGI Space' }, 'the name still goes back');
 });
 
 test('deemix downloads go through the Hub, which logs in with its ARL', async () => {
