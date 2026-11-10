@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { DjRequest, DjResponse, ProviderFactory } from '../src/dj/provider.ts';
-import { parseJson } from '../src/dj/station.ts';
+import { parseJson, type Station, type StationLibrary } from '../src/dj/station.ts';
 import type { MixLookups } from '../src/mixes.ts';
 import { json, seeded } from './helpers.ts';
 
@@ -126,4 +126,49 @@ test('DJ mode: reads JSON out of chatty answers', () => {
   assert.deepEqual(parseJson('Here you go:\n{"a": 1}\nEnjoy'), { a: 1 });
   assert.equal(parseJson('no json here'), null);
   assert.equal(parseJson('{broken'), null);
+});
+
+test('DJ mode: with the Hub\'s list of the library, New for you fills up with songs you have and haven\'t played', async () => {
+  const { app, db, tokens, ids } = await seeded({}, {}, { mixLookups: look, stationChart: async () => ['One', 'Two', 'Three'].map((n) => ({ title: `Chart ${n}`, artist: 'Popstar' })) });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { enabled: true, apiKey: 'sk-ant-x' } });
+  await json(app, 'PUT', `/api/admin/dj/users/${ids.member}`, { token: tokens.admin, body: { enabled: true, monthlyLimit: null } });
+  await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { djMode: { on: true } } } });
+  const station = (body: unknown) => json(app, 'POST', '/api/dj/station', { token: tokens.member, body: { talk: false, ...(body as object) } });
+  const play = db.prepare('INSERT INTO plays (user_id, played_at, title, artist, album, seconds, track) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const now = Date.now();
+  let n = 0;
+  for (let i = 0; i < 4; i++) for (const [t, a] of [['One', 'Drake'], ['Two', 'Drake'], ['Three', 'Future'], ['Four', 'Future']]) play.run(ids.member, now - DAY - ++n * 60_000, t, a, 'Al', 200, '{}');
+
+  // the library: what they play, one Discover pick (Rihanna hit), more by Rihanna, artists they've never played,
+  // songs they haven't played by Drake, and an explicit one
+  const songs = [
+    ['One', 'Drake'], ['Two', 'Drake'], ['Three', 'Future'], ['Four', 'Future'],
+    ['Rihanna hit', 'Rihanna'], ['Rihanna B-side', 'Rihanna'], ['Rihanna Other', 'Rihanna'], ['Rihanna Fourth', 'Rihanna'],
+    ['Fresh A', 'Newcomer'], ['Fresh B', 'Stranger'], ['Drake Deep Cut', 'Drake'],
+  ].map(([title, artist], i) => ({ id: `s${i}`, title, artist }));
+  const key = (s: { title: string; artist: string }) => `${s.title}|${s.artist}`.toLowerCase();
+  const lib: StationLibrary = {
+    all: () => songs,
+    match: (xs) => xs.map((x) => songs.find((s) => key(s) === key(x)) ?? null),
+  };
+  const st = (app as unknown as { hubStation: Station }).hubStation;
+  st.library = async () => lib;
+
+  let r = await station({ kind: 'discover' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const all: string[] = r.body.songs.map((s: any) => s.title);
+  const owned = all.filter((t) => songs.some((s) => s.title === t));
+  const titles = all.slice(0, owned.length);
+  assert.deepEqual(titles, owned, `songs in the library first: ${all}`);
+  assert.ok(titles.length >= 5, `${titles}`);
+  assert.ok(all.length > owned.length, 'Discover picks you don\'t have follow, to get');
+  assert.ok(titles.every((t) => !['One', 'Two', 'Three', 'Four'].includes(t)), 'nothing they\'ve played');
+  assert.equal(titles.filter((t) => t.startsWith('Rihanna')).length, 2, 'at most two by one artist');
+  assert.match(r.body.songs.find((s: any) => s.artist === 'Rihanna').because, /^Like /, 'artists like theirs come with why');
+  assert.ok(r.body.songs[0].artist === 'Rihanna' && r.body.songs[1].artist === 'Rihanna', `artists like theirs first: ${titles}`);
+  assert.ok(titles.includes('Fresh A') && titles.includes('Drake Deep Cut'), 'then new artists and deep cuts');
+
+  // other segments are as before: the app checks what you have, and lists what you don't to get
+  r = await station({ kind: 'tophits' });
+  assert.deepEqual(r.body.songs.map((s: any) => s.title), ['Chart One', 'Chart Two', 'Chart Three']);
 });

@@ -1,3 +1,4 @@
+import type { IndexedSong } from '../api/library.ts';
 import type { Db } from '../db.ts';
 import { HttpError } from '../http.ts';
 import type { Mix, Mixes, MixSong } from '../mixes.ts';
@@ -76,7 +77,18 @@ export async function deezerChart(kid: boolean): Promise<MixSong[]> {
     .filter((s) => s.title && s.artist);
 }
 
+/** What the station needs from the library index (libraryIndex.ts): every song, and each song's copy or null. */
+export interface StationLibrary {
+  all(): readonly IndexedSong[];
+  match(songs: { title: string; artist: string }[]): (IndexedSong | null)[];
+}
+
+/** At most this many songs by one artist in a New for you segment filled from the library. */
+const PER_ARTIST = 2;
+
 export class Station {
+  /** The Hub's list of the library, when it has one (app.ts): New for you fills up with songs you've never played. */
+  library: () => Promise<StationLibrary | null> = async () => null;
   private db: Db;
   private dj: DjAgent;
   private mixes: Mixes;
@@ -129,9 +141,10 @@ export class Station {
     const picked = (SEGMENTS as readonly string[]).includes(str(o.kind, 20));
     const asked = TITLES[kind];
     for (let tries = 0; tries < (picked ? 1 : SEGMENTS.length); tries++) {
-      const songs = (await this.pool(user, kind as (typeof SEGMENTS)[number], kid)).filter((s) => !recent.has(key(s)));
+      const songs = (await this.pool(user, kind as (typeof SEGMENTS)[number], kid, recent)).filter((s) => !recent.has(key(s)));
       if (songs.length >= 3) {
-        const chosen = kind === 'tophits' ? songs.slice(0, 50) : shuffle(dedupe(songs)).slice(0, SIZE * 2);
+        // New for you comes in order (the library's songs first, shuffled within each kind already)
+        const chosen = kind === 'tophits' ? songs.slice(0, 50) : kind === 'discover' ? dedupe(songs).slice(0, SIZE * 3) : shuffle(dedupe(songs)).slice(0, SIZE * 2);
         const intro = talk ? await this.intro(user, kind, chosen.slice(0, 3), { name, style }) : null;
         return { kind, title: TITLES[kind], songs: chosen, intro };
       }
@@ -148,7 +161,61 @@ export class Station {
     throw new HttpError(404, 'The DJ has nothing to play yet. Play some music first, so it learns what you like');
   }
 
-  private async pool(user: User, kind: (typeof SEGMENTS)[number], kid: boolean): Promise<MixSong[]> {
+  /**
+   * A segment's songs. New for you, when the Hub has a list of the library, is filled up from it (newToYou), with
+   * the Discover picks you don't have after, so the app can still offer to get them.
+   */
+  private async pool(user: User, kind: (typeof SEGMENTS)[number], kid: boolean, recent: Set<string>): Promise<MixSong[]> {
+    const songs = await this.candidates(user, kind, kid);
+    if (kind !== 'discover') return songs;
+    const lib = await this.library().catch(() => null);
+    if (!lib || !lib.all().length) return songs;
+    const found = lib.match(songs);
+    const mine = this.newToYou(user, songs.filter((_, i) => !!found[i]), lib, kid, recent);
+    return [...mine, ...shuffle(songs.filter((_, i) => !found[i])).slice(0, SIZE)];
+  }
+
+  /**
+   * New for you from your own library: the Discover songs you have first, then songs you've never played by the
+   * artists those came from (artists like your favourites), then songs by artists you've never played, then songs
+   * you've never played by artists you do. Shuffled within each, at most PER_ARTIST per artist.
+   *
+   * Discover's picks come from artists you've never played, so you rarely have them: on their own they left this
+   * segment empty ("None of the New for you songs the DJ picked are in your library").
+   */
+  private newToYou(user: User, have: MixSong[], lib: StationLibrary, kid: boolean, recent: Set<string>): MixSong[] {
+    const rows = this.db.prepare('SELECT title, artist FROM plays WHERE user_id = ?').all(user.id) as Song[];
+    const played = new Set(rows.map(key));
+    const playedArtists = new Set(rows.map((r) => normName(primaryArtist(r.artist))));
+    const artistOf = (s: Song) => normName(primaryArtist(s.artist));
+    const because = new Map<string, string>();
+    for (const s of have) if (s.because && !because.has(artistOf(s))) because.set(artistOf(s), s.because);
+    const like: MixSong[] = [];
+    const fresh: MixSong[] = [];
+    const deep: MixSong[] = [];
+    for (const x of lib.all()) {
+      if (!x.title || !x.artist || (kid && x.explicitStatus === 'explicit')) continue;
+      const s = { title: x.title, artist: x.artist, ...(x.album && { album: x.album }), ...(x.duration && { duration: x.duration }) };
+      const k = key(s);
+      if (played.has(k) || recent.has(k)) continue;
+      const a = artistOf(s);
+      if (because.has(a)) like.push({ ...s, because: because.get(a) });
+      else if (!playedArtists.has(a)) fresh.push(s);
+      else deep.push(s);
+    }
+    const out: MixSong[] = [];
+    const per = new Map<string, number>();
+    for (const s of dedupe([...shuffle(have), ...shuffle(like), ...shuffle(fresh), ...shuffle(deep)])) {
+      const a = artistOf(s);
+      if ((per.get(a) ?? 0) >= PER_ARTIST) continue;
+      per.set(a, (per.get(a) ?? 0) + 1);
+      out.push(s);
+      if (out.length >= SIZE * 4) break;
+    }
+    return out;
+  }
+
+  private async candidates(user: User, kind: (typeof SEGMENTS)[number], kid: boolean): Promise<MixSong[]> {
     if (kind === 'tophits') {
       const k = kid ? 'kid' : 'all';
       const hit = this.charts.get(k);

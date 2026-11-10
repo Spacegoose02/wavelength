@@ -16,7 +16,9 @@ vi.mock('../store/hub', async (orig) => ({
     djVoice: async () => null,
   }),
 }));
-vi.mock('../lib/mixes', () => ({ findSong: async (s: { title: string }) => station.find((t) => t.title === s.title) }));
+vi.mock('../lib/discoverMatch', () => ({
+  matchChart: async (songs: { title: string }[], onFound: (i: number, t: unknown) => void) => songs.forEach((s, i) => onFound(i, station.find((t) => t.title === s.title) ?? null)),
+}));
 vi.mock('../lib/match', async (orig) => ({ ...(await orig<typeof import('../lib/match')>()), findInLibrary: () => () => undefined }));
 
 // the player keeps timers on window

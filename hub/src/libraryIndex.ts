@@ -181,6 +181,11 @@ export class LibraryIndex {
     return this.songs.map((x) => ({ ...x, path: this.paths.get(x.id) }));
   }
 
+  /** Every song in the library (DJ mode's New for you picks ones you haven't played). Call ensure() first. */
+  all(): readonly IndexedSong[] {
+    return this.songs;
+  }
+
   /** Songs, albums and artists for the Search page (librarySearch.ts). Call ensure() first. */
   search(q: string, opts?: SearchOptions): SearchResult {
     return this.searchIndex.search(q, opts);
