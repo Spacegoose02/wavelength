@@ -743,6 +743,7 @@ const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string; sub?: Lo
   { tab: 'account', heading: 'Signed-in devices', also: 'devices sessions' },
   { tab: 'account', heading: 'Devices', also: 'listening now house activity share what i play privacy remote control' },
   { tab: 'account', heading: 'Home Assistant', also: 'home assistant smart home automation hass token' },
+  { tab: 'account', heading: 'Other music apps', also: 'sub/wave subwave symfonium feishin subsonic app login hub' },
   { tab: 'sources', heading: 'Sources', also: 'servers navidrome plex audiobookshelf login add server' },
   { tab: 'themes', sub: 'theme', heading: 'Motion', also: 'reduce motion animation accessibility vestibular calm still' },
   { tab: 'themes', sub: 'visualizer', heading: 'Now Playing visualizer', also: 'scene halo oscilloscope starfield spectrum rings artwork' },

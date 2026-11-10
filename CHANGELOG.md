@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Fix: Other music apps is easier to find.** It lives in Settings → Account (earlier notes wrongly said Settings → Hub).
+  Settings search now finds it (try "SUB/WAVE" or "other music apps"), and the "Send everyone through the Hub" switch
+  in Settings → Server says it turns on app logins.
+
 ## 0.39.2
 - **Fix: Other music apps always shows in Settings → Hub.** It used to vanish when logins weren't available or the Hub
   couldn't be asked, leaving no clue why. Now it always shows, with the reason: an older Hub without app logins (and
