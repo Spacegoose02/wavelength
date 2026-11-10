@@ -613,6 +613,7 @@ export class SubWaveSource implements MusicSource {
     const kept = Object.fromEntries((['station', 'stationDescription'] as const).filter((k) => values[k] !== undefined).map((k) => [k, values[k]]));
     const imp = await http(`${this.api}/backup/import`, { method: 'POST', headers: { ...auth(this), 'Content-Type': 'application/zip', Accept: 'application/json' }, body: new Uint8Array(zip) });
     const r = (await imp.json().catch(() => ({}))) as { error?: string; restored?: string[]; skipped?: string[]; requiresRestart?: boolean };
+    if (imp.status === 413) throw new Error('That station is too big to send from this device in one go. Keep both SUB/WAVE logins on the Hub (Settings → Sources → Move to Hub): the Hub sends it in pieces');
     if (!imp.ok) throw new Error(r.error ?? `Couldn't restore into this station (${imp.status})`);
     if (Object.keys(kept).length) await this.saveSettings(kept);
     return { restored: r.restored ?? [], skipped: r.skipped ?? [], requiresRestart: !!r.requiresRestart };

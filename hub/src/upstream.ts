@@ -1,4 +1,5 @@
 import { HttpError } from './http.ts';
+import { pack, readZip, writeZip, type ZipMember } from './zipSplit.ts';
 
 /**
  * The Hub's own calls to SUB/WAVE and deemix, made with logins that never leave the Hub
@@ -82,6 +83,42 @@ export async function subwaveAdmin(t: SubwaveTarget, method: string, path: strin
   return { status: res.status, body: await body(res) };
 }
 
+/**
+ * SUB/WAVE (or a proxy in front of it) refused the backup as too large: send it again as several smaller backups.
+ * A restore only writes what its zip holds, so pieces add up to the whole. Media goes first, settings after it
+ * (they can name themes and voices from the media), the library analysis last and on its own. A piece that's still
+ * too big is halved; one file too big on its own is left out and named in `skipped`.
+ */
+async function restoreInParts(
+  zip: Buffer,
+  restore: (part: Buffer) => Promise<{ restored?: string[]; skipped?: string[]; requiresRestart?: boolean } | 'too-big'>,
+): Promise<{ restored: string[]; skipped: string[]; requiresRestart: boolean }> {
+  const all = readZip(zip);
+  const manifest = all.find((m) => m.name === 'manifest.json');
+  if (!manifest) throw new HttpError(502, 'Restoring into the station: the backup has no manifest');
+  const media = all.filter((m) => !['manifest.json', 'settings.json', 'library.db'].includes(m.name));
+  const later = ['settings.json', 'library.db'].map((n) => all.find((m) => m.name === n)).filter((m): m is ZipMember => !!m);
+  const queue: ZipMember[][] = [...pack(media, Math.max(1 << 20, Math.floor(zip.length / 4))), ...later.map((m) => [m])];
+  const out = { restored: new Set<string>(), skipped: [] as string[], requiresRestart: false };
+  while (queue.length) {
+    const group = queue.shift()!;
+    const r = await restore(writeZip([manifest, ...group]));
+    if (r === 'too-big') {
+      if (group.length > 1) {
+        const half = Math.ceil(group.length / 2);
+        queue.unshift(group.slice(0, half), group.slice(half));
+      } else {
+        out.skipped.push(`${group[0].name}: too big for this SUB/WAVE to take in one upload (${Math.round(group[0].local.length / 1e6)} MB)`);
+      }
+      continue;
+    }
+    for (const x of r.restored ?? []) out.restored.add(x);
+    out.skipped.push(...(r.skipped ?? []));
+    out.requiresRestart ||= !!r.requiresRestart;
+  }
+  return { ...out, restored: [...out.restored] };
+}
+
 /** The parts of a station a copy keeps from the station being copied over: its own name and blurb. */
 const KEEP_ON_COPY = ['station', 'stationDescription'] as const;
 
@@ -112,9 +149,15 @@ export async function subwaveCopyStation(from: SubwaveTarget, to: SubwaveTarget)
   const values = (((await body(cur)) as { values?: Record<string, unknown> } | undefined)?.values ?? {}) as Record<string, unknown>;
   const kept = Object.fromEntries(KEEP_ON_COPY.filter((k) => values[k] !== undefined).map((k) => [k, values[k]]));
 
-  const imp = await call(`${subwaveApi(to)}/backup/import`, { method: 'POST', headers: { ...auth(to), 'content-type': 'application/zip', accept: 'application/json' }, body: zip }, 'the SUB/WAVE being copied into', SLOW);
-  if (!imp.ok) await fail(imp, 'Restoring into the station');
-  const result = ((await body(imp)) ?? {}) as { restored?: string[]; skipped?: string[]; requiresRestart?: boolean };
+  type Restore = { restored?: string[]; skipped?: string[]; requiresRestart?: boolean };
+  const restore = async (part: Buffer): Promise<Restore | 'too-big'> => {
+    const imp = await call(`${subwaveApi(to)}/backup/import`, { method: 'POST', headers: { ...auth(to), 'content-type': 'application/zip', accept: 'application/json' }, body: part }, 'the SUB/WAVE being copied into', SLOW);
+    if (imp.status === 413) return 'too-big';
+    if (!imp.ok) await fail(imp, 'Restoring into the station');
+    return ((await body(imp)) ?? {}) as Restore;
+  };
+  let result = await restore(zip);
+  if (result === 'too-big') result = await restoreInParts(zip, restore);
 
   if (Object.keys(kept).length) {
     const back = await call(`${subwaveApi(to)}/settings`, { method: 'POST', headers: { ...auth(to), 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(kept) }, 'the SUB/WAVE being copied into');

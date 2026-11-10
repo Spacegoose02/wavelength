@@ -1673,9 +1673,9 @@ and the heart removes one.
 
 ## Running a SUB/WAVE station
 
-The **SUB/WAVE** page has everything you need to run the station, so you don't have to open SUB/WAVE's own admin.
+The **SUB/WAVE** page has everything you need to run the station, so you don't have to open SUB/WAVE's own admin. **On air** and **Schedule** are along the top. Everything else is under **Run the station**, in a row of its own.
 With more than one SUB/WAVE server added under Sources, the menu at the top right switches between them. The
-tabs marked *admin* need SUB/WAVE's admin login, either on the source in **Settings → Sources** or kept on the Hub
+tabs under **Run the station** need SUB/WAVE's admin login, either on the source in **Settings → Sources** or kept on the Hub
 (Hub admins only).
 
 | Tab | What it does |

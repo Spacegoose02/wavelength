@@ -266,6 +266,14 @@ section h2 { font-size: 19px; margin-bottom: 14px; display: flex; align-items: c
 .chips.subtabs { display: inline-flex; flex-wrap: wrap; gap: 2px; margin: 2px 0 22px; padding: 4px; border-radius: 999px; background: var(--panel); }
 .chips.subtabs .chip { font-size: 13.5px; padding: 7px 18px; background: transparent; }
 .chips.subtabs .chip.on { background: var(--accent); color: var(--accent-ink, var(--bg)); }
+.chips.subtabs.sw-subtabs { margin-top: 14px; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.chips.subtabs.sw-subtabs .chip { flex: none; }
+@media (max-width: 760px) {
+  .chips.subtabs.sw-subtabs .chip { padding: 7px 12px; }
+  /* station rows: name on its own line, the buttons below it */
+  .sw-admin .show-card { flex-wrap: wrap; }
+  .sw-admin .show-card .track-main { flex: 1 1 calc(100% - 80px); }
+}
 .critter-look { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .critter-look .chips { margin: 0; }
 .critter-look p { margin: 0; }

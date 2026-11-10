@@ -20,6 +20,7 @@ export function SubWave({ sourceId }: { sourceId?: string }) {
   const sources = useSettings(useShallow((s) => s.sources.filter((x) => x.kind === 'subwave' && x.enabled)));
   const cfg = sources.find((s) => s.id === sourceId) ?? sources[0];
   const [tab, setTab] = useState<Tab>('air');
+  const [lastAdmin, setLastAdmin] = useState<Tab>('control');
   const sw = useMemo(() => (cfg ? (sourceFor(cfg) as SubWaveSource) : undefined), [cfg]);
 
   if (!cfg || !sw) {
@@ -31,20 +32,23 @@ export function SubWave({ sourceId }: { sourceId?: string }) {
     );
   }
 
-  const tabs: [Tab, string, boolean][] = [
-    ['air', 'On air', false],
-    ['control', 'DJ control', true],
-    ['schedule', 'Schedule', false],
-    ['shows', 'Shows', true],
-    ['djs', 'DJs', true],
-    ['skills', 'Skills', true],
-    ['settings', 'AI & voice', true],
-    ['health', 'Health', true],
-    ['archive', 'Archive', true],
-    ['stations', 'Stations', true],
-    ['stats', 'Stats', true],
+  // Listener tabs on top; everything that runs the station sits under one "Run the station" tab with its own row.
+  const adminTabs: [Tab, string][] = [
+    ['control', 'DJ control'],
+    ['shows', 'Shows'],
+    ['djs', 'DJs'],
+    ['skills', 'Skills'],
+    ['settings', 'AI & voice'],
+    ['health', 'Health'],
+    ['archive', 'Archive'],
+    ['stations', 'Stations'],
+    ['stats', 'Stats'],
   ];
-  const needsAdmin = tabs.find(([k]) => k === tab)?.[2] ?? false;
+  const needsAdmin = adminTabs.some(([k]) => k === tab);
+  const pick = (t: Tab) => {
+    setTab(t);
+    if (adminTabs.some(([k]) => k === t)) setLastAdmin(t);
+  };
   const body: Record<Tab, () => ReactNode> = {
     air: () => <OnAir sw={sw} />,
     control: () => <SwControl sw={sw} />,
@@ -62,17 +66,24 @@ export function SubWave({ sourceId }: { sourceId?: string }) {
   return (
     <div className="page sw">
       <div className="tabs" ref={tabsRef}>
-        {tabs.map(([k, label, admin]) => (
-          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
-            {label}{admin && <small>admin</small>}
-          </button>
-        ))}
+        <button className={tab === 'air' ? 'on' : ''} onClick={() => pick('air')}>On air</button>
+        <button className={tab === 'schedule' ? 'on' : ''} onClick={() => pick('schedule')}>Schedule</button>
+        <button className={needsAdmin ? 'on' : ''} onClick={() => pick(lastAdmin)}>
+          Run the station{!sw.hasAdmin && <small>admin</small>}
+        </button>
         {sources.length > 1 && (
           <select className="push" value={cfg.id} onChange={(e) => useUi.getState().go({ view: 'subwave', sourceId: e.target.value })}>
             {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         )}
       </div>
+      {needsAdmin && sw.hasAdmin && (
+        <div className="chips subtabs sw-subtabs" role="tablist">
+          {adminTabs.map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={tab === k} className={`chip ${tab === k ? 'on' : ''}`} onClick={() => pick(k)}>{label}</button>
+          ))}
+        </div>
+      )}
       {needsAdmin && !sw.hasAdmin ? (
         <Empty title="Admin login needed">
           <p>Enter SubWave's <code>ADMIN_USER</code> / <code>ADMIN_PASS</code> on the SubWave source in Settings.</p>
