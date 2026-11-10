@@ -7,9 +7,9 @@ import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import { hush, say, setStationTalking, stationTalks, unlockDjAudio } from './djVoice';
 import { kidSafe } from './kids';
-import { findInLibrary, pool, primaryArtist } from './match';
+import { matchChart } from './discoverMatch';
+import { primaryArtist } from './match';
 import { songRadio } from './songRadio';
-import { findSong } from './mixes';
 import { playlistTracks } from './myPlaylists';
 
 /**
@@ -94,8 +94,7 @@ async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?:
     style: v.style,
     talk: useStation.getState().talk,
   });
-  const find = findInLibrary();
-  const found = await pool(seg.songs, 4, (s) => findSong(s, find).catch(() => undefined));
+  const found = await findSegment(seg.songs);
   // what the list has that you don't: shown in the panel to get or request
   const missing = seg.songs.filter((_, i) => !found[i]).slice(0, 60);
   const seen = new Set<string>();
@@ -106,6 +105,30 @@ async function fetchSegment(o: { kind?: HubStationKind; ask?: string; previous?:
     return true;
   }).slice(0, SIZE);
   return { seg, tracks, missing };
+}
+
+/**
+ * The segment's songs in your library. Songs that carry a track this device can play pass straight through; the rest
+ * are matched by the Hub in one go against its list of the library (lib/discoverMatch.ts, like Discover), and only
+ * what that leaves is searched for here, one by one. Searching every song used to be the only way, and when the
+ * music server's search came back empty (the Hub answering for Navidrome) no segment ever had anything to play.
+ */
+async function findSegment(songs: HubMixSong[]): Promise<(Track | undefined)[]> {
+  const out: (Track | undefined)[] = new Array(songs.length).fill(undefined);
+  const sources = useSettings.getState().sources;
+  const rest: number[] = [];
+  songs.forEach((s, i) => {
+    const t = s.track;
+    if (t?.sourceId && t.id && sources.some((x) => x.id === t.sourceId && x.enabled)) {
+      const { streamUrl: _u, ...track } = t;
+      out[i] = track as Track;
+    } else rest.push(i);
+  });
+  if (!rest.length) return out;
+  await matchChart(rest.map((i) => songs[i]), (j, t) => {
+    if (t) out[rest[j]] = t;
+  }).catch(() => undefined);
+  return out;
 }
 
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
@@ -136,7 +159,9 @@ export async function startStation(o: { kind?: HubStationKind; ask?: string; pla
     let { seg, tracks, missing } = await fetchSegment({ kind: o.kind, ask: o.ask, previous });
     // a segment none of whose songs are here: try the next one (not for requests, which say so)
     for (let i = 0; !tracks.length && !o.ask && !o.kind && !o.playlist && i < 3; i++) ({ seg, tracks, missing } = await fetchSegment({ previous: seg.kind }));
-    if (!tracks.length) throw new Error(o.kind ? `None of the ${SEGMENT_LABELS[o.kind as keyof typeof SEGMENT_LABELS] ?? ''} songs the DJ picked are in your library. Try another segment` : 'None of those songs are in your library. Try asking for something else');
+    // how many it looked for, so "none of them" can be told apart from "it got none to look for"
+    const n = seg.songs.length;
+    if (!tracks.length) throw new Error(o.kind ? `None of the ${n} ${SEGMENT_LABELS[o.kind as keyof typeof SEGMENT_LABELS] ?? ''} songs the DJ picked are in your library. Try another segment` : `None of those ${n} songs are in your library. Try asking for something else`);
     ours.clear();
     oursNames.clear();
     playedTracks = [];
