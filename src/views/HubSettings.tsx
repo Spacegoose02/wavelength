@@ -700,20 +700,40 @@ function AppLogins({ url }: { url: string }) {
   const [name, setName] = useState('');
   const [shown, setShown] = useState<number>();
   const [msg, setMsg] = useState('');
-  const load = () => c?.appLogins().then(setSt).catch(() => setSt(undefined));
+  const [loadErr, setLoadErr] = useState('');
+  const load = () => c?.appLogins().then((r) => { setSt(r); setLoadErr(''); }).catch((e) => setLoadErr(errText(e)));
   useEffect(() => {
     load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!st?.available) return null;
   const base = url.replace(/\/+$/, '');
-  return (
-    <div className="editor">
+  const intro = (
+    <>
       <h3>Other music apps</h3>
       <p className="muted small">
         SUB/WAVE, Symfonium, Feishin and other Subsonic apps can play your library from the Hub. Make a login for each
         app, then put the address, username and password in it (for SUB/WAVE: NAVIDROME_URL, NAVIDROME_USER and
         NAVIDROME_PASSWORD). Remove one to sign that app out.
       </p>
+    </>
+  );
+  // Shown even when logins can't be made, with the reason, so the section is easy to find.
+  if (!st?.available) {
+    return (
+      <div className="editor">
+        {intro}
+        <p className="small">
+          {loadErr
+            ? `Couldn't ask the Hub for app logins: ${loadErr}. An older Hub doesn't have them; update it.`
+            : st
+              ? 'Not available yet: turn Navidrome off, or turn on “Send everyone through the Hub”, in Settings → Server → Music catalog.'
+              : 'Loading…'}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="editor">
+      {intro}
       {st.logins.map((l) => (
         <div key={l.id} className="source-row">
           <div className="track-main">
