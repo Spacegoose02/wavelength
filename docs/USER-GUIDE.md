@@ -1671,6 +1671,31 @@ and the heart removes one.
 > Wavelength Hub arrives (see [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)) the hidden list and order are
 > meant to sync per user; today they're per device.
 
+## Running a SUB/WAVE station
+
+The **SUB/WAVE** page has everything you need to run the station, so you don't have to open SUB/WAVE's own admin.
+With more than one SUB/WAVE server added under Sources, the menu at the top right switches between them. The
+tabs marked *admin* need SUB/WAVE's admin login, either on the source in **Settings → Sources** or kept on the Hub
+(Hub admins only).
+
+| Tab | What it does |
+|---|---|
+| **On air** | What's playing, what's next and what just played. Request a song or heart the one on air. |
+| **DJ control** | Skip, make the DJ say something, fire a segment, jingle or sound effect, and queue songs, albums or artist blocks from the library. |
+| **Schedule** | Paint the week's hours with shows, and take over what's on right now. |
+| **Shows** | Make and edit shows: host, guests, brief and moods. |
+| **DJs** | The station's DJs (SUB/WAVE calls them personas). Edit one's name, tagline, how much and how long they talk, humour, warmth and local colour, personality, language, voice engine and voice, and picture. **Make default** picks who hosts when no show is on. **New DJ** starts from SUB/WAVE's default, and **Browse the catalog** adds a ready-made one. Deleting a DJ also deletes the shows they host. |
+| **Skills** | What the DJ does between songs: weather, time checks, trivia and so on. Switch each on or off. A skill that's off can still be fired by hand from DJ control. |
+| **AI & voice** | The AI provider and model (the refresh button lists the provider's models), its API key, and a daily token limit. Near the limit the DJ talks less, and at the limit the music carries on without the DJ. Below that: whether the DJ talks at all, the station's voice engine and its Kokoro voice. **Restart the mixer** if the stream is stuck. |
+| **Health** | SUB/WAVE's own check of the music server, AI, voices, stream and library. Shows the last result. **Run the check** runs it again (up to a minute), and some problems have a button that fixes them. |
+| **Archive** | Every hour on air, when hourly archives are on in SUB/WAVE. **Listen** plays an hour here, **Save** downloads its MP3, and **Clear the archive** deletes them all. |
+| **Stations** | Station profiles. One SUB/WAVE can keep up to eight stations, each with its own DJs, shows, schedule and settings, but only one is on air at a time. **Go on air** switches (the stream stops for a few seconds), and **New station** copies this one or starts empty. To run two stations at the same time, run a second SUB/WAVE container with its own port and data folder and add it as another source. |
+| **Stats** | Listeners connected now, and the AI and voice calls the station has made. |
+
+A few things are still only in SUB/WAVE's own admin: Ollama and OpenAI-compatible server addresses, a backup
+model, the finer agent settings, each DJ's skills and music leanings, custom skills, jingles and beds, playlists,
+the library tagger and backups.
+
 ## Song titles on radio
 
 While a station plays, the player shows the song it's on instead of just the station's name, wherever the
@@ -1777,7 +1802,7 @@ plays**, signed in or not, with or without the Hub.
   Hub does the downloading: deemix with the ARL it keeps, and yt-dlp straight into a folder inside its music
   folder (pick the folder there; no network-share login). It works from any device, phones and TVs included.
   Change the settings there and press **Save to Hub**.
-- SUB/WAVE DJ controls, the schedule and shows go through the Hub too, which keeps the SUB/WAVE admin login.
+- SUB/WAVE DJ controls, the schedule, shows and the rest of the [station admin](#running-a-subwave-station) go through the Hub too, which keeps the SUB/WAVE admin login. Archive hours stream through the Hub, so they work on phones too.
   No device is sent that login or the deemix ARL, not even yours.
 - Members and kids never get SUB/WAVE admin controls. Downloads are for admins and people with
   **Autodownload**; everyone else sees "Your Hub admin looks after downloads".
