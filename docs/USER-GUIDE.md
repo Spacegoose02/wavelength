@@ -1680,7 +1680,7 @@ tabs under **Run the station** need SUB/WAVE's admin login, either on the source
 
 | Tab | What it does |
 |---|---|
-| **On air** | What's playing, what's next and what just played. Request a song or heart the one on air. |
+| **On air** | What's playing, what's next and what just played. Request a song or heart the one on air. Admins also get a **Skip** button beside **Like**. |
 | **DJ control** | Skip, make the DJ say something, fire a segment, jingle or sound effect, and queue songs, albums or artist blocks from the library. |
 | **Schedule** | Paint the week's hours with shows, and take over what's on right now. |
 | **Shows** | Make and edit shows: host, guests, brief and moods. |

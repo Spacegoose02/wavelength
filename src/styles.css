@@ -783,7 +783,7 @@ textarea:focus { border-color: var(--accent); }
 .track-row:hover .icon-btn.fav, .icon-btn.fav.on { opacity: 1; }
 .icon-btn.fav.on { color: #ff5a7a; }
 .icon-btn.fav.on svg, .btn.like.on svg { fill: currentColor; }
-.btn.like { background: rgb(255 255 255 / 0.12); color: #fff; }
+.btn.like, .btn.skip { background: rgb(255 255 255 / 0.12); color: #fff; }
 .btn.like.on { color: #ff5a7a; opacity: 1; }
 h2 .link.small { margin-left: 8px; font-weight: 600; }
 
