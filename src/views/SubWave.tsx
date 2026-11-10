@@ -7,7 +7,7 @@ import { useSettings } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
 import { Cover, Empty, Spinner, fmtTime } from '../components/common';
-import { IconHeart, IconPause, IconPlay } from '../components/Icons';
+import { IconHeart, IconNext, IconPause, IconPlay } from '../components/Icons';
 import { QueueSearch, SwControl, SwSchedule, SwShows, SwStats } from './SubWaveAdmin';
 import { SwList, usePoll } from './subwaveShared';
 import { SwArchives, SwHealth, SwPersonas, SwSkills, SwStationSettings, SwStations } from './SubWaveStation';
@@ -158,6 +158,7 @@ function OnAir({ sw }: { sw: SubWaveSource }) {
               {tunedIn && playing ? <><IconPause /> Pause</> : <><IconPlay /> {tunedIn ? 'Resume' : 'Tune in'}</>}
             </button>
             {t.title && <LikeButton key={t.subsonic_id ?? t.title} sw={sw} songId={t.subsonic_id} />}
+            {t.title && sw.hasAdmin && <SkipButton sw={sw} onSkipped={() => { np.refresh(); state.refresh(); }} />}
           </div>
         </div>
         <div className="sw-dj">
@@ -293,6 +294,30 @@ function LikeButton({ sw, songId }: { sw: SubWaveSource; songId?: string }) {
         }
       }}>
       <IconHeart /> {liked ? 'Liked' : 'Like'}{count ? ` · ${count}` : ''}
+    </button>
+  );
+}
+
+/** Admins only: skip the song on air (same call as "Skip track" on the Control tab). */
+function SkipButton({ sw, onSkipped }: { sw: SubWaveSource; onSkipped: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string>();
+  return (
+    <button className="btn big skip" title={err ?? 'Skip to the next song (admin)'} disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        setErr(undefined);
+        try {
+          await sw.skip();
+          // give the mixer a moment to move on before asking what's playing
+          window.setTimeout(onSkipped, 1500);
+        } catch (e) {
+          setErr(String((e as Error).message ?? e));
+        } finally {
+          setBusy(false);
+        }
+      }}>
+      <IconNext /> {busy ? 'Skipping…' : err ? 'Skip failed' : 'Skip'}
     </button>
   );
 }
