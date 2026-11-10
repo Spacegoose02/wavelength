@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.39.2
+- **Fix: Other music apps always shows in Settings → Hub.** It used to vanish when logins weren't available or the Hub
+  couldn't be asked, leaving no clue why. Now it always shows, with the reason: an older Hub without app logins (and
+  the error), or that devices don't go through the Hub yet, with where to turn Navidrome off or turn on "Send
+  everyone through the Hub" (`AppLogins` in `src/views/HubSettings.tsx`, #270).
+
 ## 0.39.1
 - **Fix: other music apps can use the Hub's plain address.** SUB/WAVE given `http://<hub>:7780` asked `/rest/ping`
   there and got the web app's page back ("Unexpected token '<'"). The Hub now answers `/rest/*` at its own address
