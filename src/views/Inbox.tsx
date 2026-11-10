@@ -32,7 +32,7 @@ export function Inbox({ tab: start }: { tab?: InboxTab } = {}) {
   const counts = useInbox();
   const [tab, setTab] = useState<Tab>(start ?? (counts.shared || (!counts.decided && !counts.pending) ? 'shared' : counts.decided ? 'requests' : 'approve'));
 
-  if (!signedIn) return <div className="page"><header className="page-head"><h1>Inbox</h1></header><Empty title="Sign in to your Hub">Requests and sharing go through your Wavelength Hub. Sign in under Settings → Hub.</Empty></div>;
+  if (!signedIn) return <div className="page"><header className="page-head"><h1>Inbox</h1></header><Empty title="Sign in to your Hub">Requests and sharing go through your Wavelength Hub. Sign in under Settings → Account.</Empty></div>;
 
   return (
     <div className="page">

@@ -199,7 +199,7 @@ function NavidromeAccounts() {
       {svc && (
         <label className="check" style={{ margin: '12px 0' }} title="Every device reaches Navidrome through the Hub, so no device holds a Navidrome password">
           <span className="switch"><input type="checkbox" checked={svc.config.relay === 'everyone'} onChange={(e) => run(0, () => c!.updateService(svc.id, { config: { relay: e.target.checked ? 'everyone' : null } }))} /><span /></span>
-          <small>Send everyone through the Hub, not just kids</small>
+          <small>Send everyone through the Hub, not just kids (this also lets people make logins for SUB/WAVE and other music apps in Settings → Account → Other music apps)</small>
         </label>
       )}
       {svc && users.map((u) => {
