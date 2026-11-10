@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.39.3
+## 0.40.0
+- **Run your SUB/WAVE station from Wavelength.** The SUB/WAVE page gets six admin tabs, so you rarely need
+  SUB/WAVE's own admin: **DJs** (edit a DJ's name, tagline, talk, humour, warmth, language, voice and picture; pick
+  the default DJ; add one from the catalog), **Skills** (switch each between-song skill on or off), **AI & voice**
+  (provider, model, API key, daily token limit, voice; **Restart the mixer**), **Health** (SUB/WAVE's check, with
+  one-click fixes), **Archive** (listen to or save each hour) and **Stations** (make, rename, delete or put a station
+  on air). The Hub's SUB/WAVE admin proxy now passes PATCH and streams audio and zip files, so these work through the
+  Hub too (`src/views/SubWaveStation.tsx`, `hub/src/upstream.ts`, #274).
 - **Fix: DJ mode's New for you plays songs from your library.** It used to pick Deezer top songs by related artists
   that were almost never in your library, so the segment failed with "None of the New for you songs the DJ picked
   are in your library". With the Hub's library list it now picks songs you have and haven't played: Discover's picks
