@@ -19,6 +19,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # well above a cold build, far below the 6-hour default, so a hung step is caught
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
 
