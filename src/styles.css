@@ -114,7 +114,6 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .settings-search { position: relative; margin-left: auto; width: min(280px, 100%); }
 .settings-search input { width: 100%; }
 .settings-found { left: 0; right: 0; width: auto; }
-.tabs-divider { align-self: center; padding: 0 6px 0 14px; margin-left: 6px; border-left: 1px solid var(--line); color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
 .side-pin { color: var(--accent); font-size: 8px; margin-right: 6px; vertical-align: middle; }
 .side-folder-head { display: flex; align-items: center; gap: 6px; }
 .side-folder-items { padding-left: 14px; display: flex; flex-direction: column; }
@@ -266,10 +265,12 @@ section h2 { font-size: 19px; margin-bottom: 14px; display: flex; align-items: c
 .chips.subtabs { display: inline-flex; flex-wrap: wrap; gap: 2px; margin: 2px 0 22px; padding: 4px; border-radius: 999px; background: var(--panel); }
 .chips.subtabs .chip { font-size: 13.5px; padding: 7px 18px; background: transparent; }
 .chips.subtabs .chip.on { background: var(--accent); color: var(--accent-ink, var(--bg)); }
-.chips.subtabs.sw-subtabs { margin-top: 14px; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-.chips.subtabs.sw-subtabs .chip { flex: none; }
+.chips.subtabs.sw-subtabs, .chips.subtabs.row-subtabs { max-width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.chips.subtabs.sw-subtabs { margin-top: 14px; }
+.chips.subtabs.row-subtabs { margin: -4px 0 22px; }
+.chips.subtabs.sw-subtabs .chip, .chips.subtabs.row-subtabs .chip { flex: none; }
 @media (max-width: 760px) {
-  .chips.subtabs.sw-subtabs .chip { padding: 7px 12px; }
+  .chips.subtabs.sw-subtabs .chip, .chips.subtabs.row-subtabs .chip { padding: 7px 12px; }
   /* station rows: name on its own line, the buttons below it */
   .sw-admin .show-card { flex-wrap: wrap; }
   .sw-admin .show-card .track-main { flex: 1 1 calc(100% - 80px); }
@@ -607,6 +608,7 @@ input[type='range']:hover::-webkit-slider-thumb { opacity: 1; }
 .tabs button small { font-weight: 500; opacity: 0.7; margin-left: 4px; }
 .tabs button:hover { color: var(--text); }
 .tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+.tabs .admin-tab { margin-left: auto; }
 .page > .search-big { margin-bottom: 8px; }
 
 .menu-wrap { position: relative; display: inline-flex; }
