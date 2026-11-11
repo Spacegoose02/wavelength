@@ -158,6 +158,14 @@ the releases page.
   versions come as separate PRs because they usually need code changes.
 - Before a release, run `cargo audit` in `src-tauri` and `npm audit` in the root and `hub/`.
 
+### When a workflow stalls
+
+Every job has a `timeout-minutes` (15–90, instead of GitHub's 6-hour default), and every `apt-get` step uses short
+network timeouts, retries three times and has its own 15-minute limit. A flaky Ubuntu mirror (e.g. "Temporary
+failure resolving 'security.ubuntu.com'") then either recovers on a retry or fails the job within minutes. If it
+fails, re-run the failed jobs from the run's page (**Re-run jobs → Re-run failed jobs**); a release can also be
+rebuilt with **Actions → Release builds → Run workflow** and its tag.
+
 ## Checklist
 
 1. Update `CHANGELOG.md` (rename **Unreleased** to the new version).

@@ -44,6 +44,8 @@ env:
 jobs:
   windows:
     runs-on: windows-latest
+    # well above a cold build, far below the 6-hour default, so a hung step is caught
+    timeout-minutes: 90
     env:
       # Keep the runner's user folder out of paths Rust embeds in the binary (see docs/RELEASING.md)
       CARGO_HOME: C:\cargo-home
@@ -99,15 +101,23 @@ jobs:
 
   linux:
     runs-on: ubuntu-22.04
+    # well above a cold build, far below the 6-hour default, so a hung step is caught
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
 
+      # Short apt timeouts and retries so a flaky Ubuntu mirror fails or recovers in minutes instead of hanging
       - name: System libraries
+        timeout-minutes: 15
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libdbus-1-dev patchelf
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=60"
+          for i in 1 2 3; do
+            timeout 90 sudo apt-get $APT update -qq && timeout 180 sudo apt-get $APT install -y -qq libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libdbus-1-dev patchelf && exit 0
+            echo "::warning::apt attempt $i failed, retrying"; sleep $((i * 15))
+          done
+          exit 1
 
       - uses: actions/setup-node@v7
         with:
@@ -155,6 +165,8 @@ jobs:
 
   macos:
     runs-on: macos-latest
+    # well above a cold build, far below the 6-hour default, so a hung step is caught
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
         with:
@@ -236,6 +248,8 @@ jobs:
   ios:
     # The iPhone app (docs/IOS.md). Needs an Apple Developer account: without its secrets this job is skipped.
     runs-on: macos-latest
+    # well above a cold build, far below the 6-hour default, so a hung step is caught
+    timeout-minutes: 90
     steps:
       - name: Check Apple secrets
         id: secrets
@@ -308,6 +322,8 @@ jobs:
 
   android:
     runs-on: ubuntu-latest
+    # well above a cold build, far below the 6-hour default, so a hung step is caught
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
         with:

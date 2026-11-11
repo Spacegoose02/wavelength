@@ -26,6 +26,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: hub
@@ -36,8 +37,18 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: hub/package-lock.json
-      # the tag editor's tests write real audio files with ffmpeg, as the image does
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      # the tag editor's tests write real audio files with ffmpeg, as the image does. Short apt timeouts and
+      # retries so a flaky Ubuntu mirror fails or recovers in minutes instead of hanging the job (an unreachable
+      # security.ubuntu.com once held this step for 20+ minutes and blocked a release).
+      - name: Install ffmpeg
+        timeout-minutes: 15
+        run: |
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=60"
+          for i in 1 2 3; do
+            timeout 90 sudo apt-get $APT update -qq && timeout 180 sudo apt-get $APT install -y -qq ffmpeg && exit 0
+            echo "::warning::apt attempt $i failed, retrying"; sleep $((i * 15))
+          done
+          exit 1
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -45,6 +56,8 @@ jobs:
   image:
     needs: test
     runs-on: ubuntu-latest
+    # two-platform build under QEMU; cached runs take a few minutes, cold ones much longer
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
