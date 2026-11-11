@@ -37,15 +37,25 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: hub/package-lock.json
-      # the tag editor's tests write real audio files with ffmpeg, as the image does. Short apt timeouts and
-      # retries so a flaky Ubuntu mirror fails or recovers in minutes instead of hanging the job (an unreachable
-      # security.ubuntu.com once held this step for 20+ minutes and blocked a release).
+      # The tag editor's tests write real audio files with ffmpeg, as the image does. A static build from
+      # GitHub releases first (no Ubuntu mirror involved: an unreachable security.ubuntu.com once hung this step
+      # for 20+ minutes and blocked a release), then apt with short timeouts and retries as a fallback.
       - name: Install ffmpeg
         timeout-minutes: 15
+        working-directory: .
         run: |
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          if curl -fsSL --retry 4 --retry-all-errors --connect-timeout 20 --max-time 300 \
+              https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz \
+              | tar -xJ -C "$RUNNER_TEMP/ffmpeg" --strip-components=2 --wildcards '*/bin/ffmpeg' '*/bin/ffprobe'; then
+            echo "$RUNNER_TEMP/ffmpeg" >> "$GITHUB_PATH"
+            "$RUNNER_TEMP/ffmpeg/ffmpeg" -hide_banner -version | head -1
+            exit 0
+          fi
+          echo "::warning::static ffmpeg download failed, falling back to apt"
           APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=60"
           for i in 1 2 3; do
-            timeout 90 sudo apt-get $APT update -qq && timeout 180 sudo apt-get $APT install -y -qq ffmpeg && exit 0
+            timeout 90 sudo apt-get $APT update -q && timeout 180 sudo apt-get $APT install -y -qq ffmpeg && exit 0
             echo "::warning::apt attempt $i failed, retrying"; sleep $((i * 15))
           done
           exit 1

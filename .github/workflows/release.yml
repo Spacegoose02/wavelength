@@ -114,7 +114,7 @@ jobs:
         run: |
           APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=60"
           for i in 1 2 3; do
-            timeout 90 sudo apt-get $APT update -qq && timeout 180 sudo apt-get $APT install -y -qq libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libdbus-1-dev patchelf && exit 0
+            timeout 90 sudo apt-get $APT update -q && timeout 180 sudo apt-get $APT install -y -qq libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libdbus-1-dev patchelf && exit 0
             echo "::warning::apt attempt $i failed, retrying"; sleep $((i * 15))
           done
           exit 1
