@@ -1,12 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.41.0
 - **Radio: add stations for everyone, with logos.** Hub admins can add a station to **Your stations** for everyone,
   from **Edit → Add a station for everyone** or **+ Everyone** on any directory station. Until now the only way was
   Navidrome's own page, which stopped working once the Hub took over the list. Hub stations now have a logo
   (migration 38), found in the radio directory automatically; **Find missing logos** fills them in for existing
   stations and **Logo** sets one by hand. The guide now says which streams can be added, including iHeartRadio
-  (`src/views/Radio.tsx`, `src/sources/radio.ts`, `hub/src/radioStations.ts`).
+  (`src/views/Radio.tsx`, `src/sources/radio.ts`, `hub/src/radioStations.ts`, #284).
+- **Settings: one Hub admin tab.** For Hub admins the Settings tab bar ran off both sides. The top row now has the
+  personal tabs and one **Hub admin** tab at the end; picking it shows **Users · Server · AI DJ · Features** in a row
+  under it, reopening the one you had last. Both rows scroll sideways on phones, and settings search says
+  "Hub admin · Server" and so on (`src/views/Settings.tsx`, #279).
 
 ## 0.40.3
 - **Fix: Favorites show your newest heart first again.** With the Hub keeping hearts, it listed them by item id, so
