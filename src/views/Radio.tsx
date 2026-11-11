@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactElement } from 'react';
-import { radioBrowser, stationToTrack } from '../sources/radio';
+import { findStationLogo, radioBrowser, sameStream, stationToTrack } from '../sources/radio';
 import { sourceFor } from '../sources/registry';
 import type { Station } from '../sources/types';
 import { useSettings } from '../store/settings';
+import { useCan } from '../store/hub';
 import { usePlayer } from '../store/player';
 import { Cover, Spinner } from '../components/common';
 import { IconHeart, IconPlay } from '../components/Icons';
@@ -33,6 +34,10 @@ export function Radio() {
   const [serverStations, setServerStations] = useState<Station[]>([]);
   const [busy, setBusy] = useState(false);
   const [custom, setCustom] = useState({ name: '', url: '' });
+  const [shared, setShared] = useState({ name: '', url: '', logo: '' });
+  const [shareNote, setShareNote] = useState<string>();
+  const [sharing, setSharing] = useState(false);
+  const isAdmin = useCan('library.edit');
 
   // SubWave + Navidrome internet radio
   useEffect(() => {
@@ -76,6 +81,72 @@ export function Radio() {
       alert(`Couldn't delete it: ${(e as Error).message ?? e}. Only admins can delete stations; you can still hide it on this device.`);
     }
   };
+
+  /**
+   * Where "Add for everyone" puts a station: the Hub's own Navidrome (stations kept on the Hub), else the first
+   * Navidrome. Only shown to Hub admins; a Navidrome without the Hub checks its own admin role.
+   */
+  const shareTo = isAdmin
+    ? (sources.find((c) => c.enabled && c.kind === 'navidrome' && c.hubId) ?? sources.find((c) => c.enabled && c.kind === 'navidrome'))
+    : undefined;
+  /** Logos are kept only by the Hub, for its own Navidrome's stations. */
+  const logos = !!shareTo?.hubId;
+  const onServer = (s: { streamUrl: string }) => serverStations.some((x) => sameStream(x.streamUrl, s.streamUrl));
+
+  /** Add a station to Your stations for everyone, with a logo from the radio directory when none is given. */
+  const shareStation = async (st: { name: string; streamUrl: string; homepage?: string; logo?: string }) => {
+    if (!shareTo) return false;
+    setSharing(true);
+    setShareNote(`Adding ${st.name}…`);
+    try {
+      const logo = st.logo || (await findStationLogo(st));
+      await sourceFor(shareTo).addStation!({ ...st, logo });
+      setShareNote(`Added ${st.name} for everyone${logo || !logos ? '' : ' (no logo found; add one with Logo in Edit)'}.`);
+      setReload((n) => n + 1);
+      return true;
+    } catch (e) {
+      setShareNote(`Couldn't add it: ${(e as Error).message ?? e}. Only admins can add stations for everyone.`);
+      return false;
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const setLogo = async (s: Station) => {
+    const cfg = sources.find((c) => c.id === s.sourceId);
+    const url = prompt(`Logo picture link for "${s.name}" (leave empty to take it off):`, s.favicon ?? '');
+    if (!cfg || url === null) return;
+    try {
+      await sourceFor(cfg).setStationLogo!(s.id, url.trim());
+      setReload((n) => n + 1);
+    } catch (e) {
+      alert(`Couldn't change the logo: ${(e as Error).message ?? e}`);
+    }
+  };
+
+  /** Look up a logo in the radio directory for every station on the Hub that has none. */
+  const findLogos = async () => {
+    const missing = serverStations.filter((s) => !s.favicon && s.sourceId === shareTo?.id);
+    if (!shareTo || !missing.length) return;
+    setSharing(true);
+    let found = 0;
+    try {
+      for (const [i, s] of missing.entries()) {
+        setShareNote(`Looking for logos… ${i + 1} of ${missing.length}`);
+        const logo = await findStationLogo(s);
+        if (!logo) continue;
+        await sourceFor(shareTo).setStationLogo!(s.id, logo);
+        found++;
+      }
+      setShareNote(`Found logos for ${found} of ${missing.length} stations.${found < missing.length ? ' Add the rest by hand with Logo.' : ''}`);
+    } catch (e) {
+      setShareNote(`Stopped after ${found}: ${(e as Error).message ?? e}`);
+    } finally {
+      setSharing(false);
+      setReload((n) => n + 1);
+    }
+  };
+
   const canDelete = (s: Station) => {
     const cfg = sources.find((c) => c.id === s.sourceId);
     return !!cfg && !!sourceFor(cfg).deleteStation;
@@ -111,6 +182,9 @@ export function Radio() {
         <div className="track-sub">{[s.country, s.codec && `${s.codec}${s.bitrate ? ` ${s.bitrate}k` : ''}`, s.tags?.split(',').slice(0, 3).join(', ')].filter(Boolean).join(' · ')}</div>
       </div>
       <div className="track-actions"><AddToPlaylist tracks={() => [stationToTrack(s)]} /><ShareButton what={() => shareOfStation(s)} className="chip" /></div>
+      {shareTo && s.sourceId === 'radio' && !onServer(s) && (
+        <button className="btn small ghost share-station" disabled={sharing} title="Add to Your stations, for everyone on the Hub" onClick={() => shareStation({ name: s.name, streamUrl: s.streamUrl, homepage: s.homepage, logo: s.favicon })}>+ Everyone</button>
+      )}
       {s.sourceId === 'radio' && (
         <button className={`icon-btn ${isSaved(s) ? 'on' : ''}`} title={isSaved(s) ? 'Remove from favorites' : 'Save'} onClick={() => toggleStation(s)}><IconHeart /></button>
       )}
@@ -121,7 +195,7 @@ export function Radio() {
     <div className="page">
       <header className="page-head"><h1>Radio</h1></header>
 
-      {serverStations.length > 0 && (
+      {(serverStations.length > 0 || shareTo) && (
         <section>
           <h2>
             Your stations
@@ -133,7 +207,8 @@ export function Radio() {
               </span>
             )}
           </h2>
-          {editing && <p className="muted small">Use the arrows (or drag on desktop) to reorder. <b>Hide</b> only affects this device. <b>Delete</b> removes a Navidrome station from the server for everyone, and needs a Navidrome admin account.</p>}
+          {editing && <p className="muted small">Use the arrows (or drag on desktop) to reorder. <b>Hide</b> only affects this device. <b>Logo</b> and <b>Delete</b> change the station for everyone, and need an admin account.</p>}
+          {!serverStations.length && !editing && <p className="muted">No stations here yet. Add one below, or tap <b>+ Everyone</b> on a station in the directory, and everyone on the Hub gets it.</p>}
           {editing ? (
             <div className="station-grid">
               {visible.map((s, i) => {
@@ -157,6 +232,7 @@ export function Radio() {
                       <button className="icon-btn" title="Move left" disabled={i === 0} onClick={() => reorder(k, -1)}>◀</button>
                       <button className="icon-btn" title="Move right" disabled={i === visible.length - 1} onClick={() => reorder(k, 1)}>▶</button>
                       <button className="btn small ghost" onClick={() => setStationHidden(k, true)}>Hide</button>
+                      {logos && s.sourceId === shareTo?.id && <button className="btn small ghost" onClick={() => setLogo(s)}>Logo</button>}
                       {canDelete(s) && <button className="btn small ghost danger" onClick={() => removeFromServer(s)}>Delete</button>}
                     </span>
                   </div>
@@ -178,6 +254,26 @@ export function Radio() {
             ))
           )}
           {!visible.length && <p className="muted">All your stations are hidden. {editing ? 'Show one below.' : 'Tap Edit to show them again.'}</p>}
+          {shareTo && (editing || !serverStations.length) && (
+            <div className="share-stations">
+              <div className="kicker">Add a station for everyone</div>
+              <form className="inline-form" onSubmit={async (e) => {
+                e.preventDefault();
+                if (!shared.url.trim()) return;
+                const ok = await shareStation({ name: shared.name.trim() || shared.url.trim(), streamUrl: shared.url.trim(), logo: shared.logo.trim() || undefined });
+                if (ok) setShared({ name: '', url: '', logo: '' });
+              }}>
+                <input placeholder="Station name" value={shared.name} onChange={(e) => setShared({ ...shared, name: e.target.value })} />
+                <input placeholder="Stream URL (https://…)" value={shared.url} onChange={(e) => setShared({ ...shared, url: e.target.value })} />
+                {logos && <input placeholder="Logo URL (optional, found for you)" value={shared.logo} onChange={(e) => setShared({ ...shared, logo: e.target.value })} />}
+                <button className="btn" disabled={sharing}>Add for everyone</button>
+              </form>
+              {editing && logos && serverStations.some((s) => !s.favicon && s.sourceId === shareTo.id) && (
+                <button className="btn small" disabled={sharing} onClick={findLogos}>Find missing logos</button>
+              )}
+            </div>
+          )}
+          {shareNote && <p className="muted small" role="status">{shareNote}</p>}
           {editing && hidden.length > 0 && (
             <div className="hidden-stations">
               <div className="kicker">Hidden on this device</div>

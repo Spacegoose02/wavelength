@@ -741,6 +741,10 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     PRIMARY KEY (item, facet)
   );
   `,
+  `
+  -- A logo for each Hub radio station (radioStations.ts), shown on its card in Radio → Your stations.
+  ALTER TABLE radio_stations ADD COLUMN logo_url TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

@@ -230,6 +230,13 @@ export interface MusicSource {
   getStations?(): Promise<Station[]>;
   /** Delete one of the server's own radio stations. Navidrome only allows this for admin accounts. */
   deleteStation?(id: string): Promise<void>;
+  /**
+   * Add a radio station to the server, for everyone on it (Radio → Your stations). Navidrome only allows this for admin
+   * accounts; the Hub for `library.edit`. `logo` is kept only by the Hub.
+   */
+  addStation?(s: { name: string; streamUrl: string; homepage?: string; logo?: string }): Promise<void>;
+  /** Change a server station's logo (Hub stations only; '' takes it off). */
+  setStationLogo?(id: string, logo: string): Promise<void>;
   getBooks?(): Promise<Book[]>;
   startBook?(bookId: string): Promise<BookPlayback>;
   syncBook?(track: Track, absoluteTime: number, listened: number): Promise<void>;

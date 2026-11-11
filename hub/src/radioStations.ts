@@ -16,6 +16,8 @@ export interface RadioStation {
   name: string;
   streamUrl: string;
   homePageUrl: string;
+  /** a picture for the station's card ('' for none) */
+  logoUrl: string;
 }
 
 const IMPORTED_KEY = 'radio.imported';
@@ -27,14 +29,14 @@ export function radioImportedAt(db: Db): number | null {
 }
 
 export function listStations(db: Db): RadioStation[] {
-  return (db.prepare('SELECT id, name, stream_url, homepage_url FROM radio_stations ORDER BY name COLLATE NOCASE, id').all() as { id: string; name: string; stream_url: string; homepage_url: string }[])
-    .map((r) => ({ id: r.id, name: r.name, streamUrl: r.stream_url, homePageUrl: r.homepage_url }));
+  return (db.prepare('SELECT id, name, stream_url, homepage_url, logo_url FROM radio_stations ORDER BY name COLLATE NOCASE, id').all() as { id: string; name: string; stream_url: string; homepage_url: string; logo_url: string }[])
+    .map((r) => ({ id: r.id, name: r.name, streamUrl: r.stream_url, homePageUrl: r.homepage_url, logoUrl: r.logo_url }));
 }
 
 /** A station's fields checked: a name, and http(s) links. */
 export function readStation(b: Record<string, unknown> | null | undefined, partial = false): Partial<Omit<RadioStation, 'id'>> {
   const str = (k: string) => (typeof b?.[k] === 'string' ? (b[k] as string).trim() : undefined);
-  const name = str('name'), streamUrl = str('streamUrl'), homePageUrl = str('homePageUrl');
+  const name = str('name'), streamUrl = str('streamUrl'), homePageUrl = str('homePageUrl'), logoUrl = str('logoUrl');
   const link = (v: string | undefined, what: string) => {
     if (v && (!/^https?:\/\/[^\s]+$/i.test(v) || v.length > 2000)) throw new HttpError(400, `${what} must be an http(s) link`);
   };
@@ -43,20 +45,28 @@ export function readStation(b: Record<string, unknown> | null | undefined, parti
   if (name !== undefined && (!name || name.length > 200)) throw new HttpError(400, 'A station name is 1 to 200 characters');
   link(streamUrl, 'The stream');
   link(homePageUrl, 'The home page');
-  return { ...(name !== undefined && { name }), ...(streamUrl !== undefined && { streamUrl }), ...(homePageUrl !== undefined && { homePageUrl }) };
+  link(logoUrl, 'The logo');
+  return {
+    ...(name !== undefined && { name }),
+    ...(streamUrl !== undefined && { streamUrl }),
+    ...(homePageUrl !== undefined && { homePageUrl }),
+    ...(logoUrl !== undefined && { logoUrl }),
+  };
 }
 
-export function addStation(db: Db, s: { name: string; streamUrl: string; homePageUrl?: string }, id: string = randomUUID()): RadioStation {
+export function addStation(db: Db, s: { name: string; streamUrl: string; homePageUrl?: string; logoUrl?: string }, id: string = randomUUID()): RadioStation {
   const now = Date.now();
-  db.prepare('INSERT INTO radio_stations (id, name, stream_url, homepage_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)').run(id, s.name, s.streamUrl, s.homePageUrl ?? '', now, now);
-  return { id, name: s.name, streamUrl: s.streamUrl, homePageUrl: s.homePageUrl ?? '' };
+  db.prepare('INSERT INTO radio_stations (id, name, stream_url, homepage_url, logo_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(id, s.name, s.streamUrl, s.homePageUrl ?? '', s.logoUrl ?? '', now, now);
+  return { id, name: s.name, streamUrl: s.streamUrl, homePageUrl: s.homePageUrl ?? '', logoUrl: s.logoUrl ?? '' };
 }
 
 export function updateStation(db: Db, id: string, s: Partial<Omit<RadioStation, 'id'>>): RadioStation {
   const cur = listStations(db).find((x) => x.id === id);
   if (!cur) throw new HttpError(404, 'No such station');
   const next = { ...cur, ...s };
-  db.prepare('UPDATE radio_stations SET name = ?, stream_url = ?, homepage_url = ?, updated_at = ? WHERE id = ?').run(next.name, next.streamUrl, next.homePageUrl, Date.now(), id);
+  db.prepare('UPDATE radio_stations SET name = ?, stream_url = ?, homepage_url = ?, logo_url = ?, updated_at = ? WHERE id = ?')
+    .run(next.name, next.streamUrl, next.homePageUrl, next.logoUrl, Date.now(), id);
   return next;
 }
 

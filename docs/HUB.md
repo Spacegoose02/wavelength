@@ -829,7 +829,10 @@ and hands out ids.
   `GET /api/radio/stations` (`src/sources/navidrome.ts`, only for the Navidrome the Hub hands out, `hubId`), and
   devices going through the relay get `getInternetRadioStations` and the create / update / delete calls answered
   from the same list (admins only, as on Navidrome). Navidrome's own list is left as it was; a Navidrome hosted on
-  its own keeps its stations.
+  its own keeps its stations. Admins add stations for everyone from the app (Radio → **Add for everyone**, or
+  **+ Everyone** on a directory station), and each station can have a logo (`logo_url`, migration 38) that the app
+  finds in the radio directory when none is given. Stations added in Navidrome's own web page after the first copy
+  don't show up: add them in Wavelength, or run `POST /api/admin/radio/import` again.
 - **Hearts, play counts and ratings live on the Hub** (phase 5, `hub/src/userData.ts`, tables `user_stars` and
   `user_song_plays`, migration 34), when an admin turns on **Hub keeps hearts and play counts** on the Music catalog
   card (`catalog.userData`, off by default). The first time a person's device calls the relay after that, the Hub
@@ -1120,8 +1123,8 @@ with a 4xx status.
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
 | `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, serve, serving, stream, streaming, missing: [{ title, artist, album, path }], summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
-| `GET /api/radio/stations` | signed in | internet radio stations on the Hub: `{ imported, importedAt, stations: [{ id, name, streamUrl, homePageUrl }] }` |
-| `POST /api/admin/radio/stations` · `PUT /api/admin/radio/stations/:id` · `DELETE /api/admin/radio/stations/:id` | `library.edit` | add, change (`{ name?, streamUrl?, homePageUrl? }`) or delete a station (audited `radio.*`) |
+| `GET /api/radio/stations` | signed in | internet radio stations on the Hub: `{ imported, importedAt, stations: [{ id, name, streamUrl, homePageUrl, logoUrl }] }` (`logoUrl` '' for none) |
+| `POST /api/admin/radio/stations` · `PUT /api/admin/radio/stations/:id` · `DELETE /api/admin/radio/stations/:id` | `library.edit` | add, change (`{ name?, streamUrl?, homePageUrl?, logoUrl? }`, http(s) links only) or delete a station (audited `radio.*`) |
 | `POST /api/admin/radio/import` | `library.edit` | copy Navidrome's stations again; ones the Hub has (same id or stream link) are left alone |
 | `GET /api/me/app-logins`, `POST /api/me/app-logins` | signed in | Logins for other Subsonic apps on the Hub's relay (`{ name }` to add); remove with `DELETE /api/me/devices/:id` |
 | `PUT /api/admin/catalog/navidrome` | `server.view` | `{ off, force? }`: turn Navidrome off for this household after copying everyone's data from it (see "Without Navidrome"), or back on; answers with the status plus `copied` and `notCopied` |
