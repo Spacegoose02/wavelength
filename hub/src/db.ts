@@ -745,6 +745,10 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   -- A logo for each Hub radio station (radioStations.ts), shown on its card in Radio → Your stations.
   ALTER TABLE radio_stations ADD COLUMN logo_url TEXT NOT NULL DEFAULT '';
   `,
+  `
+  -- Genres people set for a Hub radio station (radioStations.ts), comma separated; '' goes by the station's name.
+  ALTER TABLE radio_stations ADD COLUMN genre TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

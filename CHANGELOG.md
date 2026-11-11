@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Radio: edit a station after adding it.** **Edit station** changes a station's name, stream link, genre, home page
+  and logo, with a preview of its card. Open it with **Edit** on a card in Your stations (admins, for everyone) or the
+  pencil on a favorite (just you). Until now only the logo could be changed, so a moved stream or a station in the
+  wrong genre group meant deleting it and adding it again. Hub stations keep a genre now (migration 39), which wins
+  over the genres in the name and picks the **By genre** group; a Navidrome without the Hub keeps the name and links
+  (`src/components/EditStation.tsx`, `src/views/Radio.tsx`, `hub/src/radioStations.ts`).
+
 ## 0.41.0
 - **Radio: add stations for everyone, with logos.** Hub admins can add a station to **Your stations** for everyone,
   from **Edit → Add a station for everyone** or **+ Everyone** on any directory station. Until now the only way was

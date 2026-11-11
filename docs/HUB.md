@@ -831,7 +831,9 @@ and hands out ids.
   from the same list (admins only, as on Navidrome). Navidrome's own list is left as it was; a Navidrome hosted on
   its own keeps its stations. Admins add stations for everyone from the app (Radio → **Add for everyone**, or
   **+ Everyone** on a directory station), and each station can have a logo (`logo_url`, migration 38) that the app
-  finds in the radio directory when none is given. Stations added in Navidrome's own web page after the first copy
+  finds in the radio directory when none is given, and genres (`genre`, comma separated, migration 39) that
+  decide its card colour and **By genre** group. Admins can change every field after adding (**Edit station**,
+  `PUT /api/admin/radio/stations/:id`). Stations added in Navidrome's own web page after the first copy
   don't show up: add them in Wavelength, or run `POST /api/admin/radio/import` again.
 - **Hearts, play counts and ratings live on the Hub** (phase 5, `hub/src/userData.ts`, tables `user_stars` and
   `user_song_plays`, migration 34), when an admin turns on **Hub keeps hearts and play counts** on the Music catalog

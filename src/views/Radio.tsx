@@ -6,7 +6,8 @@ import { useSettings } from '../store/settings';
 import { useCan } from '../store/hub';
 import { usePlayer } from '../store/player';
 import { Cover, Spinner } from '../components/common';
-import { IconHeart, IconPlay } from '../components/Icons';
+import { IconHeart, IconPencil, IconPlay } from '../components/Icons';
+import { EditStation, type StationEdit } from '../components/EditStation';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfStation } from '../lib/inbox';
@@ -23,7 +24,7 @@ function arrange(list: Station[], order: string[]) {
 }
 
 export function Radio() {
-  const { sources, stations: saved, toggleStation, moveStation, hiddenStations, setStationHidden, stationOrder, setStationOrder, stationGroups, setStationGroups } = useSettings();
+  const { sources, stations: saved, toggleStation, updateSavedStation, moveStation, hiddenStations, setStationHidden, stationOrder, setStationOrder, stationGroups, setStationGroups } = useSettings();
   const [editing, setEditing] = useState(false);
   const [dragKey, setDragKey] = useState<string>();
   const [reload, setReload] = useState(0);
@@ -34,7 +35,9 @@ export function Radio() {
   const [serverStations, setServerStations] = useState<Station[]>([]);
   const [busy, setBusy] = useState(false);
   const [custom, setCustom] = useState({ name: '', url: '' });
-  const [shared, setShared] = useState({ name: '', url: '', logo: '' });
+  const [shared, setShared] = useState({ name: '', url: '', logo: '', genre: '' });
+  /** the station Edit station is open for; `everyone` for a server station, else a favorite on this device */
+  const [edit, setEdit] = useState<{ s: Station; everyone: boolean }>();
   const [shareNote, setShareNote] = useState<string>();
   const [sharing, setSharing] = useState(false);
   const isAdmin = useCan('library.edit');
@@ -94,7 +97,7 @@ export function Radio() {
   const onServer = (s: { streamUrl: string }) => serverStations.some((x) => sameStream(x.streamUrl, s.streamUrl));
 
   /** Add a station to Your stations for everyone, with a logo from the radio directory when none is given. */
-  const shareStation = async (st: { name: string; streamUrl: string; homepage?: string; logo?: string }) => {
+  const shareStation = async (st: { name: string; streamUrl: string; homepage?: string; logo?: string; genre?: string }) => {
     if (!shareTo) return false;
     setSharing(true);
     setShareNote(`Adding ${st.name}…`);
@@ -112,16 +115,24 @@ export function Radio() {
     }
   };
 
-  const setLogo = async (s: Station) => {
+  /** Edit station on a server station, for everyone. */
+  const canEdit = (s: Station) => {
     const cfg = sources.find((c) => c.id === s.sourceId);
-    const url = prompt(`Logo picture link for "${s.name}" (leave empty to take it off):`, s.favicon ?? '');
-    if (!cfg || url === null) return;
-    try {
-      await sourceFor(cfg).setStationLogo!(s.id, url.trim());
-      setReload((n) => n + 1);
-    } catch (e) {
-      alert(`Couldn't change the logo: ${(e as Error).message ?? e}`);
+    return !!cfg && !!sourceFor(cfg).updateStation;
+  };
+  /** Logos and genres are kept only by the Hub, for its own Navidrome's stations; other Navidromes keep name and links. */
+  const hubKept = (s: Station) => !!sources.find((c) => c.id === s.sourceId)?.hubId;
+
+  const saveEdit = async (s: Station, everyone: boolean, e: StationEdit) => {
+    if (!everyone) {
+      updateSavedStation(s.id, { name: e.name, streamUrl: e.streamUrl, homepage: e.homepage || undefined, favicon: e.logo || undefined, genre: e.genre || undefined });
+      return;
     }
+    const cfg = sources.find((c) => c.id === s.sourceId);
+    if (!cfg) throw new Error('That server is gone');
+    await sourceFor(cfg).updateStation!(s.id, e);
+    setShareNote(`Saved ${e.name}.`);
+    setReload((n) => n + 1);
   };
 
   /** Look up a logo in the radio directory for every station on the Hub that has none. */
@@ -179,7 +190,7 @@ export function Radio() {
       <button className="track-num" onClick={() => play(s)}><Cover src={s.favicon} alt={s.name} className="tiny" /><IconPlay className="hover-play" /></button>
       <div className="track-main">
         <div className="track-title">{s.name}</div>
-        <div className="track-sub">{[s.country, s.codec && `${s.codec}${s.bitrate ? ` ${s.bitrate}k` : ''}`, s.tags?.split(',').slice(0, 3).join(', ')].filter(Boolean).join(' · ')}</div>
+        <div className="track-sub">{[s.country, s.codec && `${s.codec}${s.bitrate ? ` ${s.bitrate}k` : ''}`, s.genre || s.tags?.split(',').slice(0, 3).join(', ')].filter(Boolean).join(' · ')}</div>
       </div>
       <div className="track-actions"><AddToPlaylist tracks={() => [stationToTrack(s)]} /><ShareButton what={() => shareOfStation(s)} className="chip" /></div>
       {shareTo && s.sourceId === 'radio' && !onServer(s) && (
@@ -207,7 +218,7 @@ export function Radio() {
               </span>
             )}
           </h2>
-          {editing && <p className="muted small">Use the arrows (or drag on desktop) to reorder. <b>Hide</b> only affects this device. <b>Logo</b> and <b>Delete</b> change the station for everyone, and need an admin account.</p>}
+          {editing && <p className="muted small">Use the arrows (or drag on desktop) to reorder. <b>Hide</b> only affects this device. <b>Edit</b> (name, stream link, genre, logo…) and <b>Delete</b> change the station for everyone, and need an admin account.</p>}
           {!serverStations.length && !editing && <p className="muted">No stations here yet. Add one below, or tap <b>+ Everyone</b> on a station in the directory, and everyone on the Hub gets it.</p>}
           {editing ? (
             <div className="station-grid">
@@ -232,7 +243,7 @@ export function Radio() {
                       <button className="icon-btn" title="Move left" disabled={i === 0} onClick={() => reorder(k, -1)}>◀</button>
                       <button className="icon-btn" title="Move right" disabled={i === visible.length - 1} onClick={() => reorder(k, 1)}>▶</button>
                       <button className="btn small ghost" onClick={() => setStationHidden(k, true)}>Hide</button>
-                      {logos && s.sourceId === shareTo?.id && <button className="btn small ghost" onClick={() => setLogo(s)}>Logo</button>}
+                      {canEdit(s) && <button className="btn small ghost" onClick={() => setEdit({ s, everyone: true })}>Edit</button>}
                       {canDelete(s) && <button className="btn small ghost danger" onClick={() => removeFromServer(s)}>Delete</button>}
                     </span>
                   </div>
@@ -260,11 +271,12 @@ export function Radio() {
               <form className="inline-form" onSubmit={async (e) => {
                 e.preventDefault();
                 if (!shared.url.trim()) return;
-                const ok = await shareStation({ name: shared.name.trim() || shared.url.trim(), streamUrl: shared.url.trim(), logo: shared.logo.trim() || undefined });
-                if (ok) setShared({ name: '', url: '', logo: '' });
+                const ok = await shareStation({ name: shared.name.trim() || shared.url.trim(), streamUrl: shared.url.trim(), logo: shared.logo.trim() || undefined, genre: shared.genre.trim() || undefined });
+                if (ok) setShared({ name: '', url: '', logo: '', genre: '' });
               }}>
                 <input placeholder="Station name" value={shared.name} onChange={(e) => setShared({ ...shared, name: e.target.value })} />
                 <input placeholder="Stream URL (https://…)" value={shared.url} onChange={(e) => setShared({ ...shared, url: e.target.value })} />
+                {logos && <input placeholder="Genre (optional, e.g. Rock)" value={shared.genre} onChange={(e) => setShared({ ...shared, genre: e.target.value })} />}
                 {logos && <input placeholder="Logo URL (optional, found for you)" value={shared.logo} onChange={(e) => setShared({ ...shared, logo: e.target.value })} />}
                 <button className="btn" disabled={sharing}>Add for everyone</button>
               </form>
@@ -293,12 +305,13 @@ export function Radio() {
         {saved.length ? saved.map((s, i) => (
           <div key={s.id} className="station-fav">
             {row(s)}
-            {saved.length > 1 && (
-              <span className="station-move">
+            <span className="station-move">
+              <button className="icon-btn" title="Edit name, stream link, genre…" onClick={() => setEdit({ s, everyone: false })}><IconPencil /></button>
+              {saved.length > 1 && <>
                 <button className="icon-btn" title="Move up" disabled={i === 0} onClick={() => moveStation(s.id, -1)}>▲</button>
                 <button className="icon-btn" title="Move down" disabled={i === saved.length - 1} onClick={() => moveStation(s.id, 1)}>▼</button>
-              </span>
-            )}
+              </>}
+            </span>
           </div>
         )) : <p className="muted">Heart a station below to keep it here.</p>}
         <form className="inline-form" onSubmit={(e) => {
@@ -320,6 +333,15 @@ export function Radio() {
         <input className="filter wide" placeholder="Search 50,000+ stations by name…" value={q} onChange={(e) => setQ(e.target.value)} />
         {results.map(row)}
       </section>
+      {edit && (
+        <EditStation
+          station={edit.s}
+          everyone={edit.everyone}
+          fields={edit.everyone && !hubKept(edit.s) ? { logo: false, genre: false } : undefined}
+          onSave={(e) => saveEdit(edit.s, edit.everyone, e)}
+          onClose={() => setEdit(undefined)}
+        />
+      )}
     </div>
   );
 }
