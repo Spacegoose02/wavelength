@@ -12,7 +12,12 @@ import { useSettings } from '../store/settings';
  * - **Albums:** every song on the other albums gets the target's Album, Album artist and Year tags, so
  *   Navidrome files them all under the target on its next scan. Files don't move and the audio isn't touched.
  * - **Artists:** every song by the others is renamed to the target's name in its Artist and Album artist tags,
- *   also where they're credited with someone else ("Other feat. X"), like Edit artist does.
+ *   also where they're credited with someone else ("Other feat. X"), like Edit artist does. A joined credit
+ *   merged into one of its own artists keeps the rest as featured ("Lil Baby;Jeremih" into Lil Baby → Artist
+ *   "Lil Baby feat. Jeremih", Album artist "Lil Baby"; see `mergedName`).
+ *
+ * Plex's other way in, from the duplicate itself, is **Merge into…** on an artist or album page
+ * (src/components/MergeInto.tsx): pick the one to keep, and this one merges into it.
  *
  * Either way it's one Save, so Settings → Server → Tag edits can undo the whole merge in one go.
  */
@@ -40,7 +45,7 @@ export function renameArtist(value: string | undefined, from: string, to: string
  * which Navidrome then lists as one artist like "Lil Baby;Jeremih"), or null when it's one name. "AC/DC" stays one.
  */
 export function splitCredit(name: string): string[] | null {
-  const parts = name.split(/\s*;\s*|\s+\/\s+/).map((s) => s.trim()).filter(Boolean);
+  const parts = name.split(/\s*[;；]\s*|\s+\/\s+/).map((s) => s.trim()).filter(Boolean);
   return parts.length > 1 ? parts : null;
 }
 
@@ -63,11 +68,15 @@ function usual(songs: HubTagSong[], key: keyof HubTags): string | undefined {
   return best;
 }
 
-/** The album the others merge into, as its own songs' tags say: Album, Album artist (or Artist), Year. */
+/** The main artist of a song credit, for an Album artist: "Lil Durk feat. Drake" and "Lil Durk;Drake" → "Lil Durk". */
+const mainArtist = (credit: string) => credit.split(/\s*[;；]\s*|\s+(?:feat\.?|ft\.?|featuring)\s+/i)[0].trim() || credit;
+
+/** The album the others merge into, as its own songs' tags say: Album, Album artist (or Artist's main artist), Year. */
 export function albumTarget(targetSongs: HubTagSong[], fallback: Pick<Album, 'title' | 'artist' | 'year'>) {
+  const artist = usual(targetSongs, 'artist');
   return {
     album: usual(targetSongs, 'album') ?? fallback.title,
-    albumArtist: usual(targetSongs, 'albumArtist') ?? usual(targetSongs, 'artist') ?? fallback.artist,
+    albumArtist: usual(targetSongs, 'albumArtist') ?? (artist && mainArtist(artist)) ?? fallback.artist,
     year: usual(targetSongs, 'year') ?? (fallback.year ? String(fallback.year) : undefined),
   };
 }
@@ -83,14 +92,36 @@ export function planAlbumMerge(target: ReturnType<typeof albumTarget>, songs: So
   });
 }
 
+/**
+ * What a merged artist's name becomes. Usually just the target's name, but a joined credit merged into one of its
+ * own artists ("Lil Baby;Jeremih" into Lil Baby) keeps the others as featured, the way Library care writes joined
+ * credits (src/lib/songIssues.ts `tidyCredit`): the Artist tag becomes "Lil Baby feat. Jeremih" and the Album
+ * artist just "Lil Baby". Inside a longer credit ("Gunna feat. Lil Baby;Jeremih") it becomes "Lil Baby; Jeremih",
+ * which Navidrome splits into both.
+ */
+export function mergedName(from: string, target: string): { artist: string; albumArtist: string; inCredit: string } {
+  const parts = splitCredit(from);
+  const same = (a: string) => a.trim().toLowerCase() === target.trim().toLowerCase();
+  const others = parts?.filter((p) => !same(p));
+  if (!parts || !others || others.length === parts.length || !others.length) return { artist: target, albumArtist: target, inCredit: target };
+  return { artist: `${target} feat. ${others.join('; ')}`, albumArtist: target, inCredit: [target, ...others].join('; ') };
+}
+
+/** `from` → `to` in one tag: the whole value becomes `whole`, a mention in a shared credit becomes `inCredit`. */
+function mergeTag(value: string | undefined, from: string, whole: string, inCredit: string) {
+  if (value && value.trim().toLowerCase() === from.trim().toLowerCase()) return whole;
+  return renameArtist(value, from, inCredit, true);
+}
+
 /** Every other artist's name → the target's, in Artist and Album artist, also in shared credits. */
 export function planArtistMerge(target: string, others: string[], songs: Song[]): MergeChange[] {
   return songs.flatMap((song) => {
     let artist = song.tags.artist, albumArtist = song.tags.albumArtist;
     for (const from of others) {
       if (from.trim().toLowerCase() === target.trim().toLowerCase()) continue;
-      artist = renameArtist(artist, from, target, true);
-      albumArtist = renameArtist(albumArtist, from, target, true);
+      const to = mergedName(from, target);
+      artist = mergeTag(artist, from, to.artist, to.inCredit);
+      albumArtist = mergeTag(albumArtist, from, to.albumArtist, to.inCredit);
     }
     const tags: HubTags = {};
     if (artist !== song.tags.artist) tags.artist = artist;
@@ -112,11 +143,17 @@ export interface MergePlan {
   missing: string[];
 }
 
+/** The Hub reads up to 200 albums' files per request, so a big artist is read in parts. */
 async function songsOf(albumIds: string[]) {
   const ids = [...new Set(albumIds)];
-  if (!ids.length) return { songs: [] as Song[], missing: [] as string[] };
-  if (ids.length > 200) throw new Error('That’s more than 200 albums; merge fewer at once');
-  return hubClient()!.tagAlbums(ids);
+  const out = { songs: [] as Song[], missing: [] as string[] };
+  if (ids.length > 1000) throw new Error('That’s more than 1000 albums; merge fewer at once');
+  for (let i = 0; i < ids.length; i += 200) {
+    const r = await hubClient()!.tagAlbums(ids.slice(i, i + 200));
+    out.songs.push(...r.songs);
+    out.missing.push(...r.missing);
+  }
+  return out;
 }
 
 /** Read the files and work out the merge. `albums[0]` is the target. Nothing is written yet. */
@@ -146,10 +183,15 @@ export async function planArtists(artists: Artist[]): Promise<MergePlan> {
   const refs = rest.flatMap((a) => navidromeRefs(a));
   if (!refs.length) throw new Error('None of the other artists are on a Navidrome server the Hub can retag');
   const sources = useSettings.getState().sources;
+  // their own albums, and the albums they're only featured on or credited jointly on ("Lil Baby;Jeremih" has
+  // no albums of its own in Navidrome), so no song is left under the old name
   const albums = (await Promise.all(refs.map(async (r) => {
-    const cfg = sources.find((s) => s.id === r.sourceId)!;
-    return (await sourceFor(cfg).getArtistAlbums?.(r.id)) ?? [];
+    const src = sourceFor(sources.find((s) => s.id === r.sourceId)!);
+    const own = (await src.getArtistAlbums?.(r.id)) ?? [];
+    const on = (await src.getAppearsOn?.({ id: r.id, name: r.name }, own.map((a) => a.id)).catch(() => [])) ?? [];
+    return [...own, ...on];
   }))).flat();
+  if (!albums.length) throw new Error(`Navidrome has no songs by ${rest.map((a) => a.name).join(', ')}`);
   const { songs, missing } = await songsOf(albums.map((a) => a.id));
   return {
     into: first.name,

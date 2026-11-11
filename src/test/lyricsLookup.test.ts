@@ -14,7 +14,8 @@ vi.mock('../lib/http', () => ({
   }),
 }));
 
-const { artistVariants, cleanArtist, cleanTitle, lyricQueries, lyricsFor } = await import('../lib/lyrics');
+const { artistVariants, cleanArtist, cleanTitle, clearLyricsPick, lyricQueries, lyricsCandidates, lyricsFor, lyricsPickFor, onLyricsPicked, pastedLyrics, setLyricsPick, setSharedLyrics, sharedKey } =
+  await import('../lib/lyrics');
 
 let n = 0;
 const track = (title: string, artist: string, duration = 200, album = 'Album') =>
@@ -156,5 +157,163 @@ describe('LRCLIB lookup', () => {
     replies.set('/search?', [{ trackName: 'Song', duration: 200, plainLyrics: 'Back' }]);
     await new Promise((r) => setTimeout(r));
     expect((await lyricsFor(t))?.lines[0].text).toBe('Back');
+  });
+});
+
+describe('shared lyrics on the Hub', () => {
+  test('the key ignores version notes and keeps the length to 10 s', () => {
+    expect(sharedKey({ title: "God's Plan (Explicit)", artist: 'Drake', duration: 199 })).toBe('drake|godsplan|20');
+    expect(sharedKey({ title: 'Song', artist: 'Band' })).toBe('band|song|');
+  });
+
+  test('lyrics another device found come from the Hub, without asking LRCLIB', async () => {
+    const hub = { lines: [{ time: 1, text: 'From the Hub' }], synced: true, source: 'LRCLIB' };
+    const put = vi.fn();
+    setSharedLyrics({ get: async () => hub, put });
+    try {
+      expect(await lyricsFor(track('Song', 'Band'))).toEqual(hub);
+      expect(asked).toEqual([]);
+      expect(put).not.toHaveBeenCalled();
+    } finally {
+      setSharedLyrics(undefined);
+    }
+  });
+
+  test('what this device finds goes to the Hub', async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, syncedLyrics: synced }]);
+    const put = vi.fn();
+    setSharedLyrics({ get: async () => null, put });
+    try {
+      const ly = await lyricsFor(track('Song', 'Band'));
+      expect(put).toHaveBeenCalledWith('band|song|20', 'Band', 'Song', ly);
+    } finally {
+      setSharedLyrics(undefined);
+    }
+  });
+});
+
+describe('stricter matching', () => {
+  test('another artist with the same song name is ignored', async () => {
+    replies.set('/search?', [{ trackName: 'Zoo', artistName: 'Someone Else', duration: 200, syncedLyrics: synced }]);
+    expect(await lyricsFor(track('Zoo', 'Lil Wayne'))).toBeUndefined();
+  });
+
+  test('a name that only contains the title is ignored', async () => {
+    replies.set('/search?', [{ trackName: 'Zoo York', artistName: 'Lil Wayne', duration: 200, syncedLyrics: synced }]);
+    expect(await lyricsFor(track('Zoo', 'Lil Wayne'))).toBeUndefined();
+  });
+
+  test('the same name at a very different length is another song', async () => {
+    replies.set('/search?', [{ trackName: 'Zoo', artistName: 'Lil Wayne', duration: 95, syncedLyrics: synced }]);
+    expect(await lyricsFor(track('Zoo', 'Lil Wayne', 228))).toBeUndefined();
+  });
+
+  test('a featured artist listed first by LRCLIB still matches', async () => {
+    replies.set('/search?', [{ trackName: 'Song', artistName: 'Band, Guest', duration: 200, syncedLyrics: synced }]);
+    expect((await lyricsFor(track('Song', 'Band')))?.synced).toBe(true);
+  });
+});
+
+describe('Wrong lyrics?', () => {
+  const store = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => void store.set(k, v),
+    removeItem: (k: string) => void store.delete(k),
+  });
+
+  test('a pick replaces the found lyrics, is shared with the Hub, and can be forgotten', async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, syncedLyrics: '[00:01.00]Wrong' }]);
+    const t = track('Song', 'Band');
+    expect((await lyricsFor(t))?.lines[0].text).toBe('Wrong');
+    const put = vi.fn();
+    const seen: string[] = [];
+    const off = onLyricsPicked((k) => seen.push(k));
+    setSharedLyrics({ get: async () => null, put });
+    try {
+      const right = { lines: [{ time: 1, text: 'Right' }], synced: true, source: 'LRCLIB' };
+      setLyricsPick(t, right);
+      expect(await lyricsFor(t)).toEqual(right);
+      expect(put).toHaveBeenCalledWith('band|song|20', 'Band', 'Song', right);
+      expect(seen).toEqual([`${t.sourceId}:${t.id}`]);
+      // the same song from another source gets the pick too
+      expect((await lyricsFor(track('Song', 'Band')))?.lines[0].text).toBe('Right');
+      clearLyricsPick(t);
+      expect(lyricsPickFor(t)).toBeUndefined();
+      expect((await lyricsFor(t))?.lines[0].text).toBe('Wrong');
+    } finally {
+      off();
+      setSharedLyrics(undefined);
+    }
+  });
+
+  test('"no lyrics" hides them', async () => {
+    replies.set('/search?', [{ trackName: 'Hum', duration: 200, plainLyrics: 'Wrong' }]);
+    const t = track('Hum', 'Band');
+    setLyricsPick(t, null);
+    expect(await lyricsFor(t)).toBeUndefined();
+    clearLyricsPick(t);
+  });
+
+  test('pasted lyrics: LRC is synced, anything else plain', () => {
+    expect(pastedLyrics('[00:01.50]One\n[00:03.00]Two')).toEqual({ synced: true, source: 'pasted in', lines: [{ time: 1.5, text: 'One' }, { time: 3, text: 'Two' }] });
+    expect(pastedLyrics('  One\nTwo  ')?.lines).toEqual([{ text: 'One' }, { text: 'Two' }]);
+    expect(pastedLyrics('   ')).toBeUndefined();
+  });
+
+  test('candidates: the likely ones first, every entry with words listed', async () => {
+    replies.set('/search?', [
+      { id: 1, trackName: 'Zoo York', artistName: 'Lil Wayne', duration: 228, syncedLyrics: '[00:01.00]Other song' },
+      { id: 2, trackName: 'Zoo', artistName: 'Lil Wayne', duration: 229, syncedLyrics: '[00:01.00]This one' },
+      { id: 3, trackName: 'Zoo', artistName: 'Lil Wayne', duration: 229, instrumental: true },
+      { id: 2, trackName: 'Zoo', artistName: 'Lil Wayne', duration: 229, syncedLyrics: '[00:01.00]This one' },
+    ]);
+    const list = await lyricsCandidates(track('Zoo', 'Lil Wayne', 228));
+    expect(list.map((c) => [c.id, c.likely, c.lyrics.synced])).toEqual([
+      ['2', true, true],
+      ['1', false, true],
+    ]);
+  });
+
+  test('candidates for words of your own', async () => {
+    replies.set('/search?', []);
+    await lyricsCandidates(track('Zoo', 'Lil Wayne'), 'wayne zoo c3');
+    expect(asked.filter((u) => u.includes('/search?'))).toEqual(['https://lrclib.net/api/search?q=wayne+zoo+c3']);
+  });
+});
+
+describe('plain lyrics get times when LRCLIB has them', () => {
+  test("the server's plain lyrics give way to LRCLIB's synced ones", async () => {
+    replies.set('/search?', [{ trackName: 'Glitchin', artistName: 'Nardo Wick', duration: 125, syncedLyrics: synced }]);
+    const own = { lines: [{ text: 'Mine' }], synced: false, source: 'Navidrome' };
+    const ly = await lyricsFor(track('Glitchin', 'Nardo Wick', 125), { getLyrics: async () => own });
+    expect(ly?.synced).toBe(true);
+    expect(ly?.source).toBe('LRCLIB');
+  });
+
+  test("the server's plain lyrics stay when LRCLIB has no synced ones", async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, plainLyrics: 'From LRCLIB' }]);
+    const own = { lines: [{ text: 'Mine' }], synced: false, source: 'Navidrome' };
+    expect((await lyricsFor(track('Song', 'Band'), { getLyrics: async () => own }))?.source).toBe('Navidrome');
+  });
+
+  test("the Hub's plain copy is replaced by synced lyrics, for the whole house", async () => {
+    replies.set('/search?', [{ trackName: 'Song', duration: 200, syncedLyrics: synced }]);
+    const put = vi.fn();
+    setSharedLyrics({ get: async () => ({ lines: [{ text: 'Plain' }], synced: false, source: 'lyrics.ovh' }), put });
+    try {
+      const ly = await lyricsFor(track('Song', 'Band'));
+      expect(ly?.synced).toBe(true);
+      expect(put).toHaveBeenCalledWith('band|song|20', 'Band', 'Song', ly);
+    } finally {
+      setSharedLyrics(undefined);
+    }
+  });
+
+  test('a picker entry of another length can keep its times', async () => {
+    replies.set('/search?', [{ id: 7, trackName: 'Song', artistName: 'Band', duration: 240, syncedLyrics: synced }]);
+    const [c] = await lyricsCandidates(track('Song', 'Band', 200));
+    expect(c.lyrics.synced).toBe(false);
+    expect(c.timedAnyway?.synced).toBe(true);
   });
 });

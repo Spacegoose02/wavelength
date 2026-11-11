@@ -36,8 +36,11 @@ export const IconPodcast = make('M12 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM11 17h2l.5 
 export const IconPlaylist = make('M3 6h12M3 12h12M3 18h7M17 18a2 2 0 1 0 4 0V8l-4 1');
 export const IconWave = make('M2 12h2l2-6 3 12 3-15 3 15 3-9 2 3h2');
 export const IconCompass = make('M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z');
+/** Browse: four tiles. */
+export const IconBrowse = make('M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z');
 export const IconSparkle = make('M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z');
 export const IconLibrary = make('M4 4v16M9 4v16M14 5l5 14.5');
+export const IconPencil = make('M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z');
 export const IconMore = make('M5 12h.01M12 12h.01M19 12h.01');
 export const IconRefresh = make('M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6');
 export const IconShare = make('M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4');
@@ -46,3 +49,4 @@ export const IconCast = make('M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20
 export const IconSpeaker = make('M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM12 18a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 6h.01');
 export const IconParty = make('M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.13a4 4 0 0 1 0 7.75M22 21v-1a6 6 0 0 0-4-5.65');
 export const IconDj = make('M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 10h.01M12 10h.01M16 10h.01');
+export const IconMini = make('M3 5h18v14H3zM12 12h7v5h-7z');

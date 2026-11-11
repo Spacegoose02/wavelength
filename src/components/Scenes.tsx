@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createAudioReader } from '../player/analysis';
 import { useSettings, type NpScene } from '../store/settings';
+import { usePlayer } from '../store/player';
+import { createCssVars, createPacer } from '../lib/framePace';
 import { Cover } from './common';
 import { Critter, critterLabel, nextAct, nextSpecies } from './critters/Critter';
 import { MouthTuner } from './MouthTuner';
@@ -212,9 +214,13 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
     const read = createAudioReader();
     let t = 0;
     let raf = 0;
+    const pace = createPacer();
+    const cssVar = createCssVars(canvas);
 
-    const loop = () => {
+    const loop = (now = performance.now()) => {
       raf = requestAnimationFrame(loop);
+      const dt = pace(now, usePlayer.getState().playing);
+      if (!dt) return;
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -223,11 +229,10 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
         canvas.height = Math.round(h * dpr);
       }
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      t += 1 / 60;
+      t += dt;
       const { freq, wave, bass, mid, treble, beat } = read(t);
 
-      const css = getComputedStyle(canvas);
-      const v = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+      const v = (name: string, fallback: string) => cssVar(name, fallback, now);
       DRAW[scene](g, {
         w,
         h,
@@ -251,8 +256,8 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
 
 /**
  * The artwork slot of Now Playing. Tap (or Enter) to move to the next scene; the choice is remembered.
- * On the critter scene two small buttons in the corner switch to the next critter (raccoon, shark, aliens, bears)
- * and to the next act (DJ, country, rapper, rocker, drums, theremin, synth, accordion), and a third opens the
+ * On the critter scene two small buttons in the corner switch to the next critter (raccoon, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla)
+ * and to the next act (DJ, country, rapper, rocker, drums, theremin, synth, accordion, driver, reactor, bongo, pianist, marimba, violinist), and a third opens the
  * mouth tuner (components/MouthTuner.tsx) beside the critter, unless a Hub admin switched the tuner off.
  */
 export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {

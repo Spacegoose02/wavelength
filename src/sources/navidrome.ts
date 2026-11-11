@@ -1,8 +1,12 @@
+import { splitGenres } from '../lib/genreNames';
+import { hubClient } from '../store/hub';
 import SparkMD5 from 'spark-md5';
+import { withoutTrackNumber } from '../lib/trackTitles';
 import { getJson, http, qs, trimSlash } from '../lib/http';
 import type { SongFacts } from '../lib/smartPlaylists';
 import type { Lyrics } from '../lib/lyrics';
 import { appearsOnSongs, type CreditedSong } from '../lib/appearsOn';
+import { tidyCredit } from '../lib/songIssues';
 import type { Album, Artist, HistoryEntry, MusicSource, ReplayGain, SearchResults, ServerPlaylist, SourceConfig, Station, Track } from './types';
 
 /** Navidrome (or any Subsonic-compatible server) via the Subsonic REST API. */
@@ -69,13 +73,24 @@ export class NavidromeSource implements MusicSource {
     id: a.id,
     sourceId: this.config.id,
     title: a.name ?? a.title ?? a.album,
-    artist: a.artist ?? 'Unknown artist',
+    // "Lil Durk;Drake" shows as "Lil Durk feat. Drake" (the first artist is the main one) until the tag is tidied
+    artist: a.artist ? tidyCredit(a.artist) : 'Unknown artist',
     artistId: a.artistId,
     year: a.year,
     coverUrl: this.cover(a.coverArt),
     trackCount: a.songCount,
     explicit: rating(a.explicitStatus),
     addedAt: a.created ? Date.parse(a.created) : undefined,
+    // OpenSubsonic lists every genre; plain Subsonic gives one tag, which may hold several ("Pop; Dance")
+    genres: splitGenres(Array.isArray(a.genres) && a.genres.length ? a.genres.map((g: { name?: string }) => g.name ?? '') : a.genre),
+    // OpenSubsonic: the release type tags (lib/releaseKind.ts splits an artist's albums into Albums / Singles & EPs)
+    releaseTypes: Array.isArray(a.releaseTypes) && a.releaseTypes.length ? a.releaseTypes.map(String) : undefined,
+    compilation: a.isCompilation === true || undefined,
+    plays: Number(a.playCount) || undefined,
+    playedAt: typeof a.played === 'string' && a.played ? Date.parse(a.played) || undefined : undefined,
+    rating: Number(a.userRating) || undefined,
+    starred: a.starred ? true : undefined,
+    labels: Array.isArray(a.recordLabels) && a.recordLabels.length ? a.recordLabels.map((l: { name?: string }) => l.name ?? '').filter(Boolean) : undefined,
   });
 
   private artist = (a: any): Artist => ({
@@ -90,8 +105,8 @@ export class NavidromeSource implements MusicSource {
     id: s.id,
     sourceId: this.config.id,
     kind: 'track',
-    title: s.title,
-    artist: s.artist ?? 'Unknown artist',
+    title: withoutTrackNumber(s.title ?? '', s.track),
+    artist: s.artist ? tidyCredit(s.artist) : 'Unknown artist',
     album: s.album,
     albumId: s.albumId,
     duration: s.duration,
@@ -107,6 +122,16 @@ export class NavidromeSource implements MusicSource {
   /** A song in Subsonic's own fields (as the Hub sends them, hub/src/libraryIndex.ts) as a playable track here. */
   fromSubsonic(s: Record<string, unknown>): Track {
     return this.track(s);
+  }
+
+  /** The Hub's search answer (hub/src/api/library.ts), in Subsonic's fields, as this server's results. */
+  fromSubsonicSearch(r: { songs: object[]; albums: object[]; artists: { id: string }[] }): Partial<SearchResults> {
+    return {
+      // an artist the Hub only knows by name can't be opened here
+      artists: r.artists.filter((a) => !a.id.startsWith('name:')).map(this.artist),
+      albums: r.albums.map(this.album),
+      tracks: r.songs.map(this.track),
+    };
   }
 
   /** OpenSubsonic `getLyricsBySongId` (Navidrome 0.53+): lyrics from tags or a .lrc file. Synced preferred. */
@@ -157,6 +182,18 @@ export class NavidromeSource implements MusicSource {
         if (fresh.length < 50) break;
       }
     }
+    return this.withFacts(raw);
+  }
+
+  /** An album's songs with what smart playlists filter on (lib/smartPlaylists.ts, rules on styles, moods or collections). */
+  async albumSongsWithFacts(albumId: string): Promise<{ track: Track; facts: SongFacts }[]> {
+    const album = (await this.call('getAlbum', { id: albumId })).album;
+    // the record label is the album's (OpenSubsonic recordLabels), not each song's
+    const label = Array.isArray(album?.recordLabels) ? album.recordLabels.map((l: { name?: string }) => l.name).filter(Boolean).join('; ') : undefined;
+    return this.withFacts(album?.song ?? [], label || undefined);
+  }
+
+  private withFacts(raw: any[], label?: string): { track: Track; facts: SongFacts }[] {
     const time = (v: unknown) => (typeof v === 'string' && v ? Date.parse(v) || undefined : undefined);
     return raw.map((s) => ({
       track: this.track(s),
@@ -168,6 +205,10 @@ export class NavidromeSource implements MusicSource {
         addedAt: time(s.created),
         year: Number(s.year) || undefined,
         genre: typeof s.genre === 'string' ? s.genre : Array.isArray(s.genres) ? s.genres.map((g: { name: string }) => g.name).join('; ') : undefined,
+        format: typeof s.suffix === 'string' ? s.suffix.toLowerCase() : undefined,
+        bitRate: Number(s.bitRate) || undefined,
+        label,
+        path: typeof s.path === 'string' ? s.path : undefined,
       },
     }));
   }
@@ -247,6 +288,12 @@ export class NavidromeSource implements MusicSource {
     return (r.album?.song ?? []).map(this.track);
   }
 
+  /** Navidrome's top songs for an artist, from Last.fm when the server has it set up; empty otherwise. */
+  async getTopSongs(artistName: string, count = 10) {
+    const r = await this.call('getTopSongs', { artist: artistName, count });
+    return (r.topSongs?.song ?? []).map(this.track);
+  }
+
   async search(q: string): Promise<Partial<SearchResults>> {
     const r = await this.call('search3', { query: q, artistCount: 20, albumCount: 30, songCount: 60 });
     const s = r.searchResult3 ?? {};
@@ -257,7 +304,22 @@ export class NavidromeSource implements MusicSource {
     };
   }
 
+  /**
+   * The Hub's own Navidrome keeps its radio stations on the Hub once the Hub has copied them (hub/src/radioStations.ts),
+   * with Navidrome's ids, so the saved order and hidden stations still match. Other Navidromes, and a Hub that hasn't
+   * copied them yet, answer as before.
+   */
+  private async hubStations() {
+    if (!this.config.hubId) return null;
+    const c = hubClient();
+    if (!c) return null;
+    const r = await c.radioStations().catch(() => null);
+    return r?.imported ? { c, list: r.stations } : null;
+  }
+
   async getStations(): Promise<Station[]> {
+    const hub = await this.hubStations();
+    if (hub) return hub.list.map((s) => ({ id: s.id, sourceId: this.config.id, name: s.name, streamUrl: s.streamUrl, homepage: s.homePageUrl || undefined, favicon: s.logoUrl || undefined }));
     const r = await this.call('getInternetRadioStations');
     return (r.internetRadioStations?.internetRadioStation ?? []).map((s: any) => ({
       id: s.id,
@@ -268,7 +330,28 @@ export class NavidromeSource implements MusicSource {
     }));
   }
 
+  async addStation(st: { name: string; streamUrl: string; homepage?: string; logo?: string }) {
+    const hub = await this.hubStations();
+    if (hub) {
+      await hub.c.addRadioStation({ name: st.name, streamUrl: st.streamUrl, homePageUrl: st.homepage || undefined, logoUrl: st.logo || undefined });
+      return;
+    }
+    // a Navidrome the Hub doesn't keep stations for: no logos there, and only its admins may add
+    await this.call('createInternetRadioStation', { name: st.name, streamUrl: st.streamUrl, homepageUrl: st.homepage || undefined });
+  }
+
+  async setStationLogo(id: string, logo: string) {
+    const hub = await this.hubStations();
+    if (!hub) throw new Error('Only stations kept on the Wavelength Hub can have a logo');
+    await hub.c.updateRadioStation(id, { logoUrl: logo });
+  }
+
   async deleteStation(id: string) {
+    const hub = await this.hubStations();
+    if (hub) {
+      await hub.c.deleteRadioStation(id);
+      return;
+    }
     // Navidrome answers non-admins with a Subsonic error 50 ("not authorized"), which `call` throws
     await this.call('deleteInternetRadioStation', { id });
   }

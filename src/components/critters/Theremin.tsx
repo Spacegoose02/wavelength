@@ -1,5 +1,7 @@
 import { useRef } from 'react';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { beatClock, bend } from './arm';
+import { swell } from './flourish';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -9,34 +11,52 @@ const STARS: [number, number, number][] = [
 ];
 
 /**
- * Theremin alien on the moon, under a hovering UFO. The space suit, the UFO lights and the sound waves take
- * the skin's colours. The left hand rises over the volume loop with the bass, the right moves toward the
- * pitch antenna with the highs and wobbles on sharp hits, waves pour off the antenna, the antennae glow with
- * the bass and the stars twinkle. Paused, the hands drop and the antennae perk up now and then.
+ * Theremin alien on the moon, under a hovering UFO. The space-age tunic, the UFO lights and the sound waves take
+ * the skin's colours. The left hand rises over the volume loop with the bass, palm rolling on the beat and
+ * waving across it every other bar; the right reaches in toward the pitch antenna with the highs, fluttering a
+ * vibrato from the wrist and trembling on sharp hits; the waves off the antenna tighten as that hand gets closer, the antennae glow with
+ * the bass and the stars twinkle. Flourish: a swoop up the antenna with a wide vibrato and big waves.
+ * Paused, the hands drop and the antennae perk up now and then.
  */
 export function Theremin({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ pulse: 0, vol: 0, pitch: 0 });
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, rock, $ }) => {
+    (f) => {
+      const { t, a, idle, bob, rock, flourish, $ } = f;
       const s = state.current;
       const svg = root.current!;
+      const { phase, index } = beatClock(f);
       s.vol += ((idle ? 0 : a.live ? a.bass : 0.4 + Math.sin(t * 1.5) * 0.3) - s.vol) * 0.15;
       s.pitch += ((idle ? 0 : a.live ? Math.min(1, a.treble * 1.6 + a.mid * 0.5) : 0.5 + Math.sin(t * 0.9) * 0.4) - s.pitch) * 0.12;
-      const vibrato = a.playing ? Math.sin(t * 14) * 1.5 : 0;
-      $('arm-l').setAttribute('transform', `rotate(${(s.vol * 22 - (idle ? 6 : 0)).toFixed(2)} 138 268)`);
-      $('arm-r').setAttribute('transform', `rotate(${(s.pitch * 14 + vibrato + rock * 4 - (idle ? 8 : 0)).toFixed(2)} 262 268)`);
+      const vibrato = a.playing ? Math.sin(t * 14) : 0;
+      const show = swell(flourish);
+      // volume hand: rises and dips over the loop with the bass, palm rolling with the beat, a slow wave
+      // across it every other bar
+      const sweep = idle ? 0 : Math.floor(index / 8) % 2 ? Math.sin(Math.PI * ((index % 8) + phase) / 4) * 10 : 0;
+      $('arm-l').setAttribute('transform', `rotate(${(s.vol * 10 - (idle ? 6 : 0) + show * 30).toFixed(2)} 138 268)`);
+      bend($, 'arm-l', {
+        to: [sweep * 1.4, -s.vol * 18 + (idle ? 0 : -bob * 4)],
+        wrist: idle ? 0 : Math.sin(2 * Math.PI * phase) * 14,
+        turn: show * -40,
+      });
+      // pitch hand: reaches in to the antenna as the notes climb, fingers fluttering a vibrato from the wrist,
+      // trembling on sharp hits; flourish: a swoop up the antenna with a wide vibrato
+      $('arm-r').setAttribute('transform', `rotate(${(s.pitch * 8 + rock * 4 - (idle ? 8 : 0) - show * 22).toFixed(2)} 262 268)`);
+      const [px] = bend($, 'arm-r', {
+        to: [s.pitch * 14, -s.pitch * 10 + vibrato * 1.5 * (1 + show * 3)],
+        wrist: vibrato * (8 + show * 14) + rock * 8,
+      });
 
       // two sine waves off the pitch antenna: louder with the mids, tighter with the highs
-      const amp = a.playing ? 3 + a.mid * 14 + bob * 4 : 0;
-      const freq = 0.1 + s.pitch * 0.18;
+      const amp = a.playing ? 3 + a.mid * 14 + bob * 4 + show * 10 : 0;
+      const freq = 0.1 + s.pitch * 0.12 + Math.max(0, px) * 0.008;
       ['wave-a', 'wave-b'].forEach((name, i) => {
         let d = '';
-        for (let x = 262; x <= 392; x += 4) {
-          const fade = (x - 262) / 130;
+        for (let x = 298; x <= 392; x += 4) {
+          const fade = (x - 298) / 94;
           const y = 236 + i * 14 + Math.sin(x * freq - t * 9 - i) * amp * (1 - fade * 0.6) * (i ? 0.6 : 1);
           d += `${d ? 'L' : 'M'}${x} ${y.toFixed(1)} `;
         }
@@ -56,7 +76,7 @@ export function Theremin({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="theremin" species={species.id} label={`A ${species.noun} playing a theremin on the moon`}>
+    <CritterFrame ref={root} kind="theremin" species={species} label={`A ${species.noun} playing a theremin on the moon`}>
       {/* space: stars, a ringed planet, the UFO, the moon's surface */}
       {STARS.map(([cx, cy, r]) => <circle key={`${cx},${cy}`} data-star="" cx={cx} cy={cy} r={r} fill="#fff" />)}
       <circle className="planet" cx="336" cy="74" r="22" />
@@ -72,39 +92,39 @@ export function Theremin({ species, still }: ActProps) {
       <ellipse className="crater" cx="330" cy="384" rx="30" ry="7" />
       <ellipse className="crater" cx="250" cy="364" rx="12" ry="3.5" />
 
-      {Tail && <Tail />}
+      <Shadow cx={200} cy={364} rx={64} />
+      <Shadow cx={200} cy={377} rx={28} ry={4} />
 
-      {/* space-suit trousers and moon boots */}
-      <Legs species={species}>
-        <path className="legs" d="M160 296 H188 V348 H160 Z M212 296 H240 V348 H212 Z" />
-        <path className="moon-boot" d="M152 342 H192 V364 H146 Q 146 348 152 342 Z" />
-        <path className="moon-boot" d="M208 342 H248 Q 254 348 254 364 H208 Z" />
-      </Legs>
+      {/* tunic leggings and boots */}
+      <Legs species={species} shoe="boot-black" />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
-        <ellipse className="suit-trim" cx="200" cy="248" rx="48" ry="9" />
-        <rect x="178" y="262" width="44" height="22" rx="4" fill="#16161a" />
-        {[0, 1, 2].map((i) => <circle key={i} data-glow="" className={`led led-${i}`} cx={188 + i * 12} cy="273" r="4" />)}
+        {/* a space-age tunic: collar band, belt with a glowing buckle, a ringed-planet badge */}
+        <path className="tunic-collar ol-thin" d="M150 250 Q 200 272 250 250 L 248 262 Q 200 284 152 262 Z" />
+        <rect className="tunic-belt ol-thin" x="140" y="300" width="120" height="8" />
+        <rect data-glow="" className="led led-0 ol-thin" x="194" y="298" width="12" height="12" rx="2" />
+        <circle className="planet ol-thin" cx="212" cy="282" r="7" />
+        <ellipse cx="212" cy="282" rx="12" ry="3.5" fill="none" stroke="#24170f" strokeWidth="1.6" transform="rotate(-18 212 282)" />
         <BodyOutfits />
       </Body>
+      <Skirt species={species} trim="tunic-trim" />
 
       <Head species={species} />
 
       {/* the theremin: a cabinet on a stand, volume loop on the left, pitch antenna on the right */}
       <path className="stand" d="M200 326 V362 L 182 376 M200 362 L 218 376" fill="none" strokeWidth="4" strokeLinecap="round" />
       <path className="rod" d="M140 308 H122 Q 102 308 102 292 Q 102 276 122 276 H130" fill="none" strokeWidth="4" strokeLinecap="round" />
-      <path className="rod" d="M254 302 V196" fill="none" strokeWidth="4" strokeLinecap="round" />
-      <circle className="rod-tip" cx="254" cy="194" r="4" />
-      <rect className="theremin" x="138" y="298" width="124" height="30" rx="5" />
-      <rect className="theremin-panel" x="146" y="304" width="108" height="18" rx="3" />
-      {[164, 200, 236].map((cx) => <circle key={cx} cx={cx} cy="313" r="5" fill="#d8d8de" stroke="#55555e" strokeWidth="1.5" />)}
-      <path data-part="wave-a" className="wave wave-a" d="M262 236" fill="none" strokeWidth="3" strokeLinecap="round" filter="url(#critter-glow)" />
-      <path data-part="wave-b" className="wave wave-b" d="M262 250" fill="none" strokeWidth="2.5" strokeLinecap="round" filter="url(#critter-glow)" />
+      <path className="rod" d="M288 302 V190" fill="none" strokeWidth="4" strokeLinecap="round" />
+      <circle className="rod-tip" cx="288" cy="188" r="4" />
+      <rect className="theremin" x="138" y="298" width="158" height="30" rx="5" />
+      <rect className="theremin-panel" x="146" y="304" width="142" height="18" rx="3" />
+      {[170, 217, 264].map((cx) => <circle key={cx} cx={cx} cy="313" r="5" fill="#d8d8de" stroke="#55555e" strokeWidth="1.5" />)}
+      <path data-part="wave-a" className="wave wave-a" d="M298 236" fill="none" strokeWidth="3" strokeLinecap="round" filter="url(#critter-glow)" />
+      <path data-part="wave-b" className="wave wave-b" d="M298 250" fill="none" strokeWidth="2.5" strokeLinecap="round" filter="url(#critter-glow)" />
 
       {/* volume hand over the loop (left of picture), pitch hand by the antenna (right) */}
-      <Arm part="arm-l" d="M138 268 Q 114 276 112 262" hand={[112, 258]} thumb={[120, 254]} />
-      <Arm part="arm-r" d="M262 268 Q 256 284 242 276" hand={[240, 274]} thumb={[234, 280]} />
+      <Arm part="arm-l" d="M138 268 Q 136 292 118 262" hand={[118, 260]} />
+      <Arm part="arm-r" d="M262 268 Q 268 296 274 256" hand={[274, 254]} />
     </CritterFrame>
   );
 }

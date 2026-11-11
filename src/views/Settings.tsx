@@ -1,12 +1,19 @@
+import { AlarmSettings } from '../components/AlarmSettings';
+import { StreamingSettings } from '../components/StreamingSettings';
+import { DesktopSettings } from '../components/DesktopSettings';
+import { MotionSettings } from '../components/MotionSettings';
+import { DontPlaySettings } from '../components/DontPlaySettings';
 import { useEffect, useState } from 'react';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid, isMobileApp } from '../lib/platform';
+import { browserFetchHint, gatewayHint, isTauri } from '../lib/http';
 import { Equalizer } from '../components/Equalizer';
 import { SCENES } from '../components/Scenes';
 import { ACTS, Critter, SPECIES } from '../components/critters/Critter';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, SOURCE_LABELS, type SourceConfig, type SourceKind } from '../sources/types';
 import { useCatalog } from '../store/catalog';
+import { isLastMusicSource, lastMusicSourceWarning } from '../lib/musicSources';
 import { useIsKid } from '../lib/kids';
 import { SKIN_GROUPS, SKINS, useSettings, type Skin } from '../store/settings';
 import { useUi, type SettingsTab } from '../store/ui';
@@ -18,6 +25,7 @@ import { ServerTab } from './ServerTab';
 import { DjAdminTab } from './DjAdmin';
 import { FeaturesAdminTab } from './FeaturesAdmin';
 import { SmartOfflineSettings } from '../components/SmartOfflineSettings';
+import { DeadZoneSettings } from '../components/DeadZoneSettings';
 import { MouthTuner } from '../components/MouthTuner';
 import { useFeature } from '../lib/features';
 import { DjVoiceSettings } from '../components/DjVoiceSettings';
@@ -112,6 +120,9 @@ function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew
   const set = (k: keyof SourceConfig, v: string) => setCfg({ ...cfg, [k]: v });
   // a Hub admin adds Plex, Audiobookshelf and SUB/WAVE to the Hub, so everyone signed in gets them
   const toHub = canKeys && hubKeeps(cfg.kind) && (cfg.hubId !== undefined || isNew);
+  // the Hub hands each person their Navidrome login (or, through its relay, one made for this device): typing
+  // another one here only breaks it, and the next sync puts the Hub's back anyway
+  const hubLogin = cfg.kind === 'navidrome' && cfg.hubId !== undefined;
 
   return (
     <form className="editor" onSubmit={async (e) => {
@@ -135,15 +146,17 @@ function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew
           </select>
         </label>
         <label>Name<input value={cfg.name} onChange={(e) => set('name', e.target.value)} placeholder={SOURCE_LABELS[cfg.kind]} /></label>
-        <label className="span2">Server URL<input value={cfg.url} onChange={(e) => set('url', e.target.value)} placeholder={hint.url} required /></label>
-        {hint.fields.map((f) => (
+        <label className="span2">Server URL<input value={cfg.url} onChange={(e) => set('url', e.target.value)} placeholder={hint.url} required readOnly={hubLogin} /></label>
+        {!hubLogin && hint.fields.map((f) => (
           <label key={f}>{hint.labels?.[f] ?? LABELS[f]}
             <input type={f === 'password' || f === 'token' ? 'password' : 'text'} value={(cfg[f] as string) ?? ''} onChange={(e) => set(f, e.target.value)}
               placeholder={cfg.hubId !== undefined && ['username', 'password', 'token'].includes(f) ? 'Kept on the Hub; type to replace' : undefined} />
           </label>
         ))}
       </div>
-      <p className="muted small">{hint.help}</p>
+      <p className="muted small">{!hubLogin ? hint.help
+        : cfg.hubRelay ? 'Signed in through your Hub. This device has a login of its own for the Hub, and your Navidrome password stays on the Hub. An admin sets your Navidrome login under Settings → Server.'
+        : 'Your Navidrome login comes from your Hub. An admin sets it under Settings → Server.'}</p>
       {toHub && <p className="muted small">Saved on your Hub, not this device. Devices signed in to the Hub get this server{cfg.kind === 'subwave' ? ', but only admins get the SUB/WAVE admin login' : ''}.</p>}
       {test && <div className={test.ok ? 'ok' : 'errors'}>{test.msg}</div>}
       <div className="row gap">
@@ -157,7 +170,7 @@ function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew
               ok: false,
               msg: isAndroid && /error sending request/i.test(msg)
                 ? `${msg} — couldn't reach the server. On Android 17+ allow Wavelength to access your local network (Settings → Apps → Wavelength → Permissions → Nearby devices / Local network), and make sure this device is on the same Wi-Fi (or VPN) as the server.`
-                : msg,
+                : browserFetchHint(gatewayHint(msg), cfg.kind, isTauri ? undefined : window.location.origin),
             });
           }
         }}>Test connection</button>
@@ -205,6 +218,7 @@ function SourcesTab() {
               <button className="icon-btn" disabled={i === 0} onClick={() => moveSource(s.id, -1)}>▲</button>
               <button className="icon-btn" disabled={i === sources.length - 1} onClick={() => moveSource(s.id, 1)}>▼</button>
               <label className="switch"><input type="checkbox" checked={s.enabled} onChange={(e) => {
+                if (!e.target.checked && isLastMusicSource(sources, s) && !confirm(lastMusicSourceWarning(s))) return;
                 upsertSource({ ...s, enabled: e.target.checked });
                 useCatalog.getState().load();
               }} /><span /></label>
@@ -452,7 +466,7 @@ function SlskdSettings() {
 
 const SEASONAL_SKINS = new Set<Skin>(SEASONS.map((s) => s.skin));
 
-/** Settings → Themes: grouped skin picker with search, live preview on hover/focus, Seasonal and Random daily. */
+/** Settings → Themes & critters → Theme: grouped skin picker with search, live preview on hover/focus, Seasonal and Random daily. */
 function ThemesTab() {
   const { skin, setSkin, seasonal, randomDaily, setThemeMode } = useSettings();
   const setPreview = useUi((s) => s.setPreviewSkin);
@@ -530,25 +544,55 @@ function ThemesTab() {
   );
 }
 
+/** The sub-tabs of Settings → Themes & critters: one place for how Wavelength looks and who plays along. */
+export type LookSub = 'theme' | 'critters' | 'scenes' | 'visualizer';
+const LOOK_SUBS: { id: LookSub; label: string }[] = [
+  { id: 'theme', label: 'Theme' },
+  { id: 'critters', label: 'Critters' },
+  { id: 'scenes', label: 'Scenes' },
+  { id: 'visualizer', label: 'Visualizer' },
+];
+
+/** Boy or girl, for every critter. Shown on both the Critters and Scenes sub-tabs. */
+function CritterLookSwitch() {
+  const { critterLook, setCritterLook } = useSettings();
+  return (
+    <div className="chips" role="group" aria-label="Boy or girl critters">
+      {(['boy', 'girl'] as const).map((l) => (
+        <button key={l} className={`chip ${critterLook === l ? 'on' : ''}`} aria-pressed={critterLook === l} onClick={() => setCritterLook(l)}>{l === 'boy' ? 'Boy' : 'Girl'}</button>
+      ))}
+    </div>
+  );
+}
+
+/** One line saying who's playing what, with a link across to the other sub-tab. */
+function CritterSummary({ other, onOther }: { other: string; onOther: () => void }) {
+  const { npScene, critter, act, critterLook } = useSettings();
+  const sp = SPECIES.find((x) => x.id === critter);
+  const a = ACTS.find((x) => x.id === act);
+  return (
+    <p className="muted small">
+      Now Playing shows {npScene === 'raccoon' ? <>the <b>{sp?.label}</b> ({critterLook}) playing <b>{a?.label}</b></> : <>the <b>{SCENES.find((x) => x.id === npScene)?.label}</b> visualizer (pick a card to switch to the critters)</>}.{' '}
+      <button type="button" className="link small" onClick={onOther}>{other} →</button>
+    </p>
+  );
+}
+
 /**
- * Settings → Playback: which Now Playing visualizer, and who plays which act in the critter scene (all sync
- * to the Hub). Each critter card shows that critter in the current act; each act card shows the current
- * critter in that act. Picking either switches Now Playing to the critter scene.
+ * Themes & critters → Critters: who plays along. Each card shows that critter in the current scene (act) and
+ * look; picking one switches Now Playing to the critter scene. All of it syncs to the Hub.
  */
-function NowPlayingPicker() {
-  const { npScene, setNpScene, critter, setCritter, act, setAct } = useSettings();
+function CrittersPicker({ go }: { go: (s: LookSub) => void }) {
+  const { npScene, setNpScene, critter, setCritter, act } = useSettings();
   const on = npScene === 'raccoon';
   return (
-    <section id="visualizer">
-      <h2>Now Playing visualizer</h2>
-      <p className="muted small">You can also tap the artwork in Now Playing to step through these.</p>
-      <div className="chips">
-        {SCENES.map((s) => (
-          <button key={s.id} className={`chip ${npScene === s.id ? 'on' : ''}`} onClick={() => setNpScene(s.id)}>{s.label}</button>
-        ))}
+    <section id="critters">
+      <h2>Critters</h2>
+      <p className="muted small">Pick who plays along: any critter can play any scene. They sing along with the vocals and dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
+      <div className="critter-look">
+        <CritterLookSwitch />
+        <CritterSummary other="Pick a scene" onOther={() => go('scenes')} />
       </div>
-      <h3>Critters</h3>
-      <p className="muted small">Pick who plays along, then what they play: any critter can do any act. They sing along with the vocals and dress for your theme: hazmat suits on Nuclear skins, laser visors, glow sticks, 8-bit shades, coder glasses and holiday hats.</p>
       <div className="critter-picks">
         {SPECIES.map((sp) => (
           <button
@@ -564,7 +608,22 @@ function NowPlayingPicker() {
           </button>
         ))}
       </div>
-      <h3>Act</h3>
+    </section>
+  );
+}
+
+/** Themes & critters → Scenes: what the critter plays, and where. Each card shows your critter in that scene. */
+function ScenesPicker({ go }: { go: (s: LookSub) => void }) {
+  const { npScene, setNpScene, critter, act, setAct } = useSettings();
+  const on = npScene === 'raccoon';
+  return (
+    <section id="scenes">
+      <h2>Scenes</h2>
+      <p className="muted small">Each scene is an instrument, an outfit and a place. The critter you picked plays whichever one you choose.</p>
+      <div className="critter-look">
+        <CritterLookSwitch />
+        <CritterSummary other="Pick a critter" onOther={() => go('critters')} />
+      </div>
       <div className="critter-picks">
         {ACTS.map((a) => (
           <button
@@ -585,7 +644,28 @@ function NowPlayingPicker() {
   );
 }
 
-/** Settings → Playback → Tune mouths, with a live critter beside it to watch while a song plays. */
+/** Themes & critters → Visualizer: what Now Playing shows behind the music. */
+function VisualizerPicker({ go }: { go: (s: LookSub) => void }) {
+  const { npScene, setNpScene } = useSettings();
+  return (
+    <section id="visualizer">
+      <h2>Now Playing visualizer</h2>
+      <p className="muted small">You can also tap the artwork in Now Playing to step through these.</p>
+      <div className="chips">
+        {SCENES.map((s) => (
+          <button key={s.id} className={`chip ${npScene === s.id ? 'on' : ''}`} onClick={() => setNpScene(s.id)}>{s.label}</button>
+        ))}
+      </div>
+      {npScene === 'raccoon' && (
+        <p className="muted small">
+          <button type="button" className="link" onClick={() => go('critters')}>Choose the critter</button> and <button type="button" className="link" onClick={() => go('scenes')}>the scene</button>.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** Settings → Themes & critters → Critters → Critter mouths, with a live critter beside it to watch while a song plays. */
 function MouthTunerSection() {
   const on = useFeature('mouthTuner');
   const { critter, act } = useSettings();
@@ -601,20 +681,126 @@ function MouthTunerSection() {
   );
 }
 
+/** Settings → Themes & critters: the theme, the critters and their scenes, and the visualizer, in sub-tabs. */
+function LookTab({ sub, setSub }: { sub: LookSub; setSub: (s: LookSub) => void }) {
+  return (
+    <>
+      <div className="chips subtabs" role="tablist" aria-label="Themes and critters">
+        {LOOK_SUBS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={sub === t.id} className={`chip ${sub === t.id ? 'on' : ''}`} onClick={() => setSub(t.id)}>{t.label}</button>
+        ))}
+      </div>
+      {sub === 'theme' && (
+        <>
+          <ThemesTab />
+          <MotionSettings />
+        </>
+      )}
+      {sub === 'critters' && (
+        <>
+          <CrittersPicker go={setSub} />
+          <MouthTunerSection />
+        </>
+      )}
+      {sub === 'scenes' && <ScenesPicker go={setSub} />}
+      {sub === 'visualizer' && <VisualizerPicker go={setSub} />}
+    </>
+  );
+}
+
+/** Where the visualizer and critter pickers used to be on Playback: a pointer to their new home. */
+function LookMovedNote({ open }: { open: (s: LookSub) => void }) {
+  return (
+    <section id="visualizer-moved">
+      <p className="muted small">
+        The Now Playing visualizer, critters and scenes are under{' '}
+        <button type="button" className="link small" onClick={() => open('critters')}>Themes &amp; critters</button>.
+      </p>
+    </section>
+  );
+}
+
+/**
+ * Personal settings first, then the Hub's. A family manager gets one more tab (My family); a Hub admin gets one
+ * "Hub admin" tab whose own row of sub-tabs holds Users, Server, AI DJ and Features, so the bar never overflows.
+ */
 const TABS: { id: SettingsTab; label: string; admin?: boolean; manager?: boolean }[] = [
   { id: 'account', label: 'Account' },
+  { id: 'sources', label: 'Sources' },
+  { id: 'playback', label: 'Playback' },
+  { id: 'themes', label: 'Themes & critters' },
+  { id: 'downloads', label: 'Downloads' },
+  { id: 'discover', label: 'Discover' },
+  { id: 'updates', label: 'Updates' },
   { id: 'family', label: 'My family', manager: true },
   { id: 'users', label: 'Users', admin: true },
   { id: 'server', label: 'Server', admin: true },
   { id: 'dj', label: 'AI DJ', admin: true },
   { id: 'features', label: 'Features', admin: true },
-  { id: 'sources', label: 'Sources' },
-  { id: 'playback', label: 'Playback' },
-  { id: 'downloads', label: 'Downloads' },
-  { id: 'themes', label: 'Themes' },
-  { id: 'discover', label: 'Discover' },
-  { id: 'updates', label: 'Updates' },
 ];
+
+/**
+ * What the settings search finds: each section's heading on its tab (plus a few other words people search for).
+ * Picking one opens the tab and scrolls to the heading. Keep in step with the <h2>s when adding a section.
+ */
+const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string; sub?: LookSub }[] = [
+  { tab: 'account', heading: 'Wavelength Hub', also: 'sign in sign out password two-step 2fa pin profile' },
+  { tab: 'account', heading: 'Signed-in devices', also: 'devices sessions' },
+  { tab: 'account', heading: 'Devices', also: 'listening now house activity share what i play privacy remote control' },
+  { tab: 'account', heading: 'Home Assistant', also: 'home assistant smart home automation hass token' },
+  { tab: 'account', heading: 'Other music apps', also: 'sub/wave subwave symfonium feishin subsonic app login hub' },
+  { tab: 'sources', heading: 'Sources', also: 'servers navidrome plex audiobookshelf login add server' },
+  { tab: 'themes', sub: 'theme', heading: 'Motion', also: 'reduce motion animation accessibility vestibular calm still' },
+  { tab: 'themes', sub: 'visualizer', heading: 'Now Playing visualizer', also: 'scene halo oscilloscope starfield spectrum rings artwork' },
+  { tab: 'themes', sub: 'critters', heading: 'Critters', also: 'critter animal boy girl species' },
+  { tab: 'themes', sub: 'scenes', heading: 'Scenes', also: 'scene act instrument boy girl' },
+  { tab: 'themes', sub: 'critters', heading: 'Critter mouths', also: 'mouth tuner singing' },
+  { tab: 'playback', heading: 'Volume levelling and crossfade', also: 'replaygain loudness crossfade gapless automix' },
+  { tab: 'playback', heading: 'Streaming quality', also: 'mobile data cellular bitrate data saver flac opus transcode wifi' },
+  { tab: 'playback', heading: 'Wake-up alarm', also: 'alarm clock wake morning snooze' },
+  { tab: 'playback', heading: 'Pick up where you left off', also: 'resume restore queue restart continue' },
+  { tab: 'playback', heading: 'Talking DJ', also: 'voice dj name' },
+  { tab: 'playback', heading: 'Mini player, tray and hotkeys', also: 'mini player tray menu bar hotkey shortcut keyboard global always on top close minimize' },
+  { tab: 'playback', heading: 'Discord status' },
+  { tab: 'playback', heading: 'Bit-perfect output', also: 'wasapi exclusive hi-res' },
+  { tab: 'playback', heading: 'Explicit and clean versions', also: 'explicit clean' },
+  { tab: 'playback', heading: "Don't play", also: 'block hide ban skip artist song never dislike' },
+  { tab: 'playback', heading: 'Equalizer', also: 'eq bass treble' },
+  { tab: 'downloads', heading: 'Dead zones', also: 'offline signal tunnel' },
+  { tab: 'downloads', heading: 'Smart offline', also: 'offline favorites mixes storage' },
+  { tab: 'downloads', heading: 'Downloads', also: 'folder' },
+  { tab: 'downloads', heading: 'deemix' },
+  { tab: 'downloads', heading: 'yt-dlp', also: 'youtube' },
+  { tab: 'downloads', heading: 'Soulseek', also: 'slskd' },
+  { tab: 'themes', sub: 'theme', heading: 'Theme', also: 'skin dark light seasonal colors' },
+  { tab: 'discover', heading: 'Discover charts', also: 'charts billboard apple deezer genres' },
+  { tab: 'updates', heading: 'Updates', also: 'version install' },
+  { tab: 'users', heading: 'People', also: 'users accounts roles admin kid' },
+  { tab: 'users', heading: 'Invite someone', also: 'invite link' },
+  { tab: 'users', heading: 'Kid-safe music', also: 'kids parental' },
+  { tab: 'users', heading: 'Families', also: 'family managers' },
+  { tab: 'server', heading: 'Load', also: 'cpu memory slow' },
+  { tab: 'server', heading: 'Storage', also: 'disk space' },
+  { tab: 'server', heading: 'Library updates', also: 'scan rescan navidrome login' },
+  { tab: 'server', heading: 'Navidrome accounts' },
+  { tab: 'server', heading: 'Containers', also: 'docker restart' },
+  { tab: 'server', heading: 'Push notifications', also: 'ntfy' },
+  { tab: 'server', heading: 'Backup', also: 'restore' },
+  { tab: 'server', heading: 'Deleted albums', also: 'trash' },
+  { tab: 'server', heading: 'Tag edits', also: 'undo' },
+  { tab: 'dj', heading: 'Provider and key', also: 'anthropic claude openai api key' },
+  { tab: 'dj', heading: 'Ollama', also: 'local model' },
+  { tab: 'dj', heading: 'Spending', also: 'limits cost' },
+  { tab: 'dj', heading: 'Talking DJ voice', also: 'kokoro tts' },
+  { tab: 'features', heading: 'Features', also: 'switches turn on off' },
+];
+
+/** Settings search: headings (and their extra words) that contain every typed word. */
+export function searchSettings(q: string, tabs: SettingsTab[]): typeof SEARCH_INDEX {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  return SEARCH_INDEX.filter((e) => tabs.includes(e.tab) && words.every((w) => `${e.heading} ${e.also ?? ''}`.toLowerCase().includes(w))).slice(0, 8);
+}
 
 /** Explicit / clean versions (lib/versions.ts). Kid profiles always get the clean one. */
 function PlaybackOptions() {
@@ -684,26 +870,78 @@ function VersionsPicker() {
   );
 }
 
+/** Where a tab sits, for the search results: admin tabs say they're under Hub admin. */
+function tabLabel(id: SettingsTab): string | undefined {
+  const t = TABS.find((x) => x.id === id);
+  return t?.admin ? `Hub admin · ${t.label}` : t?.label;
+}
+
 export function Settings({ tab: initial }: { tab?: SettingsTab }) {
   const tabsRef = useTabStrip();
   const [tab, setTab] = useState<SettingsTab>(initial ?? 'sources');
+  const [lookSub, setLookSub] = useState<LookSub>('theme');
   // Users is for Hub admins only (the Hub refuses its calls from anyone else anyway)
   const isAdmin = useHub((s) => !!s.token && s.permissions.includes('users.manage'));
   // My family is for a family's managers who aren't Hub admins (admins run every family under Users)
   const isManager = useHub((s) => !!s.token && !!s.user?.familyManager && s.user.role !== 'kid' && !s.permissions.includes('users.manage'));
   const tabs = TABS.filter((t) => (!t.admin || isAdmin) && (!t.manager || isManager));
+  const [q, setQ] = useState('');
+  const [jump, setJump] = useState<string>();
+  const found = searchSettings(q, tabs.map((t) => t.id));
   useEffect(() => {
     if (initial) setTab(initial);
   }, [initial]);
+  // after a search pick: scroll to that heading once its tab has drawn
+  useEffect(() => {
+    if (!jump) return;
+    const h = window.setTimeout(() => {
+      const el = [...document.querySelectorAll('.page h2, .page h3')].find((x) => x.textContent?.trim().toLowerCase().startsWith(jump.toLowerCase()));
+      el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      setJump(undefined);
+    }, 120);
+    return () => window.clearTimeout(h);
+  }, [jump, tab]);
+  const personal = tabs.filter((t) => !t.admin);
+  const adminTabs = tabs.filter((t) => t.admin);
+  const onAdmin = adminTabs.some((t) => t.id === tab);
+  // the "Hub admin" tab reopens whichever admin sub-tab was open last
+  const [lastAdmin, setLastAdmin] = useState<SettingsTab>('users');
+  useEffect(() => {
+    if (onAdmin) setLastAdmin(tab);
+  }, [onAdmin, tab]);
 
   return (
     <div className="page narrow">
-      <header className="page-head"><h1>Settings</h1></header>
+      <header className="page-head">
+        <h1>Settings</h1>
+        <div className="settings-search">
+          <input type="search" placeholder="Search settings…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search settings" />
+          {q.trim() && (
+            <div className="menu settings-found">
+              {found.length ? found.map((e) => (
+                <button type="button" key={`${e.tab}:${e.heading}`} className="menu-item" onClick={() => { setTab(e.tab); if (e.sub) setLookSub(e.sub); setJump(e.heading); setQ(''); }}>
+                  {e.heading}<small>{tabLabel(e.tab)}</small>
+                </button>
+              )) : <div className="menu-hint">Nothing called that</div>}
+            </div>
+          )}
+        </div>
+      </header>
       <div className="tabs" ref={tabsRef} role="tablist">
-        {tabs.map((t) => (
+        {personal.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
+        {adminTabs.length > 0 && (
+          <button role="tab" aria-selected={onAdmin} className={`admin-tab ${onAdmin ? 'on' : ''}`} onClick={() => setTab(lastAdmin)}>Hub admin</button>
+        )}
       </div>
+      {onAdmin && (
+        <div className="chips subtabs row-subtabs" role="tablist" aria-label="Hub admin">
+          {adminTabs.map((t) => (
+            <button key={t.id} role="tab" aria-selected={tab === t.id} className={`chip ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+          ))}
+        </div>
+      )}
 
       {tab === 'account' && <AccountTab />}
       {tab === 'family' && isManager && <FamilyTab />}
@@ -714,13 +952,16 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       {tab === 'sources' && <SourcesTab />}
       {tab === 'playback' && (
         <>
-          <NowPlayingPicker />
-          <MouthTunerSection />
+          <LookMovedNote open={(sub) => { setLookSub(sub); setTab('themes'); }} />
           <PlaybackOptions />
+          <StreamingSettings />
+          <AlarmSettings />
           <DjVoiceSettings />
+          <DesktopSettings />
           <DiscordSettings />
           <HifiSettings />
           <VersionsPicker />
+          <DontPlaySettings />
           <section id="equalizer">
             <h2>Equalizer</h2>
             <Equalizer />
@@ -729,11 +970,12 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
       )}
       {tab === 'downloads' && (
         <>
+          <DeadZoneSettings />
           <SmartOfflineSettings />
           <DownloadsTab />
         </>
       )}
-      {tab === 'themes' && <ThemesTab />}
+      {tab === 'themes' && <LookTab sub={lookSub} setSub={setLookSub} />}
       {tab === 'discover' && <DiscoverCharts />}
       {tab === 'updates' && <UpdatesTab />}
     </div>

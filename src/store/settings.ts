@@ -6,7 +6,10 @@ import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 import type { SmartPlaylist } from '../lib/smartPlaylists';
+import type { DontPlay } from '../../hub/src/api/dontPlay';
+import type { MotionPref } from '../lib/motion';
 import { cleanTune, DEFAULT_TUNE, type MouthTune } from '../player/voice';
+import type { StreamQuality } from '../lib/streamQuality';
 
 export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber' | 'gameboy' | 'c64' | 'win95' | 'dos' | 'sunset' | 'arcade' | 'seventies'
   | 'tokyonight' | 'catppuccin' | 'gruvbox' | 'nord' | 'everforest' | 'kanagawa' | 'rosepine' | 'ipod' | 'aqua' | 'walkman'
@@ -21,10 +24,17 @@ export type Skin = 'neon' | 'plexamp' | 'winamp' | 'vaporwave' | 'crt' | 'amber'
 export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' | 'raccoon';
 
 /** Who plays in the critter scene (`npScene: 'raccoon'`, named before there were other critters): components/critters/species.tsx. */
-export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown';
+export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown' | 'moose' | 'turtle' | 'elephant' | 'tiger' | 'lion' | 'panda' | 'owl' | 'trex' | 'monkey' | 'flamingo' | 'gorilla'
+  | 'penguin' | 'fox' | 'axolotl' | 'sloth' | 'octopus' | 'dragon' | 'frog' | 'bunny' | 'red-panda' | 'turkey';
+
+/** Boy or girl critters (Settings → Playback → Critters). */
+export type CritterLook = 'boy' | 'girl';
 
 /** What the critter plays: components/critters/Critter.tsx (`ACTS`). Any species can play any act. */
-export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion';
+export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion' | 'drive' | 'reactor' | 'bongo' | 'piano' | 'marimba' | 'violin' | 'acoustic' | 'surf' | 'singer';
+
+/** Acts that were retired (0.37), and the act that took each one's place, for a pick saved before. */
+export const RETIRED_ACTS: Record<string, Act> = { sax: 'surf', harp: 'acoustic', tuba: 'singer' };
 
 /** The single critter pick from 0.17.7–0.17.8 (`raccoon` setting), as a species and an act. */
 export function critterFromOldPick(old: unknown): { critter: Species; act: Act } {
@@ -123,6 +133,8 @@ interface SettingsState {
   hiddenStations: string[];
   /** Radio → Your stations: `${sourceId}:${id}` keys in the order the user arranged them. Unknown ones go last. */
   stationOrder: string[];
+  /** Radio → Your stations: show them in genre groups (lib/stationLabel.ts) instead of one list in `stationOrder`. */
+  stationGroups: boolean;
   deemix: { url: string; arl: string; bitrate: number };
   ytdlp: { outDir: string; format: string; bin: string; shareUser: string; sharePass: string; /** Folder inside the Hub's music folder, when the Hub runs yt-dlp. */ hubFolder: string };
   /** Discover: which charts each genre uses. A genre that isn't listed uses the built-in defaults. */
@@ -137,6 +149,9 @@ interface SettingsState {
   setCritter(c: Species): void;
   act: Act;
   setAct(a: Act): void;
+  /** Boy or girl critters: the girl look adds lashes and a bow in the skin's accent colour (critters/faces.tsx). */
+  critterLook: CritterLook;
+  setCritterLook(l: CritterLook): void;
   eq: EqSettings;
   setEq(e: Partial<EqSettings>): void;
   /** The critter mouth tuner (components/MouthTuner.tsx, player/voice.ts). Synced. */
@@ -147,6 +162,9 @@ interface SettingsState {
   setMouthOffset(key: string, seconds: number): void;
   /** Discord status on this computer (lib/discord.ts). Not synced: the app ID is, the switch isn't. */
   discord: { on: boolean; appId: string };
+  /** Desktop extras (lib/desktop.ts), per computer: Ctrl+Alt hotkeys, and closing the window to the tray. */
+  desktop: { hotkeys: boolean; closeToTray: boolean };
+  setDesktop(p: Partial<SettingsState['desktop']>): void;
   setDiscord(p: Partial<SettingsState['discord']>): void;
   /** The talking DJ (lib/djVoice.ts): a spoken link between songs. Synced, except the device voice (and whether to use it) is per device. */
   djVoice: DjVoiceSettings;
@@ -157,6 +175,20 @@ interface SettingsState {
   /** Albums the library has as both an explicit and a clean version: show both, or only the preferred one (lib/versions.ts). */
   versions: 'both' | 'clean' | 'explicit';
   setVersions(v: SettingsState['versions']): void;
+  /** "Don't play this" (lib/dontPlay.ts): left out of radio, mixes, DJ mode and Smart Shuffle; synced. */
+  dontPlay: DontPlay;
+  setDontPlay(d: DontPlay): void;
+  /** Reduce motion (lib/motion.ts): follow the system, always, or never. Synced. */
+  motion: MotionPref;
+  setMotion(m: MotionPref): void;
+  /** Smart Shuffle (lib/smartShuffle.ts): shuffle with songs you might like mixed in. */
+  smartShuffle: boolean;
+  setSmartShuffle(on: boolean): void;
+  /** Wavelength playlists in folders (playlist id → folder name) and pinned to the top of the sidebar; synced. */
+  playlistFolders: Record<string, string>;
+  pinnedPlaylists: string[];
+  setPlaylistFolder(id: string, folder: string | undefined): void;
+  togglePinnedPlaylist(id: string): void;
   /** Playlists → Smart playlists (lib/smartPlaylists.ts): the rules, synced. */
   smartPlaylists: SmartPlaylist[];
   saveSmartPlaylist(p: SmartPlaylist): void;
@@ -164,12 +196,24 @@ interface SettingsState {
   /** This device shows up under Devices on your other devices, which can control it (lib/remote.ts). Not synced. */
   remoteControl: boolean;
   setRemoteControl(v: boolean): void;
+  /** House activity (lib/houseActivity.ts): show the house what I'm playing. null: the default (grown-ups yes, kids no). Synced. */
+  shareListening: boolean | null;
+  setShareListening(v: boolean): void;
   /** Show Inbox news from the Hub as system notifications (lib/notify.ts). Per device, not synced. */
   notifications: boolean;
   setNotifications(v: boolean): void;
   /** Settings → Downloads → Smart offline (lib/smartOffline.ts). Per device, not synced. */
   smartOffline: SmartOfflineSettings;
   setSmartOffline(p: Partial<SmartOfflineSettings>): void;
+  /** Settings → Downloads → Dead zones (lib/deadZone.ts). Per device, not synced. */
+  deadZone: DeadZoneSettings;
+  setDeadZone(p: Partial<DeadZoneSettings>): void;
+  /** Settings → Playback → Pick up where you left off (lib/resume.ts). Per device, not synced. */
+  resume: boolean;
+  setResume(on: boolean): void;
+  /** Settings → Playback → Streaming quality (lib/streamQuality.ts), on Wi-Fi and on mobile data. Per device, not synced. */
+  streamQuality: { wifi: StreamQuality; mobile: StreamQuality };
+  setStreamQuality(p: Partial<SettingsState['streamQuality']>): void;
   /** Settings → Updates (lib/updates.ts). Per device, not synced through the Hub. */
   updates: { auto: boolean; prerelease: boolean };
   setUpdates(u: Partial<SettingsState['updates']>): void;
@@ -184,6 +228,7 @@ interface SettingsState {
   moveStation(id: string, dir: -1 | 1): void;
   setStationHidden(key: string, hidden: boolean): void;
   setStationOrder(keys: string[]): void;
+  setStationGroups(on: boolean): void;
   setSkin(s: Skin): void;
   setThemeMode(m: Partial<Pick<SettingsState, 'seasonal' | 'randomDaily'>>): void;
   setDeemix(d: Partial<SettingsState['deemix']>): void;
@@ -204,6 +249,18 @@ export interface SmartOfflineSettings {
   /** last finished run, ms */
   lastRun?: number;
 }
+
+/** The dead zone cushion's settings (lib/deadZone.ts): saved music that keeps playing when the signal goes. */
+export interface DeadZoneSettings {
+  enabled: boolean;
+  /** how many minutes of music to keep ready: the queue ahead, and as much again of songs like the one playing */
+  minutes: number;
+  /** keep songs like the one playing too, not only the queue ahead */
+  similar: boolean;
+  /** only fetch on Wi-Fi (off by default: on the road is where dead zones are) */
+  wifiOnly: boolean;
+}
+export const DEFAULT_DEAD_ZONE: DeadZoneSettings = { enabled: true, minutes: 20, similar: true, wifiOnly: false };
 
 export interface DjVoiceSettings {
   on: boolean;
@@ -236,6 +293,7 @@ export const useSettings = create<SettingsState>()(
       randomDaily: false,
       hiddenStations: [],
       stationOrder: [],
+      stationGroups: true,
       deemix: { url: 'http://localhost:6595', arl: '', bitrate: 9 },
       ytdlp: { outDir: '', format: 'opus', bin: '', shareUser: '', sharePass: '', hubFolder: 'yt-dlp' },
       discoverCharts: {},
@@ -251,10 +309,18 @@ export const useSettings = create<SettingsState>()(
       setCritter: (critter) => set({ critter }),
       act: 'dj',
       setAct: (act) => set({ act }),
+      critterLook: 'boy',
+      setCritterLook: (critterLook) => set({ critterLook }),
       eq: DEFAULT_EQ,
       setEq: (e) => set((st) => ({ eq: { ...st.eq, ...e } })),
       smartOffline: DEFAULT_SMART_OFFLINE,
       setSmartOffline: (p) => set((st) => ({ smartOffline: { ...st.smartOffline, ...p } })),
+      resume: true,
+      setResume: (resume) => set({ resume }),
+      streamQuality: { wifi: 'original', mobile: 'original' },
+      setStreamQuality: (p) => set((st) => ({ streamQuality: { ...st.streamQuality, ...p } })),
+      deadZone: DEFAULT_DEAD_ZONE,
+      setDeadZone: (p) => set((st) => ({ deadZone: { ...st.deadZone, ...p } })),
       mouthTune: DEFAULT_TUNE,
       setMouthTune: (t) => set((st) => ({ mouthTune: t === null ? DEFAULT_TUNE : cleanTune({ ...st.mouthTune, ...t }) })),
       mouthOffsets: {},
@@ -269,6 +335,8 @@ export const useSettings = create<SettingsState>()(
           return { mouthOffsets: next };
         }),
       discord: { on: false, appId: '' },
+      desktop: { hotkeys: true, closeToTray: false },
+      setDesktop: (p) => set((st) => ({ desktop: { ...st.desktop, ...p } })),
       setDiscord: (p) => set((st) => ({ discord: { ...st.discord, ...p } })),
       djVoice: DEFAULT_DJ_VOICE,
       setDjVoice: (p) => set((st) => ({ djVoice: { ...st.djVoice, ...p } })),
@@ -276,10 +344,30 @@ export const useSettings = create<SettingsState>()(
       setPlayback: (p) => set((st) => ({ playback: { ...st.playback, ...p } })),
       versions: 'both',
       setVersions: (versions) => set({ versions }),
+      dontPlay: { artists: [], songs: [] },
+      setDontPlay: (dontPlay) => set({ dontPlay }),
+      motion: 'system',
+      setMotion: (motion) => set({ motion }),
+      smartShuffle: false,
+      setSmartShuffle: (smartShuffle) => set({ smartShuffle }),
+      playlistFolders: {},
+      pinnedPlaylists: [],
+      setPlaylistFolder: (id, folder) =>
+        set((st) => {
+          const next = { ...st.playlistFolders };
+          const name = folder?.trim();
+          if (name) next[id] = name.slice(0, 60);
+          else delete next[id];
+          return { playlistFolders: next };
+        }),
+      togglePinnedPlaylist: (id) =>
+        set((st) => ({ pinnedPlaylists: st.pinnedPlaylists.includes(id) ? st.pinnedPlaylists.filter((x) => x !== id) : [id, ...st.pinnedPlaylists] })),
       smartPlaylists: [],
       saveSmartPlaylist: (p) => set((st) => ({ smartPlaylists: st.smartPlaylists.some((x) => x.id === p.id) ? st.smartPlaylists.map((x) => (x.id === p.id ? p : x)) : [...st.smartPlaylists, p] })),
       removeSmartPlaylist: (id) => set((st) => ({ smartPlaylists: st.smartPlaylists.filter((x) => x.id !== id) })),
       remoteControl: true,
+      shareListening: null,
+      setShareListening: (shareListening) => set({ shareListening }),
       setRemoteControl: (remoteControl) => set({ remoteControl }),
       notifications: true,
       setNotifications: (notifications) => set({ notifications }),
@@ -329,6 +417,7 @@ export const useSettings = create<SettingsState>()(
       setStationHidden: (key, hidden) =>
         set((st) => ({ hiddenStations: hidden ? [...new Set([...st.hiddenStations, key])] : st.hiddenStations.filter((k) => k !== key) })),
       setStationOrder: (stationOrder) => set({ stationOrder }),
+      setStationGroups: (stationGroups) => set({ stationGroups }),
       setSkin: (skin) => set({ skin }),
       setThemeMode: (m) => set(m),
       setDeemix: (d) => set((st) => ({ deemix: { ...st.deemix, ...d } })),
@@ -380,7 +469,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, mouthTune: cleanTune(s.mouthTune) };
+        return { ...current, ...s, ...(s.act && RETIRED_ACTS[s.act] && { act: RETIRED_ACTS[s.act] }), ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, deadZone: { ...current.deadZone, ...s.deadZone }, streamQuality: { ...current.streamQuality, ...s.streamQuality }, mouthTune: cleanTune(s.mouthTune) };
       },
     },
   ),

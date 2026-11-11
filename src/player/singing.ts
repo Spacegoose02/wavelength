@@ -1,10 +1,11 @@
-import { lineAt, sungLinesFor } from '../lib/singAlong';
+import { lineAt, sungLinesFor, type SungLine } from '../lib/singAlong';
 import { featureOn } from '../lib/features';
 import { sourceFor } from '../sources/registry';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import type { AudioSample } from './analysis';
 import { engine } from './engine';
+import { shapeAt, vowelFromFormants, type Viseme } from './visemes';
 import { DEFAULT_TUNE, dbToLinear, heardInMono, newVoiceState, voiceFrame, type MouthTune } from './voice';
 
 /**
@@ -40,10 +41,17 @@ export interface SingingReading {
   loud: number;
   hit: boolean;
   live: boolean;
+  /**
+   * the mouth shape the singing suggests (player/visemes.ts): the lyric syllable being sung, else a rough vowel
+   * from the voice spectrum, else null (the face picks one)
+   */
+  shape: Viseme | null;
+  /** 0..1, how bright (high) the voice sounds: its spectral centre between ~300 Hz and ~2.5 kHz */
+  bright: number;
   at: number;
 }
 
-export const singingReading: SingingReading = { detector: 0, mouth: 0, line: 'none', mode: 'quiet', mono: false, centred: 0, tonal: 0, level: -120, loud: -60, hit: false, live: false, at: 0 };
+export const singingReading: SingingReading = { detector: 0, mouth: 0, line: 'none', mode: 'quiet', mono: false, centred: 0, tonal: 0, level: -120, loud: -60, hit: false, live: false, shape: null, bright: 0, at: 0 };
 
 /** The tune in force: the person's own, or the defaults when the tuner is switched off on the Hub. */
 export function currentTune(): MouthTune {
@@ -63,8 +71,44 @@ export function createSingingReader() {
     return out;
   };
 
+  // smoothed formant bands and brightness, so the guessed shape doesn't flicker frame to frame
+  let f1Low = 0;
+  let f1High = 0;
+  let f2 = 0;
+  let bright = 0;
+
+  /** The syllable being sung in `line` at song time `pos`, as `singing.ts` times them (one hump each). */
+  const lyricShape = (line: SungLine, pos: number, rate: number) => {
+    const x = Math.max(0, rate * pos);
+    return shapeAt(line.shapes, Math.floor(x), x % 1);
+  };
+
+  /** Formant bands and brightness from the centre spectrum (linear magnitudes), smoothed. */
+  const listen = (m: Float32Array, s: Float32Array, binHz: number) => {
+    const band = (lo: number, hi: number) => {
+      let p = 0;
+      for (let i = Math.round(lo / binHz); i <= Math.round(hi / binHz) && i < m.length; i++) {
+        const c = m[i] * Math.min(1, Math.max(0, 1 - (2 * s[i]) / (m[i] + 1e-9)));
+        p += c * c;
+      }
+      return p;
+    };
+    const k = 0.25;
+    f1Low += (band(250, 550) - f1Low) * k;
+    f1High += (band(550, 1000) - f1High) * k;
+    f2 += (band(1800, 3000) - f2) * k;
+    let w = 0;
+    let wf = 0;
+    for (let i = Math.round(300 / binHz); i <= Math.round(2500 / binHz) && i < m.length; i++) {
+      w += m[i];
+      wf += m[i] * i * binHz;
+    }
+    const centre = w > 1e-9 ? wf / w : 300;
+    bright += (Math.min(1, Math.max(0, (centre - 600) / 1400)) - bright) * 0.1;
+  };
+
   return (t: number, a: AudioSample): number => {
-    if (!a.playing) return report({ detector: 0, mode: 'quiet', line: 'none', live: false }, 0);
+    if (!a.playing) return report({ detector: 0, mode: 'quiet', line: 'none', live: false, shape: null }, 0);
     const tune = currentTune();
     const track = usePlayer.getState().current();
     const sung = tune.useLyrics
@@ -87,16 +131,27 @@ export function createSingingReader() {
       }
       taps.mid.getFloatFrequencyData(mid);
       taps.side.getFloatFrequencyData(side);
-      detector = voiceFrame(state, dbToLinear(mid), dbToLinear(side), taps.sampleRate / taps.mid.fftSize, t, !!line, tune);
-      if (line === null) return report({ detector, mode: 'quiet', line: lineState, live: true }, 0);
+      const binHz = taps.sampleRate / taps.mid.fftSize;
+      dbToLinear(mid);
+      dbToLinear(side);
+      detector = voiceFrame(state, mid, side, binHz, t, !!line, tune);
+      listen(mid, side, binHz);
+      if (line === null) return report({ detector, mode: 'quiet', line: lineState, live: true, shape: null, bright }, 0);
       // in mono the detector can't tell the voice from the band: follow the lyrics' syllables when we have them
-      if (!line || !tune.monoFallback || !heardInMono(state)) return report({ detector, mode: 'voice', line: lineState, live: true }, detector);
+      if (!line || !tune.monoFallback || !heardInMono(state)) {
+        const shape = line ? lyricShape(line, pos - offset - line.start, line.syllables / Math.max(0.5, line.end - line.start)) : vowelFromFormants(f1Low, f1High, f2);
+        return report({ detector, mode: 'voice', line: lineState, live: true, shape, bright }, detector);
+      }
     }
     if (line) {
       const rate = line.syllables / Math.max(0.5, line.end - line.start);
-      return report({ detector, mode: 'lyrics', line: lineState, live: !!taps }, Math.abs(Math.sin(Math.PI * rate * (pos - offset - line.start))) * 0.85);
+      const at = pos - offset - line.start;
+      // without the audio, brightness follows the vowel: ee sounds brighter than oh
+      const shape = lyricShape(line, at, rate);
+      if (!taps) bright += ((shape === 'ee' ? 0.7 : shape === 'ah' ? 0.45 : 0.2) - bright) * 0.1;
+      return report({ detector, mode: 'lyrics', line: lineState, live: !!taps, shape, bright }, Math.abs(Math.sin(Math.PI * rate * at)) * 0.85);
     }
-    if (line === null) return report({ detector, mode: 'quiet', line: lineState, live: !!taps }, 0);
-    return report({ detector, mode: 'chatter', line: lineState, live: !!taps }, Math.max(0, Math.sin(t * 7.5) * Math.sin(t * 2.3 + 1)) * 0.7);
+    if (line === null) return report({ detector, mode: 'quiet', line: lineState, live: !!taps, shape: null, bright }, 0);
+    return report({ detector, mode: 'chatter', line: lineState, live: !!taps, shape: null, bright }, Math.max(0, Math.sin(t * 7.5) * Math.sin(t * 2.3 + 1)) * 0.7);
   };
 }

@@ -35,7 +35,18 @@ export interface VoiceSettings {
   openaiVoice: string;
   /** USD per million characters read (OpenAI: about $15 for gpt-4o-mini-tts and tts-1). */
   openaiPrice: number;
+  /**
+   * Who understands spoken requests to the DJ (dj/voice.ts transcribe). `device`: the device's own speech
+   * recognition, where it has one. `whisper`: a Whisper server next to the Hub that speaks OpenAI's API
+   * (speaches, faster-whisper-server). `openai`: OpenAI's transcription, with the same key as the voice.
+   */
+  listen: (typeof LISTEN_ENGINES)[number];
+  whisperUrl: string;
+  whisperModel: string;
 }
+export const LISTEN_ENGINES = ['device', 'whisper', 'openai'] as const;
+/** OpenAI's gpt-4o-mini-transcribe: USD per minute of audio. */
+export const OPENAI_LISTEN_PRICE = 0.003;
 export const VOICE_DEFAULTS: VoiceSettings = {
   engine: 'device',
   kokoroUrl: 'http://kokoro:8880',
@@ -43,6 +54,9 @@ export const VOICE_DEFAULTS: VoiceSettings = {
   openaiModel: 'gpt-4o-mini-tts',
   openaiVoice: 'ash',
   openaiPrice: 15,
+  listen: 'device',
+  whisperUrl: 'http://whisper:8000',
+  whisperModel: 'Systran/faster-whisper-small',
 };
 
 export const PROVIDERS = ['anthropic', 'ollama'] as const;
@@ -299,6 +313,20 @@ function readVoice(v: unknown, cur: VoiceSettings): VoiceSettings {
   if (b.openaiModel !== undefined) {
     if (!(OPENAI_VOICE_MODELS as readonly unknown[]).includes(b.openaiModel)) throw new HttpError(400, `The OpenAI voice model must be one of: ${OPENAI_VOICE_MODELS.join(', ')}`);
     out.openaiModel = b.openaiModel as VoiceSettings['openaiModel'];
+  }
+  if (b.listen !== undefined) {
+    if (!(LISTEN_ENGINES as readonly unknown[]).includes(b.listen)) throw new HttpError(400, `Listening must be one of: ${LISTEN_ENGINES.join(', ')}`);
+    out.listen = b.listen as VoiceSettings['listen'];
+  }
+  if (b.whisperUrl !== undefined) {
+    const u = typeof b.whisperUrl === 'string' ? b.whisperUrl.trim().replace(/\/+$/, '') : '';
+    if (!/^https?:\/\/\S+$/i.test(u)) throw new HttpError(400, 'Whisper’s address must start with http:// or https://');
+    out.whisperUrl = u;
+  }
+  if (b.whisperModel !== undefined) {
+    const m = typeof b.whisperModel === 'string' ? b.whisperModel.trim() : '';
+    if (!/^[\w./:-]{1,120}$/.test(m)) throw new HttpError(400, 'Pick a Whisper model, like Systran/faster-whisper-small');
+    out.whisperModel = m;
   }
   if (b.openaiPrice !== undefined) {
     const n = Number(b.openaiPrice);

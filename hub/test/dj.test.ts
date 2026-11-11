@@ -339,3 +339,79 @@ test('Talking DJ voices: device by default, Kokoro and OpenAI on the Hub, OpenAI
   assert.equal((await json(app, 'POST', '/api/admin/dj/voice/test', { token: tokens.member, body: {} })).status, 403);
   assert.equal((db.prepare("SELECT COUNT(*) AS n FROM dj_usage WHERE model LIKE 'openai:%'").get() as { n: number }).n, 1);
 });
+
+test('Lyrics translation: one call per song and language for the house, line for line', async () => {
+  const script = scripted([
+    (req) => {
+      assert.match(req.system, /into English/);
+      assert.deepEqual(JSON.parse(String(req.messages[0].content)), ['Hola', '', 'Te quiero']);
+      return text('```json\n["Hello", "", "I love you"]\n```');
+    },
+    () => text('["just one"]'), // wrong number of lines
+    (req) => {
+      assert.match(req.system, /romanize/);
+      return text('["annyeong", "", "saranghae"]');
+    },
+  ]);
+  const { app, tokens, ids } = await seeded({}, {}, { djProvider: script.factory });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { enabled: true, apiKey: 'sk-ant-x-1234' } });
+  for (const id of [ids.member, ids.admin]) await json(app, 'PUT', `/api/admin/dj/users/${id}`, { token: tokens.admin, body: { enabled: true } });
+  const ask = (token: string, body: object) => json(app, 'POST', '/api/lyrics/translate', { token, body });
+  const body = { key: 'artist|song|180', lines: ['Hola', '', 'Te quiero'], mode: 'translate', to: 'English' };
+
+  const r = await ask(tokens.member, body);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.lines, ['Hello', '', 'I love you']);
+  assert.equal(r.body.cached, false);
+  // someone else in the house gets it free
+  const again = await ask(tokens.admin, body);
+  assert.deepEqual([again.body.lines[2], again.body.cached], ['I love you', true]);
+  assert.equal(script.seen.length, 1);
+
+  assert.equal((await ask(tokens.member, { ...body, key: 'other' })).status, 502);
+  assert.deepEqual((await ask(tokens.member, { ...body, key: 'k2', mode: 'romanize', lines: ['안녕', '', '사랑해'] })).body.lines, ['annyeong', '', 'saranghae']);
+  assert.equal((await ask(tokens.member, { ...body, to: '' })).status, 400);
+  assert.equal((await ask(tokens.member, { key: 'x', lines: [] })).status, 400);
+
+  const features = (await json(app, 'GET', '/api/admin/features', { token: tokens.admin })).body.features;
+  await json(app, 'PUT', '/api/admin/features', { token: tokens.admin, body: { features: { ...features, lyricsTranslate: { on: false, kids: false } } } });
+  assert.equal((await ask(tokens.member, body)).status, 403);
+});
+
+test('voice requests: the Hub turns a recording into words with Whisper or OpenAI', async () => {
+  const calls: { url: string; model: string | null; auth: string | null; file: number }[] = [];
+  const ttsFetch = async (url: string, init?: RequestInit) => {
+    const f = init?.body as FormData;
+    const file = f?.get?.('file') as Blob | null;
+    calls.push({ url, model: (f?.get?.('model') as string) ?? null, auth: new Headers(init?.headers).get('authorization'), file: file ? file.size : 0 });
+    if (url.includes('whisper-down')) throw new TypeError('fetch failed');
+    return Response.json({ text: '  play   something for a road trip ' });
+  };
+  const { app, tokens, ids } = await seeded({}, {}, { djProvider: scripted([]).factory, ttsFetch });
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { enabled: true, apiKey: 'sk-ant-x-1234' } });
+  await json(app, 'PUT', `/api/admin/dj/users/${ids.member}`, { token: tokens.admin, body: { enabled: true, monthlyLimit: null } });
+  const listen = (seconds = 3) => app.inject({ method: 'POST', url: `/api/dj/listen?seconds=${seconds}`, headers: { authorization: `Bearer ${tokens.member}`, 'content-type': 'audio/webm;codecs=opus' }, payload: Buffer.from([1, 2, 3, 4]) });
+
+  assert.deepEqual((await json(app, 'GET', '/api/dj/listen', { token: tokens.member })).body, { engine: 'device' });
+  assert.equal((await listen()).statusCode, 409, 'the device listens until an admin picks Whisper or OpenAI');
+
+  assert.equal((await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { voice: { listen: 'ears' } } })).status, 400);
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { voice: { listen: 'whisper', whisperUrl: 'http://whisper:8000/' } } });
+  const r = await listen();
+  assert.equal(r.statusCode, 200);
+  assert.deepEqual(r.json(), { text: 'play something for a road trip' });
+  assert.deepEqual(calls.at(-1), { url: 'http://whisper:8000/v1/audio/transcriptions', model: 'Systran/faster-whisper-small', auth: null, file: 4 });
+
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { voice: { whisperUrl: 'http://whisper-down:8000' } } });
+  const down = await listen();
+  assert.equal(down.statusCode, 502);
+  assert.match(down.json().error, /Whisper can’t be reached.*container running/);
+
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { voice: { listen: 'openai' } } });
+  assert.equal((await listen()).statusCode, 409, 'OpenAI needs its key');
+  await json(app, 'PUT', '/api/admin/dj', { token: tokens.admin, body: { openaiKey: 'sk-openai-secret-9876' } });
+  assert.equal((await listen(12)).statusCode, 200);
+  assert.equal(calls.at(-1)?.url, 'https://api.openai.com/v1/audio/transcriptions');
+  assert.equal(calls.at(-1)?.auth, 'Bearer sk-openai-secret-9876');
+  assert.equal(calls.at(-1)?.model, 'gpt-4o-mini-transcribe');
+});

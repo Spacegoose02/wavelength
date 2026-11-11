@@ -48,7 +48,7 @@ genre names cover it).
 ## Add a skin
 
 1. `src/store/settings.ts`: add the id to `Skin` and a `{ id, label, group }` to `SKINS`. `group` is one of
-   `SKIN_GROUPS` and decides the heading it appears under in Settings → Themes.
+   `SKIN_GROUPS` and decides the heading it appears under in Settings → Themes & critters → Theme & critters → Theme.
 2. `src/styles.css`: a `:root[data-skin='myskin'] { … }` block defining at least
    `--bg --bg-2 --panel --panel-2 --line --text --muted --accent --accent-ink --lcd-bg --lcd-text --lcd-dim --viz-low --viz-mid --viz-high --viz-peak --bevel --bevel-in` and `color-scheme`.
 3. Optional component overrides (`.btn.primary`, `.nav.on`, `.chip.on`, `.tabs button.on`, `.deck`).
@@ -77,49 +77,86 @@ genre names cover it).
 - **SVG or DOM scene** (like the critters): its own component, rendered by `NowPlayingStage` for its id.
   Call `createAudioReader()` from `player/analysis.ts` inside a `requestAnimationFrame` loop and write
   attributes directly instead of setting React state every frame.
+- Pace the loop with `createPacer()` from `lib/framePace.ts` (skip the frame when it returns 0, and advance
+  your clock by the seconds it returns), and read skin colours with `createCssVars()`, not `getComputedStyle`
+  each frame (`docs/ARCHITECTURE.md`, Keeping it smooth).
 - Both must keep moving with no readable audio (paused, or a stream without CORS): the reader gives a calm
   made-up signal with `live: false`.
 
 ## Add a critter, an act or an outfit
 
 The critters live in `components/critters/`. A critter on screen is a **species** (raccoon, shark, alien,
-grey alien, black or brown bear) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
-Accordion), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
+grey alien, black or brown bear, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, red panda, turkey) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
+Accordion, Driver, Reactor, Bongo, Pianist, Marimba, Violinist, Acoustic, Surf rock, Singer), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
 for how the pieces fit.
 
-Everything is drawn on one skeleton so faces, acts, the rig and the outfits all fit together: head centred on
-200,178 (about 160 wide, 130 tall, top near y 112 where the hats sit), eyes on y 166, mouth around y 212,
-shoulders at 138,268 and 262,268, tail root at 268,292, and `TORSO` for the top.
+Faces, hats and glasses are drawn on one head skeleton: centred on 200,178 (about 160 wide, 130 tall, top near
+y 112 where the hats sit), eyes on y 166 to 190 (each species' `fit.eyeY`), mouth around y 212. Each species'
+**figure** (`bodies.tsx`) then places and shrinks that head and gives the body: the top's silhouette, the
+shoulders, sleeve width, paw size and reach, and the legs, feet, neck and tail. Acts still write the old pivots
+(arms about 138,268 and 262,268, the tail about 268,292, the country boot about 236,362); `Pivot` moves each of
+those parts so the pivot lands on the figure's own shoulder, tail root or foot.
 
-- **A critter (species):** in `species.tsx`,
-  1. Write a `MyFace` component: everything from ears to mouth, with `data-part="eyes"` centred on y 166,
-     `data-part="smile"` and `data-part="yawn"` (an open mouth around y 212 to 232, starting
-     `transform="scale(1 0)"`; the rig opens it to sing and yawn). Features that stick out (fins,
-     antennae) go in the face too; hats are drawn over them.
-  2. Optionally a `MyTail` with `data-part="tail"`, rooted at 268,292 (the rig wags it), and a `MyLower` drawn
-     instead of every act's trousers and shoes for a critter without legs (the shark's tail end). It needs a
-     `data-part="boot"`, which the country act taps.
-  3. Fit it, if it isn't the usual round head on the usual body: `build` narrows the body (the aliens are
-     0.78 to 0.82), `fit` resizes the shared hats, headphones and hoods (`w`, `lift`) and stretches glasses
-     over bigger eyes (`eyes`), and `shadow` is the ellipse the head casts under the chin. Check it in a hat,
-     shades and the nuclear hood.
+- **A critter (species):** faces live in `faces.tsx`, the species list in `species.tsx`.
+  1. Write a `MyFace` component in `faces.tsx`, in the house style: draw it in its own art frame and place it on
+     the skeleton with `<Placed cx cy s>` (the drawing's centre goes to 200,178, scaled by `s`, about 0.8).
+     `HeadShape` gives the head its outline, shading clipped inside it and the rim of stage light on the right
+     edge; `Shade` makes the radial "vinyl" gradients (lit at the upper left); `Eye` draws a big round eye with
+     an iris and highlights. Give gradients ids unique to the species: a gradient takes its colours where it's
+     defined, so two faces sharing one id would both get the first one's colours. Then the parts the rig moves:
+     `data-part="eyes"` around both eyes (it blinks about its own centre), `data-part="smile"` (the closed
+     mouth) and the singing mouth as `<Mouth id="myface" x={…} y={…} w={…} h={…} fill="…" line="…" />` from
+     `parts.tsx` (`y` where the smile sits; `w` the half-width, `h` how deep *ah* drops; `teeth="rows"` for a
+     toothy one, `"none"` for none). It draws all six shapes (`player/visemes.ts`); the rig shows the one
+     `face.ts` picks. Add brows with `<Pair l="M… Q … …" mid={…} stroke="…" />` (the left brow's path, mirrored
+     about `mid` for the right). Optional details the rig animates if they're there: `whisker-l` / `whisker-r`
+     and `snarl` (shown on accents), `ear-l` / `ear-r` (flick), `data-shine` on eye highlights (widen on loud
+     notes), `data-voice-glow` on antennae (brighten with a high voice). Put brows outside the `eyes` group so
+     blinks don't squash them. Features that stick out (fins, antennae, antlers) go in the face too; hats are drawn over
+     them. Draw them behind the head so a hat covers their roots, and hide them under the hazmat hood in
+     `styles.css` if they would poke through it (the moose's `.moose-antlers`, the shark's `.shark-fin`). The style frames in `docs/critters/` are the reference drawings.
+  2. Give it a body: use one of the `FIGURES` in `bodies.tsx` (raccoon, bear, shark, alien, grey, moose, turtle, elephant, tiger, lion, panda, owl, trex, monkey, gorilla, flamingo, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, redPanda; most of the newer ones come from `roundFigure`) or add one in
+     the same style (outlined with `.ol`, shaded with `url(#critter-vinyl)` over a flat class colour, no rim
+     light). `Under` draws the legs in the act's `legs` class and the feet in its `shoe` class (bare feet when
+     there's none), with the right foot inside `<Pivot from={[236, 362]} … part="boot">` and a tail inside
+     `<Pivot from={[268, 292]} … part="tail">`; a figure without legs still needs an empty `data-part="boot"`.
+     Set `waist` (`[y, half-width, length]`) for where a girl's skirt hangs. Put the shoulders on the outer edges of the top, and set `reach` so hands don't stretch to the old wide
+     body's instruments.
+  3. Fit the headwear, if it isn't the usual round head: `fit` resizes the shared hats, headphones and hoods
+     (`w`, `lift`), stretches glasses over bigger eyes (`eyes`) and moves them to where the eyes are (`eyeY`,
+     the eyes' line on the skeleton). Check it in a hat, shades and the nuclear hood.
   4. Add an entry to `SPECIES` and its id to `Species` (`store/settings.ts`).
   5. In `styles.css`, `.species-<id> { --skin: …; --skin-dark: …; --belly: …; }` (hands, thumbs, bare arms
      and legs; `--belly` for necklines) and its
      face colours beside the others. Face colours stay fixed on every skin.
-  6. A colour variant (like the black and brown bears) is another `SPECIES` entry with the same face and
-     different CSS variables on its `.species-<id>`.
-  7. Check it in every act, singing as well as still, (they all show it), and add a row to the critter table in the
+  6. A colour variant (like the black and brown bears) is another `SPECIES` entry with the same face drawing
+     and different CSS variables on its `.species-<id>`; give each its own gradient ids (`Bear` takes an `id`).
+  7. The girl look: put `<Lashes l={[x, y]} r={[x, y]} />` inside the `eyes` group (each eye's outer-top
+     corner; they blink with the eyes) and set `fit.bow` (`[x, y, rotation]` on the skeleton, the upper left of
+     the head). `Head` hides the act's `hat` for girls and draws the bow in `--accent`;
+     pass `girlHat` to keep the hat (the Accordion's beanie), and the bow goes on it in `--viz-high`. Both show only inside `GirlContext`, which
+     `Critter` provides from the `critterLook` setting.
+  8. Check it in every act, as a boy and a girl, singing as well as still, (they all show it), and add a row to the critter table in the
      [user guide](USER-GUIDE.md#critters).
 - **An act:** copy the nearest one (`Drums.tsx`, say) to `components/critters/MyAct.tsx`, then:
   1. Take `ActProps` (`{ species, still }`) and wrap the scene in `CritterFrame` with `kind="myact"` (the
-     `critter-myact` class for its colours) and `species={species.id}`.
-  2. Draw behind to front: background, `{Tail && <Tail />}`, legs inside `<Legs species={species}>` (so a
-     legless critter swaps in its own), `<Body species={species}>` (`TORSO` clothes, then `BodyOutfits`; it
-     narrows for slim critters and adds the chin shadow, so don't draw your own), `<Head species={species}
+     `critter-myact` class for its colours) and `species={species}`.
+  2. Draw behind to front: background, `<Legs species={species} shoe="…" />` (the species draws its own legs,
+     feet and tail; `legs="bare"` for fur instead of trousers), `<Body species={species}>` with the top's prints
+     and `BodyOutfits` (it draws the species' top in `.top`, clips what you put in it to the top and adds the
+     chin shadow and shading, so don't draw your own), the girls' `<Skirt species={species} style=… />` right after
+     it (`aline`, `pleated`, `ruffle`, `tutu` or `fringe`; `className` colours it, `top` for a dress), `<Head species={species}
      hat={…} eyewear={…} />` with the act's headwear (`className="own-hat"`, and `data-part="adjust"` to
-     have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`Arm`, classes `sleeve` and `hand`, can hold a prop).
-  3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Write
+     have it set straight when paused; glasses `className="own-eyewear"`), then the instrument and arms (`<Arm part d hand>`, classes `sleeve` and `hand`, can hold a prop; `d` is drawn from
+     the old shoulder, and the arm is redrawn from the species' own). Each arm has an elbow halfway along `d`:
+     play the instrument from it with `bend($, 'arm-l', { turn, to, wrist })` (`arm.ts`), which moves the forearm
+     and hand and leaves the upper arm still. Turn the whole arm about the shoulder (`$('arm-l')`) only for big
+     reaches (a drummer's tom, a fist in the air); `beatClock` and `lift` there give a pattern its beat and bar.
+  3. Call `useCritterRig(root, frame, { still })` with a `frame` callback for its hands and props. Move
+     things in time with `tempo` (`phase` through the beat, `index`, `locked`) rather than raw `a.beat`
+     where you can, and give the act a flourish: when `flourish` is above 0, draw one move with `windUp` or
+     `swell` from `flourish.ts` (set it after the act's usual transforms so it wins). Put `<Shadow>`s on
+     the floor under the feet and any stand or prop, before what stands on them. Write
      attributes straight onto `data-part` elements; don't set React state per frame. Keep it moving with
      `a.live` false (made-up signal) and calm when `idle`. Mouths sing on their own; pass `talk: false`
      only if the act covers the mouth.

@@ -5,13 +5,16 @@
  *
  * Lyrics come from the same per-song cache as the Lyrics panel, so this costs no extra lookups.
  */
-import { lyricsFor, type LyricLine } from './lyrics';
+import { lyricsFor, onLyricsPicked, type LyricLine } from './lyrics';
+import { syllableShapes, type SyllableShape } from '../player/visemes';
 import type { Track } from '../sources/types';
 
 export interface SungLine {
   start: number;
   end: number;
   syllables: number;
+  /** each syllable's mouth shape (player/visemes.ts), for the critters' faces */
+  shapes: SyllableShape[];
 }
 
 /** Rough syllable count: vowel groups per word, at least one per word. */
@@ -34,7 +37,7 @@ export function sungLines(lines: LyricLine[], perSyllable = 0.32): SungLine[] {
     if (l.time === undefined || !l.text.trim()) return;
     const next = lines[i + 1]?.time ?? l.time + 8;
     const syl = syllables(l.text);
-    out.push({ start: l.time, end: Math.min(next, l.time + syl * perSyllable + 0.8), syllables: syl });
+    out.push({ start: l.time, end: Math.min(next, l.time + syl * perSyllable + 0.8), syllables: syl, shapes: syllableShapes(l.text) });
   });
   return out;
 }
@@ -54,6 +57,10 @@ let key = '';
 let sung: SungLine[] | undefined;
 let raw: LyricLine[] | undefined;
 let rawSyllable = 0.32;
+// other lyrics picked for the playing song ("Wrong lyrics?"): look them up again on the next ask
+onLyricsPicked((k) => {
+  if (k === key) key = '';
+});
 
 /**
  * The current song's sung spans: `undefined` until (and unless) synced lyrics arrive, `[]` for an instrumental.

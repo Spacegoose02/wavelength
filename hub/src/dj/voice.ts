@@ -1,7 +1,7 @@
 import type { Db } from '../db.ts';
 import { HttpError } from '../http.ts';
 import type { User } from '../users.ts';
-import { checkBudget, getApiKey, getSettings, isVoiceName, OPENAI_VOICES, recordUsage, type VoiceSettings } from './settings.ts';
+import { checkBudget, getApiKey, getSettings, isVoiceName, OPENAI_LISTEN_PRICE, OPENAI_VOICES, recordUsage, type VoiceSettings } from './settings.ts';
 
 /**
  * The talking DJ's voice (docs/AI-DJ.md "Voices"). The AI DJ writes a line (agent.ts `patter`); when an admin
@@ -121,13 +121,49 @@ export class DjVoice {
     throw new HttpError(409, 'The Hub has no DJ voice: each device reads it with its own');
   }
 
+  /** How spoken requests are understood: `device` (the app uses the device's own), or on the Hub. */
+  listenEngine(): VoiceSettings['listen'] {
+    return getSettings(this.db).voice.listen;
+  }
+
+  /**
+   * A spoken request to the DJ → its words. `audio` is what the app recorded (WebM/Ogg Opus, MP4 or WAV, at most
+   * 30 seconds), `seconds` how long it says it is (for the cost of OpenAI's transcription).
+   */
+  async transcribe(user: User, audio: Buffer, type: string, seconds: number): Promise<string> {
+    const v = getSettings(this.db).voice;
+    if (!audio.length) throw new HttpError(400, 'Nothing was recorded');
+    if (audio.length > 3_000_000) throw new HttpError(413, 'That recording is too long (30 seconds at most)');
+    const ext = /ogg/.test(type) ? 'ogg' : /mp4|m4a|aac/.test(type) ? 'm4a' : /wav/.test(type) ? 'wav' : /mpeg|mp3/.test(type) ? 'mp3' : 'webm';
+    const form = (model: string) => {
+      const f = new FormData();
+      f.append('file', new Blob([new Uint8Array(audio)], { type: type || 'audio/webm' }), `request.${ext}`);
+      f.append('model', model);
+      f.append('response_format', 'json');
+      return f;
+    };
+    let res: Response;
+    if (v.listen === 'whisper') {
+      res = await this.call(`${v.whisperUrl}/v1/audio/transcriptions`, { method: 'POST', body: form(v.whisperModel) }, 'Whisper', 60_000);
+    } else if (v.listen === 'openai') {
+      const key = getApiKey(this.db, this.secretKey, 'openaiKey', user.id);
+      if (!key) throw new HttpError(409, 'Voice requests aren’t set up yet: the Hub has no OpenAI key');
+      checkBudget(this.db, user.id);
+      res = await this.call('https://api.openai.com/v1/audio/transcriptions', { method: 'POST', body: form('gpt-4o-mini-transcribe'), headers: { authorization: `Bearer ${key}` } }, 'OpenAI', 60_000);
+      const minutes = Math.min(0.5, Math.max(0, Number(seconds) || 0) / 60) || 0.5;
+      recordUsage(this.db, user.id, null, 'openai:gpt-4o-mini-transcribe', { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, minutes * OPENAI_LISTEN_PRICE);
+    } else throw new HttpError(409, 'The Hub doesn’t listen: each device uses its own speech recognition');
+    const body = (await res.json().catch(() => null)) as { text?: unknown } | null;
+    return typeof body?.text === 'string' ? body.text.replace(/\s+/g, ' ').trim().slice(0, 500) : '';
+  }
+
   private async call(url: string, init: RequestInit, who: string, ms: number): Promise<Response> {
     let res: Response;
     try {
       res = await this.fetcher(url, { ...init, signal: AbortSignal.timeout(ms) });
     } catch (e) {
       const why = (e as Error)?.name === 'TimeoutError' ? 'took too long' : `can’t be reached at ${new URL(url).origin}`;
-      throw new HttpError(502, `${who} ${why}${who === 'Kokoro' ? '. Is its container running?' : ''}`);
+      throw new HttpError(502, `${who} ${why}${who === 'Kokoro' || who === 'Whisper' ? '. Is its container running?' : ''}`);
     }
     if (!res.ok) {
       // OpenAI: { error: { message } }; Kokoro-FastAPI: { detail: { message } } or { detail: '…' }

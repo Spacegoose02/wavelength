@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArtistAbout } from '../components/ArtistAbout';
 import { useCatalog } from '../store/catalog';
-import { useCan } from '../store/hub';
+import { useCan, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { usePlayer } from '../store/player';
@@ -9,7 +9,7 @@ import { sourceFor, mergeAlbums } from '../sources/registry';
 import { stationToTrack } from '../sources/radio';
 import type { Album, Artist, Track } from '../sources/types';
 import { SOURCE_COLORS } from '../sources/types';
-import { AlbumCard, ArtistCard, Cover, Rating, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
+import { AlbumCard, ArtistCard, ArtistCredit, Cover, Rating, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
 import { IconDownload, IconPlay, IconShuffle } from '../components/Icons';
 import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
@@ -18,18 +18,31 @@ import { albumVersion, explicitOfAlbum, explicitOfTrack, useHidden, useIsKid, us
 import { cleanSide, hasBoth, preferredRef, useVersionHidden, useVersionPref, versionOf, versionsOf } from '../lib/versions';
 import { CleanVersionButton, KidFlagButton } from '../components/KidFlag';
 import { deleteAlbum, deleteAlbums } from '../lib/deleteAlbums';
-import { applyMerge, navidromeRefs, planAlbums, planArtists, type MergePlan } from '../lib/merge';
+import { navidromeRefs, planAlbums, planArtists } from '../lib/merge';
+import { useArtistMeta } from '../lib/artistMeta';
+import { shelves } from '../lib/releaseKind';
+import { AlbumTagChips, ArtistTagChips } from '../components/TagChips';
+import { useItemTags } from '../lib/itemTags';
+import { EditAlbumButton, EditAlbumTagsButton } from './AlbumEditor';
+import { EditArtistButton } from './ArtistEditor';
+import { confirmMerge, forgetAlbums, forgetArtists, MergeIntoButton } from '../components/MergeInto';
 import { SelectBar, useSelection, type Selection } from '../components/Selection';
 import { QueueAllOnSubwave } from '../components/TrackButtons';
 import { DownloadButton } from '../components/DownloadButton';
 import { ArtworkButton } from '../components/ArtworkButton';
 import { albumArt, artistArt, useArtworkList } from '../lib/artwork';
 import { loadParts } from '../lib/albumParts';
+import { artistOfAlbum } from '../lib/trackLinks';
 import { FollowButton } from '../components/FollowButton';
 import { SongRadioButton } from '../components/SongRadioButton';
 import { ArtistNews, notOneArtist, useCanGet } from '../components/ArtistNews';
+import { PopularSongs } from '../components/PopularSongs';
 import { MadeForYou } from './Mix';
 import { JumpBackIn } from '../components/JumpBackIn';
+import { ALBUM_SORTS, ARTIST_SORTS, BrowseFilters } from '../components/BrowseFilters';
+import { isFiltered, queryAlbums, queryArtists } from '../lib/browse';
+import { useBrowseFilters } from '../store/browse';
+import { isMusicSource } from '../lib/musicSources';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -142,13 +155,17 @@ export function Albums() {
   const hidden = useHidden();
   const kid = useIsKid();
   const [busy, setBusy] = useState<string>();
+  const q = useBrowseFilters((s) => s.albums);
+  const setQ = useBrowseFilters((s) => s.setAlbums);
+  // the Hub's styles, moods and collections, which the filters read
+  const tagsAt = useItemTags().albums;
   const shown = useMemo(() => {
     const f = filter.toLowerCase();
-    return albums.filter(
+    return queryAlbums(albums.filter(
       (a) => (!f || a.title.toLowerCase().includes(f) || a.artist.toLowerCase().includes(f)) &&
         (!only || (a.refs ?? [a]).some((r) => r.sourceId === only)) && !hidden.album(a),
-    );
-  }, [albums, filter, only, hidden]);
+    ), q, q.sort);
+  }, [albums, filter, only, hidden, q, tagsAt]); // eslint-disable-line react-hooks/exhaustive-deps
   const musicSources = sources.filter((s) => s.enabled && (s.kind === 'navidrome' || s.kind === 'plex'));
   const cardKey = (a: Album) => `${a.sourceId}:${a.id}`;
   // what can be ticked: the cards on screen (a version hidden by Settings → Playback isn't)
@@ -165,7 +182,7 @@ export function Albums() {
         <input className="filter" placeholder="Filter albums…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
       {sel.selecting && (
-        <SelectBar sel={sel} all={selectable} filtered={!!filter || !!only} name={(a) => a.title} status={busy}>
+        <SelectBar sel={sel} all={selectable} filtered={!!filter || !!only || isFiltered(q)} name={(a) => a.title} status={busy}>
           <AlbumSelectActions sel={sel} busy={busy} setBusy={setBusy} />
         </SelectBar>
       )}
@@ -179,6 +196,8 @@ export function Albums() {
           ))}
         </div>
       )}
+      <BrowseFilters albums={albums} q={q} set={setQ} sorts={ALBUM_SORTS} />
+      {!filter && !isFiltered(q) && <NoLibrary count={albums.length} />}
       <Grid>{shown.slice(0, 600).map((a) => (
         <AlbumCard key={cardKey(a)} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
           selected={sel.isPicked(a)} badge={sel.badge(a)} />
@@ -189,14 +208,20 @@ export function Albums() {
 }
 
 export function Artists() {
-  const { artists } = useCatalog();
+  const { artists, albums } = useCatalog();
   const go = useUi((s) => s.go);
+  const q = useBrowseFilters((s) => s.artists);
+  const setQ = useBrowseFilters((s) => s.setArtists);
+  const tagsAt = useItemTags().artists;
   const [filter, setFilter] = useState('');
   const hidden = useHidden();
   const kid = useIsKid();
   const canEdit = useCan('library.edit');
   const [busy, setBusy] = useState<string>();
-  const shown = useMemo(() => artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()) && !hidden.artist(a)), [artists, filter, hidden]);
+  const shown = useMemo(
+    () => queryArtists(artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()) && !hidden.artist(a)), albums, q, q.sort),
+    [artists, albums, filter, hidden, q, tagsAt], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   const selectable = useMemo(() => shown.slice(0, 600), [shown]);
   const sel = useSelection(selectable, (a: Artist) => `${a.sourceId}:${a.id}`);
   const chosen = sel.chosen;
@@ -216,11 +241,13 @@ export function Artists() {
         <input className="filter" placeholder="Filter artists…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
       {sel.selecting && (
-        <SelectBar sel={sel} all={selectable} filtered={!!filter} name={(a) => a.name} status={busy}>
+        <SelectBar sel={sel} all={selectable} filtered={!!filter || isFiltered(q)} name={(a) => a.name} status={busy}>
           <SelectionPlayButtons disabled={!chosen.length || !!busy} play={play} />
           {canEdit && !kid && <button className="btn" disabled={chosen.length < 2 || !!busy} title="Merge the others into the first one you ticked" onClick={merge}>Merge{chosen.length > 1 ? ` (${chosen.length})` : ''}</button>}
         </SelectBar>
       )}
+      <BrowseFilters albums={albums} q={q} set={setQ} sorts={ARTIST_SORTS} />
+      {!filter && !isFiltered(q) && <NoLibrary count={artists.length} />}
       <Grid>
         {selectable.map((a) => (
           <ArtistCard key={`${a.sourceId}:${a.id}`} artist={a} onOpen={(x, e) => sel.click(x, e) || go({ view: 'artist', artist: x })} onPick={sel.pick}
@@ -229,6 +256,36 @@ export function Artists() {
       </Grid>
     </div>
   );
+}
+
+/**
+ * Why Albums or Artists is empty when nothing is filtered: every music source is switched off in Settings → Sources
+ * (with the Hub as the music server, its "Navidrome" row is the whole library), or the sources failed to answer.
+ */
+function NoLibrary({ count }: { count: number }) {
+  const { loaded, loading, errors } = useCatalog();
+  const sources = useSettings((s) => s.sources);
+  const go = useUi((s) => s.go);
+  if (count || !loaded || loading) return null;
+  const music = sources.filter(isMusicSource);
+  const off = music.filter((s) => !s.enabled);
+  const failed = Object.entries(errors);
+  if (music.length && off.length === music.length) {
+    return (
+      <Empty title="Your music source is switched off">
+        <p>{off.map((s) => s.name).join(' and ')} {off.length === 1 ? 'is' : 'are'} off in Settings → Sources, so there is no music to list. Switch {off.length === 1 ? 'it' : 'one'} back on.</p>
+        <button className="btn primary" onClick={() => go({ view: 'settings' })}>Open Settings</button>
+      </Empty>
+    );
+  }
+  if (failed.length) {
+    return (
+      <Empty title="Couldn’t load your music">
+        {failed.map(([name, e]) => <p key={name}>{name}: {e}</p>)}
+      </Empty>
+    );
+  }
+  return null;
 }
 
 // ---- what the select bar does (components/Selection.tsx) ----
@@ -335,43 +392,6 @@ async function tracksOfArtists(artists: Artist[]) {
   return out;
 }
 
-/** Show what a merge will change, ask, and save it. True when it was saved. */
-async function confirmMerge(plan: MergePlan, others: string[], setBusy: (s?: string) => void) {
-  if (!plan.changes.length) {
-    alert(`Nothing to change: ${others.join(', ')} already ${others.length === 1 ? 'has' : 'have'} the same tags as ${plan.into}.${plan.missing.length ? ` (${plan.missing.length} files weren't found in the Hub's music folder.)` : ''}`);
-    return false;
-  }
-  const list = others.slice(0, 8).map((x) => `• ${x}`).join('\n') + (others.length > 8 ? `\n…and ${others.length - 8} more` : '');
-  const missing = plan.missing.length ? `\n\n${plan.missing.length} file${plan.missing.length === 1 ? ' isn’t' : 's aren’t'} in the Hub's music folder and will be left out.` : '';
-  if (!confirm(`Merge into ${plan.into}?\n\n${list}\n\nThis rewrites the tags of ${plan.changes.length} song${plan.changes.length === 1 ? '' : 's'}. The audio isn't touched, and you can undo it under Settings → Server → Tag edits.${missing}`)) return false;
-  setBusy('Merging…');
-  const r = await applyMerge(plan);
-  alert(`Merged: ${r.changed.length} song${r.changed.length === 1 ? '' : 's'} retagged${r.failed.length ? `; ${r.failed.length} failed (${r.failed[0].error})` : ''}. Navidrome rescans in a minute or two to show it.`);
-  // the library refreshes once Navidrome has had time to rescan
-  window.setTimeout(() => void useCatalog.getState().load(), 120_000);
-  return r.changed.length > 0;
-}
-
-/** Take merged albums and artists off the lists now; the refresh after the rescan shows the result. */
-function forgetAlbums(gone: Album[]) {
-  const keys = new Set(gone.flatMap((a) => navidromeRefs(a)).map((r) => `${r.sourceId}:${r.id}`));
-  const keep = (a: Album) => {
-    const refs = (a.refs ?? [a]).filter((r) => !keys.has(`${r.sourceId}:${r.id}`));
-    return refs.length === (a.refs ?? [a]).length ? [a] : refs.length ? [{ ...a, ...refs[0], refs }] : [];
-  };
-  useCatalog.setState((s) => ({ albums: s.albums.flatMap(keep), recent: s.recent.flatMap(keep) }));
-}
-
-function forgetArtists(gone: Artist[]) {
-  const keys = new Set(gone.flatMap((a) => navidromeRefs(a)).map((r) => `${r.sourceId}:${r.id}`));
-  useCatalog.setState((s) => ({
-    artists: s.artists.flatMap((a) => {
-      const refs = (a.refs ?? [a]).filter((r) => !keys.has(`${r.sourceId}:${r.id}`));
-      return refs.length === (a.refs ?? [a]).length ? [a] : refs.length ? [{ ...a, ...refs[0], refs }] : [];
-    }),
-  }));
-}
-
 function useSourceCfg() {
   const sources = useSettings((s) => s.sources);
   return (id: string) => sources.find((s) => s.id === id);
@@ -380,6 +400,7 @@ function useSourceCfg() {
 export function ArtistView({ artist }: { artist: Artist }) {
   const cfgOf = useSourceCfg();
   const canEditTags = useCan('library.edit');
+  const kid = useIsKid();
   const { canGet } = useCanGet();
   const [albums, setAlbums] = useState<Album[] | null>(null);
   // a server that couldn't list this artist's albums says so, instead of leaving the page empty
@@ -408,6 +429,9 @@ export function ArtistView({ artist }: { artist: Artist }) {
     };
   }, [artist]);
   const appearsOn = useAppearsOn(artist, albums);
+  // Albums / Singles & EPs / Compilations, in the order Edit artist → Advanced sets (lib/releaseKind.ts)
+  const albumSort = useArtistMeta(artist.name)?.albumSort ?? '';
+  const albumShelves = useMemo(() => shelves(albums ?? [], albumSort), [albums, albumSort]);
   const hidden = useHidden();
   useArtworkList();
   const [busy, setBusy] = useState<string>();
@@ -438,12 +462,15 @@ export function ArtistView({ artist }: { artist: Artist }) {
             <KidFlagButton kind="artist" artist={artist.name} />
             <ArtworkButton kind="artist" artist={artist.name} current={artistArt(artist)} />
             {canEditTags && (artist.refs ?? [artist]).some((r) => cfgOf(r.sourceId)?.kind === 'navidrome') && (
-              <button className="btn" title="Rename this artist, or merge two spellings, in all their songs' tags" onClick={() => useUi.getState().go({ view: 'artistTags', artist })}>Edit artist</button>
+              <EditArtistButton artist={artist} picture={artistArt(artist)} />
             )}
+            {canEditTags && !kid && navidromeRefs(artist).length > 0 && <MergeIntoButton kind="artist" item={artist} />}
           </div>
+          <ArtistTagChips name={artist.name} />
           <ArtistNews artist={artist} />
         </div>
       </header>
+      {!notOneArtist(artist.name) && <PopularSongs artist={artist.name} />}
       {albums && albums.length > 1 && (
         <div className="row">
           <button className={`btn small ${sel.selecting ? 'primary' : ''}`} onClick={sel.selecting ? sel.stop : sel.start}>{sel.selecting ? 'Done' : 'Select'}</button>
@@ -455,12 +482,15 @@ export function ArtistView({ artist }: { artist: Artist }) {
         </SelectBar>
       )}
       <ErrorList errors={errors} />
-      {!albums ? <Spinner /> : (
-        <Grid>{albums.map((a) => (
-          <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
-            selected={sel.isPicked(a)} badge={sel.badge(a)} />
-        ))}</Grid>
-      )}
+      {!albums ? <Spinner /> : albumShelves.map((shelf) => (
+        <section key={shelf.title} className="artist-shelf">
+          {albumShelves.length > 1 && <h2>{shelf.title}</h2>}
+          <Grid>{shelf.albums.map((a) => (
+            <AlbumCard key={`${a.sourceId}:${a.id}`} album={a} onOpen={(x, e) => sel.click(x, e) || openAlbum(x)} onPick={sel.pick}
+              selected={sel.isPicked(a)} badge={sel.badge(a)} />
+          ))}</Grid>
+        </section>
+      ))}
       {featured.length > 0 && (
         <section className="appears-on">
           <h2>Appears On</h2>
@@ -529,10 +559,13 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
   useArtworkList();
   const art = albumArt(album, ref.coverUrl ?? album.coverUrl);
   useCatalog((s) => s.albums);
+  const catalogArtists = useCatalog((s) => s.artists);
   const versions = versionsOf(album);
   const both = hasBoth(versions);
   const shown = versionOf(ref);
   const canEditTags = useCan('library.edit');
+  const editRef = cfgOf(ref.sourceId)?.kind === 'navidrome' ? ref : navidromeRefs(album).find((r) => versionOf(r) === shown) ?? navidromeRefs(album)[0];
+  const hubOn = useHub((s) => !!s.token);
   const kid = useIsKid();
 
   // Navidrome can list one album as two, e.g. when a song was downloaded on its own into another folder: the
@@ -573,11 +606,13 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
         <div>
           <div className="kicker">Album{album.year ? ` · ${album.year}` : ''}</div>
           <h1>{both ? ref.title : album.title} <Rating explicit={both ? shown : explicitOfAlbum(album)} /></h1>
-          <button className="link" onClick={() => {
-            const artist = useCatalog.getState().artists.find((a) => (a.refs ?? [a]).some((r) => r.id === ref.artistId && r.sourceId === ref.sourceId));
-            if (artist) useUi.getState().go({ view: 'artist', artist });
-          }}>{album.artist}</button>
+          {/* the library artist, else their Deezer releases, so the link always goes somewhere (lib/trackLinks.ts) */}
+          {/* each artist in "A feat. B" links on its own; one the library lacks opens their Deezer releases */}
+          <div className="hero-artists">
+            <ArtistCredit credit={album.artist} fallback={artistOfAlbum({ ...album, refs: [ref, ...refs] }, catalogArtists)} linkClass="link" discography="all" />
+          </div>
           <div className="muted">{tracks ? `${tracks.length} tracks · ${fmtTime(total)}` : ''}</div>
+          <AlbumTagChips album={album} />
           <div className="hero-actions">
             <button className="btn primary" disabled={!tracks?.length} onClick={() => tracks && playTracks(tracks)}><IconPlay /> Play</button>
             <button className="btn" disabled={!tracks?.length} onClick={() => {
@@ -602,9 +637,10 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
               </div>
             )}
             <ArtworkButton kind="album" artist={album.artist} album={album.title} current={art} />
-            {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && (
-              <button className="btn" title="Fix this album's tags in its files" onClick={() => useUi.getState().go({ view: 'tags', album: { ...ref, refs: [ref] } })}>Edit tags</button>
-            )}
+            {/* the copy shown can be Plex's; the editor works on the Navidrome copy, which is the files */}
+            {canEditTags && editRef && <EditAlbumButton album={{ ...editRef, refs: [editRef] }} cover={art} />}
+            {canEditTags && !editRef && hubOn && <EditAlbumTagsButton album={album} />}
+            {canEditTags && !kid && navidromeRefs(album).length > 0 && <MergeIntoButton kind="album" item={album} />}
             {canEditTags && cfgOf(ref.sourceId)?.kind === 'navidrome' && <DeleteAlbumButton album={ref} />}
             {tracks?.length ? (
               <DownloadButton id={`album:${ref.sourceId}:${ref.id}`} kind="album" name={album.title} subtitle={album.artist}

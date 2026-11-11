@@ -42,6 +42,8 @@ let fallbackPending = false;
 let levelValue = 1;
 /** the volume slider; the plain element also carries ReplayGain cuts in its volume (it can't boost) */
 let volume = 1;
+/** Playback speed for spoken word (audiobooks, podcasts: lib/spoken.ts); music always plays at 1. */
+let speed = 1;
 /** what the idle deck holds, ready to play */
 let preloaded: { url: string; el: HTMLAudioElement } | undefined;
 /** the deck still fading out after a crossfade, and a preload waiting for it to finish */
@@ -353,8 +355,9 @@ export const engine = {
     if (preloaded?.el === el) preloaded = undefined;
     current = el;
     applyVolume();
-    el.playbackRate = 1;
     el.src = url;
+    el.preservesPitch = true;
+    el.playbackRate = speed;
     if (startAt > 0) el.currentTime = startAt;
 
     if (!usePlain) {
@@ -452,6 +455,20 @@ export const engine = {
     // a crossfade under way: the old song stops too, not just the new one
     endFade();
     current.pause();
+  },
+  /** Playback speed for what's loaded now and next (1 = normal). Speakers and bit-perfect output ignore it. */
+  setSpeed(rate: number) {
+    speed = Math.min(3, Math.max(0.5, rate || 1));
+    // a new src resets playbackRate to defaultPlaybackRate, so set both
+    for (const el of all) {
+      el.preservesPitch = true;
+      el.defaultPlaybackRate = speed;
+    }
+    if (remote) return;
+    current.playbackRate = speed;
+  },
+  speed() {
+    return remote ? 1 : speed;
   },
   seek(t: number) {
     if (!Number.isFinite(t)) return;

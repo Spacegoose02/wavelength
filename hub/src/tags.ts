@@ -12,12 +12,41 @@ import { run } from './ytdlp.ts';
  * leaves a half-written file; the audio itself is copied as is.
  */
 
-export const TAG_KEYS = ['title', 'artist', 'album', 'albumArtist', 'track', 'disc', 'year', 'genre'] as const;
+export const TAG_KEYS = [
+  'title', 'artist', 'album', 'albumArtist', 'track', 'disc', 'year', 'genre',
+  // the Edit album / Edit artist dialogs (src/views/AlbumEditor.tsx, ArtistEditor.tsx)
+  'albumSort', 'artistSort', 'albumArtistSort', 'label', 'releaseType', 'mood',
+] as const;
 export type TagKey = (typeof TAG_KEYS)[number];
 export type Tags = Partial<Record<TagKey, string>>;
 
-/** What ffmpeg calls each tag when writing. */
-const FF: Record<TagKey, string> = { title: 'title', artist: 'artist', album: 'album', albumArtist: 'album_artist', track: 'track', disc: 'disc', year: 'date', genre: 'genre' };
+/**
+ * Tags only some formats can hold: ID3 (mp3) and Vorbis comments (FLAC, Ogg, Opus) take any name, but ffmpeg writes
+ * only a fixed set of MP4 atoms and drops the rest, so an .m4a keeps no sort names, record label, release type or mood.
+ * A Save leaves those tags out for such files instead of saying it wrote them.
+ */
+const EXTRA: readonly TagKey[] = ['albumSort', 'artistSort', 'albumArtistSort', 'label', 'releaseType', 'mood'];
+const ANY_TAG = /\.(mp3|flac|ogg|opus|oga)$/i;
+export const canWrite = (file: string, k: TagKey) => !EXTRA.includes(k) || ANY_TAG.test(file);
+
+/**
+ * What ffmpeg calls each tag when writing. The names Navidrome reads (its resources/mappings.yaml): in an mp3 the
+ * sort names are the TSOA / TSOP frames (ffmpeg's "album-sort" / "artist-sort"), the label is TPUB ("publisher"),
+ * and the rest go in TXXX frames under their own name; Vorbis comments use the plain names.
+ */
+function ffName(file: string, k: TagKey): string {
+  const mp3 = /\.mp3$/i.test(file);
+  switch (k) {
+    case 'albumArtist': return 'album_artist';
+    case 'year': return 'date';
+    case 'albumSort': return mp3 ? 'album-sort' : 'albumsort';
+    case 'artistSort': return mp3 ? 'artist-sort' : 'artistsort';
+    case 'albumArtistSort': return 'albumartistsort';
+    case 'label': return mp3 ? 'publisher' : 'label';
+    case 'releaseType': return 'releasetype';
+    default: return k;
+  }
+}
 /** The names files use for each tag when reading (ID3, Vorbis comments, MP4 all differ). */
 const READ: Record<TagKey, string[]> = {
   title: ['title'],
@@ -28,6 +57,12 @@ const READ: Record<TagKey, string[]> = {
   disc: ['disc', 'discnumber'],
   year: ['date', 'year', 'originaldate'],
   genre: ['genre'],
+  albumSort: ['albumsort', 'album-sort', 'sort_album', 'tsoa'],
+  artistSort: ['artistsort', 'artist-sort', 'sort_artist', 'tsop'],
+  albumArtistSort: ['albumartistsort', 'album_artist-sort', 'sort_album_artist', 'tso2'],
+  label: ['label', 'publisher', 'organization', 'tpub'],
+  releaseType: ['releasetype', 'musicbrainz_albumtype', 'musicbrainz album type', 'release type'],
+  mood: ['mood', 'tmoo'],
 };
 export const AUDIO_EXT = /\.(mp3|flac|m4a|mp4|aac|ogg|opus|oga|wma|wav|aiff?)$/i;
 /** Ogg files keep their tags on the audio stream rather than the file. */
@@ -71,14 +106,14 @@ export async function readTags(file: string): Promise<Tags> {
 
 /** Set these tags (an empty string removes one); the others stay as they are. */
 export async function writeTags(file: string, tags: Tags): Promise<void> {
-  const keys = TAG_KEYS.filter((k) => tags[k] !== undefined);
+  const keys = TAG_KEYS.filter((k) => tags[k] !== undefined && canWrite(file, k));
   if (!keys.length) return;
   const ext = extname(file);
   const tmp = join(dirname(file), `.wavelength-${randomBytes(6).toString('hex')}${ext}`);
   const flag = STREAM_TAGS.test(file) ? '-metadata:s:a:0' : '-metadata';
   const args = ['-v', 'error', '-nostdin', '-y', '-i', file, '-map', '0', '-c', 'copy', '-map_metadata', '0'];
   if (STREAM_TAGS.test(file)) args.push('-map_metadata:s:a', '0:s:a');
-  for (const k of keys) args.push(flag, `${FF[k]}=${tags[k]!.replace(/[\r\n]+/g, ' ').slice(0, 1000)}`);
+  for (const k of keys) args.push(flag, `${ffName(file, k)}=${tags[k]!.replace(/[\r\n]+/g, ' ').slice(0, 1000)}`);
   if (/\.mp3$/i.test(file)) args.push('-id3v2_version', '3');
   args.push('--', tmp);
   const r = await run(FFMPEG, args).catch(() => ({ code: 1, out: '', err: 'ffmpeg is missing' }));

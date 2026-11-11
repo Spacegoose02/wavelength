@@ -590,6 +590,161 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     PRIMARY KEY (service_id, family_id)
   );
   `,
+  `
+  -- Lyrics the house's apps found (LRCLIB, lyrics.ovh, Navidrome), so each song is looked up once for everyone,
+  -- and the words can be searched (lyrics_fts.words: the lines without apostrophes, so "its" finds "it's").
+  -- See lyricsCache.ts. key = the app's "artist|title|length" (src/lib/lyrics.ts).
+  CREATE TABLE lyrics_cache (
+    key    TEXT PRIMARY KEY,
+    artist TEXT NOT NULL,
+    title  TEXT NOT NULL,
+    body   TEXT NOT NULL,                 -- JSON: the app's Lyrics (hub/src/api/lyrics.ts)
+    at     INTEGER NOT NULL
+  );
+  CREATE VIRTUAL TABLE lyrics_fts USING fts5(key UNINDEXED, artist UNINDEXED, title UNINDEXED, lines UNINDEXED, words, tokenize = 'unicode61 remove_diacritics 2');
+  `,
+  `
+  -- The Hub's own catalog of the music folder (catalog.ts): one row per music file, read by the Hub, matched to the
+  -- Navidrome song it is by path (nd_*: NULL until matched). path is relative to the music folder.
+  CREATE TABLE catalog_songs (
+    path         TEXT PRIMARY KEY,
+    size         INTEGER NOT NULL,
+    mtime        INTEGER NOT NULL,          -- ms; size or mtime changing means read it again
+    title        TEXT NOT NULL DEFAULT '',
+    artist       TEXT NOT NULL DEFAULT '',
+    album        TEXT NOT NULL DEFAULT '',
+    album_artist TEXT NOT NULL DEFAULT '',
+    track        INTEGER,
+    disc         INTEGER,
+    year         INTEGER,
+    genre        TEXT NOT NULL DEFAULT '',  -- as tagged ("Rap; Hip-Hop")
+    explicit     TEXT NOT NULL DEFAULT '',  -- 'explicit', 'clean' or ''
+    duration     REAL NOT NULL DEFAULT 0,   -- seconds
+    bit_rate     INTEGER,                   -- kbps
+    codec        TEXT NOT NULL DEFAULT '',
+    mb_track_id  TEXT NOT NULL DEFAULT '',
+    mb_album_id  TEXT NOT NULL DEFAULT '',
+    error        TEXT,                      -- why the file couldn't be read
+    read_at      INTEGER NOT NULL,
+    nd_id        TEXT,
+    nd_album_id  TEXT,
+    nd_artist_id TEXT
+  );
+  CREATE INDEX catalog_songs_nd ON catalog_songs (nd_id);
+  CREATE INDEX catalog_songs_album ON catalog_songs (album_artist, album);
+  `,
+  `
+  -- What the Hub's own Subsonic answers need (routes/relay.ts, subsonicCatalog.ts): loudness tags, the album
+  -- artist's Navidrome id, and when the file first turned up (for "newest"). Every file is read again once for the
+  -- loudness tags.
+  ALTER TABLE catalog_songs ADD COLUMN rg_track_gain REAL;
+  ALTER TABLE catalog_songs ADD COLUMN rg_album_gain REAL;
+  ALTER TABLE catalog_songs ADD COLUMN rg_track_peak REAL;
+  ALTER TABLE catalog_songs ADD COLUMN rg_album_peak REAL;
+  ALTER TABLE catalog_songs ADD COLUMN nd_album_artist_id TEXT;
+  ALTER TABLE catalog_songs ADD COLUMN created INTEGER;
+  UPDATE catalog_songs SET created = mtime, mtime = 0;
+  `,
+  `
+  -- What an admin sets on an artist that has no tag in the music files (routes/artistMeta.ts, the app's Edit
+  -- artist): a biography shown instead of Wikipedia's, and how the artist page orders their albums.
+  CREATE TABLE artist_meta (
+    name       TEXT PRIMARY KEY COLLATE NOCASE,
+    bio        TEXT NOT NULL DEFAULT '',
+    album_sort TEXT NOT NULL DEFAULT '' CHECK (album_sort IN ('', 'newest', 'oldest', 'title')),
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at INTEGER NOT NULL
+  );
+  `,
+  `
+  -- Internet radio stations, kept by the Hub instead of Navidrome (radioStations.ts, phase 5 of the Hub's own music
+  -- server). Copied once from Navidrome with its ids, so each device's order and hidden stations still match.
+  CREATE TABLE radio_stations (
+    id           TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    stream_url   TEXT NOT NULL,
+    homepage_url TEXT NOT NULL DEFAULT '',
+    created_at   INTEGER NOT NULL,
+    updated_at   INTEGER NOT NULL
+  );
+  `,
+  `
+  -- Each person's hearts, plays and ratings, kept by the Hub (userData.ts, phase 5 of the Hub's own music server).
+  -- Copied once from Navidrome per person; ids are Navidrome's song, album and artist ids.
+  CREATE TABLE user_stars (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id    TEXT NOT NULL,
+    starred_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, item_id)
+  );
+  CREATE TABLE user_song_plays (
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    song_id     TEXT NOT NULL,
+    play_count  INTEGER NOT NULL DEFAULT 0,
+    last_played INTEGER,
+    rating      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, song_id)
+  );
+  `,
+  `
+  -- Each person's playlists, kept by the Hub (playlists.ts, phase 5 of the Hub's own music server). Copied once from
+  -- Navidrome with its ids (smart playlists stay on Navidrome); every change is made on Navidrome too.
+  CREATE TABLE server_playlists (
+    id         TEXT PRIMARY KEY,
+    owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    comment    TEXT NOT NULL DEFAULT '',
+    public     INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE server_playlist_songs (
+    playlist_id TEXT NOT NULL REFERENCES server_playlists(id) ON DELETE CASCADE,
+    pos         INTEGER NOT NULL,
+    song_id     TEXT NOT NULL,
+    PRIMARY KEY (playlist_id, pos)
+  );
+  `,
+  `
+  -- Styles, moods and collections of albums and artists, and artists' own genres (itemTags.ts): Plex-style
+  -- metadata that has no place in the music files. One row per album or artist and kind of tag. Albums are
+  -- keyed by album artist and title, artists by name (both compared without case, accents or punctuation), so
+  -- they don't depend on Navidrome's ids. The source column says who set it: an admin ('edit', never overwritten by an
+  -- import) or an import ('plex').
+  CREATE TABLE item_tags (
+    kind       TEXT NOT NULL CHECK (kind IN ('artist', 'album')),
+    item       TEXT NOT NULL,
+    facet      TEXT NOT NULL CHECK (facet IN ('genre', 'style', 'mood', 'collection')),
+    artist     TEXT NOT NULL,
+    title      TEXT NOT NULL DEFAULT '',
+    vals       TEXT NOT NULL,           -- JSON array of names, in order
+    source     TEXT NOT NULL DEFAULT 'edit' CHECK (source IN ('edit', 'plex')),
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (kind, item, facet)
+  );
+  `,
+  `
+  -- Styles and moods of single songs (trackTags.ts), like Plex's track moods. Keyed by album artist, album and
+  -- title (compared like item_tags), so the same song on another album is another row. Kept apart from item_tags
+  -- because a library has tens of thousands of songs, and the app only asks for them when it needs them.
+  CREATE TABLE track_tags (
+    item       TEXT NOT NULL,
+    facet      TEXT NOT NULL CHECK (facet IN ('style', 'mood')),
+    artist     TEXT NOT NULL,
+    album      TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    vals       TEXT NOT NULL,
+    source     TEXT NOT NULL DEFAULT 'edit' CHECK (source IN ('edit', 'plex')),
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (item, facet)
+  );
+  `,
+  `
+  -- A logo for each Hub radio station (radioStations.ts), shown on its card in Radio → Your stations.
+  ALTER TABLE radio_stations ADD COLUMN logo_url TEXT NOT NULL DEFAULT '';
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

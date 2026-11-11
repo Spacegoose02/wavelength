@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { PlayedButton } from './PlayedButton';
+import { EpisodeVideoChip } from './VideoButton';
 import { useSettings } from '../store/settings';
 import { SOURCE_COLORS, type Album, type Artist, type Track } from '../sources/types';
 import { explicitOfAlbum, explicitOfTrack, trackVersion, useHidden, useRatings } from '../lib/kids';
@@ -12,8 +14,10 @@ import { AddToPlaylist } from './AddToPlaylist';
 import { FavButton, QueueOnSubwave } from './TrackButtons';
 import { ShareButton } from './ShareButton';
 import { shareOfTracks } from '../lib/inbox';
-import { albumOfTrack, artistOfTrack, focusIndex } from '../lib/trackLinks';
+import { albumOfTrack, artistOfTrack, creditLinks, focusIndex, isLibraryTrack } from '../lib/trackLinks';
 import { useCatalog } from '../store/catalog';
+import { openTrackMenu } from './TrackMenu';
+import { EditSongButton } from './EditSong';
 import { useUi } from '../store/ui';
 
 export function fmtTime(s?: number) {
@@ -130,11 +134,31 @@ interface TrackListProps {
   onMove?: (i: number, to: number) => void;
   /** A song to scroll to and flash once (Now Playing's song title link); matched by id, else by title. */
   focus?: { id: string; sourceId: string; title?: string };
+  /**
+   * For long lists (Favorites): draw the first rows, and more as the list is scrolled to its end, instead of every
+   * row at once. Playing a row still plays from the whole list.
+   */
+  grow?: boolean;
 }
 
-export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, onMove, focus }: TrackListProps) {
+/** Rows a growing TrackList draws at first, and adds each time its end comes into view. */
+export const GROW_ROWS = 100;
+
+export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, onMove, focus, grow }: TrackListProps) {
   const phone = useIsPhone();
   const focusIdx = focusIndex(tracks, focus);
+  const [rows, setRows] = useState(GROW_ROWS);
+  const shown = grow ? Math.max(rows, focusIdx + 1) : tracks.length;
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const end = endRef.current;
+    if (!end || typeof IntersectionObserver === 'undefined') return;
+    const seen = new IntersectionObserver((e) => {
+      if (e.some((x) => x.isIntersecting)) setRows((n) => n + GROW_ROWS);
+    }, { rootMargin: '600px' });
+    seen.observe(end);
+    return () => seen.disconnect();
+  }, [shown, tracks.length]);
   const focusRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // braces, not an expression body: newer Chromium (WebView2, so the Windows app) has scrollIntoView return a
@@ -151,10 +175,11 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
   useArtworkList();
   return (
     <div className="tracklist">
-      {tracks.map((t, i) => hidden.track(t) ? null : (
+      {(shown < tracks.length ? tracks.slice(0, shown) : tracks).map((t, i) => hidden.track(t) ? null : (
         <div key={`${i}:${t.sourceId}:${t.id}`} ref={i === focusIdx ? focusRef : undefined}
           className={`track-row ${current?.id === t.id && current.sourceId === t.sourceId ? 'active' : ''} ${openRow === i ? 'open' : ''} ${i === focusIdx ? 'focus' : ''}`}
           onDoubleClick={() => playTracks(tracks, i)}
+          onContextMenu={(e) => openTrackMenu(e, t, tracks, i)}
           // phones: tap the row to play; the ⋯ button reveals the actions
           onClick={phone ? (e) => !(e.target as HTMLElement).closest('button, .menu') && playTracks(tracks, i) : undefined}>
           <button className="track-num" onClick={() => playTracks(tracks, i)} title="Play">
@@ -165,7 +190,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
           <div className="track-main">
             <div className="track-title"><Rating explicit={explicitOfTrack(t)} />{t.title}</div>
             <div className="track-sub">{sub ? sub(t) : <TrackSub track={t} showAlbum={showAlbum} />}</div>
-            {t.progress ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
+            {t.progress && t.progress < 1 ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
           </div>
           <SourceDots sourceIds={[t.sourceId]} />
           <div className="track-actions">
@@ -174,9 +199,12 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
             <button className="chip" onClick={() => playNext([t])}>Next</button>
             <button className="chip" onClick={() => enqueue([t])}>+ Queue</button>
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} />}
+            {t.kind === 'episode' && <PlayedButton track={t} />}
+            {t.kind === 'episode' && <EpisodeVideoChip track={t} />}
             <QueueOnSubwave track={t} />
             {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} version={trackVersion(t)} explicit={explicitOfTrack(t) === 'explicit'} className="chip" />}
             {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}
+            <EditSongButton track={t} />
             {onRemove && <button className="chip" onClick={() => onRemove(i)} title="Remove from playlist">✕</button>}
           </div>
           <FavButton key={`${t.sourceId}:${t.id}:${t.starred}`} track={t} />
@@ -185,6 +213,11 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
           <div className="track-time">{t.kind === 'radio' ? 'LIVE' : fmtTime(t.duration)}</div>
         </div>
       ))}
+      {shown < tracks.length && (
+        <div ref={endRef} className="row center muted small" style={{ padding: 12 }}>
+          <button className="btn" onClick={() => setRows((n) => n + GROW_ROWS)}>Show more ({tracks.length - shown} left)</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -201,12 +234,49 @@ function TrackSub({ track: t, showAlbum }: { track: Track; showAlbum?: boolean }
   const go = useUi.getState().go;
   return (
     <>
-      {artist
-        ? <button className="sub-link" title="Go to artist" onClick={() => go({ view: 'artist', artist })}>{t.artist}</button>
-        : t.artist}
+      <ArtistCredit credit={t.artist} fallback={artist} linkClass="sub-link" links={isLibraryTrack(t)} discography="several" />
       {showAlbum && t.album ? <>{' — '}{album
         ? <button className="sub-link" title="Go to album" onClick={() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } })}>{t.album}</button>
         : t.album}</> : null}
+    </>
+  );
+}
+
+/**
+ * An artist credit with each artist its own link: "Future feat. Drake; Travis Scott" is three links, to Future's,
+ * Drake's and Travis Scott's library pages (lib/trackLinks.ts creditLinks). An artist the library doesn't have opens
+ * their Deezer releases when `discography` says so: "all" always, "several" only in a credit naming more than one
+ * artist (a featured artist with no album of their own). When no name is a library artist, `fallback` (the
+ * song's or album's artist, found another way) links the whole credit. `links` false shows plain text.
+ */
+export function ArtistCredit({ credit, fallback, linkClass, links = true, discography, stop }: {
+  credit: string;
+  fallback?: Artist;
+  linkClass: string;
+  links?: boolean;
+  discography?: 'all' | 'several';
+  /** Keep the click from reaching the row around the link. */
+  stop?: boolean;
+}) {
+  const artists = useCatalog((s) => s.artists);
+  if (!links || !credit) return <>{credit}</>;
+  const parts = creditLinks(credit, artists);
+  const go = (e: MouseEvent, artist: Artist, deezer?: boolean) => {
+    if (stop) e.stopPropagation();
+    useUi.getState().go(deezer ? { view: 'artistReleases', artist } : { view: 'artist', artist });
+  };
+  const named = parts.filter((p) => p.name).length;
+  if (fallback && !parts.some((p) => p.artist)) {
+    return <button className={linkClass} title="Go to artist" onClick={(e) => go(e, fallback)}>{credit}</button>;
+  }
+  const deezer = discography === 'all' || (discography === 'several' && named > 1);
+  return (
+    <>
+      {parts.map((p, i) => p.artist
+        ? <button key={i} className={linkClass} title={`Go to ${p.name}`} onClick={(e) => go(e, p.artist!)}>{p.text.trim()}</button>
+        : p.name && deezer
+          ? <button key={i} className={linkClass} title={`${p.name}'s releases`} onClick={(e) => go(e, { id: '', sourceId: '', name: p.name! }, true)}>{p.text.trim()}</button>
+          : <Fragment key={i}>{p.text}</Fragment>)}
     </>
   );
 }

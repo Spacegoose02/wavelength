@@ -1,8 +1,16 @@
 import { BlendView, MixView } from './views/Mix';
 import { startSmartOffline } from './lib/smartOffline';
+import { startDeadZone } from './lib/deadZone';
+import './lib/spoken';
+import { startResume } from './lib/resume';
+import { startAlarm } from './lib/alarm';
+import { AlarmBanner } from './components/AlarmSettings';
 import { startDjVoice } from './lib/djVoice';
 import { startDjStation } from './lib/djStation';
 import { startSingMode } from './lib/singMode';
+import { startDesktop } from './lib/desktop';
+import { startHouseActivity } from './lib/houseActivity';
+import { HouseActivity } from './components/HouseActivity';
 import { startDiscord } from './lib/discord';
 import { startHifi } from './lib/hifi';
 import { startArtworkChecks } from './lib/artwork';
@@ -27,7 +35,7 @@ import { useUi, type Route } from './store/ui';
 import { usePlayer } from './store/player';
 import { PlayerBar } from './components/PlayerBar';
 import { NowPlaying, QueuePanel } from './components/NowPlaying';
-import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconHeart, IconInbox, IconDj } from './components/Icons';
+import { IconAlbum, IconArtist, IconBack, IconBook, IconDownload, IconHistory, IconHome, IconPlaylist, IconPlus, IconPodcast, IconRadio, IconSearch, IconSettings, IconWave, IconCompass, IconSparkle, IconBrowse, IconHeart, IconInbox, IconDj } from './components/Icons';
 import { Podcasts, PodcastView } from './views/Podcasts';
 import { History } from './views/History';
 import { HouseholdPlaylistView } from './views/Household';
@@ -42,11 +50,15 @@ import { useLibrary } from './store/library';
 import { AlbumView, Albums, ArtistView, Artists, Home } from './views/Library';
 import { Search } from './views/Search';
 import { Radio } from './views/Radio';
-import { Books } from './views/Books';
+import { Books, BookView } from './views/Books';
 import { activeSkin } from './lib/seasons';
 import { startUpdateChecks } from './lib/updates';
 import { UpdateBanner } from './components/Updates';
 import { Spinner } from './components/common';
+import { TrackMenuHost } from './components/TrackMenu';
+import { SongEditorHost } from './views/SongEditor';
+import { VideoHost } from './components/VideoButton';
+import { groupPlaylists } from './lib/playlistFolders';
 
 /** A page loaded the first time it's opened, so startup only parses what Home needs (slow TV boxes notice). */
 // `any`: each page has its own props, which lazy() keeps from M[K]
@@ -65,38 +77,66 @@ const ArtistReleases = page(() => import('./views/ArtistReleases'), 'ArtistRelea
 const Inbox = page(() => import('./views/Inbox'), 'Inbox');
 const Settings = page(() => import('./views/Settings'), 'Settings');
 const DJ = page(() => import('./views/DJ'), 'DJ');
+const Browse = page(() => import('./views/Browse'), 'Browse');
 
-const NAV: { view: Route['view']; label: string; icon: ReactNode }[] = [
-  { view: 'home', label: 'Home', icon: <IconHome /> },
-  { view: 'search', label: 'Search', icon: <IconSearch /> },
-  { view: 'dj', label: 'AI DJ', icon: <IconDj /> },
-  { view: 'discover', label: 'Discover', icon: <IconCompass /> },
-  { view: 'recent', label: 'Recently added', icon: <IconSparkle /> },
-  { view: 'albums', label: 'Albums', icon: <IconAlbum /> },
-  { view: 'artists', label: 'Artists', icon: <IconArtist /> },
-  { view: 'favorites', label: 'Favorites', icon: <IconHeart /> },
-  { view: 'offline', label: 'Downloaded', icon: <IconDownload /> },
-  { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave /> },
-  { view: 'radio', label: 'Radio', icon: <IconRadio /> },
-  { view: 'history', label: 'History', icon: <IconHistory /> },
-  { view: 'books', label: 'Audiobooks', icon: <IconBook /> },
-  { view: 'podcasts', label: 'Podcasts', icon: <IconPodcast /> },
-  { view: 'downloads', label: 'Downloads', icon: <IconDownload /> },
-  { view: 'inbox', label: 'Inbox', icon: <IconInbox /> },
-  { view: 'settings', label: 'Settings', icon: <IconSettings /> },
+type NavGroup = 'main' | 'library' | 'discover' | 'you';
+const NAV: { view: Route['view']; label: string; icon: ReactNode; group: NavGroup }[] = [
+  { view: 'home', label: 'Home', icon: <IconHome />, group: 'main' },
+  { view: 'search', label: 'Search', icon: <IconSearch />, group: 'main' },
+  { view: 'dj', label: 'AI DJ', icon: <IconDj />, group: 'main' },
+  { view: 'recent', label: 'Recently added', icon: <IconSparkle />, group: 'library' },
+  { view: 'browse', label: 'Browse', icon: <IconBrowse />, group: 'library' },
+  { view: 'albums', label: 'Albums', icon: <IconAlbum />, group: 'library' },
+  { view: 'artists', label: 'Artists', icon: <IconArtist />, group: 'library' },
+  { view: 'favorites', label: 'Favorites', icon: <IconHeart />, group: 'library' },
+  { view: 'offline', label: 'Downloaded', icon: <IconDownload />, group: 'library' },
+  { view: 'history', label: 'History', icon: <IconHistory />, group: 'library' },
+  { view: 'books', label: 'Audiobooks', icon: <IconBook />, group: 'library' },
+  { view: 'podcasts', label: 'Podcasts', icon: <IconPodcast />, group: 'library' },
+  { view: 'discover', label: 'Discover', icon: <IconCompass />, group: 'discover' },
+  { view: 'radio', label: 'Radio', icon: <IconRadio />, group: 'discover' },
+  { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave />, group: 'discover' },
+  { view: 'downloads', label: 'Downloads', icon: <IconDownload />, group: 'you' },
+  { view: 'inbox', label: 'Inbox', icon: <IconInbox />, group: 'you' },
+  { view: 'settings', label: 'Settings', icon: <IconSettings />, group: 'you' },
 ];
+/** Sidebar section headings; the main group has none. Each section folds, remembered on this device. */
+const GROUP_LABELS: Partial<Record<NavGroup, string>> = { library: 'Your library', discover: 'Explore' };
+const FOLDED_KEY = 'tonearm.navFolded';
+function useFoldedGroups() {
+  const [folded, setFolded] = useState<NavGroup[]>(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(FOLDED_KEY) ?? '[]');
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  });
+  const toggle = (g: NavGroup) => {
+    const next = folded.includes(g) ? folded.filter((x) => x !== g) : [...folded, g];
+    setFolded(next);
+    try {
+      localStorage.setItem(FOLDED_KEY, JSON.stringify(next));
+    } catch {
+      // private mode
+    }
+  };
+  return { folded, toggle };
+}
 
 function View({ route }: { route: Route }) {
   switch (route.view) {
     case 'home': return <Home />;
     case 'albums': return <Albums />;
     case 'artists': return <Artists />;
+    case 'browse': return <Browse key={[route.genre, route.decade, route.style, route.mood, route.collection].join('|')} genre={route.genre} decade={route.decade} style={route.style} mood={route.mood} collection={route.collection} />;
     case 'artist': return <ArtistView key={route.artist.id} artist={route.artist} />;
     case 'artistReleases': return <ArtistReleases key={`${route.artist.id}:${route.open?.id ?? ''}`} artist={route.artist} open={route.open} />;
     case 'album': return <AlbumView key={route.album.id} album={route.album} focus={route.track} />;
     case 'search': return <Search initial={route.q} />;
     case 'radio': return <Radio />;
     case 'books': return <Books />;
+    case 'book': return <BookView key={route.book.id} book={route.book} />;
     case 'podcasts': return <Podcasts />;
     case 'podcast': return <PodcastView key={route.podcast.id} podcast={route.podcast} />;
     case 'history': return <History />;
@@ -148,7 +188,16 @@ const nowPlayingCrashed = (retry: () => void, error: Error) => (
 
 function SidebarPlaylists({ route }: { route: Route }) {
   const playlists = useLibrary((s) => s.playlists);
+  const folders = useSettings((s) => s.playlistFolders);
+  const pinned = useSettings((s) => s.pinnedPlaylists);
   const go = useUi((s) => s.go);
+  const [open, setOpen] = useState<string[]>([]);
+  const g = groupPlaylists(playlists, folders, pinned, 'made');
+  const item = (p: (typeof playlists)[number]) => (
+    <button key={p.id} className={`side-item ${route.view === 'playlist' && route.id === p.id ? 'on' : ''}`} onClick={() => go({ view: 'playlist', id: p.id })}>
+      {pinned.includes(p.id) && <span className="side-pin" title="Pinned">●</span>}{p.name}
+    </button>
+  );
   return (
     <div className="side-playlists">
       <div className="side-head">
@@ -159,11 +208,22 @@ function SidebarPlaylists({ route }: { route: Route }) {
         }}><IconPlus /></button>
       </div>
       <div className="side-list">
-        {playlists.map((p) => (
-          <button key={p.id} className={`side-item ${route.view === 'playlist' && route.id === p.id ? 'on' : ''}`} onClick={() => go({ view: 'playlist', id: p.id })}>
-            {p.name}
-          </button>
-        ))}
+        {g.pinned.map(item)}
+        {g.folders.map((f) => {
+          // a folder opens by itself when you're on one of its playlists
+          const here = route.view === 'playlist' && f.playlists.some((p) => p.id === route.id);
+          const isOpen = open.includes(f.name) || here;
+          return (
+            <div key={f.name} className="side-folder">
+              <button type="button" className="side-item side-folder-head" aria-expanded={isOpen}
+                onClick={() => setOpen(open.includes(f.name) ? open.filter((x) => x !== f.name) : [...open, f.name])}>
+                <span className="nav-fold">{isOpen ? '▾' : '▸'}</span> {f.name} <small className="muted">{f.playlists.length}</small>
+              </button>
+              {isOpen && <div className="side-folder-items">{f.playlists.map(item)}</div>}
+            </div>
+          );
+        })}
+        {g.loose.map(item)}
       </div>
     </div>
   );
@@ -204,10 +264,15 @@ export default function App() {
     startRemote();
     startTogether();
     startSmartOffline();
+    startDeadZone();
+    startResume();
+    startAlarm();
     startDjVoice();
     startDjStation();
     startSingMode();
     startDiscord();
+    startDesktop();
+    startHouseActivity();
     void startHifi();
   }, []);
 
@@ -245,6 +310,7 @@ export default function App() {
   const kid = useIsKid();
   const badge = useInbox(inboxBadge);
   const dj = useDjAvailable();
+  const { folded, toggle } = useFoldedGroups();
   const tabRoot = ['home', 'discover', 'search', 'subwave', 'library'].includes(route.view);
 
   return (
@@ -253,17 +319,35 @@ export default function App() {
         <nav className="sidebar">
           <div className="brand"><span className="brand-mark" />Wavelength</div>
           <ProfileButton />
-          {NAV.filter((n) => (n.view !== 'inbox' || hubOn) && (n.view !== 'dj' || dj) && (!kid || KID_VIEWS[n.view])).map((n) => (
-            <button key={n.view} className={`nav ${route.view === n.view ? 'on' : ''}`} onClick={() => go({ view: n.view } as Route)}>
-              {n.icon}<span>{kid ? KID_VIEWS[n.view] : n.label}</span>
-              {n.view === 'inbox' && badge > 0 && <span className="badge">{badge}</span>}
-            </button>
-          ))}
+          {(['main', 'library', 'discover', 'you'] as NavGroup[]).map((g) => {
+            const items = NAV.filter((n) => n.group === g && (n.view !== 'inbox' || hubOn) && (n.view !== 'dj' || dj) && (!kid || KID_VIEWS[n.view]));
+            if (!items.length) return null;
+            const label = kid ? undefined : GROUP_LABELS[g];
+            // a folded section still shows the page you're on
+            const shown = label && folded.includes(g) ? items.filter((n) => route.view === n.view) : items;
+            return (
+              <div key={g} className={`nav-group nav-${g}`}>
+                {label && (
+                  <button type="button" className="nav-group-head" aria-expanded={!folded.includes(g)} onClick={() => toggle(g)}>
+                    {label}<span className="nav-fold">{folded.includes(g) ? '▸' : '▾'}</span>
+                  </button>
+                )}
+                {shown.map((n) => (
+                  <button key={n.view} className={`nav ${route.view === n.view ? 'on' : ''}`} onClick={() => go({ view: n.view } as Route)}>
+                    {n.icon}<span>{kid ? KID_VIEWS[n.view] : n.label}</span>
+                    {n.view === 'inbox' && badge > 0 && <span className="badge">{badge}</span>}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+          <HouseActivity />
           <SidebarPlaylists route={route} />
         </nav>
       )}
       <main className="main">
         <UpdateBanner />
+        <AlarmBanner />
         {history.length > 0 && (!phone || !tabRoot) && <button className="back" onClick={() => window.history.back()} title="Back (Alt+←)"><IconBack /></button>}
         <ErrorBoundary key={JSON.stringify(route).slice(0, 200)} onReset={() => go({ view: 'home' })}>
           <Suspense fallback={<Spinner />}>
@@ -274,6 +358,9 @@ export default function App() {
       {queueOpen && <ErrorBoundary fallback={partCrashed('The queue')}><QueuePanel /></ErrorBoundary>}
       <ErrorBoundary fallback={partCrashed('The player')}>{phone ? <MobileNav /> : <PlayerBar />}</ErrorBoundary>
       {nowPlayingOpen && <ErrorBoundary fallback={nowPlayingCrashed}><NowPlaying /></ErrorBoundary>}
+      <TrackMenuHost />
+      <SongEditorHost />
+      <VideoHost />
       <KidLockScreen />
       <KidSignedOutScreen />
       <WebSignIn />

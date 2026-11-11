@@ -1,15 +1,17 @@
 import { spawn } from 'node:child_process';
 import { setPriority } from 'node:os';
-import type { Db } from '../db.ts';
+import { Worker } from 'node:worker_threads';
+import { tx, type Db } from '../db.ts';
 import { getFeatures } from '../features.ts';
 import { getScanSettings, navidrome } from '../library.ts';
 import { libraryFile } from '../tags.ts';
-import { analyse, SR } from './analyse.ts';
+import { analyse, SR, type SonicFeatures } from './analyse.ts';
 import { SonicIndex } from './index.ts';
 
 /**
- * Sound-alike analysis (Settings → Features → Sound-alike analysis, off by default). While it's on, the Hub lists
- * the Navidrome library (with the scan login, docs/HUB.md "Library updates") every hour, and analyses each song it
+ * Sound-alike analysis (Settings → Features → Sound-alike analysis, off by default). While it's on, the Hub takes
+ * the Navidrome library's songs from the library index (one listing with the scan login, docs/HUB.md "Library
+ * updates") every hour, and analyses each song it
  * hasn't yet, one at a time at low priority: ffmpeg decodes 60 seconds from about a third of the way in, and
  * sonic/analyse.ts measures it. Roughly 1–2 seconds a song on a NAS, so a 20 000-song library takes most of a
  * night the first time. Needs the music folder mapped into the Hub (WAVELENGTH_MUSIC_DIR), like the tag editor.
@@ -31,6 +33,48 @@ export interface SonicStatus {
   current: string | null;
   lastListAt: number | null;
   lastError: string | null;
+}
+
+/**
+ * analyse() in a worker thread (thread.ts), so the Hub keeps answering while it works. One thread, started on first
+ * use and kept; if it can't start (an unusual Node build), analysis runs here as before.
+ */
+let thread: Worker | null | undefined;
+let nextId = 0;
+const waiting = new Map<number, { resolve: (f: SonicFeatures) => void; reject: (e: Error) => void }>();
+
+function analyseOff(samples: Float32Array): Promise<SonicFeatures> {
+  if (thread === undefined) {
+    try {
+      thread = new Worker(new URL('./thread.ts', import.meta.url));
+      thread.on('message', (m: { id: number; features?: SonicFeatures; error?: string }) => {
+        const w = waiting.get(m.id);
+        waiting.delete(m.id);
+        if (!waiting.size) thread?.unref();
+        if (m.features) w?.resolve(m.features);
+        else w?.reject(new Error(m.error ?? 'analysis failed'));
+      });
+      const fail = (e: unknown) => {
+        for (const w of waiting.values()) w.reject(e instanceof Error ? e : new Error(String(e)));
+        waiting.clear();
+        thread = undefined; // started again for the next song
+      };
+      thread.on('error', fail);
+      thread.on('exit', (code) => code !== 0 && fail(new Error(`analysis thread stopped (${code})`)));
+      // held open only while a song is being analysed (ref below), so it never keeps the Hub from exiting
+      thread.unref();
+    } catch {
+      thread = null;
+    }
+  }
+  if (!thread) return Promise.resolve(analyse(samples));
+  const id = ++nextId;
+  const t = thread;
+  return new Promise((resolve, reject) => {
+    waiting.set(id, { resolve, reject });
+    t.ref();
+    t.postMessage({ id, samples }, [samples.buffer as ArrayBuffer]);
+  });
 }
 
 /** Decode a stretch of a file to mono floats at SR. */
@@ -67,8 +111,14 @@ export class SonicWorker {
   private current: string | null = null;
   private lastListAt: number | null = null;
   private lastError: string | null = null;
+  /** Navidrome is off (catalog.ts standalone): the songs come from the catalog, no Navidrome login needed. Set by app.ts. */
+  standalone: () => boolean = () => false;
+  /** Navidrome's songs from the library index (libraryIndex.ts `navidromeSongs`), set by app.ts; null lists here. */
+  listSongs: () => Promise<{ id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }[] | null> = async () => null;
   /** for tests */
   decodeFn = decode;
+  /** for tests; a worker thread otherwise */
+  analyseFn: (samples: Float32Array) => Promise<SonicFeatures> = analyseOff;
 
   constructor(db: Db, key: Buffer, musicDir: string, navidromeDir: string) {
     this.db = db;
@@ -81,7 +131,7 @@ export class SonicWorker {
   private blocked(): string | null {
     if (!getFeatures(this.db).sonic.on) return 'Sound-alike analysis is switched off in Settings → Features.';
     if (!this.musicDir) return 'The Hub has no music folder. Map your music share to /music (WAVELENGTH_MUSIC_DIR).';
-    if (!getScanSettings(this.db, this.key)) return 'The Hub needs a Navidrome admin login (Settings → Server → Library updates) to list the songs.';
+    if (!this.standalone() && !getScanSettings(this.db, this.key)) return 'The Hub needs a Navidrome admin login (Settings → Server → Library updates) to list the songs.';
     return null;
   }
 
@@ -116,22 +166,28 @@ export class SonicWorker {
   /** Songs from Navidrome into sonic_songs: new ones added, changed paths re-analysed, gone ones dropped. */
   async list(): Promise<number> {
     const s = getScanSettings(this.db, this.key);
-    if (!s) return 0;
+    if (!s && !this.standalone()) return 0;
     const seen = new Set<string>();
     const upsert = this.db.prepare(`INSERT INTO sonic_songs (id, path, title, artist, album, duration) VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT (id) DO UPDATE SET title = excluded.title, artist = excluded.artist, album = excluded.album, duration = excluded.duration,
         features = CASE WHEN sonic_songs.path = excluded.path THEN sonic_songs.features ELSE NULL END,
         error = CASE WHEN sonic_songs.path = excluded.path THEN sonic_songs.error ELSE NULL END,
         path = excluded.path`);
-    for (let offset = 0; offset < 500_000; offset += 500) {
-      const r = await navidrome(s, 'search3', { query: '', songCount: '500', songOffset: String(offset), artistCount: '0', albumCount: '0' });
-      const songs = (r?.searchResult3?.song ?? []) as { id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }[];
-      for (const x of songs) {
-        if (!x.id || !x.path) continue;
-        seen.add(String(x.id));
-        upsert.run(String(x.id), x.path, x.title ?? '', x.artist ?? '', x.album ?? '', Math.round(x.duration ?? 0));
+    const add = (x: { id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }) => {
+      if (!x.id || !x.path) return;
+      seen.add(String(x.id));
+      upsert.run(String(x.id), x.path, x.title ?? '', x.artist ?? '', x.album ?? '', Math.round(x.duration ?? 0));
+    };
+    // the library index's listing when there is one (one listing of Navidrome for the whole Hub)
+    const listed = await this.listSongs();
+    if (listed) tx(this.db, () => listed.forEach(add));
+    else if (s) {
+      for (let offset = 0; offset < 500_000; offset += 500) {
+        const r = await navidrome(s, 'search3', { query: '', songCount: '500', songOffset: String(offset), artistCount: '0', albumCount: '0' });
+        const songs = (r?.searchResult3?.song ?? []) as { id: string; path?: string; title?: string; artist?: string; album?: string; duration?: number }[];
+        songs.forEach(add);
+        if (songs.length < 500) break;
       }
-      if (songs.length < 500) break;
     }
     if (seen.size) {
       const ids = (this.db.prepare('SELECT id FROM sonic_songs').all() as { id: string }[]).map((r) => r.id).filter((id) => !seen.has(id));
@@ -150,7 +206,7 @@ export class SonicWorker {
       const offset = row.duration > 90 ? Math.round(row.duration * 0.3) : 0;
       const samples = await this.decodeFn(file, offset, SECONDS);
       if (samples.length < SR * 5) throw new Error('too short to analyse');
-      const f = analyse(samples);
+      const f = await this.analyseFn(samples);
       this.db.prepare('UPDATE sonic_songs SET features = ?, error = NULL, analysed_at = ? WHERE id = ?').run(JSON.stringify({ ...f, offset }), Date.now(), row.id);
     } catch (e) {
       this.db.prepare('UPDATE sonic_songs SET error = ?, analysed_at = ? WHERE id = ?').run(String((e as Error).message ?? e).slice(0, 300), Date.now(), row.id);

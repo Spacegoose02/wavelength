@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
 import { findDuplicates, missingAlbums } from '../lib/libraryCare';
+import { navidromeRefs } from '../lib/merge';
+import { saveInParts } from '../lib/tagSave';
+import { titleFixes, type TitleFix } from '../lib/trackTitles';
+import { HubError } from '../sources/hub';
 import type { Release } from '../sources/releaseRadar';
 import type { Album } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -8,10 +12,15 @@ import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { Cover, Spinner } from '../components/common';
 import { ReleaseCards } from '../components/ReleaseRadar';
+import { UnmatchedSongs } from './UnmatchedSongs';
 
-/** Library → Library care: duplicates and missing albums (lib/libraryCare.ts). */
+/**
+ * Library → Library care: duplicates and missing albums (lib/libraryCare.ts), and for Hub admins numbered song titles
+ * (lib/trackTitles.ts) and unmatched songs (lib/songIssues.ts, views/UnmatchedSongs.tsx).
+ */
 export function LibraryCare() {
-  const [tab, setTab] = useState<'duplicates' | 'missing'>('duplicates');
+  const [tab, setTab] = useState<'duplicates' | 'missing' | 'numbered' | 'unmatched'>('duplicates');
+  const canEdit = useCan('library.edit');
   return (
     <div className="page">
       <header className="page-head">
@@ -19,9 +28,11 @@ export function LibraryCare() {
         <span className="chips inline">
           <button className={`chip ${tab === 'duplicates' ? 'on' : ''}`} onClick={() => setTab('duplicates')}>Duplicates</button>
           <button className={`chip ${tab === 'missing' ? 'on' : ''}`} onClick={() => setTab('missing')}>Missing albums</button>
+          {canEdit && <button className={`chip ${tab === 'numbered' ? 'on' : ''}`} onClick={() => setTab('numbered')}>Numbered titles</button>}
+          {canEdit && <button className={`chip ${tab === 'unmatched' ? 'on' : ''}`} onClick={() => setTab('unmatched')}>Unmatched songs</button>}
         </span>
       </header>
-      {tab === 'duplicates' ? <Duplicates /> : <Missing />}
+      {tab === 'duplicates' ? <Duplicates /> : tab === 'missing' ? <Missing /> : tab === 'numbered' ? <NumberedTitles /> : <UnmatchedSongs />}
     </div>
   );
 }
@@ -115,6 +126,132 @@ function Missing() {
         <button className="link small" onClick={() => void run()}>Check again</button>
       </div>
       <ReleaseCards releases={artist ? list.filter((r) => r.artist === artist) : list} />
+    </>
+  );
+}
+
+/** Songs looked at per request (the Hub takes up to 5000; it only reads Navidrome's list, no files). */
+const SCAN_PAGE = 2000;
+/** Albums read per request on a Hub too old to list numbered titles itself (it takes up to 200). */
+const OLD_SCAN_BATCH = 25;
+
+/**
+ * Song titles with their track number in front ("04 - God's Plan"), as some renaming tools leave them: found
+ * in Navidrome's own list of songs by the Hub (`GET /api/admin/tags/numbered`, a page at a time, so a big library
+ * takes seconds and no album needs opening), and fixed by writing the title without the number back into the
+ * files, a few songs per request (lib/tagSave.ts). The whole fix is one Save that Settings → Server → Tag edits
+ * can undo.
+ */
+function NumberedTitles() {
+  const albums = useCatalog((s) => s.albums);
+  const [fixes, setFixes] = useState<TitleFix[]>();
+  const [progress, setProgress] = useState<string>();
+  const [done, setDone] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const c = hubClient();
+
+  const byId = useMemo(() => {
+    const m = new Map<string, Album>();
+    for (const a of albums) for (const r of navidromeRefs(a)) m.set(r.id, r);
+    return m;
+  }, [albums]);
+
+  /** An older Hub: read every album's files, as before. */
+  const scanAlbums = async (found: TitleFix[], errors: string[]) => {
+    const ids = [...byId.keys()];
+    for (let i = 0; i < ids.length; i += OLD_SCAN_BATCH) {
+      setProgress(`Read ${i} of ${ids.length} albums…`);
+      try {
+        const r = await c!.tagAlbums(ids.slice(i, i + OLD_SCAN_BATCH));
+        found.push(...titleFixes(r.songs));
+      } catch (e) {
+        errors.push(String((e as Error).message ?? e));
+      }
+    }
+  };
+
+  const scan = async () => {
+    if (!c) return;
+    setFixes(undefined);
+    setDone(undefined);
+    setProgress('Looking through your songs…');
+    const found: TitleFix[] = [];
+    const errors: string[] = [];
+    try {
+      for (let offset = 0; ; offset += SCAN_PAGE) {
+        const r = await c.numberedTitles(offset, SCAN_PAGE);
+        found.push(...r.fixes);
+        setProgress(`Looked through ${Math.min(offset + r.scanned, r.total)} of ${r.total} songs…`);
+        if (r.scanned < SCAN_PAGE || offset + r.scanned >= r.total) break;
+      }
+    } catch (e) {
+      if (e instanceof HubError && e.status === 404 && !found.length) await scanAlbums(found, errors);
+      else errors.push(String((e as Error).message ?? e));
+    }
+    setProgress(undefined);
+    setFixes(found);
+    if (errors.length) setDone(`Not every song could be checked: ${errors[0]}`);
+  };
+
+  const fix = async () => {
+    if (!c || !fixes?.length) return;
+    setBusy(true);
+    const r = await saveInParts(c, 'Track numbers taken out of titles', fixes.map((f) => ({ path: f.path, tags: { title: f.to } })), (d, t) => setDone(`Fixed ${d} of ${t}…`));
+    const changed = new Set(r.changed);
+    // what's left to fix: the songs not written yet (the Hub skips one whose title is already clean)
+    const failedPaths = new Set(r.failed.map((f) => f.path));
+    setFixes(r.error ? fixes.filter((f) => !changed.has(f.path)) : fixes.filter((f) => failedPaths.has(f.path)));
+    const n = `${changed.size} title${changed.size === 1 ? '' : 's'}`;
+    setDone(r.error
+      ? `Fixed ${n}, then the Hub stopped answering (${r.error}). Fix again to carry on; titles that are already clean are skipped.`
+      : `Fixed ${n}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. Navidrome rescans in a minute to show them. Settings → Server → Tag edits can undo this.`);
+    setBusy(false);
+  };
+
+  const groups = useMemo(() => {
+    const m = new Map<string, TitleFix[]>();
+    for (const f of fixes ?? []) m.set(f.albumId ?? '', [...(m.get(f.albumId ?? '') ?? []), f]);
+    return [...m.entries()];
+  }, [fixes]);
+
+  if (!c) return <p className="muted">Sign in to your Hub to fix song titles in your files.</p>;
+  if (!fixes) {
+    return (
+      <>
+        <p className="muted">
+          Finds songs whose title has the track number in front, like “04 - God’s Plan”. Some renaming tools copy the
+          file name into the title, which stops lyrics and Deezer from finding the song. Wavelength already shows these
+          without the number; fixing them writes the clean title into the files on your server.
+        </p>
+        {progress ? <div className="row gap muted small"><Spinner /> {progress}</div>
+          : <button className="btn primary" onClick={() => void scan()}>Find numbered titles</button>}
+      </>
+    );
+  }
+  return (
+    <>
+      {done && <p className="small">{done}</p>}
+      {!fixes.length ? (
+        <p className="muted">{done ? '' : 'No numbered titles: every song title is clean. '}<button className="link" onClick={() => void scan()}>Check again</button></p>
+      ) : (
+        <>
+          <div className="row gap">
+            <span className="muted small">{fixes.length} song{fixes.length === 1 ? '' : 's'} on {groups.length} album{groups.length === 1 ? '' : 's'}</span>
+            <button className="btn primary" disabled={busy} onClick={() => void fix()}>{busy ? 'Fixing…' : `Fix ${fixes.length} title${fixes.length === 1 ? '' : 's'}`}</button>
+          </div>
+          {groups.map(([id, list]) => {
+            const a = byId.get(id);
+            return (
+              <section key={id} className="dup-group">
+                <h3>{a ? <button className="link" onClick={() => useUi.getState().go({ view: 'album', album: a })}>{a.artist} · {a.title}</button> : list[0].album ? `${list[0].artist} · ${list[0].album}` : 'Other songs'}</h3>
+                {list.map((f) => (
+                  <div key={f.path} className="small" title={f.path}><span className="muted">{f.from}</span> → {f.to}</div>
+                ))}
+              </section>
+            );
+          })}
+        </>
+      )}
     </>
   );
 }

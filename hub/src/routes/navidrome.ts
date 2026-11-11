@@ -1,24 +1,44 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need } from '../http.ts';
-import { serviceForHub, setServiceUser } from '../services.ts';
+import { navidromeOff, serviceForHub, setServiceUser } from '../services.ts';
 import { getUser } from '../users.ts';
+
+/**
+ * Admin sessions by server and login. Navidrome only lets a few sign-ins through per address in a short window
+ * (AuthRequestLimit, 5 per 20 s by default) and answers the rest with 429, so a Library care scan that signed in
+ * again for every page or batch of albums got "refused" part way through. One sign-in now lasts a while.
+ */
+const sessions = new Map<string, { token: string; isAdmin?: boolean; at: number }>();
+const SESSION_FOR = 10 * 60_000;
 
 /** Navidrome's own API (not Subsonic): sign in as the admin, then call it with the token. */
 export async function navidromeAdmin(url: string, username: string, password: string) {
   const base = url.replace(/\/+$/, '');
+  const key = `${base}\n${username}\n${createHash('sha256').update(password).digest('hex')}`;
   const call = async (path: string, init: RequestInit) => {
+    let r: Response;
     try {
-      return await fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(15_000) });
+      r = await fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(15_000) });
     } catch {
       throw new HttpError(502, `Couldn't reach Navidrome at ${url}`);
     }
+    // Navidrome restarted or the token ran out: sign in afresh next time
+    if (r.status === 401) sessions.delete(key);
+    return r;
   };
-  const login = await call('/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) });
-  const session = (await login.json().catch(() => null)) as { token?: string; isAdmin?: boolean } | null;
-  if (!login.ok || !session?.token) throw new HttpError(502, 'Navidrome refused the admin login saved on the Hub');
+  let session = sessions.get(key);
+  if (!session || Date.now() - session.at > SESSION_FOR) {
+    sessions.delete(key);
+    const login = await call('/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username, password }) });
+    if (login.status === 429) throw new HttpError(502, 'Navidrome is turning away sign-ins for a moment (too many in a row). Wait a minute and try again');
+    const body = (await login.json().catch(() => null)) as { token?: string; isAdmin?: boolean } | null;
+    if (!login.ok || !body?.token) throw new HttpError(502, 'Navidrome refused the admin login saved on the Hub. Check it under Settings → Server');
+    session = { token: body.token, isAdmin: body.isAdmin, at: Date.now() };
+    sessions.set(key, session);
+  }
   if (session.isAdmin === false) throw new HttpError(502, `${username} isn't a Navidrome admin, so it can't make accounts`);
   return {
     /** An album's songs with their file paths (as Navidrome sees them). */
@@ -29,6 +49,30 @@ export async function navidromeAdmin(url: string, username: string, password: st
       if (!r.ok) throw new HttpError(502, `Navidrome couldn't list that album (${r.status})`);
       const list = (await r.json().catch(() => [])) as any[];
       return (Array.isArray(list) ? list : []).filter((x) => x && (x.albumId ?? x.album_id ?? albumId) === albumId);
+    },
+    /**
+     * One page of every song in the library (`start` to `end`, sorted by album), with its file path, and how many
+     * songs there are in all. Navidrome's own copy of the tags, so no file is opened.
+     */
+    async songs(start: number, end: number): Promise<{ songs: { id: string; path: string; title: string; trackNumber: number; albumId: string; album: string; artist: string; albumArtist: string; albumArtistId: string }[]; total: number }> {
+      const r = await call(`/api/song?${new URLSearchParams({ _start: String(start), _end: String(end), _sort: 'album', _order: 'ASC' })}`, {
+        headers: { 'x-nd-authorization': `Bearer ${session.token}` },
+      });
+      if (!r.ok) throw new HttpError(502, `Navidrome couldn't list the songs (${r.status})`);
+      const list = (await r.json().catch(() => [])) as any[];
+      const songs = (Array.isArray(list) ? list : []).filter((x) => x?.id && typeof x.title === 'string').map((x) => ({
+        id: String(x.id),
+        path: String(x.path ?? ''),
+        title: String(x.title),
+        trackNumber: Number(x.trackNumber ?? 0) || 0,
+        albumId: String(x.albumId ?? x.album_id ?? ''),
+        album: String(x.album ?? ''),
+        artist: String(x.artist ?? ''),
+        albumArtist: String(x.albumArtist ?? x.album_artist ?? ''),
+        albumArtistId: String(x.albumArtistId ?? x.album_artist_id ?? ''),
+      }));
+      const total = Number(r.headers.get('x-total-count'));
+      return { songs, total: Number.isFinite(total) && total > 0 ? total : start + songs.length };
     },
     /** Every album with its genres (for the genre review). */
     async albums(): Promise<{ id: string; name: string; artist: string; genres: string[]; songs: number }[]> {
@@ -86,6 +130,7 @@ export function navidromeRoutes(app: FastifyInstance, { db, config }: Ctx) {
     if (!s || s.kind !== 'navidrome') throw new HttpError(404, 'No such Navidrome server');
     const target = getUser(db, Number(req.params.userId));
     if (!target) throw new HttpError(404, 'No such user');
+    if (navidromeOff(db)) throw new HttpError(409, 'Navidrome is off: the Hub serves the music itself, so nobody needs a Navidrome account');
     if (!s.secrets.adminUsername || !s.secrets.adminPassword) throw new HttpError(409, 'Add the Navidrome admin login first');
     const nd = await navidromeAdmin(s.url, s.secrets.adminUsername, s.secrets.adminPassword);
     const password = randomBytes(18).toString('base64url');

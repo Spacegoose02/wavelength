@@ -25,13 +25,21 @@ Every external system Wavelength talks to, how, and what bites. All HTTP goes th
 - Auth: `Authorization: Bearer <API key>`. Book and podcast libraries are kept separate (`mediaType`).
 - Playback opens a **session**: `POST /api/items/<id>/play` (books) or `/play/<episodeId>` (podcasts) with `forceDirectPlay`. Audio files come back in `audioTracks[]` (`contentUrl` + `?token=`), multi-file books carry `startOffset`.
 - Progress: `POST /api/session/<id>/sync { currentTime, timeListened }` every 15 s. Resume point = session `currentTime`.
-- Progress per item/episode: `GET /api/me` → `mediaProgress[]`.
+- Progress per item/episode: `GET /api/me` → `mediaProgress[]`. When a book file or an episode plays to the end, one last sync at its full length makes the server mark it finished.
+- Podcasts → Latest episodes: `GET /api/libraries/<podcast lib>/recent-episodes?limit=200` (each episode carries `libraryItemId` and `podcast.metadata.title`). Continue listening: `GET /api/me/items-in-progress` → podcast items with `recentEpisode`.
+- Played / unplayed and book finished: `PATCH /api/me/progress/<itemId>[/<episodeId>]` with `{ isFinished: true }`, or `{ isFinished: false, progress: 0, currentTime: 0 }` to go back to the start; several at once with `PATCH /api/me/progress/batch/update` and an array of `{ libraryItemId, episodeId, … }`.
+- A book's page: `GET /api/items/<id>?expanded=1` → `media.metadata.description`, `genres`, `publisher` and `media.chapters`.
 
 ## SUB/WAVE AI radio — `src/sources/subwave.ts`, `views/SubWave*.tsx`
 Project: <https://github.com/perminder-klair/subwave>. Ports: web `:7700` (API mounted at `/api` behind Caddy), controller `:7701`, Icecast `:7702`.
 
 - Public: `GET /now-playing`, `/state` (current/upcoming/history), `/schedule`, `/personas`, `POST /request` + `GET /request/:id`, `POST /like`, `/cover/:id`.
 - Admin (HTTP Basic `ADMIN_USER`/`ADMIN_PASS`): `/dj/skip`, `/dj/say`, `/dj/skill`, `/dj/search`, `/dj/queue-track`, `/dj/queue-block`, `DELETE /dj/queue/:trackId`, `DELETE /dj/queue/block/:blockId`, `/jingles`, `/sfx`, `PUT /schedule`, `POST/DELETE /shows`, `POST/DELETE /schedule/override`, `GET /settings` (full show objects), `/stats`, `/listeners/connections`, `/likes`, `/likes/index`.
+- Station admin (`views/SubWaveStation.tsx`): `GET /settings` and partial `POST /settings` (`personas` is the whole roster, `activePersonaId`, and `llm` / `tts`, which SUB/WAVE merges field by field), `POST /settings/secrets` (keys by env name, blank = keep), `GET /settings/llm/models?provider=`, `DELETE /personas/:id`, `POST/DELETE /personas/:id/avatar` (`{ dataUrl }`, PNG/JPEG/WebP ≤ 300 KB: the app crops to a square JPEG), `GET /personas/community` + `POST /personas/community/:slug/install`, `GET /persona-avatar/:id` (public), `GET /dj/skills` + `POST /dj/skill-toggle { name, on }`, `GET /doctor/last`, `GET /doctor` (all checks, slow), the doctor's fixes (`SW_FIXES`), `POST /restart-mixer`, `GET/DELETE /archives`, `GET /archives/file/:date/:hour` (MP3), `GET/POST /stations`, `PATCH/DELETE /stations/:id`, `POST /stations/:id/activate` (202, then SUB/WAVE restarts to switch).
+- **Personas are saved whole.** `savePersona()` loads the roster from `GET /settings` and merges the edit into its stored copy (`mergePersona`), so fields the app doesn't show (skills, music leanings, voice gain and speed…) survive. A new persona has no id; SUB/WAVE gives it one.
+- **Through the Hub** (`/api/admin/subwave/<id>/…`): PATCH is passed on too, audio and zip answers are streamed back as they are (`subwaveAdmin` in `hub/src/upstream.ts`), and the doctor, model lists and archive files get a longer timeout (`subwaveTimeout`).
+- **Copy from another SUB/WAVE** (`copyFrom`, Hub `POST /api/admin/subwave-copy/:from/:to` → `subwaveCopyStation`): `GET /backup/export` on one, `POST /backup/import` (the raw zip) on the other, then `POST /settings` with the target's own `station` and `stationDescription` again. A backup holds no API keys and no music server login (those live in `secrets.env` and `setup-config.json`), so the target keeps its own. It does hold `library.db`, which is keyed by song id, so both should use the same music (the Hub keeps Navidrome's ids). Audited as `subwave.copy`. If the restore is refused as too large (413, from SUB/WAVE's upload cap or a proxy in front of it), the Hub sends the backup again as several smaller ones (`restoreInParts`, `hub/src/zipSplit.ts`: members copied byte for byte, each piece with the manifest). A restore only writes what its zip holds, so the pieces add up: media first, then `settings.json`, then `library.db` alone. A piece still too big is halved, and a single file too big on its own is listed in `skipped`. The device-only path can't split, so it asks to move the logins to the Hub.
+- **One station on air per SUB/WAVE.** Station profiles share one mixer and one Icecast, so only one is live; switching restarts SUB/WAVE. Several at once means several SUB/WAVE containers, each its own source.
 - **Quirks** (all handled):
   - now-playing has `timestamp` (unix *seconds*) and `duration` but no `startedAt`; `/state` items have ISO `startedAt`. `swTrack()` normalises both.
   - Queue items are identified by `subsonic_id` (the `trackId` the cancel route expects). Block members carry `block: { id, label, index, size }`.
@@ -94,7 +102,12 @@ source fails (Deezer's `200 {"error": "Quota limit exceeded"}` counts as a failu
 Hub older than this, it fetches directly as before. On top of that the app keeps each chart for 30 minutes
 (**Refresh** skips that) and keeps the last copy that loaded, shown with a note when fetching again fails.
 
-Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others).
+Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others). Lookups
+are paced (one starts every 120 ms, under Deezer's 50 per 5 s), wait out `Quota limit exceeded` and try again, and
+throw when Deezer couldn't be asked, so only a real "not on Deezer" greys a button out. Among hits by the right
+artist the same title wins, then one with a clip. Clip links are signed (`hdnea=exp=<unix>`) and run out, so a
+kept one past its time is looked up again: by Discover before playing, and by the player for any `preview` track
+(`freshPreview()` in `src/store/player.ts`).
 
 **Around the charts** (`src/views/Discover.tsx`): `songKey()` names a song the same on every chart (main artist
 plus title without brackets); `getMix` merges on it, and Not interested (`discoverHidden`) and Get all missing

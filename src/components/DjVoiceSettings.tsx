@@ -30,7 +30,7 @@ export function DjVoiceSettings() {
       <h2>Talking DJ</h2>
       <p className="muted small">
         Every few songs the AI DJ says a line about what you just heard and what's next, over the start of the song with the music
-        turned down. It uses the Hub's AI DJ (and a little of your monthly allowance){hubHas ? `, read by ${engineName(hub!.engine)} on your Hub` : ' and this device\'s own voice'}.
+        turned down. It only talks over music the DJ played for you (in the AI DJ chat), never over songs you pick yourself. It uses the Hub's AI DJ (and a little of your monthly allowance){hubHas ? `, read by ${engineName(hub!.engine)} on your Hub` : ' and this device\'s own voice'}.
       </p>
       {!canSpeak && !hubHas ? <p className="muted small">This device has no text-to-speech voice, so the DJ can't talk here.</p> : <>
         <label className="check">

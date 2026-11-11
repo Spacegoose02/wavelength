@@ -18,6 +18,8 @@ export interface SourceConfig {
   hubId?: number;
   /** SUB/WAVE kept on the Hub: admin controls go through the Hub, which holds the admin login. */
   hubAdmin?: boolean;
+  /** Navidrome through the Hub's relay (`/nd/<id>`): the login is one the Hub made for this device, not the person's own. */
+  hubRelay?: boolean;
 }
 
 export type TrackKind = 'track' | 'radio' | 'book' | 'episode';
@@ -49,13 +51,23 @@ export interface Track {
   episodeId?: string;
   publishedAt?: number;
   progress?: number;
+  /** Podcast episodes: when you last listened to it (ms). */
+  lastPlayedAt?: number;
   description?: string;
+  /** Audiobooks and podcast episodes: chapters, in seconds from the start of the whole book or episode. */
+  chapters?: Chapter[];
   /** Plex: the entry id inside a server playlist (needed to remove it). */
   playlistItemId?: string;
   /** Navidrome: starred / favorited on the server. */
   starred?: boolean;
   /** Loudness tags (OpenSubsonic `replayGain`), in dB; see player/replayGain.ts. */
   replayGain?: ReplayGain;
+}
+
+export interface Chapter {
+  start: number;
+  end: number;
+  title: string;
 }
 
 export interface ReplayGain {
@@ -91,6 +103,12 @@ export interface Podcast {
   coverUrl?: string;
   episodeCount?: number;
   description?: string;
+  /** When the show was added to the server (ms since epoch). */
+  addedAt?: number;
+  /** When the show last changed on the server, which is usually a new episode (ms). */
+  updatedAt?: number;
+  /** When you last listened to any of its episodes (ms). */
+  lastPlayedAt?: number;
 }
 
 export interface HistoryEntry {
@@ -111,6 +129,18 @@ export interface Album {
   trackCount?: number;
   /** When it was added to the library (ms epoch). */
   addedAt?: number;
+  /** Its genres, as the server lists them (lib/browse.ts). */
+  genres?: string[];
+  /** What kind of release it is, from its tags (OpenSubsonic `releaseTypes`: "album", "single", "ep", "compilation"…). */
+  releaseTypes?: string[];
+  /** Navidrome: a compilation of several artists. */
+  compilation?: boolean;
+  /** Navidrome: your plays, last play (ms), star rating and ♥ for the album, and its record labels (smart playlist rules, lib/smartRules.ts). */
+  plays?: number;
+  playedAt?: number;
+  rating?: number;
+  starred?: boolean;
+  labels?: string[];
   /** Same album found on several sources (first = preferred). */
   refs?: Album[];
 }
@@ -147,6 +177,14 @@ export interface Book {
   coverUrl?: string;
   duration?: number;
   progress?: number;
+  /** Listened to the end (or marked finished on the server). */
+  finished?: boolean;
+  /** When the book was added to the server (ms since epoch). */
+  addedAt?: number;
+  /** When you last listened to it (ms). */
+  lastPlayedAt?: number;
+  publishedYear?: number;
+  series?: string;
 }
 
 export interface SearchResults {
@@ -156,6 +194,15 @@ export interface SearchResults {
   stations: Station[];
   books: Book[];
   podcasts: Podcast[];
+}
+
+export interface BookDetails {
+  description?: string;
+  chapters?: Chapter[];
+  publisher?: string;
+  genres?: string[];
+  /** Where you are in the book, seconds. */
+  currentTime?: number;
 }
 
 export interface BookPlayback {
@@ -178,14 +225,33 @@ export interface MusicSource {
   /** Albums by other artists where this artist is featured on a song ("Appears On"), leaving out `ownAlbumIds`. */
   getAppearsOn?(artist: { id: string; name: string }, ownAlbumIds?: string[]): Promise<Album[]>;
   getAlbumTracks?(albumId: string): Promise<Track[]>;
+  /** The artist's best-known songs that are on this server, most popular first (Navidrome asks Last.fm). */
+  getTopSongs?(artistName: string, count?: number): Promise<Track[]>;
   getStations?(): Promise<Station[]>;
   /** Delete one of the server's own radio stations. Navidrome only allows this for admin accounts. */
   deleteStation?(id: string): Promise<void>;
+  /**
+   * Add a radio station to the server, for everyone on it (Radio → Your stations). Navidrome only allows this for admin
+   * accounts; the Hub for `library.edit`. `logo` is kept only by the Hub.
+   */
+  addStation?(s: { name: string; streamUrl: string; homepage?: string; logo?: string }): Promise<void>;
+  /** Change a server station's logo (Hub stations only; '' takes it off). */
+  setStationLogo?(id: string, logo: string): Promise<void>;
   getBooks?(): Promise<Book[]>;
   startBook?(bookId: string): Promise<BookPlayback>;
   syncBook?(track: Track, absoluteTime: number, listened: number): Promise<void>;
   getPodcasts?(): Promise<Podcast[]>;
   getEpisodes?(podcastId: string): Promise<Track[]>;
+  /** The newest episodes across every show, newest first (Podcasts → Latest episodes). */
+  getLatestEpisodes?(limit?: number): Promise<Track[]>;
+  /** Episodes you're part way through, most recently played first (Podcasts → Continue listening). */
+  getEpisodesInProgress?(): Promise<Track[]>;
+  /** Mark episodes played (finished) or unplayed (back to the start), on the server. */
+  setPlayed?(tracks: Track[], played: boolean): Promise<void>;
+  /** A book's page: its description and chapters. */
+  getBookDetails?(bookId: string): Promise<BookDetails>;
+  /** Mark a book finished, or not started (back to the start). */
+  setBookFinished?(bookId: string, finished: boolean): Promise<void>;
   /** Server-side play history, newest first. */
   getHistory?(): Promise<HistoryEntry[]>;
   getRecentlyPlayedAlbums?(): Promise<Album[]>;

@@ -1,12 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
-import { filesSince, GENRE_CHECK_MS, genreKey, getGenreCheck, setGenreCheck, genreLookup, genresSince, genreTargets, getGenreSettings, normalizeGenre, saveGenreSettings, setGenresSince, type GenreRule } from '../genres.ts';
+import { filesSince, GENRE_CHECK_MS, genreKey, isOccasion, getGenreCheck, setGenreCheck, genreLookup, genresSince, genreTargets, getGenreSettings, subgenresOf, normalizeGenre, saveGenreSettings, setGenresSince, type GenreRule } from '../genres.ts';
 import { clientIp, HttpError, need } from '../http.ts';
 import { getScanSettings } from '../library.ts';
 import { notify, withPermission } from '../notify.ts';
+import { join } from 'node:path';
 import { libraryFile, readTags, relPath, type Tags } from '../tags.ts';
-import { navidromeAdmin } from './navidrome.ts';
+import type { Db } from '../db.ts';
+import { libraryAdmin } from '../libraryAdmin.ts';
 import { saveTagChanges } from './tags.ts';
 
 /**
@@ -15,37 +17,89 @@ import { saveTagChanges } from './tags.ts';
  * editor Save, so it shows under Settings → Server → Tag edits and can be undone there.
  */
 
-/** "Rap; Hip-Hop" and ["Hip-Hop", "Rap"] are the same genres. */
-const sameGenres = (a: string[], b: string) => {
-  const x = new Set(a.flatMap((g) => g.split(/\s*[;,/|\\]\s*/)).map(genreKey).filter(Boolean));
-  const y = new Set(b.split(/\s*[;,/|\\]\s*/).map(genreKey).filter(Boolean));
+/**
+ * An album's genres are already the tidy ones only when they are spelled exactly so (in any order): "Rap;Hip-Hop" or
+ * "Rap/Hip Hop" in the file is the same genre to a person but a different one to Navidrome, which splits only on
+ * "; " and shows each spelling as its own genre in Browse. The album's genres are as Navidrome split them, or the
+ * file's genre tags split on "; " when they come from the catalog.
+ */
+export const sameGenres = (a: string[], b: string) => {
+  const x = new Set(a.map((g) => g.trim()).filter(Boolean));
+  const y = new Set(b.split(/;\s+/).map((g) => g.trim()).filter(Boolean));
   return x.size === y.size && [...x].every((k) => y.has(k));
 };
+
+const RESTORED_KEY = 'genres.occasionsRestored';
+const splitGenre = (g: string) => g.split(/\s*[;,/|\\]\s*/).map((p) => p.trim()).filter(Boolean);
+
+/**
+ * Before tidying kept occasion genres (isOccasion: "Christmas", "Christmas Country"), tidying a "Christmas; Country"
+ * album dropped the Christmas. This puts them back, once: for each file a genre tidy changed (its undo log), the
+ * occasion genres its genre had before and lost are added after the genre it has now. One undoable Save, "Put
+ * Christmas genres back". Returns how many files it changed.
+ */
+export async function restoreOccasions(db: Db, musicDir: string): Promise<{ changed: number; failed: number }> {
+  const rows = db.prepare("SELECT path, before, after FROM tag_edits WHERE undone_at IS NULL AND (label LIKE 'Genre: %' OR label LIKE 'Genres of %') ORDER BY id").all() as { path: string; before: string; after: string }[];
+  const lost = new Map<string, string[]>();
+  for (const r of rows) {
+    let before: Tags, after: Tags;
+    try { before = JSON.parse(r.before); after = JSON.parse(r.after); } catch { continue; }
+    if (typeof before.genre !== 'string' || typeof after.genre !== 'string') continue;
+    const kept = new Set(splitGenre(after.genre).map(genreKey));
+    const gone = splitGenre(before.genre).filter((g) => isOccasion(g) && !kept.has(genreKey(g)));
+    if (gone.length) lost.set(r.path, [...(lost.get(r.path) ?? []), ...gone]);
+  }
+  const plan: { file: string; tags: Tags }[] = [];
+  for (const [path, gone] of lost) {
+    const file = join(musicDir, path);
+    const cur = (await readTags(file).catch(() => null))?.genre;
+    if (cur === undefined || cur === null) continue;
+    const have = new Set(splitGenre(cur).map(genreKey));
+    const add = [...new Map(gone.filter((g) => !have.has(genreKey(g))).map((g) => [genreKey(g), g])).values()];
+    if (add.length) plan.push({ file, tags: { genre: [...splitGenre(cur), ...add].join('; ') } });
+  }
+  if (!plan.length) return { changed: 0, failed: 0 };
+  const r = await saveTagChanges(db, musicDir, plan, 'Put Christmas genres back', null);
+  if (r.changed.length) audit(db, { action: 'genres.occasionsRestored', target: 'library', detail: { files: r.changed.length, failed: r.failed.length } });
+  return { changed: r.changed.length, failed: r.failed.length };
+}
 
 function readRules(v: unknown): GenreRule[] {
   if (!Array.isArray(v) || v.length > 5000) throw new HttpError(400, 'rules must be a list of up to 5000');
   const out = new Map<string, GenreRule>();
   for (const r of v as Record<string, unknown>[]) {
     const from = typeof r?.from === 'string' ? r.from.trim() : '', to = typeof r?.to === 'string' ? r.to.trim() : '';
-    if (!genreKey(from) || !genreKey(to) || from.length > 100 || to.length > 100) throw new HttpError(400, 'Each rule needs a genre to change and what it becomes (up to 100 characters)');
-    out.set(genreKey(from), { from, to });
+    const sub = typeof r?.sub === 'string' ? r.sub.trim() : '';
+    if (!genreKey(from) || !genreKey(to) || from.length > 100 || to.length > 100 || sub.length > 100) throw new HttpError(400, 'Each rule needs a genre to change and what it becomes (up to 100 characters)');
+    if (sub && (sub.includes(';') || genreKey(sub) === genreKey(to))) throw new HttpError(400, 'A sub-genre is one name, other than its genre');
+    out.set(genreKey(from), genreKey(sub) ? { from, to, sub } : { from, to });
   }
   return [...out.values()];
 }
 
-export function genreRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
-  const admin = async () => {
-    const s = getScanSettings(db, config.secretKey);
-    if (!s) throw new HttpError(409, 'Add the Navidrome admin login under Settings → Server first');
-    return navidromeAdmin(s.url, s.username, s.password);
-  };
+export function genreRoutes(app: FastifyInstance, { db, config, library, catalog }: Ctx) {
+  const admin = () => libraryAdmin(db, config.secretKey, catalog);
   const settingsOut = () => {
     const s = getGenreSettings(db);
-    return { auto: s.auto, rules: s.rules, defaults: s.defaults, kept: s.keep.length, genres: genreTargets(s.rules) };
+    return { auto: s.auto, rules: s.rules, defaults: s.defaults, kept: s.keep.length, genres: genreTargets(s.rules), subgenres: subgenresOf(s.rules) };
   };
 
   // Downloads that finish from now on are new; the library already there is for the review.
   if (genresSince(db) === null) setGenresSince(db, Date.now());
+
+  // once: put back the Christmas (and other occasion) genres earlier tidies dropped
+  if (config.musicDir && !db.prepare('SELECT 1 FROM hub_settings WHERE key = ?').get(RESTORED_KEY)) {
+    const t = setTimeout(() => {
+      void restoreOccasions(db, config.musicDir)
+        .then((r) => {
+          db.prepare('INSERT INTO hub_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING').run(RESTORED_KEY, JSON.stringify({ at: Date.now(), ...r }));
+          if (r.changed) library.changed();
+        })
+        .catch(() => undefined);
+    }, 30_000);
+    t.unref();
+    app.addHook('onClose', async () => clearTimeout(t));
+  }
 
   /** New downloads: give their files the tidy genre before Navidrome scans them (Library.onNewMusic). */
   library.onNewMusic.push(async () => {
@@ -147,7 +201,7 @@ export function genreRoutes(app: FastifyInstance, { db, config, library }: Ctx) 
 
   // every 6 hours, see whether a week has gone by since the last look (needs the Navidrome admin login)
   const timer = setInterval(() => {
-    if (Date.now() - getGenreCheck(db).at < GENRE_CHECK_MS || !getScanSettings(db, config.secretKey)) return;
+    if (Date.now() - getGenreCheck(db).at < GENRE_CHECK_MS || !(getScanSettings(db, config.secretKey) || catalog.standalone())) return;
     void check().catch(() => undefined);
   }, 6 * 3_600_000);
   timer.unref();

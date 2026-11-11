@@ -48,6 +48,7 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | Steering wheel / Bluetooth buttons do nothing (Android) | No native media session | Fixed in 0.4.1 (`MediaBridge.kt`). If a head unit still ignores it, check its own key-mapping settings and that something has played once (sessions become active on play) |
 | Music stops as soon as the screen locks (Android) | Wry pauses the WebView when the activity pauses, and Android tells it the window is hidden; a paused / hidden WebView suspends `<audio>` | Fixed (unreleased): `MainActivity` keeps the WebView awake while a track is loaded (`PlaybackHost`, `onPause`). If it comes back after a Tauri/wry upgrade, check that wry still calls `setContentView(webView)` and that `MainActivity.setContentView` still wraps it |
 | Music stops at the end of a song with the screen off, or a few minutes in (Android) | The phone's battery saver froze or killed the app, or the foreground service dropped out between tracks | `MediaPlaybackService` now stays in the foreground through track changes and holds wake + Wi-Fi locks. On Samsung, Xiaomi, Huawei, OnePlus and similar, also set Wavelength's battery use to **Unrestricted** (Settings → Apps → Wavelength → Battery) and remove it from "Sleeping apps" / "Deep sleeping apps"; see [dontkillmyapp.com](https://dontkillmyapp.com). Make sure the playback notification is allowed; swiping it away pauses the music |
+| Lyrics belong to another song | LRCLIB (user-submitted) has a wrong or mislabelled entry, the file's tags or `.lrc` hold the wrong words (credit says "Navidrome"), or a wrong match was saved to the Hub's shared copy | **Wrong lyrics?** above the lyrics: pick another entry, search, paste, or mark "no lyrics". The pick wins over every source and replaces the Hub's copy. For Navidrome, also fix the tags / `.lrc` and rescan |
 
 ## Discover / downloads
 
@@ -56,6 +57,8 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | Old songs in a genre chart | Source stopped updating (Deezer genre charts, several Billboard genre pages) | Freshness guard drops stale charts; if one slips through, check its date and remove it from `BY_GENRE` |
 | A genre shows different charts than expected | It was customised in Settings → Discover (genre chip has a •) | **Reset to defaults** for that genre |
 | Deezer artist/album page says "no such artist/album" | Deezer removed or merged the id | Search again; Deezer answers 200 with `{ error }` for dead ids |
+| Discover preview buttons grey out ("No preview available") for songs Deezer does have | Older versions read Deezer's rate limit (`200 {"error": "Quota limit exceeded"}`) or a network blip as "no clip", and took the first hit by the artist even when it had no clip | Update. Lookups are paced, wait out the rate limit, and a failed one leaves the button to try again (its tooltip says why) |
+| A preview fails with "Playback failed (code 4)" | Deezer's clip links are signed and run out; the charts, the Weekly Mix and Release Radar keep them for hours or days | Update: an expired link is swapped for a fresh one when it plays (`previewExpired()` in `charts.ts`, `freshPreview()` in `store/player.ts`) |
 | "Skipped: Apple Music timed out / 504" | Apple's RSS service is down | Nothing to do; Mix uses the rest |
 | "Skipped: 403 … rss.applemarketingtools.com" | Apple moved the feed to `rss.marketingtools.apple.com`; an older app or Hub refuses the redirect | Update both the app and the Hub |
 | A chart shows 0 rows / "layout changed" | Site HTML changed (Billboard, RadioWave scrapers) | Update the parser in `charts.ts`; test against the live page |
@@ -74,8 +77,22 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | **Merge** isn't in the select bar | Merging is for Hub admins (`library.edit`), and needs two or more ticked | Sign in to the Hub as an admin; tick at least two |
 | "…isn't on a Navidrome server, so the Hub can't merge into it" | The first album ticked is only on Plex (or another server) | Tick a Navidrome album first; it's the target |
 | Merged, but the albums still show separately after the rescan | Navidrome also tells albums apart by their MusicBrainz album id (and release date), and the files have different ones. The merge sets the year, but can't write MusicBrainz ids | Open the album, **Edit tags**, and fix it there; or clear the MusicBrainz album id with a tagger like MusicBrainz Picard. Check Navidrome's `PID.Album` setting |
-| Merged the wrong way round | The first one ticked is the target | **Settings → Server → Tag edits → Undo**, then tick the right one first |
+| **Merge into…** isn't on an artist or album page | It's for Hub admins (`library.edit`), and only for artists and albums on Navidrome | Sign in to the Hub as an admin |
+| **Merge into…** suggests nothing | Nothing else in the library has a name close enough | Type part of the other name in the box |
+| An artist still shows after merging it | Before this fix, songs where they were only featured on someone else's album weren't retagged | Merge again: it now reads their appears-on albums too |
+| Merged the wrong way round | The first one ticked is the target (with **Merge into…**, the one you picked is kept) | **Settings → Server → Tag edits → Undo**, then tick the right one first |
 | "The Hub can't find …'s files in its music folder" | The Hub's music folder isn't the one Navidrome reads, or is read-only | See the tag editor's setup in `docs/HUB.md` (`WAVELENGTH_MUSIC_DIR`, `WAVELENGTH_NAVIDROME_MUSIC_DIR`) |
+
+## Artist credits and unmatched songs
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| An artist shows as "Lil Wayne;Drake" instead of Lil Wayne feat. Drake | Navidrome splits artists on "; " with a space, not on ";" alone | **Library care → Unmatched songs → Split joined artists** writes Artist "Lil Wayne feat. Drake" and Album artist "Lil Wayne". New downloads are fixed by the Hub before the scan unless the tick box there is off |
+| An artist shows as "Lil Durk;Lil Durk" or "Lil Durk Lil Durk" | The file names the same artist twice in one tag (some downloaders write the main artist again) | **Library care → Unmatched songs → Split joined artists** writes just "Lil Durk". New downloads are fixed by the Hub before the scan unless the tick box there is off |
+| "Lil Wayne,Drake" or "Lil Wayne/Drake" isn't split | Commas and slashes can be part of a name ("AC/DC"), so they're only listed as **Maybe joined** | Filter **Maybe joined**, tick the wrong ones and set the Artist, or **Edit tags** one by one. Write "Lil Wayne feat. Drake" so Navidrome splits it with Lil Wayne as the main artist |
+| "504 error" in Library care after **Fix titles** or **Split joined artists** (before 0.26.1) | The whole fix went to the Hub as one long request and the proxy in front of it gave up; the Hub usually kept writing | Update the app and Hub, then **Check again**: titles already fixed are skipped. Settings → Server → Tag edits shows what was saved and can undo it |
+| **Unmatched songs** isn't in Library care | It's for Hub admins (`library.edit`) | Sign in to the Hub as an admin |
+| Fixed songs still look the same | Navidrome shows new tags after its rescan, about a minute later | Wait for the rescan, then **Check again** |
 
 ## In-app updates
 

@@ -1,8 +1,10 @@
+import { isSmartPick, useSmartPicks } from '../lib/smartShuffle';
+import { ShuffleButton } from './ShuffleButton';
 import { SoundsLikeButton } from './SoundsLikeButton';
 import { trackArt, useArtworkList } from '../lib/artwork';
-import { usePlayer } from '../store/player';
-import { Cover, fmtTime } from './common';
-import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat, IconShuffle } from './Icons';
+import { ArtistCredit, Cover } from './common';
+import { Seek, usePlayerControls } from './PlayerClock';
+import { IconChevronDown, IconNext, IconPause, IconPlay, IconPrev, IconRepeat } from './Icons';
 import { Visualizer } from './Visualizer';
 import { NowPlayingStage } from './Scenes';
 import { AddToPlaylist } from './AddToPlaylist';
@@ -14,6 +16,8 @@ import { TogetherButton } from './Together';
 import { RadioGetButton } from './RadioGetButton';
 import { SongRadioButton } from './SongRadioButton';
 import { SleepButton } from './SleepButton';
+import { ChaptersButton, SkipButton, SpeedButton } from './SpokenControls';
+import { isSpoken } from '../lib/spoken';
 import { DjModeButton } from './DjStation';
 import { useStation } from '../lib/djStation';
 import { TrashPanda, DJ_NAME } from './TrashPanda';
@@ -21,15 +25,29 @@ import { LyricsPanel } from './Lyrics';
 import { SingButton, SingControls } from './SingButton';
 import { VideoButton } from './VideoButton';
 import { useState } from 'react';
+import { useSleep } from '../lib/sleep';
+import { useSing } from '../lib/singMode';
 import { useCatalog } from '../store/catalog';
 import { useUi } from '../store/ui';
-import { albumOfTrack, artistOfTrack } from '../lib/trackLinks';
+import { albumOfTrack, artistOfTrack, isLibraryTrack } from '../lib/trackLinks';
 import type { Track } from '../sources/types';
 
 /** Full-screen Plexamp-style view: blurred artwork backdrop, big art, big visualizer. */
 export function NowPlaying() {
-  const p = usePlayer();
+  const p = usePlayerControls();
   const [showLyrics, setShowLyrics] = useState(false);
+  const [more, setMore] = useState(savedMore);
+  // a running sleep timer or Sing mode stays in sight even with More folded
+  const sleeping = useSleep((s) => !!s.endsAt || s.endOfTrack);
+  const singing = useSing((s) => s.on);
+  const toggleMore = () => {
+    setMore(!more);
+    try {
+      localStorage.setItem(MORE_KEY, more ? '0' : '1');
+    } catch {
+      /* no storage */
+    }
+  };
   const close = () => window.history.back(); // pops the entry setNowPlaying(true) pushed
   const t = p.current();
   const albums = useCatalog((s) => s.albums);
@@ -50,49 +68,54 @@ export function NowPlaying() {
         <NowPlayingStage art={art} alt={t.title} />
         <div className="np-side">
           {/* the album, song and artist open their library pages (and close Now Playing) */}
-          <div className="np-kicker">{live ? 'Live radio' : t.kind === 'book' ? 'Audiobook' : album
+          <div className="np-kicker">{live ? 'Live radio' : t.kind === 'book' ? 'Audiobook' : t.kind === 'episode' ? 'Podcast' : album
             ? <button className="np-link" title="Go to album" onClick={() => go({ view: 'album', album })}>{t.album}</button>
             : t.album}</div>
           <h1 className="np-title">{album && !live
             ? <button className="np-link" title="Show in album" onClick={() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } })}>{t.title}</button>
             : live ? p.liveTitle ?? t.title : t.title}</h1>
-          <div className="np-artist">{artist && !live
-            ? <button className="np-link" title="Go to artist" onClick={() => go({ view: 'artist', artist })}>{t.artist}</button>
-            : live ? t.title : t.artist}</div>
+          {/* each artist in "A feat. B; C" opens their own page */}
+          <div className="np-artist">{live
+            ? t.title
+            : <ArtistCredit credit={t.artist} fallback={artist} linkClass="np-link" links={isLibraryTrack(t)} discography="several" />}</div>
           {p.error && <div className="np-error" role="status">{p.error}</div>}
+          {!p.error && p.noSignal && <div className="np-note muted small" role="status">No signal · playing songs saved on this device until it's back</div>}
+          {/* the actions people use most, then the rest behind More (remembered on this device) */}
           <div className="np-actions">
             {t.kind !== 'book' && <AddToPlaylist tracks={[t]} label="Add to playlist" />}
-            <EqButton className="chip" />
-            <DevicesButton className="chip" />
-            <CastButton className="chip" />
-            <CreditsButton track={t} />
-            <TogetherButton className="chip" />
+            {t.kind === 'track' && <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>}
             {live && <RadioGetButton text={p.liveTitle} />}
-            {t.kind === 'track' && t.sourceId !== 'preview' && <SongRadioButton artist={t.artist} track={t} className="chip" />}
-            {t.kind === 'track' && t.sourceId !== 'preview' && <SoundsLikeButton track={t} />}
-            {t.kind === 'track' && <>
-              <button className={`chip ${showLyrics ? 'on' : ''}`} onClick={() => setShowLyrics(!showLyrics)} title="Lyrics">Lyrics</button>
-              <SingButton onOn={() => setShowLyrics(true)} />
-              <VideoButton track={t} />
-            </>}
-            <SleepButton />
+            {isSpoken(t) && <><SpeedButton track={t} /><ChaptersButton track={t} /><SleepButton /></>}
+            <CastButton className="chip" />
             <DjModeButton />
+            {singing && t.kind === 'track' && <SingButton onOn={() => setShowLyrics(true)} />}
+            {sleeping && !isSpoken(t) && <SleepButton />}
+            <button type="button" className={`chip np-more ${more ? 'on' : ''}`} aria-expanded={more} onClick={toggleMore}>{more ? 'Less' : 'More'}</button>
           </div>
-          <Visualizer className="np-viz" bars={48} mode="smooth" />
-          {!live && (
-            <div className="seek big">
-              <span>{fmtTime(p.position)}</span>
-              <input type="range" min={0} max={p.duration || 1} step={0.5} value={p.position}
-                onChange={(e) => p.seek(Number(e.target.value))} style={{ ['--pct' as string]: `${(p.position / (p.duration || 1)) * 100}%` }} />
-              <span>-{fmtTime(Math.max(0, p.duration - p.position))}</span>
+          {more && (
+            <div className="np-actions np-actions-more">
+              {t.kind === 'track' && t.sourceId !== 'preview' && <SongRadioButton artist={t.artist} track={t} className="chip" />}
+              {t.kind === 'track' && t.sourceId !== 'preview' && <SoundsLikeButton track={t} />}
+              {t.kind === 'track' && <>
+                {!singing && <SingButton onOn={() => setShowLyrics(true)} />}
+                <VideoButton track={t} />
+              </>}
+              {t.kind === 'episode' && <VideoButton track={t} />}
+              <CreditsButton track={t} />
+              <TogetherButton className="chip" />
+              <DevicesButton className="chip" />
+              <EqButton className="chip" />
+              {!sleeping && !isSpoken(t) && <SleepButton />}
             </div>
           )}
+          <Visualizer className="np-viz" bars={48} mode="smooth" />
+          {!live && <Seek className="seek big" remaining />}
           <div className="transport big">
-            <button className={`tbtn small ${p.shuffle ? 'on' : ''}`} onClick={p.toggleShuffle}><IconShuffle /></button>
-            <button className="tbtn" onClick={p.prev}><IconPrev /></button>
-            <button className="tbtn play" onClick={p.toggle}>{p.playing ? <IconPause /> : <IconPlay />}</button>
-            <button className="tbtn" onClick={p.next}><IconNext /></button>
-            <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat}><IconRepeat /></button>
+            {isSpoken(t) ? <SkipButton back /> : <ShuffleButton />}
+            <button className="tbtn" onClick={p.prev} aria-label="Previous"><IconPrev /></button>
+            <button className="tbtn play" onClick={p.toggle} aria-label={p.playing ? 'Pause' : 'Play'}>{p.playing ? <IconPause /> : <IconPlay />}</button>
+            <button className="tbtn" onClick={p.next} aria-label="Next"><IconNext /></button>
+            {isSpoken(t) ? <SkipButton /> : <button className={`tbtn small ${p.repeat !== 'off' ? 'on' : ''}`} onClick={p.cycleRepeat} aria-label={`Repeat: ${p.repeat}`}><IconRepeat /></button>}
           </div>
           {showLyrics && t.kind === 'track' && <><SingControls /><LyricsPanel track={t} /></>}
           {!(showLyrics && t.kind === 'track') && <UpNext />}
@@ -100,6 +123,15 @@ export function NowPlaying() {
       </div>
     </div>
   );
+}
+
+const MORE_KEY = 'tonearm.npMore';
+function savedMore(): boolean {
+  try {
+    return localStorage.getItem(MORE_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 const UP_NEXT_KEY = 'tonearm.npUpNext';
@@ -119,7 +151,7 @@ function savedOpen(): boolean {
  * whole queue, and a tap plays a song. In DJ mode the last row says the DJ adds more when these run out.
  */
 function UpNext() {
-  const p = usePlayer();
+  const p = usePlayerControls();
   const station = { on: useStation((s) => s.on), busy: useStation((s) => s.busy) };
   const [open, setOpen] = useState(savedOpen);
   const [tab, setTab] = useState<'next' | 'back'>('next');
@@ -169,15 +201,14 @@ function UpNextRow({ track: q, onPlay }: { track: Track; onPlay(): void }) {
         <Cover src={trackArt(q)} alt={q.title} className="tiny" />
         <span>{q.title}</span>
       </button>
-      {artist
-        ? <button className="np-link" title="Go to artist" onClick={() => useUi.getState().go({ view: 'artist', artist })}><small>{q.artist}</small></button>
-        : <small>{q.artist}</small>}
+      <small><ArtistCredit credit={q.artist} fallback={artist} linkClass="np-link" links={isLibraryTrack(q)} discography="several" /></small>
     </div>
   );
 }
 
 export function QueuePanel() {
-  const p = usePlayer();
+  const p = usePlayerControls();
+  const picks = useSmartPicks((s) => s.keys);
   return (
     <aside className="queue">
       <div className="queue-head">
@@ -190,7 +221,7 @@ export function QueuePanel() {
           <div key={`${i}:${t.id}`} className={`queue-row ${i === p.index ? 'active' : ''} ${i < p.index ? 'played' : ''}`} onDoubleClick={() => p.jump(i)}>
             <Cover src={trackArt(t)} alt={t.title} className="tiny" />
             <div className="track-main" onClick={() => p.jump(i)}>
-              <div className="track-title">{t.title}</div>
+              <div className="track-title">{t.title}{isSmartPick(picks, t) && <span className="smart-pick" title="Smart Shuffle pick"> ✦</span>}</div>
               <div className="track-sub">{t.artist}</div>
             </div>
             {i !== p.index && <button className="x" onClick={() => p.removeAt(i)} title="Remove">×</button>}

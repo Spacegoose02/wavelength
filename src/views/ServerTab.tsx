@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { HubError, type HubAdminService, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit, type HubTrashAlbum } from '../sources/hub';
+import { HubError, type HubAdminService, type HubCatalogStatus, type HubAdminUser, type HubContainer, type HubLibraryStatus, type HubListening, type HubServerStatus, type HubTagEdit, type HubTrashAlbum } from '../sources/hub';
 import { hubClient } from '../store/hub';
 import { GenreReview } from './GenreReview';
+import { PlexImport } from './PlexImport';
 
 const gb = (n: number) => (n >= 1e12 ? `${(n / 1e12).toFixed(1)} TB` : n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${Math.max(0, Math.round(n / 1e6))} MB`);
 const since = (t: number) => {
@@ -23,6 +24,28 @@ function Disk({ d }: { d: { free: number; total: number } | null }) {
 const errText = (e: unknown) => String((e as Error).message ?? e);
 
 /** Admin: the ntfy server the Hub sends push notifications through (hub/src/push.ts). */
+/**
+ * How hard the Hub's machine is working (GET /api/admin/server `load`). "Answer delay" is how long the Hub's main
+ * thread was stuck since the last look: anything over about 100 ms makes every device wait for the Hub.
+ */
+function ServerLoad({ load, index }: { load: NonNullable<HubServerStatus['load']>; index: HubServerStatus['index'] }) {
+  const [one] = load.loadAvg;
+  const busy = load.cpus ? one / load.cpus : 0;
+  const used = load.memory.total - load.memory.free;
+  const slow = load.eventLoopMs.p99 > 100;
+  return (
+    <section>
+      <h2>Load</h2>
+      <div className="server-grid">
+        <div><span className="muted">CPU</span><b className={busy > 0.9 ? 'kid-blocked' : ''}>{Math.round(busy * 100)}% of {load.cpus} core{load.cpus === 1 ? '' : 's'} (last minute)</b></div>
+        <div><span className="muted">Memory</span><b>{gb(used)} of {gb(load.memory.total)} used · Hub {gb(load.memory.hub)}</b></div>
+        <div><span className="muted">Answer delay</span><b className={slow ? 'kid-blocked' : ''}>{load.eventLoopMs.p99} ms typical worst, {load.eventLoopMs.max} ms worst{slow ? ' — the Hub is busy; check sound-alike analysis and other containers' : ''}</b></div>
+        {index && <div><span className="muted">Library copy</span><b>{index.listedAt ? `${index.songs.toLocaleString()} songs, listed ${since(index.listedAt)} ago` : 'Not listed yet (needs the Library updates login)'} · {index.lyrics.toLocaleString()} songs' lyrics</b></div>}
+      </div>
+    </section>
+  );
+}
+
 function PushNotifications() {
   const [s, setS] = useState<{ server: string; hasToken: boolean } | null>();
   const [form, setForm] = useState({ server: '', token: '' });
@@ -91,7 +114,7 @@ function ListeningNow() {
             <div className="track-title">{p.displayName}{p.role === 'kid' ? <small className="muted"> · kid</small> : null}</div>
             <div className="track-sub">{p.title}{p.artist ? ` — ${p.artist}` : ''}{p.album ? ` · ${p.album}` : ''}</div>
           </div>
-          <span className="muted small">{p.deviceName}{p.source ? ` · ${p.source}` : ''}</span>
+          <span className="muted small" title={PLAYED_BY_HINT[p.playedBy ?? ''] ?? undefined}>{p.deviceName}{p.playedBy ? ` · ${PLAYED_BY[p.playedBy]}` : p.source ? ` · ${p.source}` : ''}</span>
         </div>
       ))}
     </section>
@@ -176,7 +199,7 @@ function NavidromeAccounts() {
       {svc && (
         <label className="check" style={{ margin: '12px 0' }} title="Every device reaches Navidrome through the Hub, so no device holds a Navidrome password">
           <span className="switch"><input type="checkbox" checked={svc.config.relay === 'everyone'} onChange={(e) => run(0, () => c!.updateService(svc.id, { config: { relay: e.target.checked ? 'everyone' : null } }))} /><span /></span>
-          <small>Send everyone through the Hub, not just kids</small>
+          <small>Send everyone through the Hub, not just kids (this also lets people make logins for SUB/WAVE and other music apps in Settings → Account → Other music apps)</small>
         </label>
       )}
       {svc && users.map((u) => {
@@ -265,6 +288,194 @@ function LibraryScan() {
           </p>
         )}
       </form>
+    </section>
+  );
+}
+
+/**
+ * Music catalog (hub/src/catalog.ts): the Hub reads the music folder itself, the first step of it becoming the
+ * music server. Shows how far a scan got and what it found; nothing here changes what devices play. Hidden on a
+ * Hub that hasn't got it yet.
+ */
+/** Listening now: who sent the song (hub/src/playedBy.ts). */
+const PLAYED_BY: Record<string, string> = { hub: 'played by the Hub', navidrome: 'Navidrome via the Hub', direct: 'Navidrome directly' };
+const PLAYED_BY_HINT: Record<string, string> = {
+  hub: 'The Hub sent this song from the music folder itself (Hub plays the songs)',
+  navidrome: 'This device goes through the Hub, which fetched the song from Navidrome (Hub plays the songs is off, or the catalog doesn\'t know the song yet)',
+  direct: 'This device talks to Navidrome itself, not through the Hub. Turn on “Send everyone through the Hub” under Sources for the Hub to play its songs',
+};
+
+function MusicCatalog() {
+  const c = hubClient();
+  const [st, setSt] = useState<HubCatalogStatus>();
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = () => c?.catalog().then(setSt).catch(() => undefined);
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!st?.scanning) return;
+    const t = setTimeout(load, 3000);
+    return () => clearTimeout(t);
+  }, [st]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!st) return null;
+  const n = (x: number) => x.toLocaleString();
+  const scan = async () => {
+    setMsg('');
+    try {
+      setSt(await c!.scanCatalog());
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    }
+  };
+  const serve = async (b: { serve?: boolean; stream?: boolean; userData?: boolean }) => {
+    setMsg('');
+    try {
+      setSt(await c!.setCatalogServe(b));
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    }
+  };
+  const navidrome = async (off: boolean, force = false) => {
+    if (off && !force && !window.confirm('Turn Navidrome off? Everyone\'s hearts, plays and playlists are copied to the Hub first, then every device uses only the Hub.')) return;
+    setMsg('');
+    setBusy(true);
+    try {
+      setSt(await c!.setNavidromeOff(off, force));
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const p = st.progress;
+  const sum = st.summary;
+  return (
+    <section>
+      <h2>Music catalog</h2>
+      <p className="muted small">
+        {st.standalone ? (
+          <>The Hub is your music server. It reads your music folder, keeps its own list of every song with its tags, plays the
+          songs and keeps everyone's hearts, plays and playlists. It looks for changes every hour. Apps reach it through the
+          Navidrome source in Settings → Sources, so keep that switched on.</>
+        ) : (
+          <>The Hub reads your music folder itself and keeps its own list of every song, with its tags, on the way to becoming
+          your music server. Navidrome still plays everything; this list is matched to Navidrome's songs. Once nearly all of
+          them match, Library care, the tag editors, the genre review and Delete album read this list instead of asking
+          Navidrome. The Hub looks for changes every hour and after every Navidrome scan.</>
+        )}
+      </p>
+      {st.blocked ? <p className="errors small">{st.blocked}</p> : (
+        <>
+          <div className="server-grid">
+            <div><span className="muted">Songs</span><b>{n(st.files)} files · {n(sum.albums)} albums · {n(sum.artists)} artists · {n(Math.round(sum.hours))} hours</b></div>
+            {st.navidromeSongs > 0 && <div><span className="muted">Matched to Navidrome</span><b>{n(st.linked)} of Navidrome's {n(st.navidromeSongs)} songs{sum.unlinked ? ` · ${n(sum.unlinked)} files Navidrome doesn't list` : ''}</b></div>}
+            {st.inUse !== undefined && <div><span className="muted">Library care reads</span><b>{st.inUse ? 'This catalog (no sign-ins to Navidrome)' : 'Navidrome, until the catalog matches nearly all of its songs'}</b></div>}
+            {sum.formats.length > 0 && <div><span className="muted">Formats</span><b>{sum.formats.map((f) => `${f.codec} ${n(f.files)}`).join(' · ')}</b></div>}
+            {sum.untagged > 0 && <div><span className="muted">Missing tags</span><b>{n(sum.untagged)} files have no title, artist or album</b></div>}
+            {sum.genres.length > 0 && <div><span className="muted">Top genres</span><b>{sum.genres.slice(0, 8).map((g) => g.genre).join(' · ')}</b></div>}
+          </div>
+          <div className="row gap wrap">
+            <button className="btn" disabled={st.scanning} onClick={scan}>{st.scanning ? 'Scanning…' : 'Scan now'}</button>
+            <span className="muted small">
+              {p ? (p.step === 'walking' ? `Looking through folders · ${n(p.done)} files found` : `Reading ${n(p.done)} of ${n(p.total)} new or changed files`)
+                : st.lastScanAt ? `Last scan ${since(st.lastScanAt)} ago, took ${Math.max(1, Math.round((st.lastScanMs ?? 0) / 1000))} s${st.lastChanges ? ` (${n(st.lastChanges.added)} new, ${n(st.lastChanges.changed)} changed, ${n(st.lastChanges.removed)} removed)` : ''}.`
+                : 'No scan since the Hub started.'}
+            </span>
+            {msg && <span className="errors small">{msg}</span>}
+          </div>
+          {st.lastError && <p className="kid-blocked small">{st.lastError}</p>}
+          {st.serve !== undefined && !st.standalone && (
+            <>
+              <label className="check" style={{ margin: '12px 0 4px' }} title="Albums, artists, genres, search and covers come from the Hub; playing, hearts and playlists still go to Navidrome">
+                <span className="switch"><input type="checkbox" checked={st.serve} onChange={(e) => serve({ serve: e.target.checked })} /><span /></span>
+                <small>Hub answers browsing, search and covers (beta)</small>
+              </label>
+              <p className="muted small">
+                {st.serve && !st.serving ? 'Waiting until the catalog matches nearly all of Navidrome\'s songs; Navidrome answers until then. '
+                  : st.serving ? 'On for devices that reach Navidrome through the Hub. ' : ''}
+                Only devices that reach Navidrome through the Hub (kids, or everyone with “Send everyone through the Hub”) are
+                affected. Songs still play from Navidrome, by the same ids, and hearts and playlists stay there. A new download shows
+                up here after the catalog's next look, a few minutes after Navidrome's scan.
+              </p>
+            </>
+          )}
+          {st.stream !== undefined && !st.standalone && (
+            <>
+              <label className="check" style={{ margin: '12px 0 4px' }} title="Songs are read straight from the music folder; hearts, playlists and play counts still go to Navidrome">
+                <span className="switch"><input type="checkbox" checked={st.stream} onChange={(e) => serve({ stream: e.target.checked })} /><span /></span>
+                <small>Hub plays the songs (beta)</small>
+              </label>
+              <p className="muted small">
+                {st.stream && !st.streaming ? 'Waiting until the catalog matches nearly all of Navidrome\'s songs; Navidrome plays until then. '
+                  : st.streaming ? 'On for devices that reach Navidrome through the Hub. ' : ''}
+                The Hub sends the music file itself, with seeking, instead of fetching it from Navidrome. When a device asks
+                for a lower quality it converts as it plays. Plays still count in Navidrome, and a song the catalog doesn't
+                know yet plays from Navidrome.
+              </p>
+            </>
+          )}
+          {st.userData !== undefined && !st.standalone && (
+            <>
+              <label className="check" style={{ margin: '12px 0 4px' }} title="Hearts, play counts, ratings and playlists are kept by the Hub; Navidrome gets every change too">
+                <span className="switch"><input type="checkbox" checked={st.userData} onChange={(e) => serve({ userData: e.target.checked })} /><span /></span>
+                <small>Hub keeps hearts, play counts and playlists (beta)</small>
+              </label>
+              <p className="muted small">
+                {st.userData && st.people ? `Kept for ${n(st.people.people)} ${st.people.people === 1 ? 'person' : 'people'}: ${n(st.people.stars)} hearts, ${n(st.people.plays)} plays. ` : ''}
+                Each person's hearts, plays, ratings and playlists are copied from Navidrome the first time they use the app through
+                the Hub, then kept here. Smart playlists stay on Navidrome. Every change is sent on to Navidrome as well, so it stays
+                complete. Recently played, Most played and Starred lists come from the Hub while the Hub answers browsing.
+              </p>
+            </>
+          )}
+          {st.standalone !== undefined && (
+            <div style={{ marginTop: 16 }}>
+              <h3 className="small">Navidrome</h3>
+              {st.standalone ? (
+                <>
+                  <p className="small"><b>Navidrome is off.</b> The Hub is your music server: it scans the music folder, plays the songs and keeps everyone's hearts, plays and playlists. New songs get ids from the Hub.</p>
+                  <p className="muted small">Turning Navidrome back on lets it answer again, but it won't know about hearts, plays, playlists or songs added while it was off.</p>
+                  <button className="btn" onClick={() => navidrome(false)}>Turn Navidrome back on</button>
+                </>
+              ) : (
+                <>
+                  <p className="muted small">
+                    When the Hub does everything above, Navidrome can be switched off. Turning it off first copies everyone's
+                    hearts, plays, ratings and playlists (and the radio stations) from Navidrome, then every device talks only to
+                    the Hub. Smart playlists stay behind. You can stop the Navidrome container afterwards; nothing changes for
+                    other households that use their own Navidrome.
+                  </p>
+                  <button className="btn" disabled={!st.inUse || busy} title={st.inUse ? undefined : 'Scan first, so the catalog matches Navidrome\'s songs'} onClick={() => navidrome(true)}>
+                    {busy ? 'Copying everyone from Navidrome…' : 'Turn Navidrome off'}
+                  </button>
+                  {!!st.notCopied?.length && (
+                    <div className="kid-blocked small" style={{ marginTop: 8 }}>
+                      <p>Some of it couldn't be copied, so Navidrome is still on:</p>
+                      <ul>{st.notCopied.map((f) => <li key={f.user}><b>{f.user}</b>: {f.error}</li>)}</ul>
+                      <button className="btn" onClick={() => navidrome(true, true)}>Turn it off anyway</button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          {!!st.missing?.length && (
+            <details className="small">
+              <summary>{n(Math.max(0, st.navidromeSongs - st.linked))} songs Navidrome lists without a file the Hub found</summary>
+              <p className="muted">Usually files that were moved or deleted and are still in Navidrome until it cleans up, or files in a hidden folder or one with a .ndignore, which the Hub skips.</p>
+              <ul>{st.missing.map((m) => <li key={m.path || `${m.artist}-${m.title}`}>{m.artist} – {m.title}{m.album ? ` (${m.album})` : ''}{m.path && <> · <code>{m.path}</code></>}</li>)}</ul>
+            </details>
+          )}
+          {sum.failed.length > 0 && (
+            <details className="small">
+              <summary>{n(st.failed)} files couldn't be read</summary>
+              <ul>{sum.failed.map((f) => <li key={f.path}><code>{f.path}</code>: {f.error}</li>)}</ul>
+            </details>
+          )}
+        </>
+      )}
     </section>
   );
 }
@@ -507,6 +718,7 @@ export function ServerTab() {
           {rows.map(([k, v]) => <div key={k}><span className="muted">{k}</span><b>{v}</b></div>)}
         </div>
       </section>
+      {s.load && <ServerLoad load={s.load} index={s.index} />}
       <section>
         <h2>Storage</h2>
         <div className="server-grid">
@@ -534,7 +746,9 @@ export function ServerTab() {
       <Containers />
       <NavidromeAccounts />
       <LibraryScan />
+      <MusicCatalog />
       <GenreReview />
+      <PlexImport />
       <TagEdits />
       <DeletedAlbums />
       <section>

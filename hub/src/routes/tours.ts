@@ -40,4 +40,11 @@ export function videoRoutes(app: FastifyInstance, { db, videos }: Ctx) {
     const d = Number(req.query.duration);
     return { video: await videos.find(req.query.artist ?? '', req.query.title ?? '', Number.isFinite(d) && d > 0 ? d : undefined) };
   });
+  // a podcast episode's video, posted by the show
+  app.get<{ Querystring: { show?: string; title?: string; duration?: string } }>('/api/videos/episode', async (req) => {
+    const { user } = signedIn(req);
+    requireFeature(db, 'musicVideos', user);
+    const d = Number(req.query.duration);
+    return { video: await videos.findEpisode(req.query.show ?? '', req.query.title ?? '', Number.isFinite(d) && d > 0 ? d : undefined) };
+  });
 }

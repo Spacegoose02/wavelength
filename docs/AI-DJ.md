@@ -213,7 +213,8 @@ Ideas for later, roughly in order:
 With **Talking AI DJ** on in **Settings → Features**, people can turn on **Settings → Playback → Talking DJ**.
 Every few songs (they choose how often, and a laid back, hype or trivia style) the app asks the Hub for a line
 about the song that just played and the one coming up, a few seconds before it starts, then reads it while the
-music dips. Each line is one small, low-effort call (a fraction of a cent on the default model) counted against the
+music dips. It only talks before songs the DJ itself queued (the AI DJ chat's **play**, and DJ mode's own
+station, see below), never over music you picked yourself: see [Who's in charge](#whos-in-charge). Each line is one small, low-effort call (a fraction of a cent on the default model) counted against the
 same monthly allowance as the chat.
 
 **What the DJ calls you** (in the same section, shown even with talking off, and in the DJ mode panel) is the name
@@ -263,6 +264,33 @@ like `af_bella+af_sky` (half and half) or `af_bella(2)+af_sky(1)` (two parts Bel
 (blend)". Kokoro can also load extra voice files (`.pt`): mount a folder of them over the container's voices folder
 (`/app/api/src/voices/v1_0` in Kokoro-FastAPI) and restart it; they appear in the pickers by their file name.
 
+## Ask out loud
+
+A microphone sits next to the DJ chat's **Send** and DJ mode's **Go**. Press it, say what you want ("something for
+a road trip", "more like this but slower"), and press it again (or wait: it stops after 15 seconds). The words go
+to the DJ as if you'd typed them.
+
+Who understands them is set under **Settings → AI DJ → Voice requests**:
+
+| Choice | How | Cost |
+|---|---|---|
+| **Each device's own** (default) | The browser's speech recognition: Chrome, Edge and Safari have one; the Android app and some desktop builds don't, and say so | Free |
+| **Whisper on your Hub** | The app records and sends it to `POST /api/dj/listen`; the Hub passes it to a Whisper server that speaks OpenAI's API | Free, nothing leaves your server |
+| **OpenAI** | The same, to OpenAI's `gpt-4o-mini-transcribe`, with the OpenAI key from the voice settings | About $0.003 a minute, counted toward the AI DJ limits |
+
+Whisper runs in its own container next to the Hub, for example speaches:
+
+```yaml
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    restart: unless-stopped
+    volumes:
+      - ./whisper-cache:/home/ubuntu/.cache/huggingface/hub
+```
+
+Set its address (`http://whisper:8000`) and a model (`Systran/faster-whisper-small` is a good start on a CPU; the
+first request downloads it). The app asks for the microphone the first time you press it.
+
 ## DJ mode
 
 With **DJ mode** on in **Settings → Features** (off by default, kids separately), people the AI DJ is on for get a
@@ -280,7 +308,7 @@ to the music, up to 250%; the music dips under the voice more the louder it is.
 | Segment | Where the songs come from |
 |---|---|
 | **Your favorites** | On Repeat and your own songs in the Daily Mixes |
-| **New for you** | Discover Weekly and the Daily Mixes' songs from artists like yours |
+| **New for you** | Songs in your library you've never played: first Discover Weekly's and the Daily Mixes' picks you have, then other songs by those artists (artists like your favorites), then artists you've never played, then deep cuts by artists you do play. At most two per artist. Discover's picks you don't have come after, to get. Without the Hub's list of the library (no scan login), just Discover Weekly and the Daily Mixes' songs from artists like yours |
 | **Throwbacks** | Forgotten favorites and Time Capsule. Those need months of listening; until then, pressing Throwbacks has the AI pick older songs (10 to 30 years old) that fit what you play |
 | **Top hits** | Deezer's worldwide chart (kid profiles: no explicit songs) |
 | **Your playlist** | pick one of your playlists (Wavelength's or your server's): the AI picks some of its songs plus up to 12 it knows that fit its mood and artists, then the rest of the playlist. Every segment after builds on it, until you pick something else |
@@ -291,15 +319,42 @@ in the box to change course. In the rotation, a segment whose songs aren't in yo
 and the next one is asked for with three songs to go. When no segment has anything you have (or the AI DJ's
 allowance is used up), the station keeps going with **More like <artist>**: songs from your library like the one
 playing (song radio, `src/lib/songRadio.ts`), so it never just stops when the queue runs out.
+The app finds a segment's songs the way Discover does (`src/lib/discoverMatch.ts`): songs that carry a track this
+device can play go straight through, the Hub matches the rest at once against its list of the library
+(`POST /api/discover/match`), and only songs it can't answer for are searched on your music servers one by one.
 Songs a segment wanted that aren't in your library are listed under **N songs on <segment> you don't have** in
 the panel (Top hits checks the chart's top 50), each with **Get** (deemix, or yt-dlp as a backup) or **Request**
 for people without Autodownload, plus **Get all**. Songs DJ mode already played since you opened the app (up to 300) aren't repeated. Playing something else (a song in your library, an album, a playlist) stops DJ mode, even when that list
-holds songs the station played: a new queue shares none of the station's upcoming songs. A song you put in front
+holds songs the station played (see [Who's in charge](#whos-in-charge)). A song you put in front
 of the station's with **Play next** or **Add to queue** just plays and the station carries on after it. Songs are matched by
 title and artist as well as their id, so a source handing back a copy of a song doesn't stop it. If nothing at all can
 be found, not even songs like the one playing, the station replays its own earlier songs (**Encore**) rather than
-let the music stop. **×** stops it
+let the music stop. There's no cap on how many songs a mix plays: it runs until you stop it. Asking for the next
+segment never gives up while DJ mode is on: one that finds nothing tries again every 30 seconds, one that hangs (a
+slow Hub or music server) is dropped after two minutes and asked again, and when the next songs arrive after the
+queue already ran out they start playing (the player's `ranOut` flag; they used to sit behind a stopped player, so
+the mix went quiet after its first dozen songs or so). **×** stops it
 too, and **–** folds the panel into a small pill.
+
+### Who's in charge
+
+DJ Trash Panda only plays, and only talks, when you ask it to:
+
+- **DJ mode** starts only from the raccoon button (the DJ Trash Panda station panel) once you pick a segment,
+  **Mix it up**, a playlist or type a request. Nothing else starts it.
+- **The AI DJ chat** plays music when you ask it for some; the Talking DJ may then talk between those songs.
+- **Your own music wins.** Starting a queue yourself, anywhere (a song, album or playlist in your Library, Search,
+  a mix, Radio, a remote or party), ends DJ mode, stops the DJ mid-sentence and brings the music back up, even when
+  that list holds songs the station or the chat played. The Talking DJ never talks over a queue you started.
+  **Play next** and **Add to queue** add to the DJ's queue instead, so the DJ carries on after them.
+
+How: the player counts new queues (`queueId`, bumped by every `playTracks`) and records who started each one
+(`queueBy`: `you`, `dj` for the chat, `station` for DJ mode; `src/store/player.ts`). DJ mode stops on any new queue
+it didn't start (`startDjStation` in `src/lib/djStation.ts`); the Talking DJ only writes a line for a song DJ mode
+queued or one in `djQueued`, the chat's songs, which a queue of yours empties (`src/lib/djVoice.ts`), and `hush()`
+cancels a line being read. Until this change the station matched the new queue against its own upcoming songs, so an
+album from your library holding songs it had queued kept it going, and the Talking DJ talked over any music.
+Tested in `src/test/djTakeover.test.ts`.
 
 **Cost.** Picking songs costs nothing: they come from the Made for you mixes (made once a day) and the chart.
 Each segment's intro is one short, low-effort AI call (a fraction of a cent), and a request is one call that

@@ -76,3 +76,60 @@ test('makes Made for you mixes from plays, once a day, and Blends between people
   assert.ok(b.body.mix.songs.some((s: any) => s.because === 'You both play this artist'));
   assert.equal((await json(app, 'GET', `/api/blend?with=${ids.kid}`, { token: tokens.member })).status, 404);
 });
+
+test('"Don\'t play this" keeps artists and songs out of mixes, even ones made earlier today', async () => {
+  const { app, db, tokens, ids } = await seeded({}, {}, { mixLookups: look });
+  const now = Date.now();
+  let at = now - 5 * DAY;
+  for (let i = 0; i < 4; i++) for (const [t, a] of [['One', 'Drake'], ['Two', 'Drake'], ['Three', 'Future'], ['Four', 'Adele (Live)'], ['Five', 'Adele']]) play(db, ids.member, (at += 60_000), t, a);
+  const before = await json(app, 'GET', '/api/mixes', { token: tokens.member });
+  const all = (b: any) => b.mixes.flatMap((m: any) => m.songs) as { artist: string; title: string }[];
+  assert.ok(all(before.body).some((s) => s.artist === 'Drake'));
+  assert.ok(all(before.body).some((s) => s.title === 'Five'));
+  const put = await json(app, 'PUT', '/api/me/prefs', { token: tokens.member, body: { changes: { 'settings.dontPlay': { value: { artists: ['drake'], songs: [{ artist: 'Adele', title: 'Five (Remastered)' }] }, updatedAt: Date.now() } } } });
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  const after = await json(app, 'GET', '/api/mixes', { token: tokens.member });
+  assert.equal(after.body.builtAt, before.body.builtAt, 'the same mixes, filtered');
+  assert.ok(!all(after.body).some((s) => s.artist === 'Drake'));
+  assert.ok(!all(after.body).some((s) => s.title === 'Five'));
+  assert.ok(all(after.body).some((s) => s.artist === 'Future'));
+});
+
+test('daylist: the part of the day in the listener’s own time zone, with late night counting as the day before', async () => {
+  const { dayPart, DAY_PARTS } = await import('../src/mixes.ts');
+  // Saturday 2026-11-07 22:30 in New York (UTC-5, getTimezoneOffset 300) is Sunday 03:30 UTC
+  const sat = Date.UTC(2026, 10, 8, 3, 30);
+  assert.deepEqual(dayPart(sat, 300), { part: DAY_PARTS.length - 1, weekday: 6, date: '2026-11-07' });
+  assert.equal(DAY_PARTS[dayPart(sat, 300).part].name, 'night');
+  // 02:00 Sunday local is still Saturday late night
+  const late = Date.UTC(2026, 10, 8, 7, 0);
+  assert.deepEqual(dayPart(late, 300), { part: 0, weekday: 6, date: '2026-11-07' });
+  // 08:00 Monday is early morning (5–8)
+  assert.equal(DAY_PARTS[dayPart(Date.UTC(2026, 10, 9, 8, 0), 0).part].name, 'early morning');
+});
+
+test('daylist: songs played at this time of day, named after it, sent first when the app says its time zone', async () => {
+  const { daylist } = await import('../src/mixes.ts');
+  const now = Date.UTC(2026, 10, 7, 23, 0); // Saturday 23:00 UTC
+  const rows: any[] = [];
+  const add = (at: number, title: string, artist: string) => rows.push({ played_at: at, title, artist, album: '', seconds: 200, track: '{}' });
+  for (let w = 1; w <= 6; w++) {
+    for (let i = 0; i < 10; i++) add(now - w * 7 * DAY + i * 60_000, `Night ${i}`, i % 2 ? 'SZA' : 'Drake'); // Saturday nights
+    for (let i = 0; i < 10; i++) add(now - w * 7 * DAY - 14 * 3_600_000 + i * 60_000, `Morning ${i}`, 'Adele'); // Saturday mornings
+  }
+  const d = daylist(rows, now, 0, (s) => (s.artist === 'SZA' || s.artist === 'Drake' ? 'chill' : undefined));
+  assert.ok(d);
+  assert.equal(d.kind, 'daylist');
+  assert.equal(d.name, 'daylist: chill Saturday night');
+  assert.ok(d.songs.every((s) => s.title.startsWith('Night')));
+  assert.equal(daylist(rows.slice(0, 3), now), null);
+
+  const { app, db, tokens, ids } = await seeded({}, {}, { mixLookups: look });
+  const t = Date.now();
+  for (let i = 0; i < 12; i++) for (let w = 0; w < 3; w++) play(db, ids.member, t - w * 7 * DAY - i * 60_000 - 3_600_000 * 0, `Song ${i}`, 'Drake');
+  const r = await json(app, 'GET', `/api/mixes?tz=${new Date().getTimezoneOffset()}`, { token: tokens.member });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.mixes[0].kind, 'daylist');
+  const old = await json(app, 'GET', '/api/mixes', { token: tokens.member });
+  assert.ok(!old.body.mixes.some((m: any) => m.kind === 'daylist'));
+});

@@ -1,23 +1,27 @@
 import { useRef } from 'react';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { swell, windUp } from './flourish';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
 /**
- * Rocker raccoon in front of two amp stacks: a spiky mohawk and a flying-V in the skin's colours, a studded
+ * Rocker raccoon in front of two amp stacks: a flying-V in the skin's colours, a studded
  * leather jacket, and a proper headbang on the beat. The amp lights follow the bass, mids and highs.
- * Paused, he pushes his hair back up now and then.
+ * Strums eighth notes in time. Flourish: a full windmill strum with the guitar tipped up. Paused, he rests.
  */
 export function Rocker({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const hands = useRef(newGuitarHands());
 
   useCritterRig(
     root,
     (f) => {
-      playGuitar(f, hands.current, 24, 1.3);
+      playGuitar(f, hands.current, 24, 1.3, 2);
+      if (f.flourish) {
+        f.$('arm-l').setAttribute('transform', `rotate(${(-360 * windUp(f.flourish)).toFixed(1)} 138 268)`);
+        f.$('guitar').setAttribute('transform', `rotate(${(-10 * swell(f.flourish)).toFixed(2)} 200 320)`);
+      }
       const levels = [f.a.bass, f.a.mid, f.a.treble * 1.6];
       root.current!.querySelectorAll<SVGElement>('[data-level]').forEach((led) => {
         const [band, step] = led.dataset.level!.split(':').map(Number);
@@ -28,7 +32,7 @@ export function Rocker({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="rocker" species={species.id} label={`A rocker ${species.noun} playing electric guitar`}>
+    <CritterFrame ref={root} kind="rocker" species={species} label={`A rocker ${species.noun} playing electric guitar`}>
       {/* amp stacks and stage */}
       {[12, 308].map((x) => (
         <g key={x}>
@@ -47,34 +51,25 @@ export function Rocker({ species, still }: ActProps) {
         )),
       )}
 
-      {Tail && <Tail />}
+      {[52, 348].map((cx) => <Shadow key={cx} cx={cx} cy={346} rx={46} ry={5} />)}
+      <Shadow cx={200} cy={366} rx={66} />
 
       {/* ripped black jeans and boots */}
-      <Legs species={species}>
-        <path className="legs" d="M160 296 H186 V352 H160 Z M214 296 H240 V352 H214 Z" />
-        <path d="M164 326 L 182 322 M218 330 L 236 326" stroke="#cfcfd6" strokeWidth="3" strokeLinecap="round" />
-        <path className="boot-black" d="M154 346 H190 V366 H146 Q 146 352 154 346 Z" />
-        <path className="boot-black" d="M210 346 H246 Q 254 352 254 366 H210 Z" />
-      </Legs>
+      <Legs species={species} shoe="boot-black" />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
         <path className="leather" d="M116 304 C 116 262, 150 246, 186 246 L 178 304 Z" />
         <path className="leather" d="M284 304 C 284 262, 250 246, 214 246 L 222 304 Z" />
         <path d="M186 246 L 170 274 L 182 280 M214 246 L 230 274 L 218 280" fill="none" stroke="#3a3a42" strokeWidth="2.5" />
         {[[140, 262], [152, 256], [164, 252], [260, 262], [248, 256], [236, 252]].map(([cx, cy]) => <circle key={cx} cx={cx} cy={cy} r="2.6" fill="#d8d8de" />)}
         <BodyOutfits />
       </Body>
+      <Skirt species={species} style="tutu" className="skirt-tutu" />
 
-      <Head
-        species={species}
-        hat={
-          <g data-part="adjust" className="own-hat">
-            <path className="mohawk" d="M166 124 L 172 74 L 184 112 L 194 50 L 204 108 L 216 56 L 222 112 L 234 78 L 236 124 Z" />
-            <path className="mohawk-tip" d="M172 74 L 176 92 M194 50 L 196 74 M216 56 L 214 78 M234 78 L 230 96" fill="none" strokeWidth="3" strokeLinecap="round" />
-          </g>
-        }
-      />
+      <Head species={species} />
+
+
+      <Arm part="arm-r" d="M262 268 Q 258 312 296 266" hand={[296, 266]} handLater />
 
       {/* flying-V, neck up to the right */}
       <g data-part="guitar">
@@ -94,8 +89,9 @@ export function Rocker({ species, still }: ActProps) {
         </g>
       </g>
 
-      <Arm part="arm-l" d="M138 268 Q 146 302 178 314" hand={[180, 314]} thumb={[186, 308]} />
-      <Arm part="arm-r" d="M262 268 Q 288 288 294 270" hand={[296, 266]} thumb={[290, 260]} />
+      {/* the strumming arm goes over the guitar body; only the fretting arm is behind the neck */}
+      <Arm part="arm-l" d="M138 268 Q 146 302 178 314" hand={[180, 314]} />
+      <ArmHand part="arm-r" d="M262 268 Q 258 312 296 266" hand={[296, 266]} />
     </CritterFrame>
   );
 }

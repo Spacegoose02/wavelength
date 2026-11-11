@@ -193,6 +193,13 @@ object MediaBridge {
       }
     }
 
+    /** Wake-up alarm (src/lib/alarm.ts, AlarmBridge.kt): `at` is ms since 1970. False when only an inexact alarm was allowed. */
+    @JavascriptInterface
+    fun setAlarm(at: Double, label: String): Boolean = AlarmBridge.set(ctx, at.toLong(), label)
+
+    @JavascriptInterface
+    fun cancelAlarm() = AlarmBridge.cancel(ctx)
+
     @JavascriptInterface
     fun browseResult(request: String, json: String) {
       val items = toItems(json)

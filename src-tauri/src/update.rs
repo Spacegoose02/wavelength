@@ -1,6 +1,8 @@
 //! In-app updates from GitHub Releases. The frontend (lib/updates.ts) picks the release and the
 //! file; Rust lists releases (GitHub's API wants a User-Agent), downloads the file into
-//! `<app cache>/updates`, and on Windows runs the installer or swaps the portable exe.
+//! `<app cache>/updates`, and on Windows runs the installer or swaps the portable exe. The Linux AppImage
+//! swaps itself for the new one; the Mac app swaps its Wavelength.app for the one in the release's
+//! `.app.tar.gz`. (A .deb install is updated by the system's package manager instead.)
 //! On Android the APK is handed to the system installer by UpdateBridge.kt.
 //!
 //! Every download is checked before it can be installed: its SHA-256 must match the `digest` GitHub
@@ -41,14 +43,24 @@ fn safe_name(name: &str) -> Result<String, String> {
     Ok(clean)
 }
 
-/// How this copy was installed, so the frontend picks the right file:
-/// `installer` (setup exe), `portable` (Wavelength.exe on its own), `android`, or `none` (dev / other OS).
+/// How this copy was installed, so the frontend picks the right file: `installer` (setup exe), `portable`
+/// (Wavelength.exe on its own), `appimage` (Linux), `mac` (Wavelength.app), `android`, or `none` (dev build,
+/// a .deb install, iOS).
 #[tauri::command]
 pub fn update_target() -> &'static str {
     if cfg!(target_os = "android") {
         return "android";
     }
-    if !cfg!(windows) || cfg!(debug_assertions) {
+    if cfg!(debug_assertions) {
+        return "none";
+    }
+    if cfg!(target_os = "linux") {
+        return if appimage().is_some() { "appimage" } else { "none" };
+    }
+    if cfg!(target_os = "macos") {
+        return if app_bundle().is_some() { "mac" } else { "none" };
+    }
+    if !cfg!(windows) {
         return "none";
     }
     // the NSIS installer puts uninstall.exe next to Wavelength.exe; the portable exe runs alone
@@ -236,9 +248,99 @@ pub fn update_install(app: AppHandle, path: String) -> Result<(), String> {
             }
             std::process::Command::new(&exe).spawn().map_err(|e| format!("updated, but couldn't restart: {e}"))?;
         }
+        "appimage" => {
+            let current = appimage().ok_or("not running from an AppImage")?;
+            let new = current.with_extension("AppImage.new");
+            std::fs::copy(&file, &new).map_err(|e| format!("can't write next to {}: {e}", current.display()))?;
+            make_executable(&new)?;
+            // a running AppImage can be replaced: the old one stays mounted until it quits
+            std::fs::rename(&new, &current).map_err(|e| format!("can't replace {}: {e}", current.display()))?;
+            std::process::Command::new(&current).spawn().map_err(|e| format!("updated, but couldn't restart: {e}"))?;
+        }
+        "mac" => {
+            let bundle = app_bundle().ok_or("not running from Wavelength.app")?;
+            let parent = bundle.parent().ok_or("can't find the Applications folder")?;
+            let unpack = updates_dir(&app)?.join("unpacked");
+            let _ = std::fs::remove_dir_all(&unpack);
+            std::fs::create_dir_all(&unpack).map_err(|e| e.to_string())?;
+            let ok = std::process::Command::new("/usr/bin/tar")
+                .arg("-xzf")
+                .arg(&file)
+                .arg("-C")
+                .arg(&unpack)
+                .status()
+                .map_err(|e| format!("couldn't unpack the update: {e}"))?
+                .success();
+            let fresh = unpack.join("Wavelength.app");
+            if !ok || !fresh.join("Contents").exists() {
+                return Err("the update didn't unpack to a Wavelength.app".into());
+            }
+            // next to the old app first (the cache can be on another volume), then swap
+            let staged = parent.join(".Wavelength.app.new");
+            let old = parent.join(".Wavelength.app.old");
+            let _ = std::fs::remove_dir_all(&staged);
+            let _ = std::fs::remove_dir_all(&old);
+            copy_dir(&fresh, &staged).map_err(|e| format!("can't write to {}: {e}", parent.display()))?;
+            std::fs::rename(&bundle, &old).map_err(|e| format!("can't replace {}: {e}", bundle.display()))?;
+            if let Err(e) = std::fs::rename(&staged, &bundle) {
+                let _ = std::fs::rename(&old, &bundle);
+                return Err(format!("can't put the new Wavelength.app in place: {e}"));
+            }
+            let _ = std::fs::remove_dir_all(&old);
+            std::process::Command::new("/usr/bin/open")
+                .arg("-n")
+                .arg(&bundle)
+                .spawn()
+                .map_err(|e| format!("updated, but couldn't restart: {e}"))?;
+        }
         _ => return Err("updates are installed by the system on this device".into()),
     }
     app.exit(0);
+    Ok(())
+}
+
+/// Linux: the AppImage file this copy runs from (the AppImage runtime sets `$APPIMAGE`).
+fn appimage() -> Option<PathBuf> {
+    let p = PathBuf::from(std::env::var_os("APPIMAGE")?);
+    p.is_file().then_some(p)
+}
+
+/// Mac: the Wavelength.app this copy runs from (`…/Wavelength.app/Contents/MacOS/Wavelength`).
+fn app_bundle() -> Option<PathBuf> {
+    bundle_of(&std::env::current_exe().ok()?)
+}
+
+fn bundle_of(exe: &Path) -> Option<PathBuf> {
+    let bundle = exe.parent()?.parent()?.parent()?;
+    (bundle.extension()? == "app" && exe.parent()?.ends_with("Contents/MacOS")).then(|| bundle.to_path_buf())
+}
+
+#[cfg(unix)]
+fn make_executable(p: &Path) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(p, std::fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())
+}
+#[cfg(not(unix))]
+fn make_executable(_: &Path) -> Result<(), String> {
+    Ok(())
+}
+
+/// Copies a folder (an .app bundle) with its symlinks as links, as the frameworks inside need.
+fn copy_dir(from: &Path, to: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let kind = entry.file_type()?;
+        let dest = to.join(entry.file_name());
+        if kind.is_symlink() {
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(std::fs::read_link(entry.path())?, &dest)?;
+        } else if kind.is_dir() {
+            copy_dir(&entry.path(), &dest)?;
+        } else {
+            std::fs::copy(entry.path(), &dest)?;
+        }
+    }
     Ok(())
 }
 
@@ -247,6 +349,10 @@ pub fn clean_up(app: &AppHandle) {
     if let Ok(exe) = std::env::current_exe() {
         let _ = std::fs::remove_file(exe.with_extension("exe.old"));
     }
+    if let Some(parent) = app_bundle().as_deref().and_then(Path::parent) {
+        let _ = std::fs::remove_dir_all(parent.join(".Wavelength.app.old"));
+        let _ = std::fs::remove_dir_all(parent.join(".Wavelength.app.new"));
+    }
     if let Ok(dir) = updates_dir(app) {
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -254,7 +360,26 @@ pub fn clean_up(app: &AppHandle) {
 
 #[cfg(test)]
 mod tests {
-    use super::{expected, safe_name, verify_signature};
+    use super::{bundle_of, copy_dir, expected, safe_name, verify_signature};
+    use std::path::Path;
+
+    #[test]
+    fn mac_bundle() {
+        let b = bundle_of(Path::new("/Applications/Wavelength.app/Contents/MacOS/Wavelength"));
+        assert_eq!(b.as_deref(), Some(Path::new("/Applications/Wavelength.app")));
+        assert!(bundle_of(Path::new("/usr/local/bin/Wavelength")).is_none());
+    }
+
+    #[test]
+    fn copies_folders() {
+        let tmp = std::env::temp_dir().join(format!("wl-copy-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(tmp.join("a/Contents/MacOS")).unwrap();
+        std::fs::write(tmp.join("a/Contents/MacOS/x"), b"hi").unwrap();
+        copy_dir(&tmp.join("a"), &tmp.join("b")).unwrap();
+        assert_eq!(std::fs::read(tmp.join("b/Contents/MacOS/x")).unwrap(), b"hi");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
     #[test]
     fn names() {
         assert_eq!(safe_name("Wavelength_0.10.0_x64-setup.exe").unwrap(), "Wavelength_0.10.0_x64-setup.exe");

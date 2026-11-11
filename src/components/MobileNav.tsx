@@ -1,13 +1,13 @@
 import { trackArt, useArtworkList } from '../lib/artwork';
 import type { ReactNode } from 'react';
-import { usePlayer } from '../store/player';
 import { useUi, type Route } from '../store/ui';
 import { useLibrary } from '../store/library';
 import { isMobileApp } from '../lib/platform';
 import { Cover } from './common';
+import { MiniProgress, usePlayerControls } from './PlayerClock';
 import { DjModeBar, DjModeButton, DjStationPanel } from './DjStation';
 import {
-  IconAlbum, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
+  IconAlbum, IconBrowse, IconArtist, IconBook, IconCompass, IconDownload, IconHeart, IconHistory, IconHome, IconLibrary,
   IconNext, IconPause, IconPlay, IconPlaylist, IconPodcast, IconRadio, IconSearch, IconSettings, IconSparkle, IconWave, IconInbox, IconDj,
 } from './Icons';
 import { useDjAvailable } from '../lib/djStatus';
@@ -21,13 +21,13 @@ const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route[
   { view: 'discover', label: 'Discover', icon: <IconCompass /> },
   { view: 'search', label: 'Search', icon: <IconSearch /> },
   { view: 'subwave', label: 'SUB/WAVE', icon: <IconWave /> },
-  { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'podcasts', 'podcast', 'radio', 'downloads', 'inbox', 'settings', 'offline', 'offlineCollection', 'dj'] },
+  { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['browse', 'albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'book', 'podcasts', 'podcast', 'radio', 'downloads', 'inbox', 'settings', 'offline', 'offlineCollection', 'dj'] },
 ];
 
 /** Phone layout: mini player + bottom tab bar (replaces the sidebar and desktop deck). */
 export function MobileNav() {
   const { route, go, setNowPlaying } = useUi();
-  const p = usePlayer();
+  const p = usePlayerControls();
   const t = p.current();
   useArtworkList();
   const art = p.liveCover ?? trackArt(t);
@@ -39,17 +39,19 @@ export function MobileNav() {
       {!t && <DjModeBar />}
       {t && (
         <div className="mini-player" onClick={() => setNowPlaying(true)}>
-          <div className="mini-progress"><i style={{ width: live ? '100%' : `${(p.position / (p.duration || 1)) * 100}%` }} /></div>
+          <MiniProgress live={live} />
           <Cover key={art} src={art} alt={t.title} className="tiny" />
           <div className="track-main">
             <div className="track-title">{live ? p.liveTitle ?? t.title : t.title}</div>
             {p.error
               ? <div className="track-sub err" title={p.error}>{p.error}</div>
-              : <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>}
+              : p.noSignal
+                ? <div className="track-sub" title="No signal: playing songs saved on this phone">No signal · saved songs</div>
+                : <div className="track-sub">{live ? (p.liveTitle ? t.title : 'Live radio') : t.artist}</div>}
           </div>
           <DjModeButton className="tbtn" />
-          <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.toggle(); }}>{p.playing ? <IconPause /> : <IconPlay />}</button>
-          {!live && <button className="tbtn" onClick={(e) => { e.stopPropagation(); p.next(); }}><IconNext /></button>}
+          <button className="tbtn" aria-label={p.playing ? 'Pause' : 'Play'} onClick={(e) => { e.stopPropagation(); p.toggle(); }}>{p.playing ? <IconPause /> : <IconPlay />}</button>
+          {!live && <button className="tbtn" aria-label="Next" onClick={(e) => { e.stopPropagation(); p.next(); }}><IconNext /></button>}
         </div>
       )}
       <nav className="tabbar">
@@ -78,6 +80,7 @@ export function LibraryHub() {
   const dj = useDjAvailable();
   const items: { view: Route['view']; label: string; icon: ReactNode }[] = [
     { view: 'recent', label: 'Recently added', icon: <IconSparkle /> },
+    { view: 'browse', label: 'Browse', icon: <IconBrowse /> },
     { view: 'albums', label: 'Albums', icon: <IconAlbum /> },
     { view: 'artists', label: 'Artists', icon: <IconArtist /> },
     { view: 'offline', label: 'Downloaded', icon: <IconDownload /> },

@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify';
+import { allowedBy, dontPlayOf } from '../dontPlay.ts';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { featureOn, requireFeature } from '../features.ts';
 import { usageSummary } from '../dj/agent.ts';
 import { ollamaModels } from '../dj/ollama.ts';
 import {
-  blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, OPENAI_VOICE_MODELS, priceOf, VOICE_ENGINES, saveSettings, setAccess, spentSince, webFor,
+  blockedReason, DEFAULT_MODEL, getAccess, getSettings, keyInfo, MODELS, monthStart, PROVIDERS, EFFORTS, OPENAI_VOICE_MODELS, priceOf, VOICE_ENGINES, LISTEN_ENGINES, saveSettings, setAccess, spentSince, webFor,
 } from '../dj/settings.ts';
 import { clientIp, HttpError, need, signedIn } from '../http.ts';
 import { getUser, listUsers } from '../users.ts';
@@ -60,6 +61,13 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
   });
 
   /** The talking DJ: `{ previous?, next, name?, style? }` → `{ text }` to read aloud between songs (also DJ mode's links between its songs). */
+  /** Lyrics in another language or in Latin letters (agent.ts translateLyrics). */
+  app.post('/api/lyrics/translate', { bodyLimit: 256 * 1024 }, async (req) => {
+    const { user } = signedIn(req);
+    requireFeature(db, 'lyricsTranslate', user);
+    return { ...(await dj.translateLyrics(user, req.body)), ...allowance(user.id) };
+  });
+
   app.post('/api/dj/patter', async (req) => {
     const user = listener(req);
     if (!featureOn(db, 'djMode', user)) requireFeature(db, 'djVoice', user);
@@ -70,7 +78,10 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
   app.post('/api/dj/station', async (req) => {
     const user = listener(req);
     requireFeature(db, 'djMode', user);
-    return { ...(await station.next(user, req.body)), ...allowance(user.id) };
+    const seg = await station.next(user, req.body);
+    // nothing the person said "Don't play" to (dontPlay.ts)
+    const ok = allowedBy(dontPlayOf(db, user.id));
+    return { ...seg, ...(Array.isArray(seg.songs) && { songs: seg.songs.filter(ok) }), ...allowance(user.id) };
   });
 
   /** The talking DJ's voices: `{ engine, voices, default, error? }`. `engine: 'device'` = each device reads it. */
@@ -91,6 +102,21 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
     voiceFeature(user);
     const { audio, type } = await voice.speak(user, req.body);
     return reply.type(type).header('cache-control', 'no-store').send(audio);
+  });
+
+  /**
+   * A spoken request (raw audio, `?seconds=` its length) → `{ text }`, for the DJ chat and DJ mode's request box.
+   * `GET` says how requests are understood: `{ engine: 'device' | 'whisper' | 'openai' }`.
+   */
+  app.get('/api/dj/listen', async (req) => {
+    listener(req);
+    return { engine: voice.listenEngine() };
+  });
+  app.post<{ Querystring: { seconds?: string } }>('/api/dj/listen', { bodyLimit: 3_000_000 }, async (req) => {
+    const user = listener(req);
+    const audio = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    const text = await voice.transcribe(user, audio, String(req.headers['content-type'] ?? ''), Number(req.query.seconds));
+    return { text };
   });
 
   /** `{ results: [{ id, content, isError? }] }` for the calls the app was given. */
@@ -118,6 +144,7 @@ export function djRoutes(app: FastifyInstance, { db, config, dj, voice, station 
       openaiKey: keyInfo(db, key, 'openaiKey'),
       ollamaKey: keyInfo(db, key, 'ollamaKey'),
       voiceEngines: VOICE_ENGINES,
+      listenEngines: LISTEN_ENGINES,
       openaiVoiceModels: OPENAI_VOICE_MODELS,
       providers: PROVIDERS,
       efforts: EFFORTS,

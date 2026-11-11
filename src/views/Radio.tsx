@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactElement } from 'react';
-import { radioBrowser, stationToTrack } from '../sources/radio';
+import { findStationLogo, radioBrowser, sameStream, stationToTrack } from '../sources/radio';
 import { sourceFor } from '../sources/registry';
 import type { Station } from '../sources/types';
 import { useSettings } from '../store/settings';
+import { useCan } from '../store/hub';
 import { usePlayer } from '../store/player';
 import { Cover, Spinner } from '../components/common';
 import { IconHeart, IconPlay } from '../components/Icons';
@@ -10,6 +11,7 @@ import { AddToPlaylist } from '../components/AddToPlaylist';
 import { ShareButton } from '../components/ShareButton';
 import { shareOfStation } from '../lib/inbox';
 import { stationsForYou } from '../lib/radioPicks';
+import { FAMILY_NAMES, groupByFamily, stationLabel } from '../lib/stationLabel';
 
 /** Key for a server station in `hiddenStations` / `stationOrder`. Ids are only unique per server. */
 const keyOf = (s: Station) => `${s.sourceId}:${s.id}`;
@@ -21,7 +23,7 @@ function arrange(list: Station[], order: string[]) {
 }
 
 export function Radio() {
-  const { sources, stations: saved, toggleStation, moveStation, hiddenStations, setStationHidden, stationOrder, setStationOrder } = useSettings();
+  const { sources, stations: saved, toggleStation, moveStation, hiddenStations, setStationHidden, stationOrder, setStationOrder, stationGroups, setStationGroups } = useSettings();
   const [editing, setEditing] = useState(false);
   const [dragKey, setDragKey] = useState<string>();
   const [reload, setReload] = useState(0);
@@ -32,6 +34,10 @@ export function Radio() {
   const [serverStations, setServerStations] = useState<Station[]>([]);
   const [busy, setBusy] = useState(false);
   const [custom, setCustom] = useState({ name: '', url: '' });
+  const [shared, setShared] = useState({ name: '', url: '', logo: '' });
+  const [shareNote, setShareNote] = useState<string>();
+  const [sharing, setSharing] = useState(false);
+  const isAdmin = useCan('library.edit');
 
   // SubWave + Navidrome internet radio
   useEffect(() => {
@@ -72,9 +78,75 @@ export function Radio() {
       setStationHidden(keyOf(s), false);
       setReload((n) => n + 1);
     } catch (e) {
-      alert(`Couldn't delete it: ${(e as Error).message ?? e}. Navidrome only lets admin accounts delete stations; you can still hide it on this device.`);
+      alert(`Couldn't delete it: ${(e as Error).message ?? e}. Only admins can delete stations; you can still hide it on this device.`);
     }
   };
+
+  /**
+   * Where "Add for everyone" puts a station: the Hub's own Navidrome (stations kept on the Hub), else the first
+   * Navidrome. Only shown to Hub admins; a Navidrome without the Hub checks its own admin role.
+   */
+  const shareTo = isAdmin
+    ? (sources.find((c) => c.enabled && c.kind === 'navidrome' && c.hubId) ?? sources.find((c) => c.enabled && c.kind === 'navidrome'))
+    : undefined;
+  /** Logos are kept only by the Hub, for its own Navidrome's stations. */
+  const logos = !!shareTo?.hubId;
+  const onServer = (s: { streamUrl: string }) => serverStations.some((x) => sameStream(x.streamUrl, s.streamUrl));
+
+  /** Add a station to Your stations for everyone, with a logo from the radio directory when none is given. */
+  const shareStation = async (st: { name: string; streamUrl: string; homepage?: string; logo?: string }) => {
+    if (!shareTo) return false;
+    setSharing(true);
+    setShareNote(`Adding ${st.name}…`);
+    try {
+      const logo = st.logo || (await findStationLogo(st));
+      await sourceFor(shareTo).addStation!({ ...st, logo });
+      setShareNote(`Added ${st.name} for everyone${logo || !logos ? '' : ' (no logo found; add one with Logo in Edit)'}.`);
+      setReload((n) => n + 1);
+      return true;
+    } catch (e) {
+      setShareNote(`Couldn't add it: ${(e as Error).message ?? e}. Only admins can add stations for everyone.`);
+      return false;
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const setLogo = async (s: Station) => {
+    const cfg = sources.find((c) => c.id === s.sourceId);
+    const url = prompt(`Logo picture link for "${s.name}" (leave empty to take it off):`, s.favicon ?? '');
+    if (!cfg || url === null) return;
+    try {
+      await sourceFor(cfg).setStationLogo!(s.id, url.trim());
+      setReload((n) => n + 1);
+    } catch (e) {
+      alert(`Couldn't change the logo: ${(e as Error).message ?? e}`);
+    }
+  };
+
+  /** Look up a logo in the radio directory for every station on the Hub that has none. */
+  const findLogos = async () => {
+    const missing = serverStations.filter((s) => !s.favicon && s.sourceId === shareTo?.id);
+    if (!shareTo || !missing.length) return;
+    setSharing(true);
+    let found = 0;
+    try {
+      for (const [i, s] of missing.entries()) {
+        setShareNote(`Looking for logos… ${i + 1} of ${missing.length}`);
+        const logo = await findStationLogo(s);
+        if (!logo) continue;
+        await sourceFor(shareTo).setStationLogo!(s.id, logo);
+        found++;
+      }
+      setShareNote(`Found logos for ${found} of ${missing.length} stations.${found < missing.length ? ' Add the rest by hand with Logo.' : ''}`);
+    } catch (e) {
+      setShareNote(`Stopped after ${found}: ${(e as Error).message ?? e}`);
+    } finally {
+      setSharing(false);
+      setReload((n) => n + 1);
+    }
+  };
+
   const canDelete = (s: Station) => {
     const cfg = sources.find((c) => c.id === s.sourceId);
     return !!cfg && !!sourceFor(cfg).deleteStation;
@@ -102,14 +174,17 @@ export function Radio() {
   const isOn = (s: Station) => current?.id === `radio:${s.id}`;
   const isSaved = (s: Station) => saved.some((x) => x.id === s.id);
 
-  const Row = ({ s }: { s: Station }) => (
-    <div className={`station-row ${isOn(s) ? 'active' : ''}`} onDoubleClick={() => play(s)}>
+  const row = (s: Station) => (
+    <div key={s.id} className={`station-row ${isOn(s) ? 'active' : ''}`} onDoubleClick={() => play(s)}>
       <button className="track-num" onClick={() => play(s)}><Cover src={s.favicon} alt={s.name} className="tiny" /><IconPlay className="hover-play" /></button>
       <div className="track-main">
         <div className="track-title">{s.name}</div>
         <div className="track-sub">{[s.country, s.codec && `${s.codec}${s.bitrate ? ` ${s.bitrate}k` : ''}`, s.tags?.split(',').slice(0, 3).join(', ')].filter(Boolean).join(' · ')}</div>
       </div>
       <div className="track-actions"><AddToPlaylist tracks={() => [stationToTrack(s)]} /><ShareButton what={() => shareOfStation(s)} className="chip" /></div>
+      {shareTo && s.sourceId === 'radio' && !onServer(s) && (
+        <button className="btn small ghost share-station" disabled={sharing} title="Add to Your stations, for everyone on the Hub" onClick={() => shareStation({ name: s.name, streamUrl: s.streamUrl, homepage: s.homepage, logo: s.favicon })}>+ Everyone</button>
+      )}
       {s.sourceId === 'radio' && (
         <button className={`icon-btn ${isSaved(s) ? 'on' : ''}`} title={isSaved(s) ? 'Remove from favorites' : 'Save'} onClick={() => toggleStation(s)}><IconHeart /></button>
       )}
@@ -120,46 +195,85 @@ export function Radio() {
     <div className="page">
       <header className="page-head"><h1>Radio</h1></header>
 
-      {serverStations.length > 0 && (
+      {(serverStations.length > 0 || shareTo) && (
         <section>
           <h2>
             Your stations
             <button className="link small" onClick={() => setEditing(!editing)}>{editing ? 'Done' : 'Edit'}</button>
+            {!editing && visible.length > 1 && (
+              <span className="chips station-view">
+                <button className={`chip ${stationGroups ? 'on' : ''}`} onClick={() => setStationGroups(true)}>By genre</button>
+                <button className={`chip ${stationGroups ? '' : 'on'}`} onClick={() => setStationGroups(false)}>My order</button>
+              </span>
+            )}
           </h2>
-          {editing && <p className="muted small">Use the arrows (or drag on desktop) to reorder. <b>Hide</b> only affects this device. <b>Delete</b> removes a Navidrome station from the server for everyone, and needs a Navidrome admin account.</p>}
-          <div className="shelf">
-            {visible.map((s, i) => {
-              const k = keyOf(s);
-              return editing ? (
-                <div
-                  key={k}
-                  className={`station-hero editing ${dragKey === k ? 'dragging' : ''}`}
-                  draggable
-                  onDragStart={() => setDragKey(k)}
-                  onDragEnd={() => setDragKey(undefined)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (dragKey) reorder(dragKey, k);
-                    setDragKey(undefined);
-                  }}
-                >
-                  <b>{s.name}</b><small>{s.tags ?? 'Internet radio'}</small>
-                  <span className="station-edit">
-                    <button className="icon-btn" title="Move left" disabled={i === 0} onClick={() => reorder(k, -1)}>◀</button>
-                    <button className="icon-btn" title="Move right" disabled={i === visible.length - 1} onClick={() => reorder(k, 1)}>▶</button>
-                    <button className="btn small ghost" onClick={() => setStationHidden(k, true)}>Hide</button>
-                    {canDelete(s) && <button className="btn small ghost danger" onClick={() => removeFromServer(s)}>Delete</button>}
-                  </span>
+          {editing && <p className="muted small">Use the arrows (or drag on desktop) to reorder. <b>Hide</b> only affects this device. <b>Logo</b> and <b>Delete</b> change the station for everyone, and need an admin account.</p>}
+          {!serverStations.length && !editing && <p className="muted">No stations here yet. Add one below, or tap <b>+ Everyone</b> on a station in the directory, and everyone on the Hub gets it.</p>}
+          {editing ? (
+            <div className="station-grid">
+              {visible.map((s, i) => {
+                const k = keyOf(s);
+                return (
+                  <div
+                    key={k}
+                    className={`station-card editing fam-${stationLabel(s).family} ${dragKey === k ? 'dragging' : ''}`}
+                    draggable
+                    onDragStart={() => setDragKey(k)}
+                    onDragEnd={() => setDragKey(undefined)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragKey) reorder(dragKey, k);
+                      setDragKey(undefined);
+                    }}
+                  >
+                    <StationFace s={s} />
+                    <span className="station-edit">
+                      <button className="icon-btn" title="Move left" disabled={i === 0} onClick={() => reorder(k, -1)}>◀</button>
+                      <button className="icon-btn" title="Move right" disabled={i === visible.length - 1} onClick={() => reorder(k, 1)}>▶</button>
+                      <button className="btn small ghost" onClick={() => setStationHidden(k, true)}>Hide</button>
+                      {logos && s.sourceId === shareTo?.id && <button className="btn small ghost" onClick={() => setLogo(s)}>Logo</button>}
+                      {canDelete(s) && <button className="btn small ghost danger" onClick={() => removeFromServer(s)}>Delete</button>}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            (stationGroups ? groupByFamily(visible) : [{ family: undefined, stations: visible }]).map((g) => (
+              <div key={g.family ?? 'all'} className="station-group">
+                {g.family && <h3 className="kicker">{FAMILY_NAMES[g.family]} <span>{g.stations.length}</span></h3>}
+                <div className="station-grid">
+                  {g.stations.map((s) => (
+                    <button key={keyOf(s)} className={`station-card fam-${stationLabel(s).family} ${isOn(s) ? 'on' : ''}`} title={s.name} aria-pressed={isOn(s)} onClick={() => play(s)}>
+                      <StationFace s={s} on={isOn(s)} />
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <button key={k} className={`station-hero ${isOn(s) ? 'on' : ''}`} onClick={() => play(s)}>
-                  <span className="live-dot" /> <b>{s.name}</b><small>{s.tags ?? 'Internet radio'}</small>
-                </button>
-              );
-            })}
-            {!visible.length && <p className="muted">All your stations are hidden. {editing ? 'Show one below.' : 'Tap Edit to show them again.'}</p>}
-          </div>
+              </div>
+            ))
+          )}
+          {!visible.length && <p className="muted">All your stations are hidden. {editing ? 'Show one below.' : 'Tap Edit to show them again.'}</p>}
+          {shareTo && (editing || !serverStations.length) && (
+            <div className="share-stations">
+              <div className="kicker">Add a station for everyone</div>
+              <form className="inline-form" onSubmit={async (e) => {
+                e.preventDefault();
+                if (!shared.url.trim()) return;
+                const ok = await shareStation({ name: shared.name.trim() || shared.url.trim(), streamUrl: shared.url.trim(), logo: shared.logo.trim() || undefined });
+                if (ok) setShared({ name: '', url: '', logo: '' });
+              }}>
+                <input placeholder="Station name" value={shared.name} onChange={(e) => setShared({ ...shared, name: e.target.value })} />
+                <input placeholder="Stream URL (https://…)" value={shared.url} onChange={(e) => setShared({ ...shared, url: e.target.value })} />
+                {logos && <input placeholder="Logo URL (optional, found for you)" value={shared.logo} onChange={(e) => setShared({ ...shared, logo: e.target.value })} />}
+                <button className="btn" disabled={sharing}>Add for everyone</button>
+              </form>
+              {editing && logos && serverStations.some((s) => !s.favicon && s.sourceId === shareTo.id) && (
+                <button className="btn small" disabled={sharing} onClick={findLogos}>Find missing logos</button>
+              )}
+            </div>
+          )}
+          {shareNote && <p className="muted small" role="status">{shareNote}</p>}
           {editing && hidden.length > 0 && (
             <div className="hidden-stations">
               <div className="kicker">Hidden on this device</div>
@@ -178,7 +292,7 @@ export function Radio() {
         <h2>Favorites</h2>
         {saved.length ? saved.map((s, i) => (
           <div key={s.id} className="station-fav">
-            <Row s={s} />
+            {row(s)}
             {saved.length > 1 && (
               <span className="station-move">
                 <button className="icon-btn" title="Move up" disabled={i === 0} onClick={() => moveStation(s.id, -1)}>▲</button>
@@ -199,19 +313,38 @@ export function Radio() {
         </form>
       </section>
 
-      {!q.trim() && <StationsForYou Row={Row} />}
+      {!q.trim() && <StationsForYou row={row} />}
 
       <section>
         <h2>Directory {busy && <Spinner />}</h2>
         <input className="filter wide" placeholder="Search 50,000+ stations by name…" value={q} onChange={(e) => setQ(e.target.value)} />
-        {results.map((s) => <Row key={s.id} s={s} />)}
+        {results.map(row)}
       </section>
     </div>
   );
 }
 
+/** A station card's inside: logo (or a generated tile in its genre colour), clean name, genres. */
+function StationFace({ s, on }: { s: Station; on?: boolean }) {
+  const l = stationLabel(s);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const sub = [...l.genres.slice(0, 3), l.place].filter(Boolean).join(' · ') || l.network || 'Internet radio';
+  return (
+    <>
+      <span className="station-art" aria-hidden>
+        {s.favicon && !logoFailed ? <img src={s.favicon} alt="" loading="lazy" onError={() => setLogoFailed(true)} /> : <span className="station-mark">{l.mark}</span>}
+        {on ? <span className="eq-bars"><i /><i /><i /></span> : <IconPlay className="hover-play" />}
+      </span>
+      <span className="station-text">
+        <b>{l.title}</b>
+        <small>{on ? <span className="station-live">Playing</span> : null}{sub}</small>
+      </span>
+    </>
+  );
+}
+
 /** Stations in the genres you have the most music in (lib/radioPicks.ts). Hidden without a Navidrome server. */
-function StationsForYou({ Row }: { Row: (p: { s: Station }) => ReactElement }) {
+function StationsForYou({ row }: { row: (s: Station) => ReactElement }) {
   const [picks, setPicks] = useState<{ genre: string; stations: Station[] }[]>();
   useEffect(() => {
     let alive = true;
@@ -227,7 +360,7 @@ function StationsForYou({ Row }: { Row: (p: { s: Station }) => ReactElement }) {
       {picks.map((g) => (
         <div key={g.genre}>
           <h3 className="dz-section">{g.genre}</h3>
-          {g.stations.map((s) => <Row key={s.id} s={s} />)}
+          {g.stations.map(row)}
         </div>
       ))}
     </section>

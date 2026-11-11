@@ -118,3 +118,90 @@ test('admins fix an album’s tags from a Deezer or MusicBrainz match, and undo 
   const log = JSON.stringify((await json(app, 'GET', '/api/admin/audit', { token: tokens.admin })).body);
   assert.ok(log.includes('tags.edited') && log.includes('tags.undone'));
 });
+
+test('Edit song: one song’s tags by its Navidrome id, a featured artist written and undone', async () => {
+  const music = mkdtempSync(join(tmpdir(), 'wl-song-'));
+  const dir = join(music, 'Mannie Fresh', 'The Mind Of Mannie Fresh');
+  mkdirSync(dir, { recursive: true });
+  audio(join(dir, '15.mp3'), { title: 'Real Big (feat. Lil Wayne)', artist: 'Mannie Fresh', album: 'The Mind Of Mannie Fresh', track: '15' }, ['-c:a', 'libmp3lame', '-b:a', '64k']);
+  audio(join(dir, '07.mp3'), { title: 'Wayne’s Takeover 1', artist: 'Mannie Fresh', track: '7' }, ['-c:a', 'libmp3lame', '-b:a', '64k']);
+  const nd = await listen((url) => {
+    if (url === '/auth/login') return [200, { token: 'jwt', isAdmin: true }];
+    if (url.startsWith('/rest/')) return [200, { 'subsonic-response': { status: 'ok', user: { adminRole: true } } }];
+    if (url.startsWith('/api/song?')) {
+      return [200, [
+        { id: 's7', albumId: 'mf', path: '/music/Mannie Fresh/The Mind Of Mannie Fresh/07.mp3' },
+        { id: 's15', albumId: 'mf', path: '/music/Mannie Fresh/The Mind Of Mannie Fresh/15.mp3' },
+      ]];
+    }
+    return [404, {}];
+  });
+  const { app, tokens } = await seeded({}, { musicDir: music });
+  assert.equal((await json(app, 'PUT', '/api/admin/library/navidrome', { token: tokens.admin, body: { url: nd, username: 'admin', password: 'pw' } })).status, 200);
+
+  const song = await json(app, 'GET', '/api/admin/tags/song/s15?album=mf', { token: tokens.admin });
+  assert.equal(song.status, 200, JSON.stringify(song.body));
+  assert.equal(song.body.path, 'Mannie Fresh/The Mind Of Mannie Fresh/15.mp3');
+  assert.equal(song.body.tags.title, 'Real Big (feat. Lil Wayne)');
+  assert.equal(song.body.tags.track, '15');
+  assert.equal((await json(app, 'GET', '/api/admin/tags/song/nope?album=mf', { token: tokens.admin })).status, 404);
+  assert.equal((await json(app, 'GET', '/api/admin/tags/song/s15?album=mf', { token: tokens.member })).status, 403);
+
+  // the dialog sends only what changed: the title without "(feat. …)" and the credit with Lil Wayne featured
+  const save = await json(app, 'PUT', '/api/admin/tags', { token: tokens.admin, body: { label: 'Mannie Fresh feat. Lil Wayne – Real Big', changes: [
+    { path: song.body.path, tags: { title: 'Real Big', artist: 'Mannie Fresh feat. Lil Wayne', genre: 'Hip-Hop; Southern Hip-Hop' } },
+  ] } });
+  assert.equal(save.status, 200, JSON.stringify(save.body));
+  const after = await readTags(join(dir, '15.mp3'));
+  assert.deepEqual([after.title, after.artist, after.genre, after.album], ['Real Big', 'Mannie Fresh feat. Lil Wayne', 'Hip-Hop; Southern Hip-Hop', 'The Mind Of Mannie Fresh']);
+  assert.equal((await readTags(join(dir, '07.mp3'))).title, 'Wayne’s Takeover 1', 'the other songs aren’t touched');
+
+  assert.equal((await json(app, 'POST', `/api/admin/tags/undo/${save.body.batch}`, { token: tokens.admin })).body.undone, 1);
+  const back = await readTags(join(dir, '15.mp3'));
+  assert.deepEqual([back.title, back.artist, back.genre], ['Real Big (feat. Lil Wayne)', 'Mannie Fresh', undefined]);
+});
+
+test('album tags beyond the basics: sort names, record label, release type and mood, where the format holds them', async () => {
+  const { writeTags } = await import('../src/tags.ts');
+  const dir = mkdtempSync(join(tmpdir(), 'wl-extra-'));
+  const files = {
+    mp3: join(dir, 'a.mp3'), flac: join(dir, 'a.flac'), opus: join(dir, 'a.opus'), m4a: join(dir, 'a.m4a'),
+  };
+  audio(files.mp3, { title: 'A' }, ['-c:a', 'libmp3lame', '-b:a', '64k']);
+  audio(files.flac, { title: 'A' }, ['-c:a', 'flac']);
+  audio(files.opus, { title: 'A' }, ['-c:a', 'libopus']);
+  audio(files.m4a, { title: 'A' }, ['-c:a', 'aac']);
+  const extra = { albumSort: 'Mind Of Mannie Fresh, The', artistSort: 'Fresh, Mannie', albumArtistSort: 'Fresh, Mannie', label: 'Cash Money', releaseType: 'single', mood: 'Dark; Energetic', album: 'X' };
+  for (const f of [files.mp3, files.flac, files.opus]) {
+    await writeTags(f, extra);
+    const t = await readTags(f);
+    assert.deepEqual([t.albumSort, t.artistSort, t.albumArtistSort, t.label, t.releaseType, t.mood, t.album], Object.values(extra), f);
+    await writeTags(f, { releaseType: '', mood: '' });
+    const cleared = await readTags(f);
+    assert.equal(cleared.releaseType, undefined, `${f}: an empty value removes the tag`);
+    assert.equal(cleared.label, 'Cash Money');
+  }
+  // an .m4a can't hold them: the rest is still written
+  await writeTags(files.m4a, extra);
+  const m = await readTags(files.m4a);
+  assert.equal(m.album, 'X');
+  assert.equal(m.releaseType, undefined);
+});
+
+test('artist details without a tag: biography and album order, set by admins and read by everyone', async () => {
+  const { app, tokens } = await seeded();
+  const empty = await json(app, 'GET', '/api/artist-meta?name=Kodak%20Black', { token: tokens.member });
+  assert.deepEqual(empty.body, { name: 'Kodak Black', bio: '', albumSort: '', updatedAt: null });
+  assert.equal((await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.member, body: { name: 'Kodak Black', bio: 'x' } })).status, 403);
+  assert.equal((await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', albumSort: 'sideways' } })).status, 400);
+  const set = await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', bio: ' From Pompano Beach. ', albumSort: 'oldest' } });
+  assert.equal(set.status, 200, JSON.stringify(set.body));
+  // only what's sent changes; names match in any case
+  await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'kodak black', albumSort: 'title' } });
+  const got = await json(app, 'GET', '/api/artist-meta?name=KODAK%20BLACK', { token: tokens.member });
+  assert.equal(got.body.bio, 'From Pompano Beach.');
+  assert.equal(got.body.albumSort, 'title');
+  // clearing both forgets the artist
+  await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', bio: '', albumSort: '' } });
+  assert.equal((await json(app, 'GET', '/api/artist-meta?name=Kodak%20Black', { token: tokens.member })).body.updatedAt, null);
+});

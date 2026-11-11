@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Merged into the Mac app's Info.plist by `tauri build`. -->
+<plist version="1.0">
+<dict>
+  <!-- voice requests to the AI DJ (src/lib/voiceInput.ts) -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Wavelength listens when you press the microphone to ask the DJ for music.</string>
+</dict>
+</plist>

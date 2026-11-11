@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { joinParty, leaveParty, setRules, startParty, useTogether } from '../lib/together';
+import { joinParty, leaveParty, setJam, setRules, startParty, useTogether } from '../lib/together';
 import { hubClient, useHub } from '../store/hub';
 import { IconParty } from './Icons';
+import { Qr } from './Qr';
 
 type PartyList = Awaited<ReturnType<NonNullable<ReturnType<typeof hubClient>>['parties']>>['parties'];
 
@@ -74,6 +75,26 @@ function PartyPanel() {
         <div className="device-row">
           <label className="check"><input type="checkbox" checked={party.guestsAdd} onChange={(e) => run(() => setRules({ guestsAdd: e.target.checked }))} /> Guests can add songs</label>
           <label className="check"><input type="checkbox" checked={party.guestsControl} onChange={(e) => run(() => setRules({ guestsControl: e.target.checked }))} /> Guests can skip and pause</label>
+        </div>
+      )}
+      {party.isHost && party.jam !== undefined && (
+        <div className="device-row jam-row">
+          <span className="muted small">Guest Jam</span>
+          {party.jam ? (
+            <>
+              <span className="small">Anyone with this link can see the queue and add songs from your library, no app or account needed.</span>
+              <Qr text={party.jam} />
+              <div className="row gap">
+                <button type="button" className="btn small" onClick={() => void navigator.clipboard?.writeText(party.jam!).catch(() => undefined)}>Copy link</button>
+                <button type="button" className="btn small ghost" onClick={() => run(() => setJam(false))}>Turn off</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="small">Let people in the room add songs from their phone's browser.</span>
+              <button type="button" className="btn small" onClick={() => run(() => setJam(true))}>Make a guest link</button>
+            </>
+          )}
         </div>
       )}
       <div className="row gap" style={{ marginTop: 8 }}>

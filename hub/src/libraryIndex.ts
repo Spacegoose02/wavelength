@@ -1,6 +1,8 @@
 import type { Db } from './db.ts';
 import { getScanSettings, navidrome } from './library.ts';
 import { normName, primaryArtist } from './radar.ts';
+import type { IndexedSong } from './api/library.ts';
+import { SearchIndex, type SearchOptions, type SearchResult, words } from './librarySearch.ts';
 
 /**
  * "Is this chart song in the library?" for Discover, answered by the Hub in one go
@@ -18,19 +20,8 @@ import { normName, primaryArtist } from './radar.ts';
 const LIST_EVERY = 60 * 60_000;
 const PAGE = 500;
 
-/** The Subsonic song fields an app needs to play and show it. */
-export interface IndexedSong {
-  id: string;
-  title: string;
-  artist: string;
-  album?: string;
-  albumId?: string;
-  duration?: number;
-  track?: number;
-  discNumber?: number;
-  coverArt?: string;
-  explicitStatus?: string;
-}
+/** The Subsonic song fields an app needs to play and show it (the app–Hub contract, api/library.ts). */
+export type { IndexedSong };
 
 export interface IndexStatus {
   /** false: no scan login, or the first listing hasn't finished (the app checks songs itself) */
@@ -54,14 +45,22 @@ export class LibraryIndex {
   private scannedAt: () => number | null;
   private now: () => number;
   private songs: IndexedSong[] = [];
+  /** Navidrome's path for each song id (not sent to apps; the catalog and sound-alike analysis use it). */
+  private paths = new Map<string, string>();
   private byTitle = new Map<string, IndexedSong[]>();
   private byPrefix = new Map<string, IndexedSong[]>();
+  private searchIndex = new SearchIndex([]);
   private server: string | null = null;
   private listedAt: number | null = null;
   private error: string | null = null;
   private listing: Promise<void> | null = null;
   /** for tests: what Navidrome answers */
   call: typeof navidrome = navidrome;
+  /**
+   * With Navidrome off (catalog.ts standalone), the Hub's own answers to the same calls (subsonicCatalog.ts), so
+   * the songs come from the catalog instead: no calls, same ids. Set by app.ts.
+   */
+  fromCatalog: () => ((method: string, params: Record<string, string>) => any) | null = () => null;
 
   constructor(db: Db, key: Buffer, scannedAt: () => number | null = () => null, now: () => number = Date.now) {
     this.db = db;
@@ -79,7 +78,7 @@ export class LibraryIndex {
    * when the list is old or Navidrome scanned since. False when there's no scan login or the first listing failed.
    */
   async ensure(): Promise<boolean> {
-    const s = getScanSettings(this.db, this.key);
+    const s = this.settings();
     if (!s) {
       this.reset();
       return false;
@@ -98,29 +97,50 @@ export class LibraryIndex {
 
   private reset() {
     this.songs = [];
+    this.paths = new Map();
     this.byTitle.clear();
     this.byPrefix.clear();
+    this.searchIndex = new SearchIndex([]);
     this.server = null;
     this.listedAt = null;
   }
 
-  /** Every song in Navidrome, 500 at a time. */
-  async list(): Promise<void> {
+  /** Where the songs come from: Navidrome's scan login, or the catalog when Navidrome is off. */
+  private settings(): { url: string; call: (method: string, params: Record<string, string>) => Promise<any> } | null {
+    const hub = this.fromCatalog();
     const s = getScanSettings(this.db, this.key);
+    // the server name stays the Navidrome address when there was one, so the app still finds its library
+    if (hub) return { url: s?.url ?? 'hub', call: async (m, p) => hub(m, p) };
+    return s ? { url: s.url, call: (m, p) => this.call(s, m, p) } : null;
+  }
+
+  /** Every song in Navidrome (or the catalog), 500 at a time. */
+  async list(): Promise<void> {
+    const s = this.settings();
     if (!s) return this.reset();
     const songs: IndexedSong[] = [];
+    const paths = new Map<string, string>();
+    /** Navidrome's id for each artist it split out of a credit (OpenSubsonic `artists`), for Search */
+    const artistIds = new Map<string, string>();
     try {
       for (let offset = 0; offset < 1_000_000; offset += PAGE) {
-        const r = await this.call(s, 'search3', { query: '', songCount: String(PAGE), songOffset: String(offset), artistCount: '0', albumCount: '0' });
+        const r = await s.call('search3', { query: '', songCount: String(PAGE), songOffset: String(offset), artistCount: '0', albumCount: '0' });
         const page = (r?.searchResult3?.song ?? []) as Record<string, unknown>[];
         for (const x of page) {
           if (!x.id || typeof x.title !== 'string') continue;
+          if (typeof x.path === 'string' && x.path) paths.set(String(x.id), x.path);
+          for (const ar of Array.isArray(x.artists) ? (x.artists as { id?: unknown; name?: unknown }[]) : []) {
+            const k = typeof ar?.name === 'string' ? words(ar.name).join(' ') : '';
+            if (k && ar.id != null && !artistIds.has(k)) artistIds.set(k, String(ar.id));
+          }
           songs.push({
             id: String(x.id),
             title: x.title,
             artist: typeof x.artist === 'string' ? x.artist : '',
+            ...(x.artistId != null && { artistId: String(x.artistId) }),
             ...(typeof x.album === 'string' && { album: x.album }),
             ...(x.albumId != null && { albumId: String(x.albumId) }),
+            ...(typeof x.year === 'number' && x.year > 0 && { year: x.year }),
             ...(typeof x.duration === 'number' && { duration: x.duration }),
             ...(typeof x.track === 'number' && { track: x.track }),
             ...(typeof x.discNumber === 'number' && { discNumber: x.discNumber }),
@@ -135,6 +155,7 @@ export class LibraryIndex {
       throw e;
     }
     this.songs = songs;
+    this.paths = paths;
     this.byTitle = new Map();
     this.byPrefix = new Map();
     for (const x of songs) {
@@ -143,10 +164,39 @@ export class LibraryIndex {
       push(this.byTitle, t, x);
       push(this.byPrefix, t.slice(0, PREFIX), x);
     }
+    this.searchIndex = new SearchIndex(songs, artistIds);
+    this.byId = undefined;
     this.server = s.url.replace(/\/+$/, '');
     this.listedAt = this.now();
     this.error = null;
   }
+
+  /**
+   * Every Navidrome song with its path, listed first if needed. The one listing of Navidrome the Hub makes: the
+   * music catalog (catalog.ts) links files to songs with it and sound-alike analysis (sonic/worker.ts) picks its
+   * songs from it. null when there's no scan login or Navidrome couldn't be listed.
+   */
+  async navidromeSongs(): Promise<(IndexedSong & { path?: string })[] | null> {
+    if (!(await this.ensure())) return null;
+    return this.songs.map((x) => ({ ...x, path: this.paths.get(x.id) }));
+  }
+
+  /** Every song in the library (DJ mode's New for you picks ones you haven't played). Call ensure() first. */
+  all(): readonly IndexedSong[] {
+    return this.songs;
+  }
+
+  /** Songs, albums and artists for the Search page (librarySearch.ts). Call ensure() first. */
+  search(q: string, opts?: SearchOptions): SearchResult {
+    return this.searchIndex.search(q, opts);
+  }
+
+  /** One song by its Navidrome id (a guest's Jam request, routes/together.ts). */
+  get(id: string): IndexedSong | undefined {
+    if (this.byId?.size !== this.songs.length) this.byId = new Map(this.songs.map((x) => [x.id, x]));
+    return this.byId.get(id);
+  }
+  private byId?: Map<string, IndexedSong>;
 
   /** The library's copy of each song, or null. */
   match(songs: { title: string; artist: string }[]): (IndexedSong | null)[] {

@@ -13,7 +13,9 @@ import { AlbumCard } from './common';
  */
 export function JumpBackIn() {
   // without a Hub it's always there; with one it comes and goes with the Home mixes switch
-  const on = useFeature('homeMixes') || !useHub((s) => s.token);
+  const mixesOn = useFeature('homeMixes');
+  const hasHub = useHub((s) => !!s.token);
+  const on = mixesOn || !hasHub;
   const history = useLibrary((s) => s.history);
   const go = useUi((s) => s.go);
   const albums = useMemo(() => {

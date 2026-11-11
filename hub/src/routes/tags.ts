@@ -5,8 +5,10 @@ import { audit } from '../audit.ts';
 import { tx, type Db } from '../db.ts';
 import { clientIp, HttpError, need, str } from '../http.ts';
 import { getScanSettings } from '../library.ts';
-import { findMatches, libraryFile, readTags, relPath, TAG_KEYS, writeTags, type Tags } from '../tags.ts';
-import { navidromeAdmin } from './navidrome.ts';
+import { canWrite, findMatches, libraryFile, readTags, relPath, TAG_KEYS, writeTags, type Tags } from '../tags.ts';
+import { numberedTitle } from '../trackTitles.ts';
+import { libraryAdmin } from '../libraryAdmin.ts';
+import { catalogWrote } from '../catalog.ts';
 
 /**
  * The tag editor (docs/USERS-AND-ADMIN.md Phase 5), for admins (`library.edit`): read an album's tags
@@ -27,44 +29,53 @@ function readTagsBody(v: unknown): Tags {
   return out;
 }
 
+/** Files written at the same time in one Save: ffmpeg copies each whole file, so a few at once, not all. */
+const WRITE_AT_ONCE = 4;
+
 /**
  * Write tag changes to files as one Save (one batch in `tag_edits`, so it can be undone). Only tags that
  * actually change are written and kept, so undo puts back exactly those. `batch` is null when nothing changed.
+ *
+ * A big Save is sent in several requests so none of them runs long enough for a proxy in front of the Hub to give
+ * up on it (a 504): pass the same `batch` id with each part and they stay one Save, undone together.
  */
-export async function saveTagChanges(db: Db, musicDir: string, plan: { file: string; tags: Tags }[], label: string, userId: number | null) {
-  const batch = randomBytes(8).toString('hex');
+export async function saveTagChanges(db: Db, musicDir: string, plan: { file: string; tags: Tags }[], label: string, userId: number | null, batch = randomBytes(8).toString('hex')) {
   const now = Date.now();
   const changed: string[] = [];
   const failed: { path: string; error: string }[] = [];
   const save = db.prepare('INSERT INTO tag_edits (batch, path, before, after, label, user_id, at) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  for (const p of plan) {
+  const one = async (p: { file: string; tags: Tags }) => {
     const rel = relPath(musicDir, p.file);
     try {
       const cur = await readTags(p.file);
       const after: Tags = {}, before: Tags = {};
       for (const k of TAG_KEYS) {
-        if (p.tags[k] === undefined || (p.tags[k] ?? '') === (cur[k] ?? '')) continue;
+        if (p.tags[k] === undefined || (p.tags[k] ?? '') === (cur[k] ?? '') || !canWrite(p.file, k)) continue;
         after[k] = p.tags[k];
         before[k] = cur[k] ?? '';
       }
-      if (!Object.keys(after).length) continue;
+      if (!Object.keys(after).length) return;
       await writeTags(p.file, after);
-      tx(db, () => save.run(batch, rel, JSON.stringify(before), JSON.stringify(after), label, userId, now));
+      tx(db, () => {
+        save.run(batch, rel, JSON.stringify(before), JSON.stringify(after), label, userId, now);
+        catalogWrote(db, rel, after);
+      });
       changed.push(rel);
     } catch (e) {
       failed.push({ path: rel, error: (e as Error).message });
     }
-  }
+  };
+  // the same file twice is one write (the later tags win), so two writes never race on one file
+  const byFile = new Map<string, Tags>();
+  for (const p of plan) byFile.set(p.file, { ...byFile.get(p.file), ...p.tags });
+  const files = [...byFile].map(([file, tags]) => ({ file, tags }));
+  for (let i = 0; i < files.length; i += WRITE_AT_ONCE) await Promise.all(files.slice(i, i + WRITE_AT_ONCE).map(one));
   return { batch: changed.length ? batch : null, changed, failed };
 }
 
-export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
+export function tagRoutes(app: FastifyInstance, { db, config, library, catalog }: Ctx) {
   const file = (path: string) => libraryFile(config.musicDir, config.navidromeMusicDir, path);
-  const admin = async () => {
-    const s = getScanSettings(db, config.secretKey);
-    if (!s) throw new HttpError(409, 'Add the Navidrome admin login under Settings → Server first');
-    return navidromeAdmin(s.url, s.username, s.password);
-  };
+  const admin = () => libraryAdmin(db, config.secretKey, catalog);
 
   /** An album's songs (Navidrome album id), with the tags in their files. */
   app.get<{ Params: { id: string } }>('/api/admin/tags/album/:id', async (req) => {
@@ -78,6 +89,20 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
       out.push({ id: song.id, path: relPath(config.musicDir, f), tags: await readTags(f) });
     }
     return { songs: out };
+  });
+
+  /**
+   * One song (Navidrome song id) with the tags in its file, for the app's Edit song dialog. Found in the catalog,
+   * else among its album's songs (`?album=`, the Navidrome album id) when the catalog doesn't know it yet.
+   */
+  app.get<{ Params: { id: string }; Querystring: { album?: string } }>('/api/admin/tags/song/:id', async (req) => {
+    need(req, 'library.edit');
+    const id = req.params.id.slice(0, 100), album = (req.query.album ?? '').slice(0, 100);
+    let path = catalog.usable() ? catalog.songPath(id) : undefined;
+    if (!path && album) path = (await (await admin()).albumSongs(album)).find((s) => String(s.id) === id)?.path;
+    if (!path) throw new HttpError(404, 'The Hub can’t find that song’s file. Navidrome may not have scanned it yet');
+    const f = file(String(path));
+    return { id, path: relPath(config.musicDir, f), tags: await readTags(f) };
   });
 
   /**
@@ -111,12 +136,38 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
     return { songs: out, missing };
   });
 
+  /**
+   * Library care → Numbered titles: songs whose title starts with their track number ("04 - God's Plan"), from
+   * Navidrome's own list of songs, one page (`offset`, `limit` up to 5000) at a time. No file is opened, so a
+   * whole library takes seconds instead of reading every file; the Save that fixes them reads each file first.
+   */
+  app.get<{ Querystring: { offset?: string; limit?: string } }>('/api/admin/tags/numbered', async (req) => {
+    need(req, 'library.edit');
+    const offset = Math.max(0, Number.parseInt(req.query.offset ?? '0', 10) || 0);
+    const limit = Math.min(5000, Math.max(1, Number.parseInt(req.query.limit ?? '2000', 10) || 2000));
+    const nd = await admin();
+    const { songs, total } = await nd.songs(offset, offset + limit);
+    const fixes: { path: string; albumId: string; artist: string; album: string; from: string; to: string }[] = [];
+    for (const s of songs) {
+      const hit = numberedTitle(s.title, s.trackNumber || undefined);
+      if (!hit) continue;
+      let f: string;
+      try {
+        f = file(s.path);
+      } catch {
+        continue;
+      }
+      fixes.push({ path: relPath(config.musicDir, f), albumId: s.albumId, artist: s.albumArtist || s.artist, album: s.album, from: s.title, to: hit.title });
+    }
+    return { fixes, scanned: songs.length, total };
+  });
+
   /** Artist and genre names already in the library (and in recent edits), for the editor's suggestions. */
   let names: { at: number; artists: string[]; genres: string[] } | undefined;
   app.get('/api/admin/tags/values', async (req) => {
     need(req, 'library.edit');
     if (!names || Date.now() - names.at > 5 * 60_000) {
-      const got = getScanSettings(db, config.secretKey) ? await (await admin()).names().catch(() => ({ artists: [], genres: [] })) : { artists: [], genres: [] };
+      const got = getScanSettings(db, config.secretKey) || catalog.standalone() ? await (await admin()).names().catch(() => ({ artists: [], genres: [] })) : { artists: [], genres: [] };
       names = { at: Date.now(), ...got };
     }
     // names saved since Navidrome last scanned
@@ -145,11 +196,14 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
     const changes = body?.changes;
     if (!Array.isArray(changes) || !changes.length || changes.length > 5000) throw new HttpError(400, 'Send 1 to 5000 changes');
     const label = str(body, 'label', 200) || 'Tags';
+    // one part of a bigger Save (see saveTagChanges)
+    const part = (body as { batch?: unknown }).batch;
+    if (part !== undefined && (typeof part !== 'string' || !/^[0-9a-f]{16}$/.test(part))) throw new HttpError(400, 'batch must be the id of a Save');
     const plan = changes.map((c: Record<string, unknown>) => {
       const path = typeof c?.path === 'string' ? c.path : '';
       return { file: file(path), tags: readTagsBody(c.tags) };
     });
-    const { batch, changed: done, failed } = await saveTagChanges(db, config.musicDir, plan, label, user.id);
+    const { batch, changed: done, failed } = await saveTagChanges(db, config.musicDir, plan, label, user.id, part);
     if (done.length) {
       audit(db, { actorId: user.id, action: 'tags.edited', target: label, detail: { files: done.length, failed: failed.length }, ip: clientIp(req) });
       library.changed();
@@ -176,6 +230,7 @@ export function tagRoutes(app: FastifyInstance, { db, config, library }: Ctx) {
     for (const r of rows) {
       try {
         await writeTags(file(r.path), JSON.parse(r.before) as Tags);
+        catalogWrote(db, r.path, JSON.parse(r.before) as Tags);
         db.prepare('UPDATE tag_edits SET undone_at = ? WHERE id = ?').run(Date.now(), r.id);
         undone++;
       } catch (e) {

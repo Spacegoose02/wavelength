@@ -5,6 +5,7 @@ import { engine } from '../player/engine';
 import { getJson } from '../lib/http';
 import { parseNowPlaying, parseNowPlayingCover, streamTitle } from '../sources/radio';
 import { sourceFor } from '../sources/registry';
+import { deezerLookup, previewExpired } from '../sources/charts';
 import type { Track } from '../sources/types';
 import { useSettings } from './settings';
 import { useLibrary } from './library';
@@ -14,10 +15,19 @@ import { replayGainFactor } from '../player/replayGain';
 import { planTransition, toNextBeat, type SoundInfo, type Transition } from '../player/automix';
 import { featuresFor } from '../lib/sonic';
 import { featureOn } from '../lib/features';
+import { onMobileData, withQuality } from '../lib/streamQuality';
+import { markEnded } from '../lib/episodes';
 
 export type Repeat = 'off' | 'all' | 'one';
 
-interface PlayerState {
+/**
+ * Who started the queue that's playing: you (a song, album or playlist you picked, anywhere in the app), the AI DJ
+ * chat (`dj`, lib/dj.ts) or DJ mode (`station`, lib/djStation.ts). DJ Trash Panda only talks over, and only keeps
+ * going on, music it started: a queue you start yourself ends any DJ session (docs/AI-DJ.md "Who's in charge").
+ */
+export type QueueBy = 'you' | 'dj' | 'station';
+
+export interface PlayerState {
   queue: Track[];
   index: number;
   playing: boolean;
@@ -31,16 +41,26 @@ interface PlayerState {
   /** Radio stations that publish artwork (e.g. SubWave) — overrides the station logo. */
   liveCover?: string;
   error?: string;
+  /** Counts new queues (each playTracks), so the DJ can tell a queue you started from songs added to its own. */
+  queueId: number;
+  /** Who started the queue that's playing (`QueueBy`). */
+  queueBy: QueueBy;
+  /** The queue ran out: the last song finished (or couldn't play) and nothing came after it. */
+  ranOut: boolean;
+  /** No signal: the music server can't be reached, so saved songs are standing in (lib/deadZone.ts). */
+  noSignal: boolean;
   current(): Track | undefined;
-  playTracks(tracks: Track[], start?: number, startAt?: number): void;
+  playTracks(tracks: Track[], start?: number, startAt?: number, by?: QueueBy): void;
   enqueue(tracks: Track[]): void;
   playNext(tracks: Track[]): void;
-  jump(i: number): void;
+  jump(i: number, startAt?: number): void;
   removeAt(i: number): void;
   toggle(): void;
   next(): void;
   prev(): void;
   seek(t: number): void;
+  /** Jump `seconds` back (negative) or on, across an audiobook's files when it has several. */
+  skipBy(seconds: number): void;
   setVolume(v: number): void;
   toggleShuffle(): void;
   cycleRepeat(): void;
@@ -67,6 +87,12 @@ function applyLevel(t: Track | undefined) {
   engine.setLevel(t?.kind === 'track' ? replayGainFactor(t.replayGain, replayGain, replayGainPreamp) : 1);
 }
 
+/** Audiobook and podcast speed (lib/spoken.ts plugs in here, since it imports this store); music plays at 1. */
+let spokenSpeed: ((t: Track) => number) | undefined;
+export const setSpokenSpeed = (fn?: (t: Track) => number) => {
+  spokenSpeed = fn;
+};
+
 /** Sleep timer "end of this song" (lib/sleep.ts): stop when the current song ends instead of going on. */
 let stopAfterTrack: (() => void) | undefined;
 export const setStopAfterTrack = (fn?: () => void) => {
@@ -88,9 +114,50 @@ export const setPlayerIntercept = (fn?: PlayerIntercept) => {
   intercept = fn;
 };
 
+/**
+ * Dead zone cushion (lib/deadZone.ts) plugs in here, so this store doesn't import it (it imports this store).
+ * `offline()`: the music server looked unreachable last time anyone checked. `check()`: look now (resolves true
+ * when it's unreachable, and starts watching for the signal to come back). `standIn(t)`: a saved song to play in
+ * place of `t` while there's no signal, or undefined when there's nothing left to play.
+ */
+export interface DeadZoneHook {
+  offline(): boolean;
+  check(): Promise<boolean>;
+  standIn(instead?: Track): Track | undefined;
+}
+let deadZone: DeadZoneHook | undefined;
+export const setDeadZoneHook = (h?: DeadZoneHook) => {
+  deadZone = h;
+};
+
+/** Whether a song plays without the network: downloaded on this device (and not going to a speaker). */
+const isSaved = (t: Track) => !engine.isRemote() && !!useOffline.getState().tracks[trackKey(t)];
+
+/**
+ * No signal and `t` isn't saved: put a saved song in front of it and play that instead. `t` stays where it was in
+ * the queue, so once the signal is back it plays when the stand-in ends. Returns true when it did.
+ */
+function standInFor(t: Track | undefined, at: number): boolean {
+  if (!deadZone || intercept || (t && (t.kind !== 'track' || isSaved(t)))) return false;
+  const s = deadZone.standIn(t);
+  if (!s) return false;
+  usePlayer.setState((st) => {
+    const queue = [...st.queue];
+    queue.splice(at, 0, s);
+    return { queue, index: at, noSignal: true };
+  });
+  failStreak = 0;
+  void loadCurrent();
+  return true;
+}
+
 export const usePlayer = create<PlayerState>()((set, get) => ({
   queue: [],
   index: -1,
+  queueId: 0,
+  queueBy: 'you',
+  ranOut: false,
+  noSignal: false,
   playing: false,
   buffering: false,
   position: 0,
@@ -100,7 +167,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   repeat: 'off',
   current: () => get().queue[get().index],
 
-  playTracks(all, start = 0, startAt = 0) {
+  playTracks(all, start = 0, startAt = 0, by = 'you') {
     // a listening-party guest playing something: it goes to the host rather than out of step with the party
     if (intercept?.('play', all.slice(start))) return;
     // kid profiles: drop what they may not play, keeping the chosen song's place when it stays
@@ -124,7 +191,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       queue = [first, ...shuffled(queue)];
       index = 0;
     }
-    set({ queue, index });
+    set((s) => ({ queue, index, queueId: s.queueId + 1, queueBy: by }));
     failStreak = 0;
     loadCurrent(startAt);
   },
@@ -147,11 +214,11 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       return { queue };
     });
   },
-  jump(i) {
+  jump(i, startAt = 0) {
     if (i < 0 || i >= get().queue.length) return;
     set({ index: i });
     failStreak = 0;
-    loadCurrent();
+    loadCurrent(startAt);
   },
   removeAt(i) {
     const { index } = get();
@@ -161,6 +228,11 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   toggle() {
     if (!get().current()) return;
     if (intercept?.('toggle')) return;
+    if (pendingResume) {
+      const resume = pendingResume;
+      pendingResume = undefined;
+      return resume();
+    }
     if (engine.el.paused) engine.play();
     else engine.pause();
   },
@@ -169,8 +241,11 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     const { index, queue, repeat } = get();
     if (index + 1 < queue.length) set({ index: index + 1 });
     else if (repeat === 'all' && queue.length) set({ index: 0 });
+    // the queue ran out with no signal (DJ mode and song radio can't fetch more): keep going on saved songs
+    else if (deadZone?.offline() && queue.length && standInFor(undefined, queue.length)) return;
     else {
       engine.pause();
+      set({ ranOut: true });
       return;
     }
     loadCurrent();
@@ -184,7 +259,24 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       loadCurrent();
     } else engine.seek(0);
   },
-  seek: (t) => void (intercept?.('seek', t) || engine.seek(t)),
+  seek(t) {
+    if (intercept?.('seek', t)) return;
+    // a restored queue that hasn't loaded yet: moving the bar moves where it starts
+    if (pendingResume && get().current()?.kind !== 'book') {
+      const at = Math.max(0, t);
+      pendingResume = () => void loadCurrent(at);
+      return set({ position: at });
+    }
+    engine.seek(t);
+  },
+  skipBy(seconds) {
+    const t = get().current();
+    if (!t || t.kind === 'radio' || pendingResume) return;
+    const pos = engine.el.currentTime;
+    if (t.kind === 'book') return seekBook((t.bookOffset ?? 0) + pos + seconds);
+    const dur = engine.el.duration || t.duration || 0;
+    get().seek(Math.max(0, dur ? Math.min(dur - 1, pos + seconds) : pos + seconds));
+  },
   setVolume(v) {
     engine.setVolume(v);
     set({ volume: v });
@@ -223,6 +315,8 @@ let nowPlayingTimer: number | undefined;
 let loadSeq = 0;
 /** blob: URL of the downloaded song playing on Android (see offlinePlaybackUrl) */
 let localBlob: string | undefined;
+/** The song playing is coming over the network (not from a downloaded file). */
+let fromStream = false;
 
 function releaseLocalBlob() {
   if (localBlob) URL.revokeObjectURL(localBlob);
@@ -233,13 +327,24 @@ function releaseLocalBlob() {
 function begin(t: Track, startAt: number) {
   scrobbled = false;
   listened = 0;
-  usePlayer.setState({ position: startAt, duration: t.duration ?? 0, error: undefined, liveTitle: undefined, liveCover: undefined, buffering: true });
+  waitingForSignal = false;
+  usePlayer.setState({ position: startAt, duration: t.duration ?? 0, error: undefined, liveTitle: undefined, liveCover: undefined, buffering: true, ranOut: false });
+  armStallWatch(false);
   updateMediaSession(t);
   watchNowPlaying(t);
   applyLevel(t);
+  engine.setSpeed(spokenSpeed?.(t) ?? 1);
   aheadFor = undefined;
   engine.setMeta({ title: t.title, artist: t.artist, album: t.album, cover: t.coverUrl, duration: t.duration });
   return ++loadSeq;
+}
+
+/** The link to stream a song from, at this network's quality (lib/streamQuality.ts); speakers get the original. */
+function streamAt(t: Track): string {
+  const url = t.streamUrl ?? '';
+  if (t.kind !== 'track' || engine.isRemote()) return url;
+  const q = useSettings.getState().streamQuality;
+  return withQuality(url, onMobileData() ? q?.mobile ?? 'original' : q?.wifi ?? 'original');
 }
 
 /** Load the current song again at `startAt` (casting moved playback to a speaker or back here). */
@@ -250,16 +355,45 @@ export function reloadCurrent(startAt: number, play: boolean) {
   });
 }
 
+/**
+ * A 30s Deezer clip whose signed link has run out (Discover charts, the Weekly Mix and Release Radar keep links for
+ * hours or days): ask Deezer for a fresh one, so it plays instead of failing with "Playback failed".
+ */
+async function freshPreview(t: Track): Promise<{ track: Track; startAt?: number }> {
+  if (t.sourceId !== 'preview' || !t.streamUrl || !previewExpired(t.streamUrl)) return { track: t };
+  const found = await deezerLookup({ title: t.title, artist: t.artist ?? '' }).catch(() => ({}) as { preview?: string });
+  return { track: found.preview ? { ...t, streamUrl: found.preview } : t };
+}
+
+/**
+ * Pick up where you left off (lib/resume.ts): the queue is back after a restart, paused, and nothing loads until
+ * you press play. Then this runs (load the song at the saved spot, or reopen the audiobook).
+ */
+let pendingResume: (() => void) | undefined;
+
+/** Put a saved queue back, paused at `at` seconds into song `index`. `onPlay` replaces loading it at `at`. */
+export function restoreQueue(all: Track[], index: number, at: number, onPlay?: () => void) {
+  const tracks = kidSafe(all);
+  const t = all[index];
+  const i = tracks.indexOf(t);
+  if (!tracks.length || !t || i < 0 || usePlayer.getState().queue.length) return;
+  usePlayer.setState((s) => ({ queue: tracks, index: i, position: at, duration: t.duration ?? 0, playing: false, queueId: s.queueId + 1, queueBy: 'you' }));
+  updateMediaSession(t);
+  pendingResume = onPlay ?? (() => void loadCurrent(at));
+}
+
 async function loadCurrent(startAt = 0) {
+  pendingResume = undefined;
   const t = usePlayer.getState().current();
   if (!t) return;
   const token = begin(t, startAt);
   try {
     // Loaded ahead on the idle deck while the last song played: starts with no gap
     if (ahead?.key === trackKey(t)) {
-      const { url } = ahead;
+      const { url, local } = ahead;
       ahead = undefined;
       releaseLocalBlob();
+      fromStream = !local;
       await engine.load(url, startAt);
       if (t.kind === 'track') sourceOf(t)?.scrobble?.(t, false).catch(() => {});
       return;
@@ -274,12 +408,19 @@ async function loadCurrent(startAt = 0) {
     if (local) {
       releaseLocalBlob();
       if (local.startsWith('blob:')) localBlob = local;
+      fromStream = false;
       await engine.load(local, startAt);
       if (t.kind === 'track') sourceOf(t)?.scrobble?.(t, false).catch(() => {});
       return;
     }
+    // No signal (lib/deadZone.ts): don't wait for a server we know is out of reach, play a saved song first
+    if (deadZone?.offline() && standInFor(t, usePlayer.getState().index)) return;
+    if (t.kind === 'track' && usePlayer.getState().noSignal && !deadZone?.offline()) usePlayer.setState({ noSignal: false });
+    // a song that was cut off by a dead zone picks up where it stopped
+    if (!startAt && resumeAt?.key === trackKey(t)) startAt = resumeAt.at;
+    resumeAt = undefined;
     // Refresh tokens / open listening sessions (podcast episodes, saved Navidrome tracks…)
-    const prepared = (await sourceOf(t)?.prepare?.(t)) ?? { track: t };
+    const prepared = (await sourceOf(t)?.prepare?.(t)) ?? (await freshPreview(t));
     if (token !== loadSeq) return;
     const ready = prepared.track;
     if (ready !== t) {
@@ -287,7 +428,8 @@ async function loadCurrent(startAt = 0) {
     }
     if (!ready.streamUrl) throw new Error('No stream for this item');
     releaseLocalBlob();
-    await engine.load(ready.streamUrl, startAt || prepared.startAt || 0);
+    fromStream = true;
+    await engine.load(streamAt(ready), startAt || prepared.startAt || 0);
     if (ready.kind === 'track') sourceOf(ready)?.scrobble?.(ready, false).catch(() => {});
   } catch (e) {
     if (token === loadSeq) failed(String((e as Error).message ?? e));
@@ -305,12 +447,47 @@ let skipTimer: number | undefined;
  * A song couldn't load or play: say so, and move on to the next one after a moment (a missing song shouldn't
  * stop a whole album). Not while a listening party's host is in charge, and not past the end of the queue.
  */
-function failed(message: string) {
+function failed(message: string, stalled = false) {
   window.clearTimeout(skipTimer);
+  armStallWatch(false);
+  const t = usePlayer.getState().current();
+  // The song was streaming, and the dead zone cushion has saved it since: carry on from the file
+  if (t && t.kind === 'track' && fromStream && isSaved(t) && !intercept) {
+    rememberSpot(t);
+    fromStream = false;
+    void loadCurrent(resumeAt?.at ?? 0);
+    resumeAt = undefined;
+    return;
+  }
+  // A streamed song failed: if it's because the signal went (lib/deadZone.ts), play saved songs instead of
+  // skipping through a queue that can't load either
+  if (deadZone && t && t.kind === 'track' && !isSaved(t) && !intercept) {
+    const seq = loadSeq;
+    usePlayer.setState({ buffering: true });
+    void deadZone.check().then((off) => {
+      if (seq !== loadSeq) return; // the person picked something else meanwhile
+      if (off) {
+        rememberSpot(t);
+        if (standInFor(t, usePlayer.getState().index)) return;
+        // nothing saved to play: wait for the signal rather than skip through songs that can't load either
+        waitingForSignal = true;
+        usePlayer.setState({ error: 'No signal · it carries on when the signal is back', buffering: false, playing: false, noSignal: true });
+        return;
+      }
+      // the server answers, so it's only a slow connection: keep waiting rather than skip a song that works
+      if (!off && stalled) return armStallWatch(true);
+      skipOrStop(message);
+    });
+    return;
+  }
+  skipOrStop(message);
+}
+
+function skipOrStop(message: string) {
   const { index, queue, repeat } = usePlayer.getState();
   const more = index + 1 < queue.length || (repeat === 'all' && queue.length > 1);
   const skip = more && !intercept && ++failStreak < MAX_FAILS;
-  usePlayer.setState({ error: skip ? `${message} · skipping to the next song` : message, buffering: false, playing: false });
+  usePlayer.setState({ error: skip ? `${message} · skipping to the next song` : message, buffering: false, playing: false, ...(!more && { ranOut: true }) });
   if (!skip) return;
   const seq = loadSeq;
   skipTimer = window.setTimeout(() => {
@@ -319,10 +496,49 @@ function failed(message: string) {
   }, 2000);
 }
 
+// ---- dead zones: a stream that stops coming ----------------------------------
+
+/** Stopped because the signal went and nothing saved was left to play. */
+let waitingForSignal = false;
+
+/** The music server answers again (lib/deadZone.ts): clear the note, and carry on if the music had stopped. */
+export function signalBack() {
+  usePlayer.setState({ noSignal: false });
+  if (!waitingForSignal) return;
+  waitingForSignal = false;
+  void loadCurrent();
+}
+
+/** Where a streamed song was when the signal went, so it carries on from there once it's back. */
+let resumeAt: { key: string; at: number } | undefined;
+const rememberSpot = (t: Track) => {
+  const at = engine.el.currentTime;
+  resumeAt = at > 5 ? { key: trackKey(t), at: Math.max(0, at - 2) } : undefined;
+};
+
+/**
+ * A stream that's buffering for this long counts as failed. Losing signal often doesn't raise an error at
+ * all: the `<audio>` element just waits, so without this the music would stop until the signal came back.
+ */
+export const STALL_SECONDS = 12;
+let stallTimer: number | undefined;
+function armStallWatch(on: boolean) {
+  window.clearTimeout(stallTimer);
+  stallTimer = undefined;
+  if (!on || !deadZone) return;
+  const t = usePlayer.getState().current();
+  if (!t || t.kind !== 'track' || !fromStream) return;
+  const seq = loadSeq;
+  stallTimer = window.setTimeout(() => {
+    stallTimer = undefined;
+    if (seq === loadSeq && usePlayer.getState().buffering && !engine.el.paused) failed('The stream stopped', true);
+  }, STALL_SECONDS * 1000);
+}
+
 // ---- gapless and crossfade ------------------------------------------------
 
 /** The next song, loaded ahead on the idle deck (engine.preload): which song and its stream URL. */
-let ahead: { key: string; url: string; plan?: Transition } | undefined;
+let ahead: { key: string; url: string; local?: boolean; plan?: Transition } | undefined;
 /** the song we last started preparing ahead, so it's only done once */
 let aheadFor: string | undefined;
 const AHEAD_SECONDS = 20;
@@ -346,22 +562,25 @@ async function prepareAhead(cur: Track) {
   const key = trackKey(next);
   if (aheadFor === key) return;
   aheadFor = key;
+  // no signal: nothing to fetch, and the stand-in decision is made when its turn comes
+  if (deadZone?.offline() && !useOffline.getState().tracks[key]) return;
   try {
     if (useOffline.getState().tracks[key]) {
       if (isAndroid) return;
       const local = await offlinePlaybackUrl(next);
       if (local) {
         engine.preload(local);
-        ahead = { key, url: local };
+        ahead = { key, url: local, local: true };
         void planAhead(cur, next, key);
       }
       return;
     }
-    const ready = ((await sourceOf(next)?.prepare?.(next)) ?? { track: next }).track;
+    const ready = ((await sourceOf(next)?.prepare?.(next)) ?? (await freshPreview(next))).track;
     if (!ready.streamUrl || usePlayer.getState().queue[i!] !== next) return;
     if (ready !== next) usePlayer.setState((s) => ({ queue: s.queue.map((q, j) => (j === i ? ready : q)) }));
-    engine.preload(ready.streamUrl);
-    ahead = { key, url: ready.streamUrl };
+    const url = streamAt(ready);
+    engine.preload(url);
+    ahead = { key, url };
     void planAhead(cur, ready, key);
   } catch {
     /* it just loads normally when its turn comes */
@@ -405,9 +624,10 @@ function startCrossfade(remaining: number, rate: number) {
   const next = i === undefined ? undefined : usePlayer.getState().queue[i];
   if (!next || trackKey(next) !== ahead.key) return;
   const { replayGain, replayGainPreamp } = useSettings.getState().playback;
-  const url = ahead.url;
+  const { url, local } = ahead;
   if (!engine.crossfade(url, Math.max(1, remaining), replayGainFactor(next.replayGain, replayGain, replayGainPreamp), rate)) return;
   ahead = undefined;
+  fromStream = !local;
   usePlayer.setState({ index: i! });
   begin(next, 0);
   usePlayer.setState({ buffering: false });
@@ -441,7 +661,7 @@ engine.on('timeupdate', (_, el) => {
   }
   if ('mediaSession' in navigator && Number.isFinite(dur) && dur > 0) {
     try {
-      navigator.mediaSession.setPositionState({ duration: dur, position: Math.min(now, dur), playbackRate: 1 });
+      navigator.mediaSession.setPositionState({ duration: dur, position: Math.min(now, dur), playbackRate: engine.speed() });
     } catch {
       /* ignore */
     }
@@ -453,12 +673,26 @@ engine.on('durationchange', (_, el) => {
 engine.on('play', () => usePlayer.setState({ playing: true }));
 engine.on('playing', () => {
   failStreak = 0;
+  armStallWatch(false);
   usePlayer.setState({ playing: true, buffering: false });
 });
-engine.on('waiting', () => usePlayer.setState({ buffering: true }));
+engine.on('waiting', () => {
+  usePlayer.setState({ buffering: true });
+  armStallWatch(true);
+});
 engine.on('pause', () => usePlayer.setState({ playing: false }));
 engine.on('error', (_, el) => failed(`Playback failed (code ${el.error?.code ?? '?'})`));
-engine.on('ended', () => {
+engine.on('ended', (_, el) => {
+  // a book's file or an episode that played to the end: tell the server now, so it's marked finished (the
+  // regular sync is every 15 s and would leave the last few seconds unheard)
+  const ended = usePlayer.getState().current();
+  if (ended && (ended.kind === 'book' || ended.kind === 'episode')) {
+    const end = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : ended.duration ?? 0;
+    sourceOf(ended)?.syncBook?.(ended, (ended.bookOffset ?? 0) + end, listened).catch(() => {});
+    listened = 0;
+    lastSync = Date.now();
+    markEnded(ended);
+  }
   if (stopAfterTrack) {
     const done = stopAfterTrack;
     stopAfterTrack = undefined;
@@ -538,9 +772,34 @@ function updateMediaSession(t: Track, live?: string, cover?: string) {
 
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
-  ms.setActionHandler('play', () => engine.play());
+  ms.setActionHandler('play', () => (pendingResume ? usePlayer.getState().toggle() : engine.play()));
   ms.setActionHandler('pause', () => engine.pause());
   ms.setActionHandler('nexttrack', () => usePlayer.getState().next());
   ms.setActionHandler('previoustrack', () => usePlayer.getState().prev());
   ms.setActionHandler('seekto', (d) => d.seekTime != null && engine.seek(d.seekTime));
+  // lock screen and headphone skip buttons: audiobooks and podcasts jump 15 s back / 30 s on (lib/spoken.ts)
+  try {
+    ms.setActionHandler('seekbackward', (d) => usePlayer.getState().skipBy(-(d.seekOffset || 15)));
+    ms.setActionHandler('seekforward', (d) => usePlayer.getState().skipBy(d.seekOffset || 30));
+  } catch {
+    /* not supported here */
+  }
+}
+
+/**
+ * Go to `abs` seconds into the audiobook that's playing (its parts are separate files in the queue, each with its
+ * `bookOffset`): seek in this part, or load the part it falls in.
+ */
+export function seekBook(abs: number) {
+  const { queue, index } = usePlayer.getState();
+  const t = queue[index];
+  if (!t) return;
+  if (t.kind !== 'book') return usePlayer.getState().seek(Math.max(0, abs));
+  const parts = queue.map((q, i) => ({ q, i })).filter(({ q }) => q.kind === 'book' && q.bookId === t.bookId);
+  const total = t.bookDuration ?? parts.reduce((n, { q }) => Math.max(n, (q.bookOffset ?? 0) + (q.duration ?? 0)), 0);
+  const at = Math.max(0, total ? Math.min(total - 1, abs) : abs);
+  const part = [...parts].reverse().find(({ q }) => at >= (q.bookOffset ?? 0)) ?? parts[0];
+  const within = at - (part.q.bookOffset ?? 0);
+  if (part.i === index) usePlayer.getState().seek(within);
+  else usePlayer.getState().jump(part.i, within);
 }

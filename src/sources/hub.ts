@@ -1,6 +1,9 @@
 import { http, trimSlash } from '../lib/http';
 import type { DeemixItem } from '../lib/deemixQueue';
 import type { Track } from './types';
+import type { IndexedSong, LibrarySearchResponse } from '../../hub/src/api/library';
+import type { LyricsCacheResponse, LyricsCachePut } from '../../hub/src/api/lyrics';
+import type { ActivityReport, HouseActivity } from '../../hub/src/api/activity';
 
 /**
  * The Wavelength Hub API (hub/, docs/HUB.md). The Hub owns accounts, roles and admin-only rules;
@@ -71,6 +74,15 @@ export interface HubFamilyMember extends HubFamilyPerson {
   devices: number;
   /** A kid's parents (grown-ups in the family), whose Inbox gets their requests and weekly report. */
   guardians?: number[];
+}
+
+export interface HubAppLogin {
+  id: number;
+  name: string;
+  createdAt: number;
+  path: string;
+  username: string;
+  password: string;
 }
 
 export interface HubDevice {
@@ -164,9 +176,58 @@ export interface HubService {
 }
 
 /** Tags the tag editor reads and writes (hub/src/tags.ts). */
-export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' | 'disc' | 'year' | 'genre';
+export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' | 'disc' | 'year' | 'genre'
+  | 'albumSort' | 'artistSort' | 'albumArtistSort' | 'label' | 'releaseType' | 'mood';
+/** How an artist page orders that artist's albums (hub/src/routes/artistMeta.ts); '' is the app's default, newest first. */
+export type HubAlbumSort = '' | 'newest' | 'oldest' | 'title';
+export interface HubArtistMeta { name: string; bio: string; albumSort: HubAlbumSort; updatedAt: number | null }
 export type HubTags = Partial<Record<HubTagKey, string>>;
+/** Styles, moods, collections and artist genres kept on the Hub (hub/src/itemTags.ts). */
+export type HubFacet = 'genre' | 'style' | 'mood' | 'collection';
+export interface HubItemTags {
+  kind: 'artist' | 'album';
+  /** The artist, or the album's album artist. */
+  artist: string;
+  /** The album's title ('' for an artist). */
+  title: string;
+  facets: Partial<Record<HubFacet, string[]>>;
+  /** Who set each: an admin ('edit') or the Plex import ('plex'). */
+  sources: Partial<Record<HubFacet, 'edit' | 'plex'>>;
+  updatedAt: number | null;
+}
+export interface HubTagValue { name: string; albums: number; artists: number; tracks?: number }
+/** A song's own styles and moods (hub/src/trackTags.ts), by its album artist, album and title. */
+export type HubTrackFacet = 'style' | 'mood';
+export interface HubTrackTags { artist: string; album: string; title: string; facets: Partial<Record<HubTrackFacet, string[]>>; sources: Partial<Record<HubTrackFacet, 'edit' | 'plex'>> }
+export interface HubAllItemTags { artists: HubItemTags[]; albums: HubItemTags[]; values: Record<HubFacet, HubTagValue[]> }
+/** Importing styles, moods and collections from Plex (hub/src/plexImport.ts). */
+export interface HubPlexMatch { kind: 'artist' | 'album'; artist: string; title: string; facets: Partial<Record<HubFacet, string[]>>; changes: HubFacet[] }
+export interface HubPlexPreview {
+  at: number;
+  server: string;
+  albums: { plex: number; matched: number };
+  artists: { plex: number; matched: number };
+  /** Songs (an older Hub doesn't read them). */
+  tracks?: { plex: number; matched: number; tagged: number };
+  changes: { albums: number; artists: number; tracks?: number };
+  unmatched: { artist: string; title: string }[];
+  /** Albums with no genre in their files, and Plex's genre tidied by the genre rules (`id` is Navidrome's album id). */
+  genres: { id: string; artist: string; title: string; plex: string; genre: string }[];
+  sample: HubPlexMatch[];
+}
+export interface HubPlexImport {
+  state: 'idle' | 'reading' | 'ready' | 'importing' | 'done' | 'error';
+  step?: string;
+  error?: string;
+  preview?: HubPlexPreview;
+  imported?: { at: number; albums: number; artists: number; tracks?: number };
+  servers: { id: number; name: string; token: boolean }[];
+}
+/** What PUT /api/admin/item-tags takes: each list sent replaces what was there (albums have no `genres` here). */
+export interface HubItemTagLists { genres?: string[]; styles?: string[]; moods?: string[]; collections?: string[] }
 export interface HubTagSong { id: string; path: string; tags: HubTags }
+/** A song whose title starts with its track number, and the title to write instead (GET /api/admin/tags/numbered). */
+export interface TitleFixRow { path: string; albumId: string; artist: string; album: string; from: string; to: string }
 export interface HubTagMatch {
   source: 'Deezer' | 'MusicBrainz';
   id: string;
@@ -180,9 +241,12 @@ export interface HubTagMatch {
 /** An album an admin deleted (GET /api/admin/trash): in the trash until `purgeAt`, unless restored or purged. */
 export interface HubTrashAlbum { batch: string; label: string; at: number; files: number; by: string | null; restoredAt: number | null; purgedAt: number | null; purgeAt: number }
 export interface HubTagEdit { batch: string; label: string; at: number; files: number; undoneAt: number | null; by: string | null }
-/** Tidy genres (hub/src/genres.ts): rules turn variants ("Hip Hop", "Trap") into one genre ("Rap; Hip-Hop"). */
-export interface HubGenreRule { from: string; to: string }
-export interface HubGenreSettings { auto: boolean; rules: HubGenreRule[]; defaults: boolean; kept: number; genres: string[] }
+/**
+ * Tidy genres (hub/src/genres.ts): rules turn variants ("Hip Hop") into one genre ("Rap; Hip-Hop"); with `sub`,
+ * the variant is kept as a sub-genre next to it ("Trap" → "Rap; Hip-Hop; Trap").
+ */
+export interface HubGenreRule { from: string; to: string; sub?: string }
+export interface HubGenreSettings { auto: boolean; rules: HubGenreRule[]; defaults: boolean; kept: number; genres: string[]; subgenres?: Record<string, string[]> }
 export interface HubGenreAlbum { id: string; name: string; artist: string; songs: number; current: string; proposed: string }
 export interface HubGenreReview { albums: HubGenreAlbum[]; unknown: { genre: string; albums: number; examples: string[] }[]; total: number; kept: number; genres: string[] }
 
@@ -298,7 +362,7 @@ export interface HubMix {
   id: string;
   name: string;
   description: string;
-  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend';
+  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend' | 'daylist';
   songs: HubMixSong[];
 }
 
@@ -431,6 +495,9 @@ export interface HubServerStatus {
   data: { dir: string; dbBytes: number; disk: { free: number; total: number } | null };
   music: { dir: string; exists: boolean; writable: boolean; disk: { free: number; total: number } | null } | null;
   ytdlp: string | null;
+  /** older Hubs don't send these */
+  load?: { cpus: number; loadAvg: number[]; memory: { total: number; free: number; hub: number }; eventLoopMs: { p99: number; max: number } };
+  index?: { songs: number; listedAt: number | null; lyrics: number };
   counts: { users: number; admins: number; kids: number; devices: number; activeToday: number; pendingRequests: number; services: number; flags: number; ratedAlbums: number };
 }
 
@@ -441,6 +508,14 @@ export interface HubContainer {
   state: string;
   status: string;
   created: number | null;
+}
+
+/** Internet radio stations on the Hub (GET /api/radio/stations). */
+export interface HubRadioList {
+  /** the Hub copied Navidrome's stations and keeps them now */
+  imported: boolean;
+  importedAt: number | null;
+  stations: { id: string; name: string; streamUrl: string; homePageUrl: string; logoUrl?: string }[];
 }
 
 /** Someone playing something right now (GET /api/admin/listening). */
@@ -456,9 +531,58 @@ export interface HubListening {
   album: string;
   source: string;
   at: number;
+  /** who sent the song: the Hub from the music folder, Navidrome through the Hub, Navidrome directly (absent on older Hubs) */
+  playedBy?: 'hub' | 'navidrome' | 'direct' | null;
 }
 
 /** Rescans after downloads (GET /api/admin/library). */
+/** The Hub's own catalog of the music folder (hub/src/catalog.ts, hub/src/routes/catalog.ts). */
+export interface HubCatalogStatus {
+  blocked: string | null;
+  files: number;
+  failed: number;
+  linked: number;
+  navidromeSongs: number;
+  /** Navidrome's songs with no file in the catalog (first 100; absent on older Hubs) */
+  missing?: { title: string; artist: string; album: string; path: string }[];
+  scanning: boolean;
+  progress: { step: 'walking' | 'reading'; done: number; total: number } | null;
+  lastScanAt: number | null;
+  lastScanMs: number | null;
+  lastChanges: { added: number; changed: number; removed: number } | null;
+  lastLinkAt: number | null;
+  /** Library care, the tag editors and the genre review read the catalog (absent on older Hubs) */
+  inUse?: boolean;
+  /** answer browsing, search and covers from the catalog for devices that go through the Hub (absent on older Hubs) */
+  serve?: boolean;
+  /** serve is on and the catalog matches Navidrome, so it's happening */
+  serving?: boolean;
+  /** play songs from the music folder for devices that go through the Hub (absent on older Hubs) */
+  stream?: boolean;
+  /** stream is on and the catalog matches Navidrome, so it's happening */
+  streaming?: boolean;
+  /** keep hearts, plays and ratings on the Hub (absent on older Hubs) */
+  userData?: boolean;
+  /** whose hearts and plays the Hub has copied, and how many */
+  people?: { people: number; stars: number; plays: number };
+  /** Navidrome is off: the Hub answers everything itself (absent on older Hubs) */
+  standalone?: boolean;
+  /** after turning Navidrome off: whose data was copied, and whose couldn't be */
+  copied?: string[];
+  notCopied?: { user: string; error: string }[];
+  lastError: string | null;
+  summary: {
+    albums: number;
+    artists: number;
+    hours: number;
+    untagged: number;
+    unlinked: number;
+    formats: { codec: string; files: number }[];
+    genres: { genre: string; files: number }[];
+    failed: { path: string; error: string }[];
+  };
+}
+
 export interface HubLibraryStatus {
   navidrome: { url: string; username: string } | null;
   scanning: boolean;
@@ -504,6 +628,8 @@ export interface HubParty {
   now: number;
   state: { queue: Track[]; index: number; position: number; duration: number; playing: boolean; at: number };
   members: { name: string; device: string; host: boolean }[];
+  /** Host only: the Guest Jam link, null while it's off (Hubs before Guest Jam leave it out). */
+  jam?: string | null;
 }
 export interface HubPartyRequest { id: number; action: 'add' | 'playNext' | 'next' | 'prev' | 'toggle' | 'seek' | 'jump'; tracks?: Track[]; value?: number; index?: number; from: string; at: number }
 
@@ -584,18 +710,7 @@ export interface HubRadar {
 }
 
 /** A Navidrome song the Hub matched to a chart song (hub/src/libraryIndex.ts): Subsonic's own fields. */
-export interface HubLibrarySong {
-  id: string;
-  title: string;
-  artist: string;
-  album?: string;
-  albumId?: string;
-  duration?: number;
-  track?: number;
-  discNumber?: number;
-  coverArt?: string;
-  explicitStatus?: string;
-}
+export type HubLibrarySong = IndexedSong;
 
 /** How a chart song moved (hub/src/chartHistory.ts): rank in the snapshot from about a week ago, weeks in a row. */
 export interface HubChartMove {
@@ -722,6 +837,10 @@ export interface HubDjVoiceSettings {
   openaiModel: string;
   openaiVoice: string;
   openaiPrice: number;
+  /** Who understands spoken requests (hub/src/dj/voice.ts transcribe). */
+  listen?: 'device' | 'whisper' | 'openai';
+  whisperUrl?: string;
+  whisperModel?: string;
 }
 export interface HubDjAdmin {
   settings: HubDjSettings;
@@ -784,7 +903,8 @@ export class HubClient {
   }
 
   me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean>; shared?: { discordAppId?: string | null } }>('GET', '/api/me');
-  mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes${fresh ? '?fresh=1' : ''}`);
+  /** With the device's time zone, so the Hub can add the daylist for this time of day. */
+  mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes?tz=${new Date().getTimezoneOffset()}${fresh ? '&fresh=1' : ''}`);
   blendPeople = () => this.call<{ optedIn: boolean; people: { id: number; displayName: string; optedIn: boolean }[] }>('GET', '/api/blend/people');
   setBlendOptIn = (on: boolean) => this.call<{ optedIn: boolean }>('PUT', '/api/blend/optin', { on });
   blend = (ids: number[]) => this.call<{ mix: HubMix }>('GET', `/api/blend?with=${ids.join(',')}`);
@@ -792,6 +912,12 @@ export class HubClient {
   sonicJourney = (from: { artist: string; title: string }, to: { id: string }, steps = 20) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/journey?${new URLSearchParams({ fromArtist: from.artist, fromTitle: from.title, to: to.id, steps: String(steps) })}`);
   sonicSearch = (q: string) => this.call<{ songs: HubSonicHit[] }>('GET', `/api/sonic/search?q=${encodeURIComponent(q)}`);
   sonicLookup = (songs: { id?: string; artist?: string; title?: string }[]) => this.call<{ features: (HubSonicFeatures | null)[] }>('POST', '/api/sonic/lookup', { songs });
+  /** Search the Hub's copy of its Navidrome library (hub/src/routes/search.ts): typo-tolerant, ranked by your plays. */
+  /** The house's shared lyrics (hub/src/routes/lyrics.ts). */
+  lyricsGet = (key: string) => this.call<LyricsCacheResponse>('GET', `/api/lyrics?key=${encodeURIComponent(key)}`);
+  lyricsPut = (body: LyricsCachePut) => this.call<{ ok: true }>('PUT', '/api/lyrics', body);
+  translateLyrics = (b: { key: string; lines: string[]; mode: 'translate' | 'romanize'; to: string }) => this.call<{ lines: string[]; cached: boolean }>('POST', '/api/lyrics/translate', b);
+  librarySearch = (q: string) => this.call<LibrarySearchResponse>('GET', `/api/library/search?q=${encodeURIComponent(q)}`);
   /** Discover (hub/src/routes/discover.ts): chart songs the Hub's Navidrome has, movement, and For you. */
   discoverMatch = (songs: { title: string; artist: string }[]) =>
     this.call<{ ready: boolean; server: string | null; total: number; songs: (HubLibrarySong | null)[] }>('POST', '/api/discover/match', { songs });
@@ -804,6 +930,9 @@ export class HubClient {
   /** Music videos (hub/src/videos.ts): the official video's YouTube id, or null. */
   video = (artist: string, title: string, duration?: number) =>
     this.call<{ video: { id: string; title: string; channel: string; duration?: number } | null }>('GET', `/api/videos?artist=${encodeURIComponent(artist)}&title=${encodeURIComponent(title)}${duration ? `&duration=${Math.round(duration)}` : ''}`);
+  /** A podcast episode's video on YouTube (hub/src/videos.ts), or null. Older Hubs answer 404 (no video). */
+  episodeVideo = (show: string, title: string, duration?: number) =>
+    this.call<{ video: { id: string; title: string; channel: string; duration?: number } | null }>('GET', `/api/videos/episode?show=${encodeURIComponent(show)}&title=${encodeURIComponent(title)}${duration ? `&duration=${Math.round(duration)}` : ''}`);
   /** Tour dates (hub/src/tours.ts). */
   tours = (artist: string) => this.call<{ events: HubTourEvent[] }>('GET', `/api/tours?artist=${encodeURIComponent(artist)}`);
   toursStatus = () => this.call<{ available: boolean }>('GET', '/api/tours/status');
@@ -815,6 +944,9 @@ export class HubClient {
   changePassword = (currentPassword: string, newPassword: string) => this.call('PUT', '/api/me/password', { currentPassword, newPassword });
   myDevices = () => this.call<{ devices: (HubDevice & { current: boolean })[] }>('GET', '/api/me/devices');
   signOutMyDevice = (id: number) => this.call('DELETE', `/api/me/devices/${id}`);
+  /** Logins for other music apps (SUB/WAVE, Symfonium…) on the Hub's relay; `path` goes after the Hub's address. */
+  appLogins = () => this.call<{ available: boolean; logins: HubAppLogin[] }>('GET', '/api/me/app-logins');
+  addAppLogin = (name: string) => this.call<{ login: HubAppLogin }>('POST', '/api/me/app-logins', { name });
   ssoLink = () => this.call<{ url: string; expiresIn: number }>('POST', '/api/me/sso-link', {});
   unlinkSso = () => this.call<{ user: HubUser }>('DELETE', '/api/me/sso');
   getPrefs = () => this.call<{ prefs: HubPrefs }>('GET', '/api/me/prefs');
@@ -825,6 +957,15 @@ export class HubClient {
   // ---- calls the Hub makes with its own saved logins ----
   /** A SUB/WAVE admin call (path relative to its API, e.g. `/dj/skip?x=1`). Needs subwave.control. */
   subwaveAdmin = <T>(serviceId: number, method: string, path: string, body?: unknown) => this.call<T>(method, `/api/admin/subwave/${serviceId}${path}`, body);
+  /** Copy SUB/WAVE server `from` into `to`: everything but `to`'s name (its backup, restored there). */
+  subwaveCopy = (from: number, to: number) =>
+    this.call<{ restored: string[]; skipped: string[]; requiresRestart: boolean; bytes: number }>('POST', `/api/admin/subwave-copy/${from}/${to}`, {});
+  /** A SUB/WAVE admin file (an archive hour), fetched through the Hub with its saved login. */
+  async subwaveAdminFile(serviceId: number, path: string): Promise<{ name?: string; blob: Blob }> {
+    const res = await http(`${this.url}/api/admin/subwave/${serviceId}${path}`, { headers: this.token ? { authorization: `Bearer ${this.token}` } : {} });
+    if (!res.ok) throw new HubError(res.status, ((await res.json().catch(() => ({}))) as { error?: string }).error || `${res.status} error`);
+    return { name: /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1], blob: await res.blob() };
+  }
   deemixStatus = () => this.call<{ user: string | null }>('GET', '/api/downloads/deemix');
   deemixQueue = () => this.call<any>('GET', '/api/downloads/deemix/queue');
   deemixAdd = (link: string, bitrate?: number) => this.call<any>('POST', '/api/downloads/deemix/queue', { link, bitrate });
@@ -904,6 +1045,11 @@ export class HubClient {
   flags = () => this.call<{ flags: HubFlag[] }>('GET', '/api/flags');
   server = () => this.call<HubServerStatus>('GET', '/api/admin/server');
   library = () => this.call<HubLibraryStatus>('GET', '/api/admin/library');
+  catalog = () => this.call<HubCatalogStatus>('GET', '/api/admin/catalog');
+  scanCatalog = () => this.call<HubCatalogStatus>('POST', '/api/admin/catalog/scan', {});
+  setCatalogServe = (b: { serve?: boolean; stream?: boolean; userData?: boolean }) => this.call<HubCatalogStatus>('PUT', '/api/admin/catalog', b);
+  /** Turn Navidrome off (copying everyone's hearts and playlists first) or back on. */
+  setNavidromeOff = (off: boolean, force = false) => this.call<HubCatalogStatus>('PUT', '/api/admin/catalog/navidrome', { off, force });
   containers = () => this.call<{ enabled: boolean; containers: HubContainer[] }>('GET', '/api/admin/docker');
   container = (name: string, action: 'start' | 'stop' | 'restart') =>
     this.call<{ name: string; state: string; status: string }>('POST', `/api/admin/docker/${encodeURIComponent(name)}/${action}`, {});
@@ -963,13 +1109,35 @@ export class HubClient {
   createNavidromeAccount = (id: number, userId: number) => this.call<{ service: HubAdminService }>('POST', `/api/admin/services/${id}/users/${userId}/navidrome-account`, {});
   playing = (b: { title: string; artist?: string; album?: string; source?: string } | { stopped: true }) => this.call('POST', '/api/me/playing', b);
   listening = () => this.call<{ listening: HubListening[] }>('GET', '/api/admin/listening');
+  /** Internet radio stations kept on the Hub (hub/src/radioStations.ts); `imported` false while it still asks Navidrome. */
+  radioStations = () => this.call<HubRadioList>('GET', '/api/radio/stations');
+  addRadioStation = (b: { name: string; streamUrl: string; homePageUrl?: string; logoUrl?: string }) => this.call<HubRadioList>('POST', '/api/admin/radio/stations', b);
+  updateRadioStation = (id: string, b: { name?: string; streamUrl?: string; homePageUrl?: string; logoUrl?: string }) => this.call<HubRadioList>('PUT', `/api/admin/radio/stations/${encodeURIComponent(id)}`, b);
+  deleteRadioStation = (id: string) => this.call<HubRadioList>('DELETE', `/api/admin/radio/stations/${encodeURIComponent(id)}`);
   // this person's own Wavelength playlists and play history (lib/librarySync.ts)
   myPlaylists = () => this.call<{ playlists: HubPlaylist[] }>('GET', '/api/me/playlists');
   putMyPlaylists = (playlists: HubPlaylist[]) => this.call<{ playlists: HubPlaylist[] }>('PUT', '/api/me/playlists', { playlists });
   myHistory = () => this.call<{ history: { playedAt: number; track: Track }[] }>('GET', '/api/me/history');
+  /** One song's file and tags (Navidrome song id; its album id helps a Hub whose catalog hasn't matched it yet). */
+  tagSong = (id: string, albumId?: string) => this.call<HubTagSong>('GET', `/api/admin/tags/song/${encodeURIComponent(id)}${albumId ? `?album=${encodeURIComponent(albumId)}` : ''}`);
+  artistMeta = (name: string) => this.call<HubArtistMeta>('GET', `/api/artist-meta?name=${encodeURIComponent(name)}`);
+  setArtistMeta = (name: string, meta: { bio?: string; albumSort?: HubAlbumSort }) => this.call<HubArtistMeta>('PUT', '/api/admin/artist-meta', { name, ...meta });
+  /** Every album's and artist's styles, moods, collections and artist genres (404 on an older Hub). */
+  itemTags = () => this.call<HubAllItemTags>('GET', '/api/item-tags');
+  itemTagsOf = (kind: 'artist' | 'album', artist: string, title = '') => this.call<HubItemTags>('GET', `/api/item-tags/one?${new URLSearchParams({ kind, artist, ...(kind === 'album' && { title }) })}`);
+  setItemTags = (kind: 'artist' | 'album', artist: string, title: string, lists: HubItemTagLists) => this.call<HubItemTags>('PUT', '/api/admin/item-tags', { kind, artist, ...(kind === 'album' && { title }), ...lists });
+  renameItemTags = (kind: 'artist' | 'album', from: { artist: string; title?: string }, to: { artist: string; title?: string }) => this.call<{ moved: number }>('POST', '/api/admin/item-tags/rename', { kind, from, to });
+  /** Every song with a style or mood (404 on an older Hub). */
+  trackTags = () => this.call<{ tracks: HubTrackTags[] }>('GET', '/api/item-tags/tracks');
+  trackTagsOf = (artist: string, album: string, title: string) => this.call<HubTrackTags>('GET', `/api/item-tags/track?${new URLSearchParams({ artist, album, title })}`);
+  setTrackTags = (artist: string, album: string, title: string, lists: { styles?: string[]; moods?: string[] }) => this.call<HubTrackTags>('PUT', '/api/admin/track-tags', { artist, album, title, ...lists });
+  renameTrackTags = (from: { artist: string; album: string; title: string }, to: { artist: string; album: string; title: string }) => this.call<{ moved: number }>('POST', '/api/admin/track-tags/rename', { from, to });
   tagAlbum = (albumId: string) => this.call<{ songs: HubTagSong[] }>('GET', `/api/admin/tags/album/${encodeURIComponent(albumId)}`);
   tagMatches = (artist: string, album: string) => this.call<{ candidates: HubTagMatch[] }>('GET', `/api/admin/tags/match?${new URLSearchParams({ artist, album })}`);
-  saveTags = (label: string, changes: { path: string; tags: HubTags }[]) => this.call<{ batch: string | null; changed: string[]; failed: { path: string; error: string }[] }>('PUT', '/api/admin/tags', { label, changes });
+  /** One Save; pass the same `batch` id with each part of a big one so it stays one Save (lib/tagSave.ts). */
+  saveTags = (label: string, changes: { path: string; tags: HubTags }[], batch?: string) => this.call<{ batch: string | null; changed: string[]; failed: { path: string; error: string }[] }>('PUT', '/api/admin/tags', { label, changes, ...(batch && { batch }) });
+  /** Library care → Numbered titles, a page of Navidrome's songs at a time (no files read). 404 on an older Hub. */
+  numberedTitles = (offset: number, limit: number) => this.call<{ fixes: TitleFixRow[]; scanned: number; total: number }>('GET', `/api/admin/tags/numbered?${new URLSearchParams({ offset: String(offset), limit: String(limit) })}`);
   /** Several albums' songs (Navidrome album ids), each with `albumId`; `missing` = files the Hub can't find. */
   tagAlbums = (albumIds: string[]) => this.call<{ songs: (HubTagSong & { albumId: string })[]; missing: string[] }>('GET', `/api/admin/tags/albums?ids=${albumIds.map(encodeURIComponent).join(',')}`);
   tagValues = () => this.call<{ artists: string[]; genres: string[] }>('GET', '/api/admin/tags/values');
@@ -982,9 +1150,15 @@ export class HubClient {
   /** `rules: null` goes back to the default rules. */
   saveGenreSettings = (b: { auto?: boolean; rules?: HubGenreRule[] | null }) => this.call<HubGenreSettings>('PUT', '/api/admin/genres', b);
   genreReview = () => this.call<HubGenreReview>('GET', '/api/admin/genres/review');
+  plexImport = () => this.call<HubPlexImport>('GET', '/api/admin/plex-import');
+  readPlex = (serviceId?: number) => this.call<HubPlexImport>('POST', '/api/admin/plex-import/read', serviceId === undefined ? {} : { serviceId });
+  importPlex = (facets?: HubFacet[]) => this.call<HubPlexImport>('POST', '/api/admin/plex-import/apply', facets ? { facets } : {});
   applyGenres = (albums: { id: string; genre: string }[]) =>
     this.call<{ batch: string | null; label: string; changed: string[]; failed: { path: string; error: string }[]; missing: string[] }>('POST', '/api/admin/genres/apply', { albums });
   keepGenres = (ids: string[], keep = true) => this.call<HubGenreSettings>('POST', '/api/admin/genres/keep', { ids, keep });
+  /** Joined artist credits (hub/src/credits.ts): whether new downloads' "A;B" credits become "A; B". */
+  creditSettings = () => this.call<{ auto: boolean }>('GET', '/api/admin/credits');
+  saveCreditSettings = (auto: boolean) => this.call<{ auto: boolean }>('PUT', '/api/admin/credits', { auto });
   undoTags = (batch: string) => this.call<{ undone: number; failed: { path: string; error: string }[] }>('POST', `/api/admin/tags/undo/${encodeURIComponent(batch)}`);
   importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });
   // remote control and handoff between this person's devices (lib/remote.ts)
@@ -994,11 +1168,17 @@ export class HubClient {
   remoteDevices = () => this.call<{ devices: HubRemoteDevice[] }>('GET', '/api/me/remote/devices');
   remoteCommand = (deviceId: number, c: Omit<HubRemoteCommand, 'id' | 'from' | 'at'>) => this.call('POST', '/api/me/remote/command', { deviceId, ...c });
   // listen together (lib/together.ts)
-  parties = () => this.call<{ parties: { id: string; name: string; host: string; members: number; joined: boolean; isHost: boolean }[] }>('GET', '/api/together');
+  parties = () => this.call<{ parties: { id: string; name: string; host: string; hostId?: number; members: number; joined: boolean; isHost: boolean }[] }>('GET', '/api/together');
+  // house activity (lib/houseActivity.ts)
+  activityReport = (r: ActivityReport) => this.call('PUT', '/api/me/activity', r);
+  activityClear = () => this.call('DELETE', '/api/me/activity');
+  houseActivity = () => this.call<HouseActivity>('GET', '/api/activity');
   startParty = (b: { name?: string; guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('POST', '/api/together', b);
   joinParty = (id: string) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/join`, {});
   leaveParty = (id: string) => this.call('POST', `/api/together/${encodeURIComponent(id)}/leave`, {});
   setParty = (id: string, b: { guestsAdd?: boolean; guestsControl?: boolean }) => this.call<HubParty>('PATCH', `/api/together/${encodeURIComponent(id)}`, b);
+  connectHomeAssistant = () => this.call<{ token: string; url: string; deviceId: number }>('POST', '/api/me/homeassistant', {});
+  partyJam = (id: string, on: boolean) => this.call<HubParty>('POST', `/api/together/${encodeURIComponent(id)}/jam`, { on });
   partyState = (id: string, s: Omit<HubParty['state'], 'at'>) => this.call('PUT', `/api/together/${encodeURIComponent(id)}/state`, s);
   partyRequest = (id: string, r: { action: HubPartyRequest['action']; tracks?: Track[]; value?: number; index?: number }) => this.call('POST', `/api/together/${encodeURIComponent(id)}/request`, r);
   partyWait = (id: string, version: number) => this.call<{ party: HubParty | null; requests: HubPartyRequest[] }>('GET', `/api/together/${encodeURIComponent(id)}/wait?version=${version}`);
@@ -1068,6 +1248,17 @@ export class HubClient {
   djVoice = () => this.call<HubDjVoiceInfo>('GET', '/api/dj/voice');
   /** An MP3 of `text` in the Hub's voice. */
   djSpeak = (b: { text: string; voice?: string; speed?: number; style?: string }) => this.blob('/api/dj/speak', b);
+  /** How spoken requests are understood (lib/voiceInput.ts): the device's own recognition, or Whisper / OpenAI on the Hub. */
+  djListenEngine = () => this.call<{ engine: 'device' | 'whisper' | 'openai' }>('GET', '/api/dj/listen');
+  /** A recorded request → its words. */
+  async djListen(audio: Blob, seconds: number): Promise<string> {
+    const headers: Record<string, string> = { 'content-type': audio.type || 'audio/webm' };
+    if (this.token) headers.authorization = `Bearer ${this.token}`;
+    const res = await http(`${this.url}/api/dj/listen?seconds=${Math.round(seconds)}`, { method: 'POST', headers, body: await audio.arrayBuffer() });
+    const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+    if (!res.ok) throw new HubError(res.status, data.error || `${res.status} ${res.statusText || 'error'}`, false);
+    return data.text ?? '';
+  }
   djAdminVoice = () => this.call<HubDjVoiceInfo>('GET', '/api/admin/dj/voice');
   testDjVoice = (b: { voice?: string; text?: string }) => this.blob('/api/admin/dj/voice/test', b);
   djAdmin = () => this.call<HubDjAdmin>('GET', '/api/admin/dj');

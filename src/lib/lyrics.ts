@@ -9,6 +9,7 @@
  */
 import { getJson, qs } from './http';
 import type { Track } from '../sources/types';
+import { looseWithoutTrackNumber, withoutTrackNumber } from './trackTitles';
 
 export interface LyricLine {
   /** seconds; undefined for plain (unsynced) lyrics */
@@ -132,10 +133,12 @@ const UNKNOWN = /^(unknown( artist)?|various artists|n\/a|-)?$/i;
 /**
  * The artist + title pairs to look a song up by, best first. Besides the tags as they are (cleaned), a title like
  * "Adele - Hello" from a YouTube download is also read as artist "Adele", title "Hello", first when the
- * artist tag is missing or names the same artist (or its channel).
+ * artist tag is missing or names the same artist (or its channel). A track number written in front of the
+ * title ("04 - Hello") is left out.
  */
-export function lyricQueries(t: Pick<Track, 'title' | 'artist'>): LyricsQuery[] {
-  const title = cleanTitle(t.title);
+export function lyricQueries(t: Pick<Track, 'title' | 'artist'> & { trackNumber?: number }): LyricsQuery[] {
+  // "04 - Song" from a renaming tool: the number isn't part of the name (lib/trackTitles.ts)
+  const title = cleanTitle(t.trackNumber ? withoutTrackNumber(t.title, t.trackNumber) : looseWithoutTrackNumber(t.title));
   const artist = cleanArtist(t.artist);
   const out: LyricsQuery[] = UNKNOWN.test(artist) ? [] : artistVariants(artist).map((a) => ({ artist: a, title }));
   const split = /^(.+?)\s+[-–—|]\s+(.+)$/.exec(title);
@@ -162,6 +165,41 @@ const INSTRUMENTAL = (source: string): Lyrics => ({ lines: [], synced: false, in
 const is404 = (e: unknown) => /^404\b/.test((e as Error)?.message ?? '');
 const timed = (): RequestInit => (typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(TIMEOUT_MS) } : {});
 
+const hasWords = (h: LrcLibHit) => !h.instrumental && !NO_VOCALS.test(`${h.trackName ?? ''} ${h.albumName ?? ''}`) && !!(h.syncedLyrics || h.plainLyrics);
+
+/**
+ * How an LRCLIB entry compares with the song. Names are compared without version notes (`norm`): the same name, or
+ * one inside the other when the shorter is most of the longer ("Hello" in "Hello Again" isn't; "Zoo" in "Zoo York"
+ * isn't). The artist must be one of the song's (either way round, so "Drake" matches "Drake, Future") when LRCLIB
+ * names one.
+ */
+function matchers(t: Pick<Track, 'duration'>, queries: LyricsQuery[]) {
+  const wants = [...new Set(queries.map((q) => norm(q.title)).filter(Boolean))];
+  const artists = [...new Set(queries.flatMap((q) => artistVariants(q.artist).map((a) => norm(cleanArtist(a)))).filter(Boolean))];
+  const sameName = (h: LrcLibHit) => {
+    const got = norm(h.trackName);
+    return !!got && wants.includes(got);
+  };
+  const nameOk = (h: LrcLibHit) => {
+    const got = norm(h.trackName);
+    return (
+      !!got &&
+      wants.some((want) => {
+        if (got === want) return true;
+        const [short, long] = got.length < want.length ? [got, want] : [want, got];
+        return short.length >= 3 && short.length >= long.length * 0.6 && long.includes(short);
+      })
+    );
+  };
+  const artistOk = (h: LrcLibHit) => {
+    if (!h.artistName || !artists.length) return true;
+    const theirs = artistVariants(cleanArtist(h.artistName)).map(norm).filter(Boolean);
+    return theirs.some((a) => artists.some((b) => a === b || (Math.min(a.length, b.length) >= 3 && (a.includes(b) || b.includes(a)))));
+  };
+  const near = (h: LrcLibHit) => (t.duration && h.duration ? Math.abs(h.duration - t.duration) : 0);
+  return { sameName, nameOk, artistOk, near };
+}
+
 /**
  * LRCLIB has several entries for most songs, some marked instrumental (an instrumental or karaoke upload filed
  * under the song's name, or a wrong flag), so one instrumental entry doesn't settle it: every lookup is pooled
@@ -170,14 +208,12 @@ const timed = (): RequestInit => (typeof AbortSignal.timeout === 'function' ? { 
  */
 async function lrclib(t: Pick<Track, 'title' | 'artist' | 'album' | 'duration'>, queries: LyricsQuery[]): Promise<Lyrics | undefined> {
   if (!queries.length) return undefined;
-  const wants = queries.map((q) => norm(q.title)).filter(Boolean);
-  const near = (h: LrcLibHit) => (t.duration && h.duration ? Math.abs(h.duration - t.duration) : 0);
-  const nameOk = (h: LrcLibHit) => {
-    const got = norm(h.trackName);
-    return !!got && wants.some((want) => got === want || (Math.min(got.length, want.length) >= 3 && (got.includes(want) || want.includes(got))));
-  };
+  const { nameOk, artistOk, sameName, near } = matchers(t, queries);
   const lengthOk = (h: LrcLibHit) => near(h) <= 10;
-  const words = (h: LrcLibHit) => !h.instrumental && !NO_VOCALS.test(`${h.trackName ?? ''} ${h.albumName ?? ''}`) && !!(h.syncedLyrics || h.plainLyrics);
+  // a much longer or shorter recording under the same name is another song (an unreleased one, a skit), not a live take
+  const tooFar = (h: LrcLibHit) => near(h) > Math.max(60, (t.duration ?? 0) * 0.35);
+  // a near name ("Zoo" for "Zoo York") or a different length is only trusted together with the other being right
+  const ok = (h: LrcLibHit) => nameOk(h) && artistOk(h) && !tooFar(h) && (sameName(h) || lengthOk(h));
 
   const pool: LrcLibHit[] = [];
   let answered = 0;
@@ -194,7 +230,7 @@ async function lrclib(t: Pick<Track, 'title' | 'artist' | 'album' | 'duration'>,
   };
   const best = () =>
     pool
-      .filter((h) => words(h) && nameOk(h))
+      .filter((h) => hasWords(h) && ok(h))
       .sort((a, b) => Number(lengthOk(b)) - Number(lengthOk(a)) || Number(!!b.syncedLyrics) - Number(!!a.syncedLyrics) || near(a) - near(b))[0];
   const settled = () => {
     const b = best();
@@ -213,7 +249,7 @@ async function lrclib(t: Pick<Track, 'title' | 'artist' | 'album' | 'duration'>,
 
   const hit = best();
   if (hit) return fromLrcLib(hit, lengthOk(hit));
-  if (pool.some((h) => h.instrumental && nameOk(h) && lengthOk(h))) return INSTRUMENTAL('LRCLIB');
+  if (pool.some((h) => h.instrumental && nameOk(h) && artistOk(h) && lengthOk(h))) return INSTRUMENTAL('LRCLIB');
   if (!answered && failed) throw failed;
   return undefined;
 }
@@ -244,6 +280,27 @@ async function lyricsOvh(queries: LyricsQuery[]): Promise<Lyrics | undefined> {
   return undefined;
 }
 
+/**
+ * The house's shared copy on the Hub (hub/src/lyricsCache.ts), set up by lib/sharedLyrics.ts once a Hub is signed in:
+ * lyrics another device already found come from there in one call, and what this device finds goes back to it.
+ * Kept out of this file so the lookup itself doesn't depend on the Hub.
+ */
+export interface SharedLyrics {
+  get(key: string): Promise<Lyrics | null | undefined>;
+  put(key: string, artist: string, title: string, lyrics: Lyrics): void;
+}
+let shared: SharedLyrics | undefined;
+export function setSharedLyrics(s: SharedLyrics | undefined) {
+  shared = s;
+}
+
+/** The Hub's key for a song's lyrics: its cleaned-up artist and title, and its length to 10 s (synced times differ by take). */
+export function sharedKey(t: Pick<Track, 'title' | 'artist' | 'duration'> & { trackNumber?: number }): string | undefined {
+  const [q] = lyricQueries(t);
+  if (!q) return undefined;
+  return `${norm(q.artist)}|${norm(q.title)}|${t.duration ? Math.round(t.duration / 10) : ''}`;
+}
+
 /** A source that can give lyrics itself (Navidrome). */
 export interface LyricsSource {
   getLyrics?(track: Track): Promise<Lyrics | undefined>;
@@ -252,12 +309,41 @@ export interface LyricsSource {
 const cache = new Map<string, Promise<Lyrics | undefined>>();
 
 /**
- * The server's own lyrics, else LRCLIB, else lyrics.ovh. Throws when LRCLIB couldn't be reached and nothing else
+ * The lyrics picked for this song with "Wrong lyrics?", else the server's own, else LRCLIB, else lyrics.ovh. Throws when LRCLIB couldn't be reached and nothing else
  * had them, so the caller can say so and the miss isn't cached.
  */
 async function lookup(t: Track, source?: LyricsSource): Promise<Lyrics | undefined> {
+  const mine = lyricsPickFor(t);
+  if (mine) return mine.lyrics ?? undefined;
+  const key = shared ? sharedKey(t) : undefined;
+  const share = (ly: Lyrics) => {
+    if (key && (ly.lines.length || ly.instrumental)) shared?.put(key, t.artist, t.title, ly);
+    return ly;
+  };
+  // words without times (a file's plain lyrics tag, or what the Hub kept from lyrics.ovh): LRCLIB may have the
+  // same song synced, which follows the song line by line, so it's asked once before settling for them
+  const timedIfPossible = async (ly: Lyrics) => {
+    if (ly.synced || ly.instrumental || NO_VOCALS.test(t.title)) return undefined;
+    const better = await lrclib(t, lyricQueries(t)).catch(() => undefined);
+    return better?.synced ? better : undefined;
+  };
   const own = await source?.getLyrics?.(t).catch(() => undefined);
-  if (own?.lines.length || own?.instrumental) return own;
+  // the server's own go to the Hub too, so the house can search their words
+  if (own?.lines.length || own?.instrumental) {
+    const better = await timedIfPossible(own);
+    return share(better ?? own);
+  }
+  const fromHub = key ? await shared?.get(key).catch(() => undefined) : undefined;
+  if (fromHub) {
+    const better = await timedIfPossible(fromHub);
+    return better ? share(better) : fromHub;
+  }
+  const found = await search(t);
+  return found && share(found);
+}
+
+/** LRCLIB, else lyrics.ovh. */
+async function search(t: Track): Promise<Lyrics | undefined> {
   if (NO_VOCALS.test(t.title)) return INSTRUMENTAL('LRCLIB');
   const queries = lyricQueries(t);
   let failed: unknown;
@@ -282,4 +368,152 @@ export function lyricsFor(t: Track, source?: LyricsSource): Promise<Lyrics | und
     cache.set(key, p);
   }
   return p;
+}
+
+// ---- "Wrong lyrics?": picking other lyrics for a song, remembered on this device and shared with the house ----
+
+/** What was picked for a song: other lyrics, or `null` for "this song has no lyrics". */
+export interface LyricsPick {
+  lyrics: Lyrics | null;
+  at: number;
+}
+
+const PICK = 'wl.lyricsPick.';
+/** By the song itself, and by its name and length so the same song from another source gets the pick too. */
+const pickKeys = (t: Track) => [`${t.sourceId}:${t.id}`, sharedKey(t)].filter((k): k is string => !!k).map((k) => PICK + k);
+const picked = new Set<(songKey: string) => void>();
+
+/** The pick for a song, if one was made on this device. */
+export function lyricsPickFor(t: Track): LyricsPick | undefined {
+  for (const k of pickKeys(t)) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) return JSON.parse(raw) as LyricsPick;
+    } catch {
+      /* no storage, or a broken entry: no pick */
+    }
+  }
+  return undefined;
+}
+
+function changed(t: Track) {
+  const k = `${t.sourceId}:${t.id}`;
+  cache.delete(k);
+  for (const fn of picked) fn(k);
+}
+
+/**
+ * Remember other lyrics for a song (or `null`: it has none). Other lyrics also go to the Hub's shared copy, so they
+ * replace the wrong ones for the whole house.
+ */
+export function setLyricsPick(t: Track, lyrics: Lyrics | null) {
+  const value = JSON.stringify({ lyrics, at: Date.now() } satisfies LyricsPick);
+  for (const k of pickKeys(t)) {
+    try {
+      localStorage.setItem(k, value);
+    } catch {
+      /* storage full: this session only, through the cache below */
+    }
+  }
+  const key = sharedKey(t);
+  if (lyrics && key && (lyrics.lines.length || lyrics.instrumental)) shared?.put(key, t.artist, t.title, lyrics);
+  changed(t);
+  // without storage the pick still holds for this session
+  if (!lyricsPickFor(t)) cache.set(`${t.sourceId}:${t.id}`, Promise.resolve(lyrics ?? undefined));
+}
+
+/** Forget the pick: the song's lyrics are looked up again. */
+export function clearLyricsPick(t: Track) {
+  for (const k of pickKeys(t)) {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+      /* nothing kept */
+    }
+  }
+  changed(t);
+}
+
+/** Called with the song's `sourceId:id` whenever its lyrics are picked or the pick is forgotten. */
+export function onLyricsPicked(fn: (songKey: string) => void): () => void {
+  picked.add(fn);
+  return () => picked.delete(fn);
+}
+
+/** Lyrics typed or pasted in: LRC (`[01:23.45]Line`) when it has times, else plain lines. */
+export function pastedLyrics(text: string): Lyrics | undefined {
+  const timedLines = parseLrc(text);
+  if (timedLines.some((l) => l.text)) return { lines: timedLines, synced: true, source: 'pasted in' };
+  const lines = text.trim() ? plainLines(text.trim().replace(/\n{3,}/g, '\n\n')) : [];
+  return lines.length ? { lines, synced: false, source: 'pasted in' } : undefined;
+}
+
+/** One LRCLIB entry to choose from. */
+export interface LyricsCandidate {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  duration?: number;
+  /** what the song would get: synced when the entry has times and is about the song's length */
+  lyrics: Lyrics;
+  /** the entry has times, even if they don't fit this recording */
+  hasTimes: boolean;
+  /** with its times kept, for an entry of another length (the times may be off; "Lyrics timing" can shift them) */
+  timedAnyway?: Lyrics;
+  /** the automatic lookup would accept it (name, artist and length agree) */
+  likely: boolean;
+}
+
+/**
+ * LRCLIB entries with words for a song, the likeliest first: searches by its name and artist, or by `query` (any
+ * words, like LRCLIB's own search box) when given. Throws when LRCLIB couldn't be reached.
+ */
+export async function lyricsCandidates(t: Track, query?: string): Promise<LyricsCandidate[]> {
+  const queries = lyricQueries(t);
+  const searches: Record<string, string>[] = query?.trim()
+    ? [{ q: query.trim() }]
+    : [...queries.slice(0, 2).map((q) => ({ track_name: q.title, artist_name: q.artist })), ...(queries[0] ? [{ q: `${queries[0].artist} ${queries[0].title}` }] : [])];
+  const pool: LrcLibHit[] = [];
+  let answered = 0;
+  let failed: unknown;
+  await Promise.all(
+    searches.map(async (params) => {
+      try {
+        const res = await getJson<LrcLibHit[]>(`${LRCLIB}/search?${qs(params)}`, timed());
+        answered++;
+        if (Array.isArray(res)) pool.push(...res);
+      } catch (e) {
+        if (is404(e)) answered++;
+        else failed = e;
+      }
+    }),
+  );
+  if (!answered && failed) throw failed;
+  const { nameOk, artistOk, sameName, near } = matchers(t, queries);
+  const seen = new Set<string>();
+  const out: LyricsCandidate[] = [];
+  for (const h of pool) {
+    if (!hasWords(h)) continue;
+    const text = h.syncedLyrics || h.plainLyrics || '';
+    const id = h.id !== undefined ? String(h.id) : `${h.artistName}|${h.trackName}|${text.length}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const fits = near(h) <= 10;
+    const lyrics = fromLrcLib(h, fits);
+    if (!lyrics?.lines.some((l) => l.text)) continue;
+    out.push({
+      id,
+      title: h.trackName ?? '',
+      artist: h.artistName ?? '',
+      album: h.albumName || undefined,
+      duration: h.duration,
+      lyrics,
+      hasTimes: !!h.syncedLyrics,
+      timedAnyway: h.syncedLyrics && !lyrics.synced ? fromLrcLib(h, true) : undefined,
+      likely: nameOk(h) && artistOk(h) && (sameName(h) || fits) && near(h) <= 60,
+    });
+  }
+  const score = (c: LyricsCandidate) => near({ duration: c.duration });
+  return out.sort((a, b) => Number(b.likely) - Number(a.likely) || score(a) - score(b) || Number(b.lyrics.synced) - Number(a.lyrics.synced));
 }

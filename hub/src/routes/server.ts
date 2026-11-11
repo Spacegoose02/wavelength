@@ -1,6 +1,8 @@
 import { accessSync, constants, existsSync, readFileSync, renameSync, rmSync, statfsSync, statSync, writeFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import { cpus, freemem, loadavg, totalmem } from 'node:os';
 import { join } from 'node:path';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
@@ -37,7 +39,23 @@ async function ytdlpVersion(bin: string) {
  * The admin server page (docs/USERS-AND-ADMIN.md Phase 6): how the Hub is doing, and a backup of its
  * database. Admins only (`server.view`).
  */
-export function serverRoutes(app: FastifyInstance, { db, config, library, restart }: Ctx) {
+/** How long the Hub's main thread was stuck lately (p99 and worst, ms): a busy Hub answers every request late. */
+const loopDelay = monitorEventLoopDelay({ resolution: 20 });
+loopDelay.enable();
+
+function load() {
+  const mem = process.memoryUsage();
+  const out = {
+    cpus: cpus().length,
+    loadAvg: loadavg().map((n) => Math.round(n * 100) / 100),
+    memory: { total: totalmem(), free: freemem(), hub: mem.rss },
+    eventLoopMs: { p99: Math.round(loopDelay.percentile(99) / 1e6), max: Math.round(loopDelay.max / 1e6) },
+  };
+  loopDelay.reset();
+  return out;
+}
+
+export function serverRoutes(app: FastifyInstance, { db, config, library, restart, libraryIndex, lyrics, catalog }: Ctx) {
   const dbFile = join(config.dataDir, 'hub.db');
   const count = (sql: string, ...args: (string | number)[]) => (db.prepare(sql).get(...args) as { n: number }).n;
 
@@ -62,6 +80,8 @@ export function serverRoutes(app: FastifyInstance, { db, config, library, restar
       data: { dir: config.dataDir, dbBytes: size(dbFile) + size(`${dbFile}-wal`), disk: disk(config.dataDir) },
       music: config.musicDir ? { dir: config.musicDir, exists: existsSync(config.musicDir), writable: musicWritable, disk: disk(config.musicDir) } : null,
       ytdlp: await ytdlpVersion(config.ytdlpBin),
+      load: load(),
+      index: { songs: libraryIndex.status().songs, listedAt: libraryIndex.status().listedAt, lyrics: lyrics.count() },
       counts: {
         users: count('SELECT COUNT(*) AS n FROM users WHERE disabled = 0'),
         admins: count("SELECT COUNT(*) AS n FROM users WHERE disabled = 0 AND role = 'admin'"),
@@ -115,7 +135,7 @@ export function serverRoutes(app: FastifyInstance, { db, config, library, restar
   /** Scan now. Answers straight away; the scan carries on in the background. */
   app.post('/api/admin/library/scan', async (req) => {
     const { user } = need(req, 'server.view');
-    if (!getScanSettings(db, config.secretKey)) throw new HttpError(409, 'Add a Navidrome admin login first');
+    if (!getScanSettings(db, config.secretKey) && !catalog.standalone()) throw new HttpError(409, 'Add a Navidrome admin login first');
     void library.scan().catch(() => undefined);
     audit(db, { actorId: user.id, action: 'library.scan', ip: clientIp(req) });
     return { ...library.status(), scanning: true };

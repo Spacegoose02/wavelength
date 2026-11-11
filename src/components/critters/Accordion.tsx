@@ -1,5 +1,7 @@
 import { useRef } from 'react';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, TORSO } from './parts';
+import { bend } from './arm';
+import { swell } from './flourish';
+import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -12,26 +14,30 @@ const FIREFLIES = [[40, 230], [96, 180], [300, 200], [360, 250], [70, 290], [340
  * A bear in the woods at night by a campfire, playing an accordion. Black or brown fur (two picks, one
  * drawing); the beanie, sweater and bellows take the skin's colours. The bellows squeeze in and out faster
  * with the bass and puff on the beat, the campfire flares with the bass, fireflies blink with the highs.
- * Paused, the bellows breathe slowly and he pulls his beanie straight now and then.
+ * Flourish: one long, full stretch of the bellows and a big squeeze. Paused, the bellows breathe slowly and
+ * he pulls his beanie straight now and then.
  */
 export function Accordion({ species, still }: ActProps) {
-  const { Tail } = species;
   const root = useRef<SVGSVGElement>(null);
   const state = useRef({ ph: 0 });
 
   useCritterRig(
     root,
-    ({ t, a, idle, bob, $ }) => {
+    ({ t, a, idle, bob, flourish, $ }) => {
       const s = state.current;
       const svg = root.current!;
       s.ph += (idle ? 0.8 : a.live ? 2.5 + a.bass * 6 : 3.5) / 60;
-      const dx = Math.sin(s.ph) * (idle ? 3 : 9) + (a.playing ? bob * 4 : 0);
+      // flourish: one long, full stretch of the bellows and a big squeeze back
+      const dx = flourish ? 20 * Math.sin(flourish * Math.PI * 2) * swell(flourish) ** 0.5 : Math.sin(s.ph) * (idle ? 3 : 9) + (a.playing ? bob * 4 : 0);
       $('bellows').setAttribute('transform', `translate(200 0) scale(${(1 + dx / 44).toFixed(3)} 1) translate(-200 0)`);
       $('acc-l').setAttribute('transform', `translate(${(-dx).toFixed(2)} 0)`);
       $('acc-r').setAttribute('transform', `translate(${dx.toFixed(2)} 0)`);
-      const deg = (dx / 32) * 57.3;
+      // the hands ride the ends of the bellows: mostly from the elbows, the upper arms only following a little
+      const deg = (dx / 32) * 57.3 * 0.35;
       $('arm-l').setAttribute('transform', `rotate(${deg.toFixed(2)} 138 268)`);
       $('arm-r').setAttribute('transform', `rotate(${(-deg).toFixed(2)} 262 268)`);
+      bend($, 'arm-l', { to: [-dx * 0.65, 0], wrist: -dx * 0.4 });
+      bend($, 'arm-r', { to: [dx * 0.65, 0], wrist: dx * 0.4 });
 
       const flare = 1 + (a.playing ? a.bass * 0.35 + bob * 0.15 : 0) + Math.sin(t * 13) * 0.05 + Math.sin(t * 7.3) * 0.04;
       $('flame').setAttribute('transform', `translate(332 352) scale(${(1 + Math.sin(t * 9) * 0.04).toFixed(3)} ${flare.toFixed(3)}) translate(-332 -352)`);
@@ -46,7 +52,7 @@ export function Accordion({ species, still }: ActProps) {
   );
 
   return (
-    <CritterFrame ref={root} kind="accordion" species={species.id} label={`A ${species.noun} playing the accordion by a campfire`}>
+    <CritterFrame ref={root} kind="accordion" species={species} label={`A ${species.noun} playing the accordion by a campfire`}>
       {/* moon, pines, ground, campfire, fireflies */}
       <circle className="moon-disc" cx="330" cy="68" r="24" />
       {PINES.map(([x, h, w]) => (
@@ -54,7 +60,7 @@ export function Accordion({ species, still }: ActProps) {
       ))}
       <path className="forest-floor" d="M0 338 Q 200 326 400 338 V400 H0 Z" />
       {/* the tail goes behind the campfire, not through it */}
-      {Tail && <Tail />}
+      <Shadow cx={332} cy={368} rx={42} ry={5} />
       <path className="log" d="M300 360 L 364 346 L 368 356 L 304 370 Z M300 346 L 364 360 L 360 370 L 296 356 Z" />
       <circle data-glow="" className="fire-glow" cx="332" cy="340" r="34" />
       <g data-part="flame">
@@ -63,23 +69,20 @@ export function Accordion({ species, still }: ActProps) {
       </g>
       {FIREFLIES.map(([x, y]) => <circle key={`${x},${y}`} data-fly="" className="firefly" cx={x} cy={y} r="2.6" />)}
 
+      <Shadow cx={200} cy={362} rx={62} />
       {/* legs and big paws */}
-      <Legs species={species}>
-        <path className="bare" d="M158 296 H190 V350 H158 Z M210 296 H242 V350 H210 Z" />
-        <ellipse className="bare" cx="172" cy="352" rx="22" ry="10" />
-        <ellipse className="bare" cx="228" cy="352" rx="22" ry="10" />
-        <path d="M160 352 v 6 M170 354 v 6 M180 352 v 6 M220 352 v 6 M230 354 v 6 M240 352 v 6" stroke="rgb(0 0 0 / 0.3)" strokeWidth="2" />
-      </Legs>
+      <Legs species={species} legs="bare" />
 
       <Body species={species}>
-        <path className="top" d={TORSO} />
         <path d="M122 294 H278" stroke="rgb(0 0 0 / 0.2)" strokeWidth="8" />
         <path d="M166 248 Q 200 262 234 248" fill="none" stroke="rgb(0 0 0 / 0.25)" strokeWidth="6" />
         <BodyOutfits />
       </Body>
+      <Skirt species={species} trim="knit-trim" />
 
       <Head
         species={species}
+        girlHat
         hat={
           <g data-part="adjust" className="own-hat">
             <path className="beanie" d="M134 132 Q 134 72 200 70 Q 266 72 266 132 Z" />
@@ -107,8 +110,8 @@ export function Accordion({ species, still }: ActProps) {
         {[0, 1, 3, 4, 5].map((i) => <rect key={i} x="256" y={278 + i * 8} width="8" height="4.5" fill="#16161a" />)}
       </g>
 
-      <Arm part="arm-l" d="M138 268 Q 128 290 142 304" hand={[144, 306]} thumb={[150, 300]} />
-      <Arm part="arm-r" d="M262 268 Q 272 290 258 304" hand={[256, 306]} thumb={[250, 300]} />
+      <Arm part="arm-l" d="M138 268 Q 128 290 142 304" hand={[144, 306]} />
+      <Arm part="arm-r" d="M262 268 Q 272 290 258 304" hand={[256, 306]} />
     </CritterFrame>
   );
 }

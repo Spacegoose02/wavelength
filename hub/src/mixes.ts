@@ -1,4 +1,5 @@
 import type { Db } from './db.ts';
+import { allowedBy, dontPlayOf } from './dontPlay.ts';
 import { deezer, normName, primaryArtist, sameNameArtist } from './radar.ts';
 
 /**
@@ -16,6 +17,9 @@ import { deezer, normName, primaryArtist, sameNameArtist } from './radar.ts';
  * is one), and each person's app finds them in their own library, dropping what it can't find. So suggestions
  * can name songs the library doesn't have: the app just skips them. Kids get no explicit Deezer suggestions,
  * and the app's kid filter applies to everything on top.
+ *
+ * **daylist**: what you play at this time of day (and on weekdays or weekends), changing every few hours, named
+ *   after it ("chill Saturday night"). Made fresh on each request rather than once a day; see `daylist()`.
  *
  * **Blend** mixes two or more people who have all said yes (`blend_optin`): songs by artists they share first,
  * then each person's favourites in turn.
@@ -37,7 +41,7 @@ export interface Mix {
   id: string;
   name: string;
   description: string;
-  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend';
+  kind: 'onRepeat' | 'daily' | 'discover' | 'forgotten' | 'capsule' | 'blend' | 'daylist';
   songs: MixSong[];
 }
 
@@ -234,6 +238,73 @@ export async function discoverWeekly(rows: PlayRow[], now: number, look: MixLook
   return { id: 'discover-weekly', name: 'Discover Weekly', description: `New to you, from artists like ${names(artists.slice(0, 3))}. Changes every Monday.`, kind: 'discover', songs: list };
 }
 
+/** Parts of the day for the daylist, by the local hour they start at. Night runs past midnight. */
+export const DAY_PARTS: { from: number; name: string }[] = [
+  { from: 1, name: 'late night' },
+  { from: 5, name: 'early morning' },
+  { from: 9, name: 'morning' },
+  { from: 12, name: 'afternoon' },
+  { from: 17, name: 'evening' },
+  { from: 21, name: 'night' },
+];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** The part of the day (index into DAY_PARTS) and weekday at `t`, for someone `tzOffset` minutes behind UTC (JS getTimezoneOffset). */
+export function dayPart(t: number, tzOffset = 0): { part: number; weekday: number; date: string } {
+  const local = new Date(t - tzOffset * 60_000);
+  const h = local.getUTCHours();
+  // before 1 a.m. is still night (the last part); otherwise the last part that has started
+  let part = DAY_PARTS.length - 1;
+  if (h >= DAY_PARTS[0].from) for (let i = 0; i < DAY_PARTS.length; i++) if (h >= DAY_PARTS[i].from) part = i;
+  // after midnight still belongs to the day before ("Friday late night" at 2 a.m. on Saturday)
+  const day = h < DAY_PARTS[1].from ? new Date(local.getTime() - 5 * 3_600_000) : local;
+  return { part, weekday: day.getUTCDay(), date: day.toISOString().slice(0, 10) };
+}
+
+const isWeekend = (weekday: number) => weekday === 0 || weekday === 6 || weekday === 5;
+
+/**
+ * daylist: songs you play at this time of day, from the last six months. Plays on the same kind of day (weekday or
+ * weekend, Friday nights counting as weekend) count double. `mood` names the most common mood among them when
+ * the Hub has analysed the songs (sonic/), for the title ("chill Saturday night").
+ */
+export function daylist(rows: PlayRow[], now: number, tzOffset = 0, mood?: (s: MixSong) => string | undefined): Mix | null {
+  const here = dayPart(now, tzOffset);
+  const weekend = isWeekend(here.weekday) && here.part >= 3;
+  const m = new Map<string, Tally>();
+  for (const r of rows) {
+    if (r.played_at < now - 180 * DAY) continue;
+    const p = dayPart(r.played_at, tzOffset);
+    if (p.part !== here.part) continue;
+    const w = (isWeekend(p.weekday) && p.part >= 3) === weekend ? 2 : 1;
+    const k = songKey(r);
+    const t = m.get(k);
+    if (t) {
+      t.plays += w;
+      t.last = Math.max(t.last, r.played_at);
+    } else m.set(k, { song: toSong(r), plays: w, last: r.played_at, first: r.played_at });
+  }
+  const top = [...m.values()].sort((a, b) => b.plays - a.plays || b.last - a.last).slice(0, 80).map((t) => t.song);
+  if (top.length < 8) return null;
+  const songs = dedupe(dayShuffle(top, `daylist:${here.date}:${here.part}`));
+  const moods = new Map<string, number>();
+  if (mood) for (const s of songs.slice(0, 30)) {
+    const x = mood(s);
+    if (x) moods.set(x, (moods.get(x) ?? 0) + 1);
+  }
+  const topMood = [...moods].sort((a, b) => b[1] - a[1])[0];
+  const word = topMood && topMood[1] >= 5 ? `${topMood[0]} ` : '';
+  const when = `${WEEKDAYS[here.weekday]} ${DAY_PARTS[here.part].name}`;
+  const artists = [...new Set(songs.map((s) => primaryArtist(s.artist)))].slice(0, 3);
+  return {
+    id: `daylist-${here.date}-${here.part}`,
+    name: `daylist: ${word}${when}`,
+    description: `What you play around this time, with ${names(artists)}. Changes every few hours.`,
+    kind: 'daylist',
+    songs,
+  };
+}
+
 /** Deezer, cached for a day: related artists and top songs barely change. */
 export function deezerLookups(): MixLookups {
   const cache = new Map<string, { at: number; v: unknown }>();
@@ -298,15 +369,34 @@ export class Mixes {
   private db: Db;
   private look: MixLookups;
   private now: () => number;
+  /** The mood of a song when the Hub has analysed it (sonic/), for the daylist's name. */
+  mood?: (s: MixSong) => string | undefined;
   constructor(db: Db, look: MixLookups = deezerLookups(), now = () => Date.now()) {
     this.db = db;
     this.look = look;
     this.now = now;
   }
 
-  async get(userId: number, kid: boolean, fresh = false): Promise<{ mixes: Mix[]; builtAt: number }> {
+  /** Today's mixes, with the daylist for this time of day first (`tzOffset`: the device's getTimezoneOffset). */
+  async get(userId: number, kid: boolean, fresh = false, tzOffset?: number): Promise<{ mixes: Mix[]; builtAt: number }> {
+    const r = await this.daily(userId, kid, fresh);
+    if (tzOffset === undefined) return r;
+    const ok = allowedBy(dontPlayOf(this.db, userId));
+    let d: Mix | null = null;
+    try {
+      d = daylist(playsOf(this.db, userId), this.now(), tzOffset, this.mood);
+    } catch {
+      d = null;
+    }
+    return d ? { ...r, mixes: [{ ...d, songs: d.songs.filter(ok) }, ...r.mixes] } : r;
+  }
+
+  private async daily(userId: number, kid: boolean, fresh = false): Promise<{ mixes: Mix[]; builtAt: number }> {
     const row = this.db.prepare('SELECT day, mixes, built_at FROM mixes WHERE user_id = ?').get(userId) as { day: string; mixes: string; built_at: number } | undefined;
-    if (row && row.day === today(this.now()) && !fresh) return { mixes: JSON.parse(row.mixes), builtAt: row.built_at };
+    // "Don't play this" applies to today's mixes too, so a song marked this morning is gone at once
+    const ok = allowedBy(dontPlayOf(this.db, userId));
+    const clean = (mixes: Mix[]) => mixes.map((m) => ({ ...m, songs: m.songs.filter(ok) }));
+    if (row && row.day === today(this.now()) && !fresh) return { mixes: clean(JSON.parse(row.mixes)), builtAt: row.built_at };
     let p = this.building.get(userId);
     if (!p) {
       p = buildMixes(this.db, userId, kid, this.look, this.now()).finally(() => this.building.delete(userId));
@@ -316,7 +406,7 @@ export class Mixes {
     const at = this.now();
     this.db.prepare('INSERT INTO mixes (user_id, day, mixes, built_at) VALUES (?, ?, ?, ?) ON CONFLICT (user_id) DO UPDATE SET day = excluded.day, mixes = excluded.mixes, built_at = excluded.built_at')
       .run(userId, today(at), JSON.stringify(mixes), at);
-    return { mixes, builtAt: at };
+    return { mixes: clean(mixes), builtAt: at };
   }
 
   /** A Blend of these people's listening (all of them opted in; checked by the route). */

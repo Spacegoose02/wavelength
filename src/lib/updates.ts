@@ -1,10 +1,11 @@
 /**
- * In-app updates from GitHub Releases (Windows and Android).
+ * In-app updates from GitHub Releases (Windows, Mac, the Linux AppImage and Android).
  *
  * The app asks GitHub for the latest release on launch and every few hours, and if it's newer than
  * this build shows a banner and a card in Settings → Updates. Installing downloads the right file
- * (setup exe, portable Wavelength.exe or the APK, see `update_target` in src-tauri/src/update.rs)
- * and then runs the installer (Windows) or hands the APK to Android's installer (UpdateBridge.kt).
+ * (setup exe, portable Wavelength.exe, the AppImage, the Mac .app.tar.gz or the APK, see `update_target` in
+ * src-tauri/src/update.rs) and then installs it and restarts (desktop) or hands the APK to Android's installer
+ * (UpdateBridge.kt).
  * Pre-releases are skipped unless Settings → Updates → "Include pre-releases" is on.
  */
 import { create } from 'zustand';
@@ -17,7 +18,7 @@ import { useSettings } from '../store/settings';
 export const RELEASES_URL = 'https://github.com/Spacegoose02/wavelength/releases';
 
 /** How this copy was installed (update.rs → `update_target`). `none`: dev build or a browser. */
-export type UpdateTarget = 'installer' | 'portable' | 'android' | 'none';
+export type UpdateTarget = 'installer' | 'portable' | 'appimage' | 'mac' | 'android' | 'none';
 
 interface Updater {
   canInstall(): boolean;
@@ -62,6 +63,8 @@ export function assetFor(release: Pick<GhRelease, 'assets'>, target: UpdateTarge
   const match = {
     installer: (n: string) => /_x64-setup\.exe$/i.test(n),
     portable: (n: string) => n.toLowerCase() === 'wavelength.exe',
+    appimage: (n: string) => /_amd64\.AppImage$/i.test(n),
+    mac: (n: string) => /_universal\.app\.tar\.gz$/i.test(n),
     android: (n: string) => /-android\.apk$/i.test(n),
     none: () => false,
   }[target];

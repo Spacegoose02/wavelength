@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
@@ -5,7 +6,7 @@ import { itemLink } from '../deemixQueue.ts';
 import { clientIp, HttpError, need } from '../http.ts';
 import type { Db } from '../db.ts';
 import { serviceForHub, serviceIdOfKind } from '../services.ts';
-import { deemixFor, subwaveAdmin } from '../upstream.ts';
+import { deemixFor, subwaveAdmin, subwaveCopyStation, type SubwaveTarget } from '../upstream.ts';
 
 /**
  * Calls the Hub makes for people with its own saved logins, so no device needs the SUB/WAVE admin
@@ -18,7 +19,7 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
 
   // ---- SUB/WAVE admin: /api/admin/subwave/<server id>/<API path> ----
   app.route<{ Params: { id: string; '*': string } }>({
-    method: ['GET', 'POST', 'PUT', 'DELETE'],
+    method: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     url: '/api/admin/subwave/:id/*',
     handler: async (req, reply) => {
       const { user } = need(req, 'subwave.control');
@@ -35,8 +36,32 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
       );
       // changes on air are worth knowing about; reads aren't
       if (req.method !== 'GET') audit(db, { actorId: user.id, action: 'subwave.admin', target: s.name, detail: { method: req.method, path: req.params['*'].slice(0, 200) }, ip: clientIp(req) });
+      if ('file' in r) {
+        // an archive hour: stream it on rather than holding a whole hour of MP3 in memory
+        reply.code(r.status).type(r.type);
+        if (r.disposition) reply.header('content-disposition', r.disposition);
+        if (r.length) reply.header('content-length', r.length);
+        return reply.send(Readable.fromWeb(r.file.body as any));
+      }
       return reply.code(r.status).send(r.body ?? {});
     },
+  });
+
+  // ---- SUB/WAVE: copy one station into another (everything but its name) ----
+  app.post<{ Params: { from: string; to: string } }>('/api/admin/subwave-copy/:from/:to', async (req) => {
+    const { user } = need(req, 'subwave.control');
+    const target = (id: string): { name: string; t: SubwaveTarget } => {
+      const s = serviceForHub(db, key, Number(id));
+      if (!s || s.kind !== 'subwave') throw new HttpError(404, 'No such SUB/WAVE server');
+      if (!s.secrets.username || !s.secrets.password) throw new HttpError(409, `Add the SUB/WAVE admin login to ${s.name} in Settings → Sources`);
+      return { name: s.name, t: { url: s.url, apiUrl: s.config.apiUrl as string | undefined, username: s.secrets.username, password: s.secrets.password, token: s.secrets.token } };
+    };
+    if (req.params.from === req.params.to) throw new HttpError(400, 'Pick a different station to copy from');
+    const from = target(req.params.from);
+    const to = target(req.params.to);
+    const r = await subwaveCopyStation(from.t, to.t);
+    audit(db, { actorId: user.id, action: 'subwave.copy', target: to.name, detail: { from: from.name, restored: r.restored }, ip: clientIp(req) });
+    return r;
   });
 
   // ---- deemix ----

@@ -1,4 +1,6 @@
 import { SonicWorker } from './sonic/worker.ts';
+import { answer } from './subsonicCatalog.ts';
+import { compressReplies } from './compress.ts';
 import { sonicRoutes } from './routes/sonic.ts';
 import { tourRoutes, videoRoutes } from './routes/tours.ts';
 import { Videos } from './videos.ts';
@@ -15,6 +17,11 @@ import { permissionsFor } from './roles.ts';
 import { adminRoutes } from './routes/admin.ts';
 import { familyRoutes } from './routes/families.ts';
 import { artworkRoutes } from './routes/artwork.ts';
+import { artistMetaRoutes } from './routes/artistMeta.ts';
+import { itemTagRoutes } from './routes/itemTags.ts';
+import { plexImportRoutes } from './routes/plexImport.ts';
+import { PlexImport } from './plexImport.ts';
+import { radioStationRoutes } from './routes/radioStations.ts';
 import { playlistCoverRoutes } from './routes/playlistCovers.ts';
 import { authRoutes } from './routes/auth.ts';
 import { listeningRoutes } from './routes/listening.ts';
@@ -23,6 +30,7 @@ import { navidromeRoutes } from './routes/navidrome.ts';
 import { relayRoutes } from './routes/relay.ts';
 import { remoteRoutes } from './routes/remote.ts';
 import { togetherRoutes } from './routes/together.ts';
+import { activityRoutes } from './routes/activity.ts';
 import { dockerRoutes } from './routes/docker.ts';
 import { trashRoutes } from './routes/trash.ts';
 import { notificationRoutes } from './routes/notifications.ts';
@@ -32,6 +40,7 @@ import { importRoutes } from './routes/imports.ts';
 import { inviteRoutes } from './routes/invites.ts';
 import { tagRoutes } from './routes/tags.ts';
 import { genreRoutes } from './routes/genres.ts';
+import { creditRoutes } from './routes/credits.ts';
 import { flagRoutes } from './routes/flags.ts';
 import { kidRoutes } from './routes/kids.ts';
 import { proxyRoutes } from './routes/proxy.ts';
@@ -43,9 +52,15 @@ import { shareRoutes } from './routes/shares.ts';
 import { webFetchRoutes } from './routes/webfetch.ts';
 import { radioRoutes } from './routes/radio.ts';
 import { discoverRoutes } from './routes/discover.ts';
+import { searchRoutes } from './routes/search.ts';
+import { lyricsRoutes } from './routes/lyrics.ts';
+import { LyricsCache } from './lyricsCache.ts';
 import { ChartCache } from './discover.ts';
 import { ChartHistory } from './chartHistory.ts';
 import { LibraryIndex } from './libraryIndex.ts';
+import { Catalog } from './catalog.ts';
+import { navidromeRealPaths } from './libraryAdmin.ts';
+import { catalogRoutes } from './routes/catalog.ts';
 import { ReleaseRadar } from './radar.ts';
 import { radarRoutes } from './routes/radar.ts';
 import { scrobbleRoutes } from './routes/scrobble.ts';
@@ -89,6 +104,12 @@ export interface Ctx {
   chartHistory: ChartHistory;
   /** Every Navidrome song, kept to match Discover's charts against in one go (libraryIndex.ts). */
   libraryIndex: LibraryIndex;
+  /** Styles, moods and collections read from a Plex server (plexImport.ts). */
+  plexImport: PlexImport;
+  /** The Hub's own catalog of the music folder (catalog.ts). */
+  catalog: Catalog;
+  /** Lyrics the house's apps found, shared and searchable (lyricsCache.ts). */
+  lyrics: LyricsCache;
   /** Deezer related artists and top songs (mixes.ts), for Made for you and Discover's For you. */
   mixLookups: MixLookups;
   /** Release Radar: followed artists and their new releases, looked up in the background (radar.ts). */
@@ -115,7 +136,7 @@ export interface Ctx {
   videos: Videos;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch; plexFetch?: Fetch } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -135,12 +156,43 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     sonic: new SonicWorker(db, config.secretKey, config.musicDir, config.navidromeMusicDir),
     tours: new Tours(db, config.secretKey, opts.tourFetch),
     videos: undefined as unknown as Videos,
+    plexImport: new PlexImport(db, config.secretKey, opts.plexFetch),
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.mixes = new Mixes(db, ctx.mixLookups);
+  ctx.mixes.mood = (song) => {
+    try {
+      const id = typeof song.track?.id === 'string' ? song.track.id : undefined;
+      const i = ctx.sonic.index.find({ id, artist: song.artist, title: song.title });
+      return i === undefined ? undefined : ctx.sonic.index.hit(i).mood;
+    } catch {
+      return undefined;
+    }
+  };
   ctx.station = new Station(db, ctx.dj, ctx.mixes, opts.stationChart);
   ctx.videos = new Videos(opts.videoSearch ?? ((q, n) => ctx.ytdlp.search(q, n)));
   ctx.library = new Library(db, config.secretKey, ctx.ytdlp);
-  ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => ctx.library.status().lastScanAt);
+  ctx.lyrics = new LyricsCache(db);
+  // with Navidrome off the index lists the catalog, again after each of its scans
+  ctx.libraryIndex = new LibraryIndex(db, config.secretKey, () => (ctx.catalog.standalone() ? ctx.catalog.lastScan() : ctx.library.status().lastScanAt));
+  // New for you in DJ mode fills up with library songs you haven't played (dj/station.ts)
+  ctx.station.library = async () => ((await ctx.libraryIndex.ensure()) ? ctx.libraryIndex : null);
+  ctx.libraryIndex.fromCatalog = () => (ctx.catalog.standalone() && ctx.catalog.usable() ? (m, p) => answer(db, m, p, new Map())?.['subsonic-response'] : null);
+  ctx.sonic.standalone = () => ctx.catalog.standalone();
+  // one listing of Navidrome for the whole Hub: the catalog and sound-alike analysis take the library index's
+  // sound-alike analysis reads the files: their real paths from the catalog, Subsonic's (often made up) otherwise
+  ctx.sonic.listSongs = async () => {
+    const songs = await ctx.libraryIndex.navidromeSongs();
+    const files = ctx.catalog.pathsById();
+    return songs && songs.map((x) => ({ ...x, path: files.get(x.id) ?? x.path }));
+  };
+  ctx.catalog = new Catalog(db, config.musicDir, config.navidromeMusicDir);
+  ctx.catalog.listNavidrome = () => ctx.libraryIndex.navidromeSongs();
+  ctx.catalog.listRealPaths = () => navidromeRealPaths(db, config.secretKey);
+  // Navidrome's scans prompt the catalog's; with Navidrome off the catalog's scan is the only one
+  ctx.catalog.scannedAt = () => (ctx.catalog.standalone() ? null : ctx.library.status().lastScanAt);
+  ctx.library.ownScan = () => (ctx.catalog.standalone() ? () => ctx.catalog.scan() : null);
+  if (opts.watchLibrary ?? true) ctx.catalog.start();
+  app.addHook('onClose', async () => ctx.catalog.stop());
   ctx.clean = new CleanDownloads(db, config.secretKey, config.musicDir, ctx.library);
   if (opts.watchLibrary ?? true) ctx.library.start();
   app.addHook('onClose', async () => ctx.library.stop());
@@ -161,14 +213,21 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   app.decorate('hubClean', ctx.clean);
   app.decorate('hubScrobbler', ctx.scrobbler);
   app.decorate('hubSonic', ctx.sonic);
+  app.decorate('hubCatalog', ctx.catalog);
+  app.decorate('hubStation', ctx.station);
 
   // database backups, for restore (routes/server.ts); the route sets how big
   app.addContentTypeParser(['application/octet-stream', 'application/vnd.sqlite3', 'application/x-sqlite3'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
+  // spoken requests to the DJ (routes/dj.ts /api/dj/listen)
+  app.addContentTypeParser(/^audio\//, { parseAs: 'buffer', bodyLimit: 3_000_000 }, (_req, body, done) => done(null, body));
 
   // HTML forms post url-encoded bodies
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string', bodyLimit: 16 * 1024 }, (_req, body, done) => {
     done(null, Object.fromEntries(new URLSearchParams(body as string)));
   });
+
+  // JSON answers zipped for clients that ask (compress.ts)
+  compressReplies(app);
 
   // The app's own requests go through Rust (no CORS), but the browser dev preview needs it. Auth is a
   // bearer token, never a cookie, so allowing any origin doesn't let other sites act as the user.
@@ -218,10 +277,15 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   kidRoutes(app, ctx);
   ratingRoutes(app, ctx);
   artworkRoutes(app, ctx);
+  artistMetaRoutes(app, ctx);
+  itemTagRoutes(app, ctx);
+  plexImportRoutes(app, ctx);
+  radioStationRoutes(app, ctx);
   playlistCoverRoutes(app, ctx);
   listeningRoutes(app, ctx);
   remoteRoutes(app, ctx);
   togetherRoutes(app, ctx);
+  activityRoutes(app, ctx);
   dockerRoutes(app, ctx);
   trashRoutes(app, ctx);
   notificationRoutes(app, ctx);
@@ -232,10 +296,13 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   importRoutes(app, ctx);
   tagRoutes(app, ctx);
   genreRoutes(app, ctx);
+  creditRoutes(app, ctx);
   serverRoutes(app, ctx);
   webFetchRoutes(app, ctx);
   radioRoutes(app, ctx);
   discoverRoutes(app, ctx);
+  searchRoutes(app, ctx);
+  lyricsRoutes(app, ctx);
   radarRoutes(app, ctx);
   scrobbleRoutes(app, ctx);
   pushRoutes(app, ctx);
@@ -243,6 +310,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   djRoutes(app, ctx);
   mixRoutes(app, ctx);
   sonicRoutes(app, ctx);
+  catalogRoutes(app, ctx);
   tourRoutes(app, ctx);
   videoRoutes(app, ctx);
   publicLinkRoutes(app, ctx);

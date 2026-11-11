@@ -34,3 +34,19 @@ test('music videos: route is behind the switch and cached', async () => {
   assert.equal((await json(app, 'GET', '/api/videos?artist=Adele&title=Hello', { token: tokens.kid })).status, 403, 'kids off by default');
   assert.equal((await json(app, 'GET', '/api/videos?artist=Adele', { token: tokens.member })).status, 400);
 });
+
+test('podcast episodes: the show’s own full upload, not clips or someone else’s', async () => {
+  const { pickEpisodeVideo } = await import('../src/videos.ts');
+  const results = [
+    r('clip', 'The Mailbag | The Weekly Show (Clip)', 'The Weekly Show', 300),
+    r('other', 'Reacting to The Mailbag', 'Some Reactor', 3500),
+    r('full', 'The Mailbag | The Weekly Show', 'The Weekly Show', 3550),
+  ];
+  assert.equal(pickEpisodeVideo(results, 'The Weekly Show', 'The Mailbag', 3600)?.id, 'full');
+  assert.equal(pickEpisodeVideo(results.slice(0, 2), 'The Weekly Show', 'The Mailbag', 3600), null, 'nothing good enough');
+  // "Ep. 12: Title" is matched on the title alone
+  assert.equal(pickEpisodeVideo(results, 'The Weekly Show', 'Ep. 12: The Mailbag', 3600)?.id, 'full');
+  // without a length to check, only the show's own channel is trusted
+  assert.equal(pickEpisodeVideo([r('x', 'Witness - In the Dark', 'APM Reports', 0)], 'In the Dark', 'Witness', 2400), null, 'a short title from another channel is too loose');
+  assert.equal(pickEpisodeVideo([{ ...r('y', 'In the Dark: Witness', 'In the Dark Podcast'), duration: undefined }], 'In the Dark', 'Witness', 2400)?.id, 'y');
+});

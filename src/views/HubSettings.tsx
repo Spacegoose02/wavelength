@@ -1,5 +1,5 @@
+import { Qr } from '../components/Qr';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import qrcode from 'qrcode-generator';
 import { syncNow } from '../lib/hubSync';
 import { loadHubServices } from '../lib/hubServices';
 import { recheckLibrary, runExplicitCheck, stopExplicitCheck, useExplicitCheck } from '../lib/explicitCheck';
@@ -11,7 +11,7 @@ import { isAndroid } from '../lib/platform';
 import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { FamiliesAdmin, ServiceFamilies } from './Families';
 import { SwitchPinSetting } from '../components/WhosListening';
-import { HubClient, HubError, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
+import { HubClient, HubError, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubAppLogin, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
 import { hubClient, sameFamily, thisDevice, useHub } from '../store/hub';
 import { useFeature } from '../lib/features';
 import { useSettings } from '../store/settings';
@@ -22,17 +22,6 @@ import { useUi } from '../store/ui';
 const ROLE_LABELS: Record<HubRole, string> = { admin: 'Admin', member: 'Member', kid: 'Kid' };
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
 const when = (t?: number | null) => (t ? new Date(t).toLocaleString() : 'never');
-
-/** A QR code for a link, so a phone can open it from a TV screen. */
-function Qr({ text }: { text: string }) {
-  const svg = useMemo(() => {
-    const qr = qrcode(0, 'M');
-    qr.addData(text);
-    qr.make();
-    return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  }, [text]);
-  return <div className="hub-qr" dangerouslySetInnerHTML={{ __html: svg }} />;
-}
 
 /** Shows a pairing code and waits for it to be approved in a browser. */
 function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; take?: (s: HubSession) => void }) {
@@ -235,6 +224,64 @@ function RemoteSetting() {
         <span className="switch"><input type="checkbox" checked={on} onChange={(e) => useSettings.getState().setRemoteControl(e.target.checked)} /><span /></span>
         Let my other devices see and control this one
       </label>
+      <ShareListeningSetting />
+    </div>
+  );
+}
+
+/** House activity (lib/houseActivity.ts): the sidebar's "Listening now" for the others. */
+function ShareListeningSetting() {
+  const v = useSettings((s) => s.shareListening);
+  const kid = useHub((s) => s.user?.role === 'kid');
+  const on = v ?? !kid;
+  return (
+    <>
+      <label className="check">
+        <span className="switch"><input type="checkbox" checked={on} onChange={(e) => useSettings.getState().setShareListening(e.target.checked)} /><span /></span>
+        Show the house what I'm playing
+      </label>
+      <p className="muted small">
+        {kid
+          ? 'Your grown-ups see the song you’re playing under “Listening now” in their sidebar. Nobody else does.'
+          : 'People in the house see the song you’re playing under “Listening now” in their sidebar (the song’s name, never what you played before).'}
+      </p>
+    </>
+  );
+}
+
+/** Home Assistant (docs/HOME-ASSISTANT.md): a token of its own, shown once, revoked from the devices list. */
+function HomeAssistantSetting() {
+  const [made, setMade] = useState<{ token: string; url: string }>();
+  const [err, setErr] = useState('');
+  const connect = async () => {
+    setErr('');
+    try {
+      setMade(await hubClient()!.connectHomeAssistant());
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+  return (
+    <div className="editor">
+      <h3>Home Assistant</h3>
+      <p className="muted small">
+        Show what your devices are playing in Home Assistant and control them from it: pause the music when the doorbell rings, turn it down at
+        bedtime, or put play/pause on a dashboard. Make a token, then paste it into Home Assistant (the guide in docs/HOME-ASSISTANT.md has the
+        setup to copy). Remove it any time under your devices, where it shows as "Home Assistant".
+      </p>
+      {made ? (
+        <>
+          <p className="small">Hub address: <code>{made.url}</code></p>
+          <p className="small">Token (shown only now):</p>
+          <code className="ha-token">{made.token}</code>
+          <div className="row gap">
+            <button type="button" className="btn small" onClick={() => void navigator.clipboard?.writeText(made.token).catch(() => undefined)}>Copy token</button>
+          </div>
+        </>
+      ) : (
+        <button type="button" className="btn small" onClick={() => void connect()}>Make a Home Assistant token</button>
+      )}
+      {err && <div className="errors">{err}</div>}
     </div>
   );
 }
@@ -595,10 +642,12 @@ function SignedIn() {
       </div>
 
       <RemoteSetting />
+      {user.role !== 'kid' && <HomeAssistantSetting />}
       <NotifySetting />
       <ScrobbleSetting />
 
       <PublicLinks />
+      <AppLogins url={url} />
 
       <SsoLink />
       {user.hasPassword && <TwoFactorSetting admin={user.role === 'admin'} />}
@@ -624,7 +673,7 @@ function SignedIn() {
       )}
 
       <h3>Your devices</h3>
-      {devices.map((d) => (
+      {devices.filter((d) => d.platform !== 'subsonic-app').map((d) => (
         <div key={d.id} className="source-row">
           <div className="track-main">
             <div className="track-title">{d.name}{d.current ? <span className="muted small"> · this device</span> : null}</div>
@@ -638,6 +687,86 @@ function SignedIn() {
       ))}
       {permissions.includes('users.manage') && <p className="muted small">You're an admin: manage people in the Users tab.</p>}
     </section>
+  );
+}
+
+/**
+ * Logins for other music apps (hub/src/routes/services.ts app-logins): SUB/WAVE, Symfonium, Feishin and the like sign
+ * in to the Hub's Subsonic address with these, so they keep working with Navidrome off.
+ */
+function AppLogins({ url }: { url: string }) {
+  const c = hubClient();
+  const [st, setSt] = useState<{ available: boolean; logins: HubAppLogin[] }>();
+  const [name, setName] = useState('');
+  const [shown, setShown] = useState<number>();
+  const [msg, setMsg] = useState('');
+  const [loadErr, setLoadErr] = useState('');
+  const load = () => c?.appLogins().then((r) => { setSt(r); setLoadErr(''); }).catch((e) => setLoadErr(errText(e)));
+  useEffect(() => {
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const base = url.replace(/\/+$/, '');
+  const intro = (
+    <>
+      <h3>Other music apps</h3>
+      <p className="muted small">
+        SUB/WAVE, Symfonium, Feishin and other Subsonic apps can play your library from the Hub. Make a login for each
+        app, then put the address, username and password in it (for SUB/WAVE: NAVIDROME_URL, NAVIDROME_USER and
+        NAVIDROME_PASSWORD). Remove one to sign that app out.
+      </p>
+    </>
+  );
+  // Shown even when logins can't be made, with the reason, so the section is easy to find.
+  if (!st?.available) {
+    return (
+      <div className="editor">
+        {intro}
+        <p className="small">
+          {loadErr
+            ? `Couldn't ask the Hub for app logins: ${loadErr}. An older Hub doesn't have them; update it.`
+            : st
+              ? 'Not available yet: turn Navidrome off, or turn on “Send everyone through the Hub”, in Settings → Server → Music catalog.'
+              : 'Loading…'}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="editor">
+      {intro}
+      {st.logins.map((l) => (
+        <div key={l.id} className="source-row">
+          <div className="track-main">
+            <div className="track-title">{l.name}</div>
+            <div className="track-sub">
+              Address <code>{base}</code> · Username <code>{l.username}</code> · Password{' '}
+              {shown === l.id ? <code>{l.password}</code> : <button className="btn small ghost" onClick={() => setShown(l.id)}>Show</button>}
+            </div>
+          </div>
+          <button className="btn small ghost" onClick={async () => {
+            if (!confirm(`Remove the login for ${l.name}? That app stops working until it gets a new one.`)) return;
+            await c!.signOutMyDevice(l.id);
+            load();
+          }}>Remove</button>
+        </div>
+      ))}
+      <form className="row gap" onSubmit={async (e) => {
+        e.preventDefault();
+        setMsg('');
+        try {
+          const r = await c!.addAppLogin(name);
+          setName('');
+          setShown(r.login.id);
+          load();
+        } catch (err) {
+          setMsg(errText(err));
+        }
+      }}>
+        <input placeholder="App name, like SUB/WAVE" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} required />
+        <button className="btn">Add login</button>
+        {msg && <span className="errors small">{msg}</span>}
+      </form>
+    </div>
   );
 }
 

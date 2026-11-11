@@ -4,6 +4,651 @@
 - **Clean titles on iHeartRadio stations.** iHeart streams send their tags inside the song title
   (`zc2485 - text="Bobby Bones Show" song_spot="T" …`). Radio now shows just `Artist - Song`, or the show's name
   between songs.
+## 0.41.0
+- **Radio: add stations for everyone, with logos.** Hub admins can add a station to **Your stations** for everyone,
+  from **Edit → Add a station for everyone** or **+ Everyone** on any directory station. Until now the only way was
+  Navidrome's own page, which stopped working once the Hub took over the list. Hub stations now have a logo
+  (migration 38), found in the radio directory automatically; **Find missing logos** fills them in for existing
+  stations and **Logo** sets one by hand. The guide now says which streams can be added, including iHeartRadio
+  (`src/views/Radio.tsx`, `src/sources/radio.ts`, `hub/src/radioStations.ts`, #284).
+- **Settings: one Hub admin tab.** For Hub admins the Settings tab bar ran off both sides. The top row now has the
+  personal tabs and one **Hub admin** tab at the end; picking it shows **Users · Server · AI DJ · Features** in a row
+  under it, reopening the one you had last. Both rows scroll sideways on phones, and settings search says
+  "Hub admin · Server" and so on (`src/views/Settings.tsx`, #279).
+
+## 0.40.3
+- **Fix: Favorites show your newest heart first again.** With the Hub keeping hearts, it listed them by item id, so
+  Favorites came out in a near-random order. The Hub now sorts hearted songs, albums and artists by when they were
+  hearted, newest first (`hub/src/subsonicCatalog.ts`, `hub/src/userData.ts`, #282).
+- **Fix: no lag on long song lists.** Each song row looked up its album and artist by scanning the whole library, so
+  a long Favorites list took seconds to draw every time the song changed. The lookups now use indexes (about 2.3 s
+  down to 14 ms for 500 rows), and Favorites draws 100 rows at a time, more as you scroll (`src/lib/trackLinks.ts`,
+  `src/components/common.tsx`, #282).
+
+## 0.40.2
+- **SUB/WAVE: Skip on the On air card.** Admins get a **Skip** button next to **Like**, the same skip as DJ control's
+  "Skip track" (works with the admin login on the device or kept on the Hub). It says "Skipping…" while it runs and
+  "Skip failed" with the error if it fails, then refreshes now playing and the queue (`src/views/SubWave.tsx`, #280).
+
+## 0.40.1
+- **SUB/WAVE: one "Run the station" tab.** The SUB/WAVE page's eleven tabs ran off the bar. The top row is now
+  **On air · Schedule · Run the station**, with the nine station tabs (DJ control, Shows, DJs, Skills, AI & voice,
+  Health, Archive, Stations, Stats) in a row under it. It remembers the last one you opened, the "admin" tag shows
+  only when there's no admin login, and on phones the row scrolls sideways (`src/views/SubWave.tsx`, #277).
+- **Fix: copying a big SUB/WAVE station.** Copy from another SUB/WAVE failed with "Request body too large" when the
+  backup was over SUB/WAVE's upload limit. The Hub now sends it as several smaller backups (media, then settings,
+  then the library), and names any single file too big to send (`hub/src/zipSplit.ts`, #277).
+- **Fix: Albums and Artists say why they're empty.** With every music source switched off in Settings → Sources,
+  they showed "0" and nothing else; now they say the source is off (or show the error a source gave) and link to
+  Settings. Switching off the last Navidrome or Plex source asks first, and says when that row is your library
+  through the Hub, which is easy to mistake for Navidrome itself once Navidrome is off (`src/views/Library.tsx`,
+  `src/lib/musicSources.ts`). Settings → Server → Music catalog no longer says "Navidrome still plays everything"
+  with Navidrome off (#276).
+
+## 0.40.0
+- **Copy one SUB/WAVE station into another.** Stations → **Copy from another SUB/WAVE** makes this server a copy of
+  another, all but its name: settings, DJs, shows, schedule, jingles, sound effects, voices, skills and library
+  analysis. API keys and the music server login stay as they were. It runs through the Hub when both logins are kept
+  there (`POST /api/admin/subwave-copy/:from/:to`, audited as `subwave.copy`, #275).
+- **Run your SUB/WAVE station from Wavelength.** The SUB/WAVE page gets six admin tabs, so you rarely need
+  SUB/WAVE's own admin: **DJs** (edit a DJ's name, tagline, talk, humour, warmth, language, voice and picture; pick
+  the default DJ; add one from the catalog), **Skills** (switch each between-song skill on or off), **AI & voice**
+  (provider, model, API key, daily token limit, voice; **Restart the mixer**), **Health** (SUB/WAVE's check, with
+  one-click fixes), **Archive** (listen to or save each hour) and **Stations** (make, rename, delete or put a station
+  on air). The Hub's SUB/WAVE admin proxy now passes PATCH and streams audio and zip files, so these work through the
+  Hub too (`src/views/SubWaveStation.tsx`, `hub/src/upstream.ts`, #274).
+- **Fix: DJ mode's New for you plays songs from your library.** It used to pick Deezer top songs by related artists
+  that were almost never in your library, so the segment failed with "None of the New for you songs the DJ picked
+  are in your library". With the Hub's library list it now picks songs you have and haven't played: Discover's picks
+  you own, other songs by those artists, artists you've never played, then deep cuts, at most two per artist
+  (`hub/src/dj/station.ts`, #273).
+- **Fix: DJ segments find their songs through the Hub.** The app now looks up a segment's songs the way Discover
+  does: the Hub matches them against its library at once, so segments work with Navidrome off, and the error says
+  how many songs it looked for (`src/lib/djStation.ts`, #273).
+- **Fix: Other music apps is easier to find.** It lives in Settings → Account (earlier notes wrongly said Settings → Hub).
+  Settings search now finds it (try "SUB/WAVE" or "other music apps"), and the "Send everyone through the Hub" switch
+  in Settings → Server says it turns on app logins (#272).
+
+## 0.39.2
+- **Fix: Other music apps always shows in Settings → Account.** It used to vanish when logins weren't available or the Hub
+  couldn't be asked, leaving no clue why. Now it always shows, with the reason: an older Hub without app logins (and
+  the error), or that devices don't go through the Hub yet, with where to turn Navidrome off or turn on "Send
+  everyone through the Hub" (`AppLogins` in `src/views/HubSettings.tsx`, #270).
+
+## 0.39.1
+- **Fix: other music apps can use the Hub's plain address.** SUB/WAVE given `http://<hub>:7780` asked `/rest/ping`
+  there and got the web app's page back ("Unexpected token '<'"). The Hub now answers `/rest/*` at its own address
+  with the same relay and app logins as `/nd/<id>/rest` (which keeps working), and **Other music apps** shows just
+  the Hub's address (`hub/src/routes/relay.ts`, #268).
+
+## 0.39.0
+- **Turn Navidrome off: the Hub becomes the music server (phase 6 of replacing Navidrome).** Settings → Server →
+  Music catalog has **Turn Navidrome off**. Before it switches, the Hub copies what it doesn't have yet (each
+  person's hearts, plays, ratings and playlists, with their own Navidrome login, and the radio stations); if a copy
+  fails, Navidrome stays on and the card lists who, with **Turn it off anyway**. Once off, every device goes through
+  the Hub and the relay never calls Navidrome: it also answers `ping`, folders, scans, `getIndexes`,
+  `getMusicDirectory`, `getAlbumList`, `search2`, top songs, artist and album info, similar songs (from the sound
+  analysis), play history and artist and playlist covers. Navidrome's ids are kept; new files get Hub ids
+  (`h` + 20 hex digits) that follow renames and merges (`Catalog.giveIds`). The Hub's own jobs (Search, Discover,
+  Jam, sound analysis, Library care, rescans) read the catalog. **Turn Navidrome back on** undoes it, and Navidrome
+  support stays for anyone who hosts their own (`PUT /api/admin/catalog/navidrome`, docs/HUB.md "Without
+  Navidrome", #265).
+- **Logins on the Hub for other music apps.** Settings → Hub → **Other music apps** gives SUB/WAVE or any Subsonic
+  app a Hub address (`<hub>/nd/<id>`), username and password of its own, shown again whenever you need it; **Remove**
+  signs that app out. Available once devices go through the Hub (`GET`/`POST /api/me/app-logins`, #266).
+- **The Hub stays quick as it takes over.** Answers over 1 KB are compressed (Brotli or gzip; a page of 500 albums
+  drops from about 155 KB to a tenth of that), a tag edit or small scan updates only the songs that changed instead
+  of rebuilding the catalog (about 30 ms for ten songs instead of 240 ms for 30,000), hearts and plays are kept in
+  memory, and the playlist list is faster. Trashed albums now leave the Hub's answers at once (`hub/src/compress.ts`,
+  #264).
+- **Moods and styles on songs.** Like Plex's track moods, a song can have moods and styles of its own, apart from
+  its album's: Edit song's Tags tab sets them, **Import from Plex** now reads every song's moods too, Browse puts an
+  album under a mood any of its songs has (and plays just those songs), and smart playlists get **Track mood** and
+  **Track style** rules. "Save as smart playlist" on a mood or style matches the album's or the song's own. Kept on
+  the Hub (`hub/src/trackTags.ts`, migration 37, #263).
+- **Edit album on more albums.** When the copy on screen is Plex's and the same album is on Navidrome, Edit album
+  opens the Navidrome copy (it used to be hidden). An album that's only on Plex gets an Edit album for its styles,
+  moods and collections (the rest is in Plex; #263).
+- **Podcast videos stay open.** The video from an episode row's **Video** button no longer vanishes when the mouse
+  leaves the row: it was drawn inside the row's hover-only actions. One dialog is now drawn at the app's root
+  (`VideoHost` in `src/components/VideoButton.tsx`) and stays until **Back to listening**, Escape or a click
+  outside it. Space no longer starts the audio underneath while the video is up (#262).
+- **Fix: opening Podcasts no longer crashes Audiobookshelf.** Continue listening asked ABS for
+  `/api/me/items-in-progress`, which loads every episode of every part-listened show at once and ran ABS out of
+  memory on shows with thousands of episodes. In-progress episodes now come from the progress already loaded,
+  matched against the newest episodes, and the few left over are read one show at a time (at most five)
+  (`getEpisodesInProgress` in `src/sources/audiobookshelf.ts`, #261).
+- **Fix: Test connection explains a browser's NetworkError.** In a browser it used to say only "NetworkError when
+  attempting to fetch resource"; it now gives the likely causes and, for Audiobookshelf, names **Allowed CORS
+  Origins** and the origin to add (`browserFetchHint` in `src/lib/http.ts`, #261).
+
+## 0.38.0
+- **Advanced smart playlists.** Smart playlists get an Advanced mode like Plex's filter builder: nested "match
+  all / any" groups of field, operator and value rows over artist, album and track fields (genre, style, mood,
+  collection, year, decade, record label, album type, plays, rating, last played, added, format, bit rate,
+  folder…), a limit with a sort (random, most played, highest rated, newest…), **Try it** and **Save as new**
+  (`src/lib/smartRules.ts`, `src/components/RuleBuilder.tsx`). Navidrome albums now carry their plays, rating, ♥
+  and record labels (#259).
+- **Save any filter as a smart playlist.** Browse pages and the Albums and Artists filters have **Save as smart
+  playlist**: "80s", "Christmas" or "Southern Rap · Reckless" becomes a playlist that picks fresh songs each time.
+  Smart playlists gain Styles, Moods, In collection and Leave out collection rules from the Hub's tags; with any of
+  them, songs come from the albums that fit (`src/lib/smartPlaylists.ts`). The sound-analysis mood rule is now
+  called **Sound** (#258).
+- **Browse and filter by style, mood and collection.** Browse has Collections tiles and Styles and Moods chips;
+  opening one shows its artists and albums with chips to narrow it (a genre, decade, style or mood), and they mix
+  ("Christmas · 90s", "Southern Rap · Reckless"). Albums and Artists get Style, Mood and Collection filters. The
+  chips on album and artist pages open Browse on them (`src/lib/browse.ts`, `src/views/Browse.tsx`, #257).
+- **Import from Plex.** Settings → Server → Import from Plex reads your Plex server, matches its albums and artists
+  to your library, shows what it found, then imports styles, moods, collections (Plex collections and labels) and
+  artist genres onto the Hub. Hand edits are never overwritten. Albums with no genre get Plex's as an undoable
+  suggestion (`hub/src/plexImport.ts`, #256).
+- **Each artist in a credit is its own link.** "Future feat. Drake; Travis Scott; Loe Shimmy" used to be one link to
+  Future; now Future, Drake, Travis Scott and Loe Shimmy each open their own page, in Now Playing, Up next, song rows
+  and an album's header. A name the library knows with a comma or "&" in it ("Tyler, The Creator") stays whole, and
+  "&", "," and "x" only split a credit when one side is a library artist. A featured artist with no albums in the
+  library opens their Deezer releases (`creditLinks` in `src/lib/trackLinks.ts`, `ArtistCredit` in
+  `src/components/common.tsx`, #255).
+- **Styles, moods and collections, like Plex.** Edit album's Tags tab now has **Styles** ("Christmas Pop"),
+  **Moods** ("Laid-Back/Mellow") and **Collections** ("Christmas") next to its genres, and Edit artist has the
+  artist's own **Genres**, Styles, Moods and Collections. They are kept on the Hub (`hub/src/itemTags.ts`, migration
+  36), follow renames, and show as chips under the title on album and artist pages (#254).
+- **An album's genres can differ from its artist's.** Edit artist keeps the artist's genres on the Hub instead of
+  writing them into every song, so a pop group's Christmas album stays Christmas. Tick **Also write these genres into
+  every song of theirs** to do it the old way (#254).
+- **Fix: Test connection explains 502, 503 and 504 errors.** Those come from a web proxy (nginx, Caddy, Traefik,
+  Cloudflare…) in front of the server, not from the server itself, and the message now says so (`gatewayHint` in
+  `src/lib/http.ts`, #253).
+- **The girl dragon is pearl white**, with sky-blue eyes and pale silver wings; the boy stays charcoal with lime-green
+  eyes (#252).
+
+## 0.37.0
+- **Critters: three new scenes in place of the Saxophone, Harpist and Tuba.** **Acoustic** strums an acoustic guitar in
+  a cosy room under fairy lights, **Surf rock** twangs an offset electric barefoot on the beach, and **Singer** sings
+  at a vintage mic on stage, the mic off to the side so the whole mouth shows, the free hand opening out on long
+  notes and notes floating up with the voice. A saved Saxophone, Harpist or Tuba pick moves to Surf rock, Acoustic or
+  Singer (`src/components/critters/Acoustic.tsx`, `Surf.tsx`, `Singer.tsx`, #250).
+- **See-through scenes.** The Driver, Bongo, Marimba, Violinist, Pianist and Reactor no longer paint over the whole
+  picture: their skies are gone and their walls are faint, so the album colours show through like the first scenes.
+  The beach keeps its sea and sand (#250).
+- **Critter touch-ups.** The penguin has real flippers instead of hands and a new face; the flamingo's mouth opens
+  under its bill instead of poking through it; the sloth has a new face (big shiny nose, open smile); the octopus
+  plays with four arms (two extra sticks on the drums); the dragon is now charcoal black with lime-green eyes (#250).
+- **New critter: the turkey**, an original maroon-and-orange bird with a fan of tail feathers (#250).
+
+## 0.36.1
+- **Fix: playing a song on a phone no longer blanks the screen.** The desktop mini player window (0.25.0) shared the
+  `.mini-player` class with the phone's mini player, and its full-height rule stretched the phone one over the whole
+  screen, hiding the page and the tab bar. The window now uses `.mini-window` (`src/components/MiniPlayer.tsx`), and
+  `src/test/phoneDock.test.ts` keeps a full-height rule off the phone's mini player (#248).
+
+## 0.36.0
+- **Podcasts → Latest episodes.** A new first tab lists the newest episodes from every show in one place, and
+  **Play N episodes** runs through them show to show. Pick shows with chips (each shows how many are unplayed),
+  **Unplayed only** (on by default), **This week / This month / Any time**, newest or oldest first, **Add to
+  playlist** and **Mark all played**; the choices are remembered on the device. A **Continue listening** row has every
+  episode you're part way through, with the time left (`src/lib/episodes.ts`, `src/views/Podcasts.tsx`, #244).
+- **Played and unplayed episodes.** **Mark played** on each episode, **Mark as played / unplayed** and **Go to show**
+  in the right-click menu, and **Mark all played / unplayed** on a show's page, saved on Audiobookshelf so every
+  device and ABS's own apps agree. An episode or book that plays to the end now gets a last sync at its full length,
+  so the server marks it finished, and played episodes no longer show a full progress bar (#244).
+- **Episode videos.** With a Hub and **Music videos** on, Now Playing shows **Video** for an episode the show posted
+  on YouTube, and each episode row has a **Video** chip that searches when pressed. The Hub's
+  `GET /api/videos/episode` wants the episode title in the video's, a length within about a third, and no clip,
+  trailer or reaction; it favours the show's own channel (#244).
+- **A page for each audiobook.** Tapping a book opens its page: description, narrator, year and genres, progress,
+  time left and the current chapter, **Chapters** to play from, **Resume / Start over / Mark as finished**, and **More
+  in the series** and **More by the author**. The round button on the cover still plays it straight away, and book
+  cards show time left (`src/views/Books.tsx`, #244).
+- **Radio stations live on the Hub (phase 5 of replacing Navidrome, part 1).** A minute after it starts, the Hub copies
+  Navidrome's stations once (with the Navidrome admin login, keeping their ids so each device's order and hidden
+  stations still match). The app then reads stations for the Hub's Navidrome from the Hub, and the relay answers
+  `getInternetRadioStations` and the station changes from it; only admins can change them. Navidrome's own list is
+  left alone (migration 33, `hub/src/radioStations.ts`, `POST /api/admin/radio/import`, #242).
+- **Hearts, play counts, ratings and playlists live on the Hub (phase 5, parts 2 and 3).** Off by default: **Hub keeps
+  hearts, play counts and playlists (beta)** under Settings → Server → Music catalog. The first time someone's device
+  goes through the relay with it on, the Hub copies their hearts, plays, last-played times, ratings and own playlists
+  from Navidrome (smart playlists stay on Navidrome). After that, stars, finished plays, ratings and playlist changes
+  are saved on the Hub and sent on to Navidrome in the background, and the Hub answers starred songs, the Starred,
+  Most played, Recently played and Top rated lists, and playlists whose songs it knows. The card shows how many
+  people, hearts and plays it keeps (migrations 34 and 35, `hub/src/userData.ts`, `hub/src/playlists.ts`, #243, #245).
+- **Listening now says who sent the song.** Settings → Server → Listening now shows "played by the Hub", "Navidrome via
+  the Hub" or "Navidrome directly" for each device, instead of the app's fixed "navidrome" label; hover for what each
+  means (`hub/src/playedBy.ts`, `playedBy` in `GET /api/admin/listening`, #240).
+- **Three new critter scenes: Saxophone, Harpist and Tuba.**
+  - **Saxophone**, on a city rooftop at night: a beret and a roll-neck, an alto sax that sways with the beat while
+    the fingers work the keys, notes floating out of the bell, the city's windows lighting up with the highs and a
+    string of lights pulsing on the beat. Flourish: a lean back with the bell up (`Sax.tsx`).
+  - **Harpist**, in the clouds at sunrise: a laurel wreath and a toga, plucking a golden harp under a rainbow; the
+    hands take turns on the beat and each plucked string lights up and shimmers. Flourish: a glissando (`Harp.tsx`).
+  - **Tuba**, in a snowy town square: a marching-band hat with a plume and a braided band jacket, oom-pahing with
+    puffs of breath and snow from the bell and a snowman nodding along. Flourish: one big blast (`Tuba.tsx`, #241).
+  The sax and tuba players have the mouthpiece in their mouths, so they don't sing along.
+- **Settings → Themes & critters.** One place for how Wavelength looks and who plays along, in four sub-tabs:
+  **Theme** (skins, Seasonal, Random daily, Motion), **Critters**, **Scenes** (what used to be called acts) and
+  **Visualizer**. The Boy / Girl switch sits on both the Critters and Scenes sub-tabs, with a line saying who's
+  playing what. The visualizer and critter pickers moved here from Playback, which now points to them, and
+  Settings search opens the right sub-tab (#241).
+- **Nine more critters: a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny and a red panda.**
+  The eighteenth to twenty-sixth, drawn cute. The penguin waddles with flippers for arms; the fox has a bushy
+  white-tipped tail; the axolotl's frilly gills glow with the bass; the octopus stands on six curling tentacles; the
+  bunny has one ear flopped over; the red panda has a ringed tail. Three move their own way: the laid-back sloth plays
+  half a beat behind the music, the frog hops on the beat, and the dragon puffs smoke on a flourish (`Figure.move`
+  and the `smoke` part, `rig.ts`, #241). All nine play every act as a boy or a girl, with the holiday hats and theme outfits.
+- **A monkey, a flamingo and a gorilla.** The fifteenth, sixteenth and seventeenth critters, drawn cute. The monkey is
+  brown with a tuft of hair, big round ears out at the sides that stay out under every hat, a peach heart of a face
+  and a wide grin, on thin legs with long peach feet and a long tail curling at the tip. The flamingo chick is pink
+  with a fluffy crest, golden eyes and a pale bill bending down to a black tip that opens when it sings, on a short
+  neck and long thin legs with webbed feet; its wings are its arms, with black feathered tips. The baby gorilla is
+  charcoal with a domed crown, a grey leathery face, a heavy brow and a broad nose, on a big broad body with the
+  widest shoulders and longest arms of them all. All three play every act as a boy or a girl, with the holiday hats
+  and theme outfits (`MonkeyFace`, `FlamingoFace`, `GorillaFace` in `faces.tsx`; `FIGURES.monkey`, `.flamingo`,
+  `.gorilla` in `bodies.tsx`, #241).
+- **Two new critter acts: Marimba and Violinist.**
+  - **Marimba**, in the jungle: a pith helmet and an explorer's khaki shirt with a neckerchief, at a wooden marimba
+    in a clearing by a waterfall, with vines, big leaves, a parrot and butterflies. The low hand plays on the beat
+    and the high hand on the off-beat, each moving to the bar where the music is loudest; struck bars light up in
+    your skin's colour and dip. The waterfall pours faster with the bass and the parrot bobs on the beat. Flourish:
+    a fast roll with a glissando of light up the bars, then both hands up (`Marimba.tsx`).
+  - **Violinist**, busking in the rain: a long coat, a scarf and a flat cap, playing a violin under a street lamp
+    by a brick wall, with a cat nodding along in a lit window and the case open for coins. The bow saws down one
+    beat and up the next, fuller when the band is loud; the fingers walk the neck with the melody, the rain falls
+    harder with the bass and the puddles ripple on the beat. Flourish: one long sweeping stroke with the bow lifted
+    high at the end. The fingering arm goes behind the violin, with only its hand over the neck (`Violin.tsx`, #241, #246).
+
+## 0.35.0
+- **The Hub plays the songs from the music folder (phase 4 of replacing Navidrome).** Off by default: **Hub plays
+  the songs (beta)** under Settings → Server → Music catalog, separate from the browsing switch, and only while the
+  catalog matches Navidrome. For devices that go through the Hub, `stream` and `download` of a song the catalog knows
+  come from the music folder: the file as it is, with seeking (Range), an ETag and a length, or converted by ffmpeg as
+  it plays when a lower bitrate or another format (mp3, opus, aac) is asked for. Songs the catalog doesn't know, files
+  that have gone and other formats still play from Navidrome; scrobbles, stars and playlists stay there, and kids'
+  songs are still checked. Navidrome support stays: every Hub phase is a switch (`hub/src/catalogStream.ts`, #238).
+- **Radio: a new look for Your stations.** The wall of identical cyan pills is now a grid of cards that follow
+  your skin. Messy server names are tidied (*Energy 93@181.FM (Euro EDM)(Dance/Techno)* shows as **Energy 93**,
+  *Euro EDM · Dance · Techno*), each station gets its logo or a tile in its genre's colour, and they're grouped
+  by genre (**By genre** / **My order** next to the heading). The playing station is outlined with moving bars
+  instead of every card having a red dot. Edit mode uses the same cards (#237).
+- **Fix: Radio → Favorites** showed the text "row(s)" instead of your favorite stations (#237).
+
+## 0.34.0
+- **Edit album and Edit artist, Plex style.** The album page's **Edit album** opens a dialog like Edit song's:
+  **General** (album, album artist, sort title, release date, release type and record label), **Tags** (genres and
+  moods as chips), **Poster** (the cover picker) and **Info** (songs, folder, formats). It writes what you change
+  into every song of the album as one Save you can undo; **Edit each song…** opens the old table. The artist page's
+  **Edit artist** has **General** (rename or merge, sort name, a biography shown instead of Wikipedia's),
+  **Tags** (their genres), **Poster** (the picture) and **Advanced** (album order: newest, oldest or A to Z).
+  The biography and album order are kept on the Hub (migration 32, #233).
+- **Albums, Singles & EPs, Compilations.** An artist's page puts their releases on separate shelves, by the release
+  type tag (which Edit album sets) or, without one, by song count (#233).
+- **Three new critter acts: Reactor, Bongo and Pianist.** Every species plays them, as a boy or a girl, and the
+  holiday hats and theme outfits (the hazmat suit in the Nuclear skins) go on as usual.
+  - **Reactor**, the nuclear scene: a hard hat and lab coat, rocking a keytar in front of the glowing green core
+    of a reactor. The fuel rods light up with the spectrum, the core's glow swells with the bass, amber beacons
+    spin on the beat, a Geiger counter's needle jumps with the highs and motes drift up off the core. One hand
+    plays chords along the keys (they light up), the other bends notes on the neck's ribbon. Flourish: the keytar
+    swings up, the hand sweeps down the keys and the core flares (`Reactor.tsx`).
+  - **Bongo**: a straw hat, Hawaiian shirt and flower lei (a grass skirt for girls) on a sunny beach, slapping
+    bongos: the small drum on the beat, the big one on the off-beats, both together at the end of the bar. The
+    waves roll in with the bass, palms sway, tiki torches flicker and a crab scuttles in time. Flourish: a fast
+    roll and both hands up (`Bongo.tsx`).
+  - **Pianist**: a tuxedo and bow tie at a grand piano in a jazz lounge under a neon JAZZ sign, playing stride
+    (bass note, chord, bass note, chord) with the right hand running along the keys. The keys light up, the lid
+    lifts on the bass, music notes float up and the footlights chase on the beat. Flourish: a glissando and a
+    burst of notes (`Piano.tsx`, #234).
+
+## 0.33.0
+- **Edit song.** Admins can fix one song's tags, Plex style: right-click a song → **Edit song…**, or **Edit** on its
+  row. **General** has the title, the main **Artist**, **Featured artists** as chips (pick from your library, paste
+  "A, B & C" to add several), album, album artist, track, disc and year; **Tags** has the genres as chips; **Info**
+  shows the file and its tags. The credit is written as "Main feat. A; B", the same shape Split joined artists
+  writes, so Navidrome files the song under the main artist with the others featured. Features written in the title
+  ("Sticky (feat. GloRilla, Sexyy Red & Lil Wayne)") move to the chips with one button, and a "Lil Durk;Drake" credit
+  gets a button to write it the way Navidrome splits it. Only changed tags are written; **Undo** is in the dialog and
+  under Settings → Server → Tag edits (`src/views/SongEditor.tsx`, `src/lib/songCredit.ts`, Hub
+  `GET /api/admin/tags/song/:id`, #231).
+- **Merge into…** on an artist's or album's page (Hub admins), the way Plex merges: it lists the artists or albums
+  that look like the same one, or type to find another, and the page you're on merges into the one you pick. Same
+  merge as Select → Merge, one undo under Settings → Server → Tag edits (`src/components/MergeInto.tsx`, #230).
+- **Merging artists catches every song.** Songs where the merged artist is only featured on someone else's album
+  are retagged too, and a joined credit merged into one of its artists keeps the rest featured: "Lil Wayne;Drake"
+  into Lil Wayne writes Artist "Lil Wayne feat. Drake" and Album artist "Lil Wayne". An album merged into one whose
+  songs have no Album artist takes the main artist, not "A feat. B" (`src/lib/merge.ts`, #230).
+
+## 0.32.1
+- **Joined artists are the main artist featuring the rest.** A tag like "Lil Durk;Drake" means Lil Durk featuring
+  Drake, so the song and its album now belong to Lil Durk. **Library care → Unmatched songs → Split joined
+  artists** (and the Hub, for new downloads before Navidrome scans them) writes the Artist tag as "Lil Durk feat.
+  Drake" and the Album artist as "Lil Durk", where it used to write "Lil Durk; Drake" and Navidrome listed both as
+  equal artists. Credits already written as "Lil Durk; Drake" are listed and fixed the same way, the same artist
+  named twice ("Lil Durk;Lil Durk", "Lil Durk Lil Durk") becomes "Lil Durk", and one-word band names twice ("Duran
+  Duran") stay. Until the tags are fixed, the app already shows such songs as "Lil Durk feat. Drake" (`tidyCredit`
+  in `hub/src/credits.ts` and `src/lib/songIssues.ts`, `src/sources/navidrome.ts`, #229).
+- **Lyrics follow the song more often.** When Navidrome (a file's lyrics tag) or the Hub's shared copy only has the
+  words without times, LRCLIB is asked for a synced version of the same song, which is used instead (and replaces
+  the Hub's copy), so the line being sung lights up. **Wrong lyrics?** also offers **Use with times** on an entry of
+  another length, for when its times fit well enough; **Lyrics timing** in Tune mouth can shift them (#226).
+- **Fix: searching an artist lists their features as artists.** Search's Artists row listed every credit an artist
+  is in as an artist of its own ("Lil Durk • J. Cole", "Calboy;Meek Mill;Lil Durk", "DJ Khaled feat. Lil Baby &
+  Lil Durk"), each opening the wrong artist, and the real one was lost among them. The Hub's search now splits each
+  credit into its artists (on feat./ft./featuring, •, ;, " / ", and on &, "and", x, "with" or a comma when one of
+  the names records on its own, so "Simon & Garfunkel" stays one), lists each artist once by their own name with
+  Navidrome's picture and id, and puts the exact name first. The Hub's catalog `search3` does the same with joined
+  album artists (`creditNames` in `hub/src/credits.ts`, `hub/src/librarySearch.ts`, `hub/src/subsonicCatalog.ts`, #227).
+- **Fix: the owl's hands.** Its three finger feathers splayed into a clump that looked broken, most of all round the
+  mic. Each wing now ends in one soft rounded wing tip with three short scalloped feathers along its edge
+  (`wingTip` in `parts.tsx`, #225).
+
+## 0.32.0
+- **An owl and a T. rex.** The thirteenth and fourteenth critters, drawn cute. The owlet is drawn like a sticker: a round
+  brown head with two short pointed tufts, a big cream face, huge round dark eyes with big shines, a little yellow
+  beak and pink cheeks, on a plump figure with orange talons and a fan of tail feathers. Its wings are its arms:
+  bare, with three feathers like little fingers for each hand. The baby T. rex is leaf green with a big soft snout, a pale yellow chin, freckles,
+  little brow ridges and a wide grin with two tiny teeth, on big strong legs with three-clawed feet and a thick tail
+  sweeping along the ground with a row of little plates. Its arms are short and thin: a plump upper arm, a skinny
+  forearm bending at the elbow and two little claws on each hand, and they still reach every instrument. Both play
+  all nine acts (the Driver too) as a boy or a girl, with the holiday hats and themed outfits; the owl's tufts tuck
+  under the cowboy hat like the bears' ears (`OwlFace` and `TrexFace` in `faces.tsx`, `FIGURES.owl` and
+  `FIGURES.trex` in `bodies.tsx`, a figure's `fore` and `hand` in `Arm`, `parts.tsx`, #224).
+- **Wrong lyrics? Pick the right ones.** Under the lyrics in Now Playing, **Wrong lyrics?** lists the other LRCLIB
+  entries for the song (name, artist, album, length and the first lines, the likeliest first), searches LRCLIB with
+  your own words, takes lyrics you paste in (plain, or LRC with times for karaoke), or marks the song as having
+  none. The pick is remembered for the song, wins over Navidrome's and LRCLIB's, and replaces the Hub's shared copy
+  so the rest of the house gets it too. **Forget my pick** looks the song up again (`LyricsFixer.tsx`,
+  `setLyricsPick` in `lib/lyrics.ts`, #218).
+- **Fix: lyrics from another song.** The LRCLIB lookup now needs the artist to match when LRCLIB names one, only
+  takes a name that contains the title when it is most of it ("Zoo York" no longer passes for "Zoo"), takes a
+  near name only at the song's length, and turns down an entry with the same name but a much different length
+  (more than a minute and over a third off), which is another song rather than a live take (#218).
+- **The Hub answers browsing, search and covers from its catalog (phase 3 of replacing Navidrome).** Off by default:
+  **Hub answers browsing, search and covers** under Settings → Server → Music catalog. For devices that reach
+  Navidrome through the Hub, `getArtists`, `getArtist`, `getAlbum`, `getSong`, `getGenres`, `getSongsByGenre`,
+  `getRandomSongs`, `search3`, `getAlbumList2` and album/song `getCoverArt` come from the catalog with Navidrome's
+  ids, so streaming, stars, playlists and scrobbles still go to Navidrome. Migration 31 adds ReplayGain, album artist
+  id and first-seen columns and re-reads every file once (`hub/src/subsonicCatalog.ts`, #220).
+- **Tidy genres keep Christmas.** Occasion genres (Christmas, Christmas Country, Holiday Pop, Halloween …) stay after
+  the tidy genre instead of being dropped, and a one-time restore puts back the ones earlier tidies removed, from the
+  undo log, as one undoable save ("Put Christmas genres back"). The genre review proposes exact spellings ("Rap;Hip-Hop"
+  becomes "Rap; Hip-Hop"), and the Music catalog card lists songs Navidrome has that no file matched (#219).
+- **Critters: heads sit on their necks.** Every species' head is lowered by `NECK_DROP` so the chin tucks over the
+  collar instead of floating over the shoulders, in every act (#221).
+- **Critters: no chest lines on the girls.** The folds drawn across the chest (`Bust`) are gone for every species and
+  act; the girls keep their lashes, bows and skirts (#223).
+
+## 0.31.0
+- **A panda critter.** The twelfth species: a cute panda cub with a round cream-white head and fluffy cheeks,
+  round black ears, black teardrop patches round big shiny brown eyes, a little black button nose, rosy cheeks and a
+  wide smile, on a chubby figure with black arms and legs, round black feet with pale toe pads and a white puff of a
+  tail. It plays all nine acts (the Driver too) as a boy or a girl; the girl's lashes are pale so they show against
+  the eye patches. The ears tuck under the cowboy hat and the hazmat hood like the bears' and show round every
+  holiday hat (`PandaFace` in `faces.tsx`, `FIGURES.panda` in `bodies.tsx`, #216).
+- **Critters: the elephant gets a wide smile.** Its trunk now comes down between the eyes and sweeps out to the left,
+  tip up, over a wide smile that shows either side of it, and the bigger singing mouth opens just right of centre
+  under the trunk's bend (#215).
+- **Fix: the Driver act had no necks, and the turtle no shell.** The act skipped `Legs`, where each species draws its
+  neck, shell, legs and tail, so heads floated over the car. They're now drawn behind the car's tub, with the tail
+  hidden (#214).
+
+## 0.30.0
+- **An elephant, a tiger and a lion.** Three more critters, drawn cute. The elephant calf is soft grey with big
+  round pink-lined ears that stay out either side of every hat (even the cowboy hat) and flap to the beat, and a
+  short trunk that curls up to one side so the smile shows under it. The tiger cub is orange with bold stripes, white
+  cheeks, green eyes and a pink nose, and a striped tail. The lion cub has a russet mane round its head (the girl is a
+  lioness, without one) and a tufted tail. All three play every act as a boy or a girl; the hazmat hood hides the
+  ears, trunk and mane (`ElephantFace`, `TigerFace`, `LionFace` in `faces.tsx`; `FIGURES.elephant` and the big-cat
+  figure `FIGURES.tiger` / `FIGURES.lion` in `bodies.tsx`, #211).
+- **A Driver act for the critters.** The ninth act: the critter at the wheel of a little open-top car (an original
+  design: round headlights, a grinning chrome grille, a racing stripe and a WAVE plate), coming down a long road at
+  sunset, singing along. It swerves from side to side in time with the music, the wheel turning under the steering
+  hand, bounces on its springs with the bass, and the free hand changes move every bar (tapping the wheel, waving
+  out of the car, raising the roof, drumming the door). The road bends and rushes by faster as the band gets louder,
+  the headlights pulse on the beat and the scarf flaps in the wind. Flourish: the car hops off the road, hand in
+  the air. Paused, the car idles at the roadside. A flat driving cap (a bow for girls), a white racing tee and a
+  scarf; the car, cap and lights take the skin's colours, and the holiday hats and theme outfits go on as usual.
+  Every species plays it (`Drive.tsx`, #212).
+- **A turtle critter.** The eighth species: a cute sea-green turtle with a soft mint muzzle, big blue eyes, rosy
+  cheeks and a wide smile, on stumpy clawed legs with a little pointed tail. Its high domed shell is
+  drawn behind the top, so the rim shows round every act's outfit and the instruments and arms go in front of it.
+  The plain round head takes every hat, the headphones, the visor and the respirator. It plays all eight acts as a
+  boy or a girl (`TurtleFace` in `faces.tsx`, `FIGURES.turtle` in `bodies.tsx`, #208).
+- **Popular songs on artist pages.** Above the albums, an artist page lists the artist's best-known songs that are in
+  your library, Spotify-style: five, with **Show more** for up to ten, plus **Play** and **Shuffle**. The order is
+  Deezer's top tracks for the artist, each found on your Navidrome or Plex; Navidrome's Last.fm top songs fill in when
+  Deezer has nothing. The section is left out when none of them are in the library (`src/lib/popularSongs.ts`,
+  `src/components/PopularSongs.tsx`, #207).
+- **Library care reads the music catalog (phase 2 of replacing Navidrome).** Once the catalog matches at least 95%
+  of Navidrome's songs, the tag editor, Edit artist, Merge, Library care, the genre review and Delete album take their
+  album and song lists from `catalog_songs` instead of Navidrome's API: no sign-ins, no 429s. Before that, and for
+  albums the catalog doesn't know yet, they ask Navidrome as before. Tag saves, undos and deletes update the catalog at
+  once (`hub/src/libraryAdmin.ts`, #209).
+- **Fix: the music catalog matched only 88 songs to Navidrome.** Subsonic's song paths are made up unless a player has
+  Report Real Path on, so the catalog now takes real paths from Navidrome's own API and falls back to
+  artist/album/file when the music folders sit at different levels. Sound-alike analysis gets the real paths too
+  (#210).
+
+## 0.29.0
+- **The Hub's own music catalog (phase 1 of replacing Navidrome).** The Hub walks the music folder and keeps one row
+  per file in `catalog_songs` (migration 30, `hub/src/catalog.ts`): tags, length, bit rate, format, MusicBrainz ids
+  and the matching Navidrome ids, by path. Only new or changed files are read with ffprobe; a walk that finds less
+  than half the known files removes nothing. Scans 30 s after start, hourly, after every Navidrome scan and on
+  **Scan now**. `GET /api/admin/catalog`, `POST /api/admin/catalog/scan` and **Settings → Server → Music catalog**.
+  Sound-alike analysis now takes the library index's Navidrome listing instead of listing Navidrome itself. Navidrome
+  still streams (#204).
+- **A moose critter.** The seventh species: a dark brown moose with a big droopy muzzle, a fur bell under the chin,
+  long ears and wide palmate antlers, on long legs with pale stockings and cloven hooves. It plays all eight acts as a
+  boy or a girl. The antlers sit behind the head, so the cowboy hat, the beanie, the headphones and the holiday hats
+  go on between them; the hazmat hood hides them (`MooseFace` in `faces.tsx`, `FIGURES.moose` in `bodies.tsx`, #206).
+
+## 0.28.0
+- **Browse by genre and decade.** A new **Browse** page shows a tile for every decade and every genre in the library,
+  with sub-genres on each genre. Open one for its artists and albums, narrow it with sub-genre and decade chips, and
+  Shuffle or Play it (`src/views/Browse.tsx`, `src/lib/browse.ts`). Navidrome and Plex albums now carry their genres
+  (OpenSubsonic `genres`, Plex `Genre`).
+- **Filters on Albums and Artists.** Genre (with sub-genres), decade or a year range, and sort (A to Z, artist,
+  newest, oldest, recently added; artists by name or most albums). They stay while you open an album and come back
+  (`src/components/BrowseFilters.tsx`, `src/store/browse.ts`).
+- **Sub-genres.** The Hub's tidy genres keep the sub-genre next to the genre instead of dropping it: "Trap" becomes
+  "Rap; Hip-Hop; Trap" and "Deep House" "Electronic; Deep House", written into the file tags so Navidrome lists both.
+  The defaults have about 140 sub-genres (`DEFAULT_SUBGENRES` in `hub/src/genres.ts`); saved rules get them once.
+  Settings → Server → Genres shows and edits each genre's sub-genres, and a new rule can keep its genre as a sub-genre
+  (#202).
+- **Critters: drumsticks land on the drum heads.** The sticks are drawn from the species' real hand to the snare's
+  head and the crash instead of a fixed offset, and the floor-tom stroke turns the wrist so the stick lands on the
+  tom's head. The flying-V's fretboard and headstock get a light outline so they show against dark fur (#201).
+
+## 0.27.3
+- **Critters bend at the elbow.** Every arm is split at an elbow halfway along its curve; acts move the forearm and
+  hand with `bend()` and leave the upper arm still (`src/components/critters/arm.ts`). The guitar and banjo fret and
+  strum from the elbow instead of sliding the whole arm off the shoulder, and the synth, DJ, rapper, drummer,
+  theremin and accordion get bent-elbow playing patterns on the beat (#199).
+
+## 0.27.2
+- **Fixed: "Navidrome refused the admin login saved on the Hub" during Library care scans.** The Hub signed in to
+  Navidrome's API for every page of songs or batch of albums, and Navidrome's sign-in limit (`AuthRequestLimit`,
+  5 per 20 s by default) answered the rest with 429, which the Hub reported as a bad admin login. The Hub now keeps
+  one Navidrome admin session for 10 minutes (`hub/src/routes/navidrome.ts`), and a 429 gets its own message.
+
+## 0.27.1
+- **Fixed: "Wrong username or password" on Navidrome through the Hub.** With **Send everyone through the Hub** on,
+  a device's Navidrome source points at the Hub (`<hub>/nd/<id>`) and signs in with a login the Hub made for that
+  device (`<name>~<device id>`). Settings → Sources still showed editable login fields, so typing your own
+  Navidrome login there broke it. A Hub Navidrome source now shows no login fields and a fixed address, and the
+  relay's error says what the address is when it gets a plain Navidrome login.
+
+## 0.27.0
+- **Audiobooks and podcasts: sorting, speed, skip and chapters.** Audiobooks sort by recently added, recently
+  played, title, author, series, published or length, with Not started / In progress / Finished chips. Podcasts sort
+  by new episodes, recently added, recently played, title, author or most episodes, and a show's episodes by newest,
+  oldest, unplayed first or length. Now Playing gets a speed picker (remembered per book and per show), −15 / +30
+  buttons, a chapter list, and a sleep timer for the end of the chapter (`lib/shelfSort.ts`, `lib/spoken.ts`).
+- **Pick up where you left off.** The queue and the spot in the song come back, paused, after the app restarts
+  (`lib/resume.ts`).
+- **Streaming quality.** Separate Original / High / Normal / Data saver settings for Wi-Fi and mobile data; Navidrome
+  converts on the fly (`lib/streamQuality.ts`).
+- **daylist.** A Made for you mix for this time of day, named after it ("daylist: chill Saturday night"). The app
+  sends its time zone with `GET /api/mixes?tz=`; older apps get no daylist (`hub/src/mixes.ts`).
+- **Wake-up alarm.** Settings → Playback. On Android an alarm clock alarm opens the app over the lock screen
+  (`AlarmBridge.kt`, new permissions: exact alarms, boot completed); on computers the app must be running.
+- **Ask the DJ out loud.** A microphone in the DJ chat and DJ mode, using the device's speech recognition or, set
+  under Settings → AI DJ → Voice requests, Whisper or OpenAI through `POST /api/dj/listen`. Adds the microphone
+  permission on Android and the usage text on Mac and iOS.
+- **Home Assistant can hand playback off between your devices.** `POST /api/ha/players/:id/handoff` with
+  `{ "to": "Kitchen" }` moves the queue, song and spot to the other device and pauses this one, like "play this
+  queue from here" in Devices. Handy from a dashboard button or a macro pad.
+
+## 0.26.1
+- **"Fix 1550 titles" no longer ends in a 504.** Library care sent a big fix as one request of up to 1000 songs.
+  The Hub rewrites each file, so that ran for minutes and the proxy in front of the Hub gave up with "504 error"
+  (the Hub kept writing, but the app never heard how far it got). Fixes are now sent 25 songs at a time with a
+  running count, the Hub writes four files at once, a part that fails is tried once more, and all the parts stay
+  one Save under Tag edits. If the Hub stops answering, the songs already fixed drop off the list and Fix carries
+  on from there. "Split joined artists" and other big saves in Unmatched songs work the same way.
+- **Numbered titles finds songs in seconds.** Instead of opening every album's files through the Hub, it reads
+  Navidrome's own list of songs (`GET /api/admin/tags/numbered`), so it no longer waits on every album being read.
+  An older Hub falls back to reading albums, in smaller requests.
+- **Unmatched songs reads albums in smaller requests, three at once**, so a big library doesn't time out either.
+
+## 0.26.0
+- **"Lil Wayne;Drake" splits into two artists.** Navidrome only splits artists on "; " with a space, so a credit
+  written "Lil Wayne;Drake" showed up as one artist. The Hub now writes it as "Lil Wayne; Drake" in new downloads
+  before Navidrome scans them, and Wavelength reads both spellings (and " / ") the same when it picks the main
+  artist for charts, Release Radar, For You and kid-safe checks.
+- **Library care → Unmatched songs** (Hub admins). Lists the songs whose tags keep Navidrome from filing them
+  right: joined artists, "maybe joined" ones like "Lil Wayne,Drake", and songs with no artist, album artist, album,
+  title, genre, year or track number. Filter by problem and search, split every joined credit in one click, set a
+  tag on many ticked songs at once, or edit one song's tags in place. Everything can be undone under Tag edits
+  (`docs/USER-GUIDE.md#library-care`).
+
+## 0.25.2
+- **Theme outfits fit the critters better.** The Nuclear respirator covers every mouth and sits below the green
+  alien's eyes; the Retro shades and Laser visor are big enough for the aliens and bears; the Neon glow spans the
+  aliens' heads; the cowboy hat sits down over every head instead of clipping; and the Editor palettes' glasses are gone.
+- **Song previews play again.** In Discover, a preview button no longer greys out because Deezer was busy or a
+  lookup hiccuped: lookups are paced under Deezer's limit, wait it out when it's hit, and a failed one can be
+  clicked again. A clip link that has run out (charts, the Weekly Mix and Release Radar keep them for hours) is
+  swapped for a fresh one when it plays, instead of failing.
+
+## 0.25.1
+- **Girl critters get their own outfits.** Each act has a skirt or dress for the girls: a cowgirl denim fringe
+  skirt, a pleated mini for the rapper, a pink tutu with the rocker's leather jacket, a sailor dress for the drummer,
+  a space dress for the theremin, and dresses for the DJ, synth and accordion.
+- **The strumming arm is back over the guitar** in the Rocker and Country acts; only the arm on the neck goes
+  behind it.
+
+## 0.25.0
+- **Accessibility.** Names for icon-only buttons and the seek and volume sliders, the song menu from the keyboard
+  (Shift+F10, arrows, Esc), and **Settings → Themes → Motion** to calm animations, critters and visualizers
+  (`docs/USER-GUIDE.md#accessibility`).
+- **Translate lyrics.** With the AI DJ set up, the lyrics can show a translation under each line, or the lines in
+  Latin letters for Japanese, Korean, Chinese and other scripts. Made once per song for the whole house
+  (`docs/USER-GUIDE.md#translate-lyrics`).
+- **Listening now.** The sidebar shows what the others in the house are playing, with Play and (for a party) Join.
+  Turn it off for yourself in Settings → Account; kids are hidden unless they turn it on, and then only their
+  grown-ups see them (`docs/USER-GUIDE.md#whos-listening`).
+- **Home Assistant.** See what your devices are playing and control them from Home Assistant, with a token from
+  Settings → Account → Home Assistant and the setup in `docs/HOME-ASSISTANT.md`.
+- **Guest Jam.** In a listening party, **Make a guest link**: friends scan the QR code, search your library in their
+  phone's browser and add songs to your queue, no app or account (`docs/USER-GUIDE.md#guest-jam`).
+- **Don't play this.** From any song's menu, keep a song or a whole artist out of song radio, Sounds like this,
+  Smart Shuffle, DJ mode and your Made for you mixes. Undo it there or in Settings → Playback → Don't play. Synced
+  with a Hub, which leaves them out of your mixes too (`docs/USER-GUIDE.md#dont-play-this`).
+- **Smart Shuffle.** Press shuffle twice: your songs shuffled, with a song you might like after every three
+  (`docs/USER-GUIDE.md#smart-shuffle`).
+- **Mini player, tray icon and hotkeys** in the desktop apps: a small always-on-top player, play/pause/next/previous
+  from the tray or menu bar, Ctrl+Alt+Space / → / ← from any app, and optionally keep playing in the tray when the
+  window is closed (`docs/USER-GUIDE.md#mini-player-tray-and-hotkeys`).
+- **The Mac app and the Linux AppImage update themselves,** like the Windows and Android apps. Releases now carry
+  a `Wavelength_X.Y.Z_universal.app.tar.gz` for that (`docs/RELEASING.md#in-app-updates`).
+- **One menu for every song.** Right-click a song (press and hold on a phone) for Play next, Add to queue, Add to
+  playlist, Song radio, Sounds like this, Go to artist or album, Share and Copy song name
+  (`docs/USER-GUIDE.md#the-song-menu`).
+- **A tidier sidebar.** Pages are grouped under **Your library** and **Explore**, and each section folds.
+- **Playlist folders and pins.** Put Wavelength playlists in folders, pin favorites to the top, and sort the Playlists
+  page by recently changed, name or size. Synced with a Hub (`docs/USER-GUIDE.md#playlist-folders-and-pins`).
+- **Calmer Now Playing.** Add to playlist, Lyrics, Cast and DJ mode up front, everything else under **More**.
+- **Settings search, and Hub settings set apart.** Find any setting by name; the Hub admin tabs come after your own.
+- **Search forgives typos** (with a Hub). "kendirck", "beyonse", "acdc" and "gods plan" find Kendrick Lamar,
+  Beyoncé, AC/DC and God's Plan, words are found by their start ("kend lam"), and the artists you play come first.
+  When a word only matched with a typo, Search says *Showing results for …*. The Hub searches its copy of the
+  Navidrome library in one go instead of each device asking Navidrome (`docs/HUB.md#search`).
+- **Search by lyrics** (with a Hub). Type a line you remember ("started from the bottom") and Search lists the songs
+  with it under *In the lyrics*, with the line.
+- **Lyrics are shared through the Hub.** Lyrics one device found show up on the others straight away, and LRCLIB is
+  asked once per song for the whole house (`docs/HUB.md#lyrics`).
+- **The Hub stays quick during sound-alike analysis.** Measuring each song used to hold up every other Hub request
+  for half a second to two seconds at a time, for hours during the first analysis. It now runs in its own thread.
+- **Server load** in Settings → Server (Hub admins): CPU, memory, how long requests wait for the Hub, and how many
+  songs and lyrics the Hub keeps (`docs/HUB.md#load`).
+- **Recent searches.** The Search page shows your last few searches until you type, with **Clear**.
+- **Less lag with Now Playing open.** The player bar no longer animates behind the full-screen Now Playing, the
+  screen no longer redraws everything (the critter's whole drawing included) each time the clock ticks, and the
+  critter and visualizers slow to 20 frames a second while paused. In a test with the CPU slowed to phone speed,
+  Now Playing with a critter went from 64% to 49% of the main thread while playing and from 51% to 21% paused.
+- **The Rapper's mic no longer hides the face,** and the Theremin's hands line up with it again. The mic is held
+  low beside the chin, and the pitch antenna moved out past the head, with the hands on the antenna and over the loop.
+- **Girl critters.** A **Boy** / **Girl** switch in **Settings → Playback → Critters** gives every critter
+  eyelashes and a bow in your skin's accent colour in place of the act's hat (the beanie stays, with the bow on it)
+  (`docs/USER-GUIDE.md#critters`).
+- **The Rapper's cap is gone.** The rapper plays bare-headed now, for boys and girls alike.
+- **No crash when a feature is switched on or off.** Home's Jump back in, Share, Sounds like this, the smart
+  playlist editor and Radio's station rows could crash their page ("Rendered more hooks than during the previous
+  render") when an admin changed a feature switch or the Hub connected while the page was open.
+- **Developers:** `npm run lint` (Biome, for the app and the Hub) and `npm run e2e` (Playwright smoke tests of the
+  browser build) now run on every pull request (`docs/DEVELOPMENT.md#tests-and-checks`).
+- **The artist link on an album page always works.** It used to do nothing when the album's artist id wasn't
+  one in the library's artist list. It now finds the artist by name too, else opens the artist on that server by
+  its id, else their Deezer releases.
+- **Track numbers in song titles.** Titles like "04 - God's Plan", left by renaming tools that copy the file name
+  into the title tag, show as "God's Plan" and lyrics are looked up without the number, so more songs get synced
+  lyrics. **Library care → Numbered titles** (Hub admins) finds them across the library and fixes the files, and
+  **Edit tags** can fix one album (`docs/USER-GUIDE.md#library-care`).
+
+## 0.24.6
+- **Music keeps playing through dead zones.** Lose signal for 10 or 15 minutes (a tunnel, the countryside, a car
+  park) and the phone no longer goes quiet. While you listen, Wavelength saves about 20 minutes of your queue ahead
+  and about 20 minutes of songs like the one playing. When the signal drops, the queue carries on from those files.
+  If it runs out, the similar songs, your smart offline shelves and your other downloads stand in. Then it picks your
+  queue back up, from the spot where the song was cut off, once the signal is back. The mini player says
+  *No signal · saved songs* meanwhile. On by default, including on mobile data, because that's where dead zones
+  are. Change it in **Settings → Downloads → Dead zones**. Windows and Android app (`docs/USER-GUIDE.md#dead-zones`).
+- **New faces for the critters.** All six are redrawn like vinyl toys: big round heads with soft shading, a dark
+  outline, big eyes with coloured irises and highlights, and a rim of stage light along one edge in your skin's
+  colours. The raccoon has fluffy cheeks and white brow patches, the shark a friendlier toothy grin, the aliens
+  glossy eyes, and the bears big muzzles. Shades and glasses still sit over their eyes in every
+  act.
+- **New bodies for the critters.** Each species has its own body in the same style: the raccoon a short chunky top,
+  stout furry legs, big feet and a big striped tail; the bears a puffy jacket and baggy trousers, mid-stride; the
+  shark one slim torpedo down to a crescent tail, with its fins for arms; the aliens spindly arms and legs over a
+  hover glow. Heads are a little smaller so the bodies show, and arms hang from each body's shoulders. The act
+  outfits are fitted to them next (`docs/CRITTERS-ROADMAP.md`, phase 4).
+- **Outfit changes from the review.** The rapper wears the cap backwards and no shades, the rocker loses the
+  mohawk (the shark's fin shows again there), and the theremin player wears a space-age tunic with a belt, a
+  glowing buckle and a planet badge instead of a space suit.
+- **The critters' faces act while they sing.** Instead of one oval that opens and shuts, each critter's mouth now
+  takes six shapes (closed, *ah*, *oh*, *ee*, lips pressed for *m*/*b*/*p*, and an open grin when belting). With
+  synced lyrics the shapes follow each syllable of the line; without them they follow a rough guess from the
+  voice. The brows lift on a crescendo or a long held note, the eyes squint on high notes, and they blink now and
+  then on the beat. Species touches: the shark sings with top and bottom rows of teeth, the raccoon's whiskers
+  twitch and its lip curls on big drum hits, the alien's antennae glow brighter with a high voice, the aliens'
+  eye shines widen on loud notes, and the bears' ears flick. First step of the critter art plan in
+  `docs/CRITTERS-ROADMAP.md`.
+- **The critters keep time.** They now find the song's tempo from the beats they hear and stay on it, so the head
+  bob, a side-to-side sway, the tail and the ears (which now bounce on the beat) are steady instead of jumping on
+  every kick, and the guitar and banjo hands strum in time. When a new song starts, or in an instrumental break
+  between sung lines, each act shows off with its own flourish: a banjo spin, a DJ double-scratch with a hand in
+  the air, shades pushed up, a windmill strum, a drum fill, a theremin swoop, a synth glissando or a long squeeze
+  of the accordion. Critters, stands and props cast soft shadows on the floor.
+- **DJ mode no longer stops after about ten songs.** A mix has no song limit, but when the DJ took longer to find the
+  next segment than the last songs took to play (a slow Hub or music server, or a phone in your pocket), the new songs
+  were added behind a stopped player and the music went quiet. They now start playing as soon as they arrive. Finding
+  the next segment also keeps trying every 30 seconds instead of waiting for the next song, gives up on a request that
+  hangs, and a short first segment can fall back on an **Encore** too.
+
+## 0.24.5
+- **DJ Trash Panda only plays when you ask.** Playing your own music, like a couple of songs from an album in your
+  Library, could bring the DJ in: the Talking DJ talked over any music every few songs, and DJ mode kept running
+  when the album held songs the station had queued. Now the DJ only talks over music it played for you (the AI DJ
+  chat, or DJ mode started from the raccoon button), and starting your own song, album or playlist anywhere ends
+  DJ mode and stops the DJ mid-sentence. **Play next** and **Add to queue** still keep DJ mode going.
 
 ## 0.24.4
 - **US spelling.** Labels and messages use US English: **Your favorites**, **Forgotten favorites**, **Favorites (kept

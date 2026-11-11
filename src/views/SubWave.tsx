@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { sourceFor } from '../sources/registry';
 import { stationToTrack } from '../sources/radio';
 import { list, swTrack, txt, type SubWaveSource, type SwTrack } from '../sources/subwave';
@@ -7,18 +7,20 @@ import { useSettings } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
 import { Cover, Empty, Spinner, fmtTime } from '../components/common';
-import { IconHeart, IconPause, IconPlay } from '../components/Icons';
+import { IconHeart, IconNext, IconPause, IconPlay } from '../components/Icons';
 import { QueueSearch, SwControl, SwSchedule, SwShows, SwStats } from './SubWaveAdmin';
 import { SwList, usePoll } from './subwaveShared';
+import { SwArchives, SwHealth, SwPersonas, SwSkills, SwStationSettings, SwStations } from './SubWaveStation';
 import { useTabStrip } from '../components/TabStrip';
 
-type Tab = 'air' | 'control' | 'schedule' | 'shows' | 'stats';
+type Tab = 'air' | 'control' | 'schedule' | 'shows' | 'djs' | 'skills' | 'settings' | 'health' | 'archive' | 'stations' | 'stats';
 
 export function SubWave({ sourceId }: { sourceId?: string }) {
   const tabsRef = useTabStrip();
   const sources = useSettings(useShallow((s) => s.sources.filter((x) => x.kind === 'subwave' && x.enabled)));
   const cfg = sources.find((s) => s.id === sourceId) ?? sources[0];
   const [tab, setTab] = useState<Tab>('air');
+  const [lastAdmin, setLastAdmin] = useState<Tab>('control');
   const sw = useMemo(() => (cfg ? (sourceFor(cfg) as SubWaveSource) : undefined), [cfg]);
 
   if (!cfg || !sw) {
@@ -30,34 +32,66 @@ export function SubWave({ sourceId }: { sourceId?: string }) {
     );
   }
 
-  const tabs: [Tab, string, boolean][] = [
-    ['air', 'On air', false],
-    ['control', 'DJ control', true],
-    ['schedule', 'Schedule', false],
-    ['shows', 'Shows', true],
-    ['stats', 'Stats', true],
+  // Listener tabs on top; everything that runs the station sits under one "Run the station" tab with its own row.
+  const adminTabs: [Tab, string][] = [
+    ['control', 'DJ control'],
+    ['shows', 'Shows'],
+    ['djs', 'DJs'],
+    ['skills', 'Skills'],
+    ['settings', 'AI & voice'],
+    ['health', 'Health'],
+    ['archive', 'Archive'],
+    ['stations', 'Stations'],
+    ['stats', 'Stats'],
   ];
+  const needsAdmin = adminTabs.some(([k]) => k === tab);
+  const pick = (t: Tab) => {
+    setTab(t);
+    if (adminTabs.some(([k]) => k === t)) setLastAdmin(t);
+  };
+  const body: Record<Tab, () => ReactNode> = {
+    air: () => <OnAir sw={sw} />,
+    control: () => <SwControl sw={sw} />,
+    schedule: () => <SwSchedule sw={sw} />,
+    shows: () => <SwShows sw={sw} />,
+    djs: () => <SwPersonas sw={sw} />,
+    skills: () => <SwSkills sw={sw} />,
+    settings: () => <SwStationSettings sw={sw} />,
+    health: () => <SwHealth sw={sw} />,
+    archive: () => <SwArchives sw={sw} />,
+    stations: () => <SwStations sw={sw} />,
+    stats: () => <SwStats sw={sw} />,
+  };
 
   return (
     <div className="page sw">
       <div className="tabs" ref={tabsRef}>
-        {tabs.map(([k, label, admin]) => (
-          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
-            {label}{admin && <small>admin</small>}
-          </button>
-        ))}
+        <button className={tab === 'air' ? 'on' : ''} onClick={() => pick('air')}>On air</button>
+        <button className={tab === 'schedule' ? 'on' : ''} onClick={() => pick('schedule')}>Schedule</button>
+        <button className={needsAdmin ? 'on' : ''} onClick={() => pick(lastAdmin)}>
+          Run the station{!sw.hasAdmin && <small>admin</small>}
+        </button>
         {sources.length > 1 && (
           <select className="push" value={cfg.id} onChange={(e) => useUi.getState().go({ view: 'subwave', sourceId: e.target.value })}>
             {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         )}
       </div>
-      {(tab === 'control' || tab === 'shows' || tab === 'stats') && !sw.hasAdmin ? (
+      {needsAdmin && sw.hasAdmin && (
+        <div className="chips subtabs sw-subtabs" role="tablist">
+          {adminTabs.map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={tab === k} className={`chip ${tab === k ? 'on' : ''}`} onClick={() => pick(k)}>{label}</button>
+          ))}
+        </div>
+      )}
+      {needsAdmin && !sw.hasAdmin ? (
         <Empty title="Admin login needed">
           <p>Enter SubWave's <code>ADMIN_USER</code> / <code>ADMIN_PASS</code> on the SubWave source in Settings.</p>
           <button className="btn" onClick={() => useUi.getState().go({ view: 'settings' })}>Open Settings</button>
         </Empty>
-      ) : tab === 'air' ? <OnAir sw={sw} /> : tab === 'control' ? <SwControl sw={sw} /> : tab === 'schedule' ? <SwSchedule sw={sw} /> : tab === 'shows' ? <SwShows sw={sw} /> : <SwStats sw={sw} />}
+      ) : (
+        <div key={`${cfg.id}:${tab}`}>{body[tab]()}</div>
+      )}
     </div>
   );
 }
@@ -124,6 +158,7 @@ function OnAir({ sw }: { sw: SubWaveSource }) {
               {tunedIn && playing ? <><IconPause /> Pause</> : <><IconPlay /> {tunedIn ? 'Resume' : 'Tune in'}</>}
             </button>
             {t.title && <LikeButton key={t.subsonic_id ?? t.title} sw={sw} songId={t.subsonic_id} />}
+            {t.title && sw.hasAdmin && <SkipButton sw={sw} onSkipped={() => { np.refresh(); state.refresh(); }} />}
           </div>
         </div>
         <div className="sw-dj">
@@ -259,6 +294,30 @@ function LikeButton({ sw, songId }: { sw: SubWaveSource; songId?: string }) {
         }
       }}>
       <IconHeart /> {liked ? 'Liked' : 'Like'}{count ? ` · ${count}` : ''}
+    </button>
+  );
+}
+
+/** Admins only: skip the song on air (same call as "Skip track" on the Control tab). */
+function SkipButton({ sw, onSkipped }: { sw: SubWaveSource; onSkipped: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string>();
+  return (
+    <button className="btn big skip" title={err ?? 'Skip to the next song (admin)'} disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        setErr(undefined);
+        try {
+          await sw.skip();
+          // give the mixer a moment to move on before asking what's playing
+          window.setTimeout(onSkipped, 1500);
+        } catch (e) {
+          setErr(String((e as Error).message ?? e));
+        } finally {
+          setBusy(false);
+        }
+      }}>
+      <IconNext /> {busy ? 'Skipping…' : err ? 'Skip failed' : 'Skip'}
     </button>
   );
 }

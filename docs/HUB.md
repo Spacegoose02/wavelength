@@ -66,7 +66,10 @@ Everything works as in the app except downloading songs for offline play and run
 - Music servers you add under **Settings → Sources** are reached from the browser, so give them addresses
   the browser can reach. When the Hub is on `https://`, they need `https://` addresses too (for example
   through Nginx Proxy Manager), because browsers block `http://` content on a secure page. Navidrome and Plex
-  allow requests from other sites; Audiobookshelf may need its allowed origins set.
+  allow requests from other sites. Audiobookshelf only answers its own pages by default: in Audiobookshelf,
+  open **Settings** and add the Hub's address (for example `https://hub.example.com`, no trailing slash) under
+  **Allowed CORS Origins**. Until then Test connection in a browser shows "NetworkError when attempting to
+  fetch resource" (Firefox) or "Failed to fetch" (Chrome). The desktop and Android apps don't need this.
 - The page itself isn't behind tinyauth (only `/auth/sso/` is), the same as the app's API calls.
 
 ## First admin
@@ -235,6 +238,11 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
   Wavelength would. The Hub must be able to reach the Navidrome address.
   Navidrome gzips bigger replies and the Hub's fetch unzips them, so the relay passes them on unzipped and
   without Navidrome's `content-length` (that's the zipped size; passing it on cut replies short).
+  In Settings → Sources a Navidrome source from the Hub shows no login fields and its address can't be changed:
+  the Hub's login comes back on every sync, and a person's own Navidrome login typed over the relay one is
+  refused. The relay says so in its error ("…use the login the Hub gave this device, not your Navidrome one")
+  when the username has no `~<device id>`. To use your own Navidrome login on a device again, an admin turns
+  **Send everyone through the Hub** off.
 
 - **Logins that never leave the Hub:** the SUB/WAVE admin user and password and the deemix ARL aren't sent
   to any device, admins' included. The app sends those calls to the Hub (`/api/admin/subwave/…`,
@@ -341,6 +349,9 @@ Every save is kept in an undo log (migration 11, `tag_edits`): **Undo** on the p
 Server → Tag edits**, puts those tags back. After a save or an undo the Hub asks Navidrome to rescan.
 
 It needs the music mounted read-write at `/music` (as for yt-dlp) and a Navidrome admin login on the Hub.
+The Hub signs in to Navidrome's own API once and keeps that session for 10 minutes (`hub/src/routes/navidrome.ts`):
+Navidrome lets only a few sign-ins through per address in a short window (`AuthRequestLimit`, 5 per 20 s by default)
+and answers the rest with 429, so signing in per request cut long Library care scans off.
 If Navidrome sees the music somewhere other than `/music`, set `WAVELENGTH_NAVIDROME_MUSIC_DIR` to that path.
 Code: `hub/src/tags.ts`, `hub/src/routes/tags.ts`, `src/views/TagEditor.tsx`.
 
@@ -349,21 +360,61 @@ albums at once and renames the artist in their Artist and Album artist tags, als
 B" if asked, with an optional genre; it saves through the same `PUT /api/admin/tags`, so it's undone the same
 way. The editors suggest artist and genre names from Navidrome (`GET /api/admin/tags/values`).
 
+**Edit song** (`src/views/SongEditor.tsx`, from a song's menu or its row's Edit button) reads one song's file with
+`GET /api/admin/tags/song/:id?album=` (the catalog's file for that Navidrome song id, else the song among its
+album's songs) and saves only the tags that changed with the same `PUT /api/admin/tags`, so it's one entry under
+**Tag edits**. The credit is a main artist plus featured artists, written as "Main feat. A; B"
+(`src/lib/songCredit.ts`), the shape `tidyCredit` writes, which Navidrome splits on " feat. " and "; ".
 
-**Merging** (Albums or Artists → **Select → Merge**, `src/lib/merge.ts`) uses the same endpoints: it reads the
+**Edit album** (`src/views/AlbumEditor.tsx`) and **Edit artist** (`src/views/ArtistEditor.tsx`) are the same kind of
+dialog (`src/components/EditDialog.tsx`). Edit album writes album-wide tags into every song of the album through
+`PUT /api/admin/tags` in parts (`src/lib/tagSave.ts`): album, album artist, year, genre, and the tags added for it,
+**albumSort**, **label**, **releaseType** and **mood**. Edit artist renames (the song-by-song page's `renameArtist`),
+writes **artistSort** / **albumArtistSort** and genres into their songs, and keeps what has no tag (the biography and
+how their page orders albums) on the Hub in `artist_meta` (migration 32, `hub/src/routes/artistMeta.ts`).
+
+The extra tags are written under the names Navidrome reads (`hub/src/tags.ts`): in an mp3, TSOA / TSOP for the sort
+names, TPUB for the label, and TXXX frames for ALBUMARTISTSORT, RELEASETYPE and MOOD; in FLAC, Ogg and Opus, Vorbis
+comments of those names. ffmpeg keeps only a fixed set of MP4 atoms, so an .m4a gets none of them: a Save leaves
+them out for such files (`canWrite`). The artist page puts albums on **Albums**, **Singles & EPs** and
+**Compilations** shelves by Navidrome's `releaseTypes` (from RELEASETYPE), else its compilation flag, else the song
+count (up to 3 a single, 4 to 6 an EP) (`src/lib/releaseKind.ts`).
+
+
+**Merging** (Albums or Artists → **Select → Merge**, or **Merge into…** on an artist or album page; `src/lib/merge.ts`) uses the same endpoints: it reads the
 ticked albums' files with `GET /api/admin/tags/albums`, works out the new tags in the app, and writes them with one
 `PUT /api/admin/tags`, labelled "Merge … into …". So a merge shows up under **Tag edits**, is undone in one go, and
 is audited as `tags.edited`.
 
 ## Genres
 
-The Hub keeps one genre per kind of music: "Hip Hop", "Trap", "Pop Rap" and Deezer's "Rap/Hip Hop" all become
-**Rap; Hip-Hop**, "Dance Pop" and "Synth-pop" become **Pop**, "EDM", "House" and "Techno" become **Electronic**, and so
-on. A list of rules (genre → what it becomes) decides; the defaults are in `DEFAULT_GENRES` in `hub/src/genres.ts`,
-and admins change them under **Settings → Server → Genres** (kept in `hub_settings` as `genres`, no migration).
-Names are compared without case, spaces or punctuation, so "hip-hop", "Hip Hop" and "HipHop" are one rule; "&" and
-"and" count as the same. A tag with several genres ("Christmas; Dance Pop") takes the genre of the first one a rule
-knows. A genre that is already a rule's result is left as it is.
+The Hub keeps one genre per kind of music, with its sub-genres next to it. "Hip Hop" and Deezer's "Rap/Hip Hop"
+become **Rap; Hip-Hop**, "Trap" becomes **Rap; Hip-Hop; Trap**, "EDM" becomes **Electronic**, "Deep House"
+**Electronic; Deep House** and "Synthpop" **Pop; Synth-Pop**. Navidrome splits tags on ";", so a song shows under the
+genre and the sub-genre, and the app's Browse page puts sub-genres inside their genre (see "Browse" in
+docs/USER-GUIDE.md).
+
+A list of rules decides: `{ from, to }` makes `from` the genre `to` (another spelling), and `{ from, to, sub }` also
+keeps the sub-genre `sub` (a kind of music within it; a sub-genre's own name always counts as known). The defaults
+are `DEFAULT_GENRES` (genre → spellings) and `DEFAULT_SUBGENRES` (genre → sub-genre → spellings) in
+`hub/src/genres.ts`, and admins change them under **Settings → Server → Genres** (kept in `hub_settings` as
+`genres`, no migration). Rules saved before sub-genres existed get them once when read (`withSubgenres`): a saved rule
+that matches a default sub-genre rule takes its `sub`, and the default sub-genres of genres in use are added; rules an
+admin made stay as they are. Names are compared without case, spaces or punctuation, so "hip-hop", "Hip Hop" and
+"HipHop" are one rule; "&" and "and" count as the same. A tag with several genres ("Christmas; Dance Pop") takes
+the genre of the first one a rule knows, plus every sub-genre of that genre the tag names ("Deep House; Techno" →
+"Electronic; Deep House; Techno"); sub-genres of other genres are dropped. Genres for a time of year rather than a
+kind of music (`isOccasion`: any genre with the word Christmas, Xmas, Holiday, Halloween, Hanukkah, Easter,
+Valentine or Thanksgiving, such as "Christmas Country") are kept as spelled, after the tidy genre ("Christmas; Dance
+Pop" → "Pop; Dance Pop; Christmas"), so smart playlists that leave Christmas out keep working; a tag with only an
+occasion is left alone. Tidying a tidy tag changes nothing. An album counts as tidy only when its genres are spelled
+exactly so: "Rap;Hip-Hop" is a different genre to Navidrome (it splits only on "; "), so the review proposes
+"Rap; Hip-Hop".
+
+**Christmas put back.** Tidies before occasions were kept dropped them. Once, 30 seconds after the Hub starts
+(`genres.occasionsRestored` in `hub_settings`), `restoreOccasions` reads the undo log of genre tidies ("Genre: …",
+"Genres of …"; hand edits are left as chosen) and adds each file's lost occasion genres after its genre now, as one
+undoable save, "Put Christmas genres back".
 
 **New downloads.** When a download finishes (deemix, Soulseek or yt-dlp), the Hub looks for music files in the
 music folder that changed since it last looked (`genres.since` in `hub_settings`, set when the Hub first starts with
@@ -381,6 +432,106 @@ edits) puts them back; Navidrome rescans afterwards. **Keep** leaves an album as
 (**Save rule**), or **Keep** it as a genre of its own. Code: `src/views/GenreReview.tsx`.
 
 It needs what the tag editor needs: the music read-write at `/music` and a Navidrome admin login on the Hub.
+
+## Styles, moods and collections
+
+Plex-style metadata that has no place in the music files is kept on the Hub (`hub/src/itemTags.ts`, table
+`item_tags`, migration 36):
+
+- **Styles:** the narrow kinds of music within a genre ("Southern Rap", "Christmas Pop", "Teen Pop").
+- **Moods:** how it feels ("Laid-Back/Mellow", "Energetic"). The files' MOOD tag is no longer written by Edit album;
+  a mood the files already have is the starting value until the Hub has one for that album.
+- **Collections:** groups an admin makes ("Christmas", "Turning Red").
+- **Artist genres:** an artist's own genres, apart from their albums', so an album can have genres of its own. An
+  album's genres stay in its files (the genre rules and the tag editor look after them).
+
+Albums have styles, moods and collections; artists have those and genres. Albums are keyed by album artist and title,
+artists by name, both compared without case, accents, apostrophes or punctuation ("*NSYNC" = "NSYNC", "It’s" =
+"Its"; `tagKey`, the same rule as the app's `src/lib/itemTags.ts`), so a row doesn't depend on Navidrome's ids and
+survives rescans. Edit album and Edit artist rename the rows when they rename an album or artist (an artist's albums
+move with them); renaming onto a name that has tags puts the two lists together. Each row records who set it: an
+admin (`edit`) or an import (`plex`); an import never overwrites what an admin set. Changes are audited as
+`itemTags.edited` and `itemTags.renamed`.
+
+The app reads the whole list once per session (`GET /api/item-tags`, one row per album or artist that has any) and
+shows them as chips under the title on album and artist pages (`src/components/TagChips.tsx`).
+
+**Songs** have styles and moods of their own too (`hub/src/trackTags.ts`, table `track_tags`, migration 37), like
+Plex's track moods: an album can be Energetic while one song on it is Melancholy. A song is keyed by album artist,
+album and title, compared the same way. They're set in Edit song's Tags tab and by the Plex import, follow renames
+of the artist, the album (both through `POST /api/admin/item-tags/rename`) and the song (Edit song calls
+`POST /api/admin/track-tags/rename`), and an import never changes an admin's. A library has tens of thousands of
+songs, so they're a separate list the app loads only when it needs them (`GET /api/item-tags/tracks`): Browse on a
+mood or style (an album shows under a mood any of its songs has, and playing it plays just those songs, or the whole
+album when the album has the mood), and smart playlist rules **Track mood** and **Track style**. The shared
+suggestions (`values`) count songs too (`tracks`).
+
+An album that's only on Plex (no Navidrome copy, so no files to edit) gets an **Edit album** with just its styles,
+moods and collections, since those go by album artist and title and apply to every copy.
+
+### Importing from Plex
+
+**Settings → Server → Import from Plex** (`hub/src/plexImport.ts`, `hub/src/routes/plexImport.ts`,
+`src/views/PlexImport.tsx`) fills these in from a Plex server, whose music agent usually has them better filled than
+the files. It uses the first Plex server under Server logins (or the one picked) with its shared token.
+
+1. **Read Plex** (in the background): the music sections, every album (type 9), artist (type 8) and song (type 10),
+   500 per page, then their full details (`/library/metadata/<id>,<id>,…`, 50 albums or artists or 100 songs at a
+   time), which is where styles, moods, collections and labels are; a song listing that already carries its moods is
+   used as it is. A big library takes a few minutes for the songs. Nothing is written yet.
+2. **Matching** is against the Hub's catalog of the music folder (Music catalog above): the same album artist and
+   title without case, accents, apostrophes or punctuation, else the same title without edition words ("(Deluxe)",
+   "[Remastered]") when that pairs exactly one album on each side. Artists match by name against the catalog's album
+   artists. The preview shows how many matched, what a few albums and artists would get, and up to 100 Plex albums
+   with no match. Songs match by album artist, album and title (the album without edition words when that names one
+   song), and the preview counts how many have moods or styles of their own.
+3. **Import** writes styles, moods, collections (Plex's collections and its labels both become collections) and
+   artist genres onto the Hub, and songs' moods and styles onto the song tags, marked `plex`. Tick boxes pick which kinds. What an admin set by hand is never
+   changed, and importing again updates what came from Plex. Audited as `itemTags.imported`.
+4. **Album genres** stay in the files, so Plex's genre is only suggested for albums with none, tidied by the genre
+   rules. **Write genres** sends them through `POST /api/admin/genres/apply`, the genre review's Save, so they show
+   under Tag edits and can be undone.
+
+Needs the music catalog (the music folder mapped) and a Plex token the Hub can use.
+
+## Joined artist credits
+
+Navidrome splits a single Artist or Album artist tag into several artists only on its own separators: `" / "`,
+`" feat. "`, `" feat "`, `" ft. "`, `" ft "` and `"; "` (`resources/mappings.yaml` in Navidrome). A semicolon with no
+space after it, which many taggers and downloaders write ("Lil Wayne;Drake"), isn't one of them, so Navidrome lists
+"Lil Wayne;Drake" as one artist with no albums. Such a credit means the first artist featuring the rest, so
+`tidyCredit()` in `hub/src/credits.ts` writes the **Artist** tag as the main artist "feat." the others ("Lil
+Wayne;Drake" → "Lil Wayne feat. Drake", "A ; B;C" → "A feat. B; C") and the **Album artist** tag as just the main
+artist ("Lil Wayne"). Navidrome splits on " feat. " and "; ", so the song is Lil Wayne's with Drake featured, shows as
+"Lil Wayne feat. Drake", and the album is filed under Lil Wayne. A credit already split with "; " ("Lil Wayne;
+Drake") is rewritten the same way. Any semicolon counts, with any spacing (the full-width "；" too). The app shows a
+joined credit it gets from Navidrome the same way before the tag is fixed (`src/sources/navidrome.ts`). Empty parts ("Drake;") are dropped, and so is an artist named twice ("Lil Durk;Lil Durk" → "Lil Durk"). A name of
+two or more words written twice with only a space between ("Lil Durk Lil Durk") becomes the name once; a one-word
+name twice ("Duran Duran", "Talk Talk") is a real band and stays. Nothing else is changed: commas and slashes are left, since "Tyler, The Creator"
+and "AC/DC" are one artist.
+
+**New downloads.** Like genres, `hub/src/routes/credits.ts` adds a `Library.onNewMusic` step: music files changed
+since it last looked (`credits.since` in `hub_settings`) get their Artist and Album artist tidied before Navidrome
+scans them. Files an admin edited by hand since are left alone. The change is one save in the undo log ("Artist
+credits of new downloads"), audited as `credits.tidied`. On by default; `PUT /api/admin/credits { auto: false }`
+(the tick box on Library care → Unmatched songs) turns it off, kept in `hub_settings` as `credits`.
+
+**The library already there** is fixed from the app: **Library care → Unmatched songs** (`src/views/UnmatchedSongs.tsx`,
+`src/lib/songIssues.ts`, same rule) reads every Navidrome album's tags with `GET /api/admin/tags/albums`, lists the
+songs with joined credits or missing tags, and saves fixes through `PUT /api/admin/tags`, so they show under **Tag
+edits** and can be undone. It reads 25 albums per request, three requests at once.
+
+**Big saves go in parts.** `saveTagChanges()` rewrites each file with ffmpeg (a full copy of the file), four at a
+time. A Save of 1000 songs in one request ran for minutes, long enough for a reverse proxy to answer "504" while the
+Hub carried on, so the app couldn't tell how far it got. The app (`src/lib/tagSave.ts`) now sends 25 songs per
+request with the same `batch` id, retries a failed part once (writing the same tags again is a no-op), and stops
+with a count if it fails twice. Library care → Numbered titles finds its songs from Navidrome's song list
+(`GET /api/admin/tags/numbered`, `hub/src/trackTitles.ts`, the app's rule from `src/lib/trackTitles.ts`) instead of
+reading every file; the Save still reads each file before writing it, so a title that is already clean is skipped.
+
+The places that pick the main artist out of a credit (`primaryArtist()` in `hub/src/radar.ts`, `hub/src/kidSafe.ts`
+and `src/lib/match.ts`, `creditedArtists()` in `hub/src/forYou.ts`) split on `;` with or without spaces and on
+`" / "` too, so "Lil Wayne;Drake" and "Lil Wayne; Drake" both read as Lil Wayne.
 
 ## Following deemix downloads
 
@@ -575,6 +726,15 @@ On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favorites and Time Capsul
 artist (plus the track that played, for songs the person played), and each app finds them in its own library.
 Blends mix two to six people who have all said yes (`blend_optin`).
 
+The **daylist** isn't stored: it's made on every `GET /api/mixes?tz=<minutes>` (the device's
+`getTimezoneOffset()`) from the person's plays in the same part of the day over the last six months, same kind of
+day (weekday or weekend) counting double, and put first. Its name takes the most common mood among its songs when
+sound-alike analysis knows them. Requests without `tz` (older apps) get no daylist.
+
+
+**Don't play this.** Artists and songs a person set to "Don't play" in the app (a synced setting,
+`settings.dontPlay` in their prefs) are left out of every mix and DJ station segment, cached ones included
+(`hub/src/dontPlay.ts`; the app matches the same way in `src/lib/dontPlay.ts`).
 ## Discover
 
 Besides keeping a copy of the charts (`hub/src/discover.ts`, `GET /api/discover/fetch`), the Hub helps Discover
@@ -594,6 +754,198 @@ three ways:
 - **For you** (`hub/src/forYou.ts`): scores a chart's songs for the caller from their plays in the last 180 days
   (artists they play), their Release Radar follows, and Deezer's related artists of their 10 most played artists
   (the Made for you lookups, cached a day), with a reason for each.
+
+## Music catalog
+
+The first step of the Hub becoming the household's music server instead of Navidrome (plan and phases:
+`reviews/wavelength-own-music-server-2026-11-08.md` in the project files). The Hub reads the music folder itself
+(`hub/src/catalog.ts`, table `catalog_songs`, migration 30) and keeps one row per music file: title, artist, album,
+album artist, track and disc, year, genre as tagged, explicit / clean (`ITUNESADVISORY`), length, bit rate, format,
+MusicBrainz ids, and which Navidrome song it is. **Nothing devices play changes yet:** Navidrome still scans, streams
+and hands out ids.
+
+- **Scanning.** A scan walks the folder and only stats files; a file is read with ffprobe (four at a time, lowest CPU
+  priority) when it is new or its size or change time moved. The first scan of 26,000 songs takes roughly 15 to 35
+  minutes on a NAS; after that a scan takes seconds plus whatever changed. It runs 30 seconds after the Hub starts,
+  every hour, after every Navidrome scan (so after downloads, tag edits and deletes), and on **Scan now**.
+- **Skipped:** hidden folders (`.wavelength-trash` …) and folders with a `.ndignore`, like Navidrome. Files ffprobe
+  can't read are kept with the reason and listed.
+- **An empty-looking folder drops nothing.** When a scan finds less than half the files the catalog has (a share
+  that isn't mounted), nothing is removed and the scan says so.
+- **Matching to Navidrome** is by path. Subsonic's `path` is made up ("Artist/Album/01 - Title.flac") unless a
+  player has Report Real Path on, so the real paths come from Navidrome's own API (5000 songs a page, the admin login
+  under Library updates). They are mapped onto the music folder (absolute under `WAVELENGTH_NAVIDROME_MUSIC_DIR`, or
+  relative to Navidrome's library). When Navidrome's music folder sits above or below the Hub's (`/music/Music` vs
+  `/music`), the last three parts (artist folder, album folder, file) match instead, when only one file has them.
+  `nd_id`, `nd_album_id` and `nd_artist_id` are saved; files Navidrome doesn't list stay unmatched. Sound-alike
+  analysis reads files by these real paths too.
+- **One listing of Navidrome.** The library index (Search, Discover's library check, Guest Jam) used to list Navidrome
+  every hour, and sound-alike analysis listed it again on its own. Now the library index lists it once
+  (`LibraryIndex.navidromeSongs()`), and the catalog's matching and sound-alike analysis both take that copy.
+- **Library care reads the catalog** (phase 2, `hub/src/libraryAdmin.ts`). Once a scan has matched at least 95% of
+  Navidrome's songs to files, the tag editor, Edit artist, Merge, Library care (Numbered titles, Unmatched songs), the
+  genre review and suggestions, and Delete album take their album and song lists from the catalog instead of signing
+  in to Navidrome's API. No Navidrome sign-ins means no 429s, and big lists come from SQLite instead of paged HTTP.
+  Ids are still Navidrome's. Until the catalog matches (right after the Hub starts, or when Navidrome sees the music
+  at other paths), they ask Navidrome as before; an album the catalog doesn't know yet is asked of Navidrome too.
+  Every tag save and undo updates the catalog row at once (`catalogWrote()`) and marks the file to be read again on
+  the next scan, and Delete album drops its files from the catalog, so the lists don't wait for a rescan.
+- **Settings → Server → Music catalog** shows songs, albums, artists and hours, how many match Navidrome, formats,
+  top genres, files missing tags, files that couldn't be read, and (up to 100) songs Navidrome lists that no file
+  matched (`missing`), with their paths.
+- **The Hub answers browsing** (phase 3, `hub/src/subsonicCatalog.ts`, `hub/src/routes/relay.ts`), when an admin
+  turns on **Hub answers browsing, search and covers** on that card (`catalog.serve` in `hub_settings`, off by
+  default) and the catalog matches (`serving`). For devices that reach Navidrome through the Hub (`/nd/<id>/rest`:
+  kids, or everyone with "Send everyone through the Hub"), these Subsonic calls are answered from the catalog
+  instead of Navidrome: `getArtists`, `getArtist`, `getAlbum`, `getSong`, `getGenres`, `getSongsByGenre`,
+  `getRandomSongs`, `search3`, `getAlbumList2` (alphabetical, newest, random, by year, by genre) and `getCoverArt`
+  for albums and songs. Answers use Navidrome's ids, so `stream`, stars, playlists and scrobbles still go to
+  Navidrome unchanged; hearts come from the person's `getStarred2` (kept a minute, cleared when they star). Albums
+  are grouped by Navidrome's album id and listed under the album artist's id (`nd_album_artist_id`, from Navidrome's
+  own API); genres split on ";" like Navidrome's; "newest" goes by when a file first turned up (`created`).
+  Loudness (`replayGain`) comes from the files' `REPLAYGAIN_*` tags; migration 31 adds these columns and reads every
+  file once more to fill them. Covers: the album folder's `cover.*`, `folder.*` or `front.*`, else the picture in the
+  file, resized with ffmpeg to the size asked and kept in `<data>/covers`. Navidrome still answers the lists that
+  need a person's plays or stars (`recent`, `frequent`, `starred`, `highest`), every other call, ids the catalog
+  doesn't know yet (a download before the catalog's next look), artist pictures, and callers that ask for XML.
+  Answers from the Hub carry `x-wavelength-answered-by: hub`.
+- **The Hub plays the songs** (phase 4, `hub/src/catalogStream.ts`), when an admin turns on **Hub plays the songs**
+  on the same card (`catalog.stream` in `hub_settings`, off by default, separate from browsing) and the catalog
+  matches (`streaming`). For devices that go through the Hub, `stream` and `download` of a song the catalog knows are
+  sent from the music folder instead of fetched from Navidrome: the file as it is (no `format`, `format=raw`, or a
+  `maxBitRate` the file is already under) with Range requests for seeking, an ETag and a length; `download` as an
+  attachment. A lower `maxBitRate` or another `format` (`mp3`, `opus`, `aac`; mp3 when only a bitrate is asked) is
+  converted with ffmpeg as it plays (32 to 320 kbps, `timeOffset` honoured, no seeking inside it, stopped when the
+  player goes away). Songs the catalog doesn't know, files that have gone and other formats play from Navidrome.
+  Scrobbles, stars and playlists still go to Navidrome, and kids' songs are still checked before they play.
+  Navidrome support stays: every Hub phase is a switch, and a Navidrome hosted on its own works without a Hub.
+  **Settings → Server → Listening now** shows who sent each song (`playedBy`, `hub/src/playedBy.ts`, kept in memory
+  for 30 minutes): "played by the Hub", "Navidrome via the Hub" (switch off or a song the catalog doesn't know), or
+  "Navidrome directly" for a device that doesn't go through the Hub at all.
+- **Radio stations live on the Hub** (phase 5, `hub/src/radioStations.ts`, table `radio_stations`, migration 33).
+  A minute after the Hub starts (then every 10 minutes until it has the Navidrome admin login) it copies Navidrome's
+  internet radio stations once, keeping their ids, so each device's station order and hidden stations still match
+  (`radio.imported` in `hub_settings`). From then on the app reads and deletes the Hub's Navidrome stations through
+  `GET /api/radio/stations` (`src/sources/navidrome.ts`, only for the Navidrome the Hub hands out, `hubId`), and
+  devices going through the relay get `getInternetRadioStations` and the create / update / delete calls answered
+  from the same list (admins only, as on Navidrome). Navidrome's own list is left as it was; a Navidrome hosted on
+  its own keeps its stations. Admins add stations for everyone from the app (Radio → **Add for everyone**, or
+  **+ Everyone** on a directory station), and each station can have a logo (`logo_url`, migration 38) that the app
+  finds in the radio directory when none is given. Stations added in Navidrome's own web page after the first copy
+  don't show up: add them in Wavelength, or run `POST /api/admin/radio/import` again.
+- **Hearts, play counts and ratings live on the Hub** (phase 5, `hub/src/userData.ts`, tables `user_stars` and
+  `user_song_plays`, migration 34), when an admin turns on **Hub keeps hearts and play counts** on the Music catalog
+  card (`catalog.userData`, off by default). The first time a person's device calls the relay after that, the Hub
+  copies their hearts (`getStarred2`) and their plays, last plays and ratings (Navidrome's own API, as them) once
+  (`userdata.imported.<user id>`); if Navidrome can't be asked, that call goes to Navidrome and the copy is tried
+  again next time. From then on `star`, `unstar`, `scrobble` (finished plays) and `setRating` are recorded on the
+  Hub and answered by it, and sent on to Navidrome in the background so Navidrome stays complete for devices that
+  talk to it directly. While the Hub answers browsing, songs and albums carry the Hub's `starred`, `playCount`,
+  `played` and `userRating`, `getStarred` / `getStarred2` come from the Hub, and so do the Starred, Most played,
+  Recently played and Top rated album lists. Changes made on a device that talks to Navidrome directly aren't seen
+  by the Hub, so send everyone through the Hub before relying on it.
+- **Playlists live on the Hub too** (phase 5, `hub/src/playlists.ts`, tables `server_playlists` and
+  `server_playlist_songs`, migration 35), with the same switch. At the same first call the Hub copies the playlists
+  the person owns on Navidrome, with Navidrome's ids (`playlists.imported.<user id>`); smart playlists (those with
+  rules) stay on Navidrome, which keeps filling them. From then on `getPlaylists` is Navidrome's list with the Hub's
+  copies in place of its own (so smart playlists and other people's still show; the person's own carry their relay
+  login as `owner`, so the app lets them change them), and `getPlaylist` comes from the Hub when the catalog knows
+  every song in it (otherwise Navidrome answers). `createPlaylist` goes to Navidrome first so the new playlist gets
+  the same id in both (the Hub makes its own id if Navidrome is away), and `updatePlaylist` and `deletePlaylist` are
+  made on the Hub and sent on to Navidrome in the background. Only the owner may change a playlist. Covers (`pl-`
+  ids) still come from Navidrome.
+
+### Without Navidrome
+
+Phase 6: **Turn Navidrome off** on the Music catalog card (`PUT /api/admin/catalog/navidrome { off: true }`,
+`catalog.standalone`, audited `catalog.navidrome_off`). Navidrome support stays for anyone who hosts their own; this is
+one household's switch, and `{ off: false }` lets Navidrome answer again.
+
+- **Before it flips**, while Navidrome can still be asked, the Hub copies what it doesn't have yet: every person's
+  hearts, plays, ratings and playlists (with their own Navidrome login, `navidromeLogins`) and the radio stations.
+  Anyone whose copy fails is listed (`notCopied`) and Navidrome stays on, unless the admin sends `force: true` ("Turn
+  it off anyway"). The catalog must be usable (scanned and matched to Navidrome's ids) first.
+- **Ids.** Navidrome's ids stay. A file Navidrome never saw gets a song id made from its path (`h` + 20 hex digits).
+  Songs are grouped into albums by album artist, title and year and into artists by name, as Navidrome's scan did,
+  and each group keeps the id most of its songs already have (`Catalog.giveIds`, after every scan): renaming an
+  album keeps its id, Merge (same title, album artist and year) folds the smaller album into the bigger one, two
+  releases with the same title but different years stay apart, and a new song on a known album lands on it. Albums
+  Navidrome split for another reason (same title, artist and year) become one.
+- **Every device goes through the Hub** (`navidromeOff` in services.ts): `/api/me/services` hands each device a relay
+  login whether or not the person has a Navidrome account, and nobody needs one any more (creating one is refused).
+- **The relay answers everything itself** and never calls Navidrome: browsing, search, covers (a playlist's is its
+  first song's, an artist's their latest album's), streaming, hearts, plays, ratings, playlists (new ones get a UUID),
+  radio stations, play history (Navidrome's native `/api/song` shape, from the Hub's plays), plus `ping`,
+  `getLicense`, `getMusicFolders`, `getOpenSubsonicExtensions`, `getScanStatus`, `startScan` (a catalog scan),
+  `getUser`, `getNowPlaying` (from scrobbles without submission), `getIndexes`, `getMusicDirectory`, `getAlbumList`,
+  `search2`, `getTopSongs` (the artist's songs this person played most), `getArtistInfo2` (artists sharing the most
+  genres, no biography), `getAlbumInfo2`, `getSimilarSongs2` (sound-alike analysis), and empty play queues,
+  bookmarks and lyrics (the app has two more lyric sources). Anything else is error 70. Answers are JSON whatever `f`
+  asks for.
+- **The Hub's own jobs** read the catalog instead: the library index (Search, Discover, Jam) lists it, sound-alike
+  analysis needs no Navidrome login, Library care and the editors use only the catalog, and rescans after downloads,
+  tag edits and deletes are catalog scans (`Library.ownScan`).
+
+- **Other music apps** (SUB/WAVE, Symfonium, Feishin…) get a login of their own under Settings → Hub → Other music
+  apps (`GET`/`POST /api/me/app-logins`, audited `device.app_login`): the Hub's own address (`<hub>`, which answers `/rest/…` itself; `<hub>/nd/<id>` works too)
+  and a relay login. Each is a device with platform `subsonic-app`, so its password (made from the device id) can be
+  shown again and Remove signs it out. For SUB/WAVE they go in `NAVIDROME_URL`, `NAVIDROME_USER` and
+  `NAVIDROME_PASSWORD`. Available whenever the person's devices go through the Hub (Navidrome off, or "Send everyone
+  through the Hub").
+
+Going back to Navidrome: it never saw what changed while it was off (hearts, plays, playlists, new songs' ids).
+
+**Keeping it quick.** The Hub zips JSON answers over 1 KB for clients that ask (`hub/src/compress.ts`, Brotli at a fast
+level, else gzip, off the main thread); the app asks through its HTTP plugin's `gzip` feature. A page of 500 albums is
+about 155 KB plain and a tenth of that zipped. The in-memory copy of the catalog behind the Hub's answers is updated
+song by song after a tag edit or a scan that read a few files (`catalogChanged(paths)`, `View.patch`), and built again
+only when songs come, go or change album (about a quarter of a second for 30,000 songs). A scan that finds nothing new
+leaves it alone. Each person's hearts and plays are kept in memory until they change, and the list of playlists adds up
+lengths without building every song.
+
+Needs the music folder mapped (`WAVELENGTH_MUSIC_DIR`, `/music` in the image). Matching also needs the Navidrome login
+under Library updates; without it the catalog still scans.
+
+## Search
+
+With the Navidrome admin login set under Library updates, the app's Search page asks the Hub instead of searching
+Navidrome song by song (`hub/src/librarySearch.ts`, `GET /api/library/search`). It uses the same in-memory list of
+every song as Discover's library check, indexed by every word of each title, artist and album, and:
+
+- **forgives typos** (one letter off from 4 letters, two from 8, letters swapped: "kendirck", "beyonse") and finds
+  words by their start ("kend lam"); when a word only matched with a typo, the answer has `didYouMean` and the app
+  shows *Showing results for …*,
+- ignores case, accents, punctuation, "&" vs "and" and apostrophes, and finds names run together ("acdc", "gods plan"),
+- puts the exact title first, then artists the person searching played in the last year (`plays` table).
+
+Albums and artists are put together from the matching songs. **Artists are the people in each credit, one by
+one** (`creditNames` in `hub/src/credits.ts`): "Lil Durk • J. Cole", "Calboy;Meek Mill;Lil Durk" and "DJ Khaled
+feat. Lil Baby & Lil Durk" give Lil Durk once, plus J. Cole, Calboy, Meek Mill, DJ Khaled and Lil Baby. Credits
+always split on feat./ft./featuring, "•", "·", ";" and " / "; on "&", "and", "x", "with" and commas only when one of
+the names is credited on its own somewhere in the library, so "Simon & Garfunkel" and "Tyler, The Creator" stay one
+artist. The exact name comes first. Each artist gets Navidrome's id (from the songs' OpenSubsonic `artists`, or a
+song credited to just them) and picture (`ar-<id>`); one Navidrome has no id for comes back as `name:…`, which the
+app leaves out because it can't open it. The catalog's `search3` (Music catalog, phase 3) likewise replaces a joined
+album artist with the artists in it that have albums of their own, exact name first. The app uses the answer only when the Hub's Navidrome
+is one of its own servers (as for Discover); other servers (Plex, Audiobookshelf, a second Navidrome) and the radio
+directory are still searched by the app at the same time. With an older Hub, or before the first listing, the app
+searches as before. Recent searches are kept on each device.
+
+A search of three words or more also looks through the **lyrics** the house has found (below) and lists matching
+songs from the library under *In the lyrics*, with the line that matched (kid profiles see it masked).
+
+## Lyrics
+
+The apps still find lyrics themselves (Navidrome's own, then LRCLIB, then lyrics.ovh: `src/lib/lyrics.ts`), but
+share them through the Hub (`hub/src/lyricsCache.ts`, tables `lyrics_cache` and `lyrics_fts`):
+
+- Before asking LRCLIB, an app asks `GET /api/lyrics?key=` with the song's key (cleaned-up artist and title and its
+  length to 10 seconds, since synced times differ between takes). Another device's find comes back in one call.
+- What an app finds (including Navidrome's own lyrics) it sends with `PUT /api/lyrics`, so LRCLIB is asked once per
+  song for the whole house. Kept 180 days, then looked up again. At most 400 lines of 500 characters.
+- The words are indexed with SQLite FTS5 for search by lyrics.
+
+An older Hub answers 404 and the app stops asking until it restarts.
 
 ## Sound-alike analysis
 
@@ -644,6 +996,7 @@ with a 4xx status.
 | `GET /api/blend?with=<id,id>` | signed in, `blend` on | `{ mix }`; `409` until you and each of them opted in |
 | `GET /api/tours?artist=` | signed in, `tourDates` on | `{ events: [{ date, time?, venue, city, country?, url? }] }`: upcoming, this artist only, kept 6 hours; `409` until an admin saves a key |
 | `GET /api/videos?artist=&title=[&duration=]` | signed in, `musicVideos` on | `{ video: { id, title, channel, duration? } \| null }`: the official video's YouTube id, found with yt-dlp, kept a month |
+| `GET /api/videos/episode?show=&title=[&duration=]` | signed in, `musicVideos` on | Same shape: a podcast episode's video, when the show posted it. The title has to match, the length has to be within about a third, and clips, trailers and reactions don't count (`pickEpisodeVideo`) |
 | `GET /api/tours/status` | signed in | `{ available }`: the feature is on for you and a key is saved |
 | `GET`/`PUT /api/admin/tours` | `users.manage` | `{ provider: 'ticketmaster'\|'bandsintown', key? }` (`''` removes it) → `{ provider, keySet, hint }`; the key is sealed and never sent back |
 | `GET /api/sonic/similar?id=\|artist=&title=[&limit=]` | signed in, `sonic` on | `{ song, songs: [{ id, title, artist, album, duration, bpm, key, energy, mood, match }] }`: closest first, at most 3 per artist; `404` until that song is analysed |
@@ -684,6 +1037,13 @@ with a 4xx status.
 | `PUT /api/together/:id/state` | host | `{ queue, index, position, duration, playing }`, which guests follow |
 | `POST /api/together/:id/request` | member | `{ action: add/playNext/next/prev/toggle/seek/jump, tracks?, value?, index? }`, applied by the host's device |
 | `GET /api/together/:id/wait?version=` | member | waits (up to 25 s) for a newer version; the host also gets requests. `{ party: null }` once it's over |
+| `POST /api/me/homeassistant`, `GET /api/ha/players`, `POST /api/ha/players/:id` | signed in | Home Assistant: its own token, your players by name, commands to them ([HOME-ASSISTANT.md](HOME-ASSISTANT.md)) |
+| `PUT /api/me/activity`, `DELETE …` | signed in | house activity: `{ title, artist, album?, playing }` for the song playing now (dropped unless the person shares, `settings.shareListening`: grown-ups by default, kids only when they turn it on) / stopped |
+| `GET /api/activity` | signed in | `{ listeners: [{ userId, displayName, title, artist, album?, playing, device, at }] }` from the last 5 minutes: not yourself, kids only to their guardians, nothing not-for-kids to kids |
+| `POST /api/together/:id/jam` | host, not kids | `{ on }`: turns the Guest Jam link on (a new code each time) or off; the host's party view carries `jam` (the link, or `null`) |
+| `GET /jam/:code` | anyone | the Guest Jam page; `404` once the link is off or the party ended |
+| `GET /api/jam/:code`, `…/search?q=` | anyone with the link | what's playing and the next 10, by name only / up to 25 songs from the library index (explicit ones left out while a kid is in the party) |
+| `POST /api/jam/:code/add` | anyone with the link | `{ id, name }`: a song from the library index goes to the host as an `add` request from "<name> (guest)"; 12 per address per 10 minutes, `403` while guests can't add |
 | `GET /api/me/rewind?year=&month=&tz=` | signed in | your Rewind for a year (or one month of it); `tz` is the device's `getTimezoneOffset()` so days and hours are local |
 | `GET /api/me/rewind/periods?tz=` | signed in | `{ periods: [{ year, month, plays }] }`, newest first |
 | `PUT /api/me/prefs` | signed in | `{ changes: { key: { value, updatedAt } } }` → `{ applied, stale, prefs }`. Newest `updatedAt` wins per key. |
@@ -762,6 +1122,18 @@ with a 4xx status.
 | `GET /api/fetch?url=` | signed in | for the browser: fetches a page from Deezer's API, iHeart, Billboard, Apple's charts feed, RadioWave Monitor or Spotify's public pages (https only, nothing else) |
 | `GET /api/radio/now-playing?url=` | signed in | for the browser: the song title a radio station sends inside its stream (ICY metadata) → `{ icy, title }`; `icy: false` when the station sends none. Reads one metadata block (at most ~260 KB) and hangs up; one read per station is shared for 10 s. Only the title comes back, never the stream |
 | `GET /api/discover/fetch?url=` | signed in | Discover's charts from the Hub's copy (same sites as `/api/fetch`). Kept in memory, fetched again every 30 minutes while anyone opened it in the last 3 days; a copy over 30 minutes old is sent at once and refreshed behind the scenes, and when the site fails the last good copy is sent. Headers: `x-wavelength-fetched-at` (ISO time), `x-wavelength-stale: 1` when the site failed or the copy is being refreshed |
+| `GET /api/admin/catalog` | `server.view` | the music catalog: `{ blocked, files, failed, linked, navidromeSongs, scanning, progress: { step: walking\|reading, done, total } \| null, lastScanAt, lastScanMs, lastChanges: { added, changed, removed }, lastLinkAt, lastError, serve, serving, stream, streaming, missing: [{ title, artist, album, path }], summary: { albums, artists, hours, untagged, unlinked, formats, genres, failed } }` |
+| `GET /api/radio/stations` | signed in | internet radio stations on the Hub: `{ imported, importedAt, stations: [{ id, name, streamUrl, homePageUrl, logoUrl }] }` (`logoUrl` '' for none) |
+| `POST /api/admin/radio/stations` · `PUT /api/admin/radio/stations/:id` · `DELETE /api/admin/radio/stations/:id` | `library.edit` | add, change (`{ name?, streamUrl?, homePageUrl?, logoUrl? }`, http(s) links only) or delete a station (audited `radio.*`) |
+| `POST /api/admin/radio/import` | `library.edit` | copy Navidrome's stations again; ones the Hub has (same id or stream link) are left alone |
+| `GET /api/me/app-logins`, `POST /api/me/app-logins` | signed in | Logins for other Subsonic apps on the Hub's relay (`{ name }` to add); remove with `DELETE /api/me/devices/:id` |
+| `PUT /api/admin/catalog/navidrome` | `server.view` | `{ off, force? }`: turn Navidrome off for this household after copying everyone's data from it (see "Without Navidrome"), or back on; answers with the status plus `copied` and `notCopied` |
+| `PUT /api/admin/catalog` | `server.view` | `{ serve?, stream?, userData? }`: the Hub answers browsing, search and covers, and plays songs, for devices that go through it (audited `catalog.serve`, `catalog.stream`); answers with the status |
+| `POST /api/admin/catalog/scan` | `server.view` | scan the music folder now (answers at once with the status; audited `catalog.scan`) |
+| `GET /api/library/search?q=` | signed in | `{ ready, server, songs, albums, artists, didYouMean? }` in Subsonic fields (`hub/src/api/library.ts`); empty for `q` under 2 letters, `ready: false` without a Navidrome scan login |
+| `POST /api/lyrics/translate` | signed in, `lyricsTranslate` on, the AI DJ allowed | `{ key, lines, mode: translate\|romanize, to }` → `{ lines, cached, …allowance }`: one line out for each line in, through the AI DJ's quick model; kept in memory for the house (500 songs) |
+| `GET /api/lyrics?key=` | signed in | `{ lyrics }`: what an app in the house found for that song, or null (`hub/src/api/lyrics.ts`) |
+| `PUT /api/lyrics` | signed in | `{ key, artist, title, lyrics }`: keep lyrics for everyone; 400 when `lyrics` isn't the app's shape |
 | `POST /api/discover/match` | signed in | `{ songs: [{ title, artist }] }` (up to 300) → `{ ready, server, total, songs }`: the Hub's Navidrome song for each (Subsonic fields `id, title, artist, album, albumId, duration, track, discNumber, coverArt, explicitStatus`) or null. `ready: false` without a Navidrome scan login (every song null) |
 | `POST /api/discover/positions` | signed in | `{ chart, songs }` (songs in rank order, up to 300; `chart` names it, e.g. `billboard:all`, `ihHitsNow`, `mix:pop:<charts>`) → keeps today's snapshot and answers `{ since, moves: [{ prev, weeks }] }`: rank on the snapshot from `since` (null = wasn't on it) and weeks in a row. `since` is null on a chart's first day |
 | `POST /api/discover/foryou` | signed in | `{ songs }` (up to 300) → `{ basis, scores: [{ score, because? }] }`: how close each song is to what you play (0 = not at all) and why ("You play Drake", "You follow SZA", "Like Drake"); `basis` is how many plays it went on |
@@ -770,12 +1142,28 @@ with a 4xx status.
 | `POST /api/radar/check` | signed in | look your followed artists up now (ones looked at in the last 10 minutes are skipped) |
 | `GET /api/radar/suggestions[?fresh=1]`, `POST /api/radar/suggestions/:id/hide` | signed in | artists you might like (`{ id, name, picture, fans, because, plays? }`) / never suggest this one again |
 | `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
+| `GET /api/admin/tags/song/:id?album=` | `library.edit` | one Navidrome song's file and its tags (`{ id, path, tags }`), for Edit song. `album` (the song's Navidrome album id) finds it when the catalog hasn't matched it yet |
+| `GET /api/artist-meta?name=` | signed in | an artist's `bio` and `albumSort` set in Edit artist (`''` when none) |
+| `PUT /api/admin/artist-meta` | `library.edit` | `{ name, bio?, albumSort? }` (`albumSort`: `''`, `newest`, `oldest` or `title`); only what's sent changes, and an artist with neither is forgotten |
+| `GET /api/item-tags` | signed in | every album's and artist's tags kept on the Hub: `{ artists, albums, values }`; each item is `{ kind, artist, title, facets: { genre?, style?, mood?, collection? }, sources, updatedAt }`, and `values` lists every name per facet with how many albums and artists have it |
+| `GET /api/item-tags/one?kind=&artist=&title=` | signed in | one album (`kind=album`, its album artist and title) or artist (`kind=artist`) |
+| `PUT /api/admin/item-tags` | `library.edit` | `{ kind, artist, title?, genres?, styles?, moods?, collections? }`: each list sent replaces what was there, an empty one clears it; albums take no `genres` (theirs are in the files) |
+| `GET /api/admin/plex-import` | `library.edit` | the Plex import: `{ state, step?, error?, preview?, imported?, servers }` (`state`: idle, reading, ready, importing, done or error) |
+| `POST /api/admin/plex-import/read` | `library.edit` | `{ serviceId? }`: read Plex in the background and match it to the library (202); nothing is written |
+| `POST /api/admin/plex-import/apply` | `library.edit` | `{ facets? }` (any of genre, style, mood, collection; all by default): write what the last read found |
+| `GET /api/item-tags/tracks` | signed in | every song with a style or mood: `{ tracks: [{ artist, album, title, facets: { style?, mood? }, sources }] }` (artist is the album artist) |
+| `GET /api/item-tags/track?artist=&album=&title=` | signed in | one song's styles and moods |
+| `PUT /api/admin/track-tags` | `library.edit` | `{ artist, album, title, styles?, moods? }`: a song's own styles and moods; each list sent replaces what was there |
+| `POST /api/admin/track-tags/rename` | `library.edit` | `{ from: { artist, album, title }, to: { … } }`: a song's styles and moods follow an edit of its title, album or album artist; answers `{ moved }` |
+| `POST /api/admin/item-tags/rename` | `library.edit` | `{ kind, from: { artist, title? }, to: { artist, title? } }`: the tags follow a rename (an artist's albums too); answers `{ moved }` |
 | `GET /api/admin/tags/match?artist=&album=` | `library.edit` | matching albums on Deezer and MusicBrainz, with their songs |
-| `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }] }` writes tags (only those given) → `{ batch, changed, failed }` |
+| `PUT /api/admin/tags` | `library.edit` | `{ label, changes: [{ path, tags }], batch? }` writes tags (only those given), four files at a time → `{ batch, changed, failed }`. Pass the same 16-hex `batch` with each part of a big Save to keep it one Save (`src/lib/tagSave.ts` sends 25 songs per part) |
+| `GET /api/admin/tags/numbered?offset=&limit=` | `library.edit` | Library care → Numbered titles: one page (`limit` ≤ 5000, default 2000) of Navidrome's songs → `{ fixes: [{ path, albumId, artist, album, from, to }], scanned, total }`. Reads Navidrome's list only, no files |
 | `GET /api/admin/tags/history`, `POST /api/admin/tags/undo/:batch` | `library.edit` | saved edits / put a save's files back |
 | `GET /api/admin/tags/albums?ids=a,b` | `library.edit` | up to 200 Navidrome albums' files and tags at once, each with `albumId` (for Edit artist) → `{ songs, missing }` |
 | `GET /api/admin/tags/values` | `library.edit` | `{ artists, genres }`: names in Navidrome and in recent edits, for suggestions |
-| `GET /api/admin/genres`, `PUT /api/admin/genres` | `library.edit` | genre rules: `{ auto, rules: [{ from, to }], defaults, kept, genres }`; `PUT` takes `{ auto?, rules? }` (`rules: null` = the defaults) |
+| `GET /api/admin/genres`, `PUT /api/admin/genres` | `library.edit` | genre rules: `{ auto, rules: [{ from, to, sub? }], defaults, kept, genres, subgenres: { genre: [sub-genre] } }`; `PUT` takes `{ auto?, rules? }` (`rules: null` = the defaults) |
+| `GET /api/admin/credits`, `PUT /api/admin/credits` | `library.edit` | joined artist credits: `{ auto }`, whether new downloads' "A;B" credits become "A; B" before the scan |
 | `GET /api/admin/genres/review` | `library.edit` | `{ albums: [{ id, name, artist, songs, current, proposed }], unknown: [{ genre, albums, examples }], total, kept, genres }` |
 | `POST /api/admin/genres/apply` | `library.edit` | `{ albums: [{ id, genre }] }` (up to 500) sets the genre in every song, as one undoable save → `{ batch, label, changed, failed, missing }` |
 | `POST /api/admin/genres/keep` | `library.edit` | `{ ids, keep? }`: leave albums out of the review (`keep: false` puts them back) |
@@ -826,6 +1214,17 @@ own server to keep them in the house. The person's topic list is kept in `hub_se
 - Only allow a pairing you just started yourself: the confirmation page names the device for that reason.
 - In the app, the device token and server logins are kept in the OS keychain (Windows Credential Manager,
   Android Keystore), not in the app's own storage. A Wavelength opened in a browser keeps them in the browser.
+
+## Load
+
+Settings → Server shows how hard the Hub's machine is working (`load` in `GET /api/admin/server`): CPU over the last
+minute against the number of cores, memory used (and the Hub's own share), the **answer delay** (how long the
+Hub's main thread was stuck since the page last looked, p99 and worst; over about 100 ms every device waits for the
+Hub), and how many songs and lyrics the Hub keeps a copy of.
+
+Sound-alike analysis runs in its own worker thread (`hub/src/sonic/thread.ts`), so the first analysis of a big
+library no longer slows every other request. If the delay is still high, look at the other containers on the same
+machine (Kokoro, Ollama, Navidrome scans).
 
 ## Backups
 

@@ -449,16 +449,74 @@ export function chartKey(view: ChartSource | 'mix', g: Genre, sources: ChartSour
   return view === 'billboard' || view === 'apple' ? `${view}:${g}` : view;
 }
 
-/** Look a song up on Deezer: link for deemix, 30s preview clip and explicit flag (strict match, then loose). */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Deezer allows about 50 requests per 5 seconds from one address. Lookups start at most one per GAP so a burst
+ * (a kid profile checking a whole chart, quick clicks down the preview buttons) stays under it.
+ */
+const LOOKUP_GAP_MS = 120;
+let nextLookupAt = 0;
+function paced<T>(fn: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const at = Math.max(now, nextLookupAt);
+  nextLookupAt = at + LOOKUP_GAP_MS;
+  return sleep(at - now).then(fn);
+}
+
+/**
+ * One Deezer search. Deezer answers its rate limit ("Quota limit exceeded", code 4) with a 200 and an `error`
+ * object instead of results; that is waited out and tried again, and any other failure throws, so it is never
+ * read as "Deezer doesn't have this song".
+ */
+async function deezerSearch(q: string): Promise<any[]> {
+  for (let attempt = 0; ; attempt++) {
+    const r = await paced(() => getJson(`https://api.deezer.com/search?${qs({ q, limit: 10 })}`));
+    if (!r?.error) return r?.data ?? [];
+    if (r.error.code === 4 && attempt < 3) {
+      await sleep(2_000 * (attempt + 1));
+      continue;
+    }
+    throw new Error(r.error.code === 4 ? 'Deezer is busy, try again in a moment' : `Deezer: ${r.error.message ?? 'error'}`);
+  }
+}
+
+/**
+ * Whether a Deezer clip link has run out. Preview links are signed (`hdnea=exp=<unix seconds>~…`) and stop working
+ * after a while, so one kept with a chart (the app and the Hub hold charts for up to hours) has to be looked up again.
+ * A link with no expiry in it is taken as good.
+ */
+export function previewExpired(url: string, now = Date.now()): boolean {
+  const m = /[?&~=]exp=(\d+)/.exec(url);
+  return !!m && Number(m[1]) * 1000 < now + 60_000;
+}
+
+/**
+ * Look a song up on Deezer: link for deemix, 30s preview clip and explicit flag (strict match, then loose).
+ * Among the hits by the right artist, the same title wins, and one with a clip wins over one without. Returns `{}`
+ * when Deezer doesn't have it; throws when Deezer couldn't be asked (offline, rate limited), so callers can tell
+ * the two apart.
+ */
 export async function deezerLookup(e: { title: string; artist: string }): Promise<{ link?: string; preview?: string; explicit?: boolean }> {
   const artist = primaryArtist(e.artist);
   const title = e.title.replace(/\(.*?\)|\[.*?\]/g, '').trim();
+  const wantTitle = norm(title);
+  const sameArtist = (t: any) => norm(t.artist?.name ?? '').includes(norm(artist)) || norm(artist).includes(norm(t.artist?.name ?? ''));
+  const sameTitle = (t: any) => {
+    const got = norm(String(t.title ?? '').replace(/\(.*?\)|\[.*?\]/g, ''));
+    return !!got && !!wantTitle && (got === wantTitle || got.startsWith(wantTitle) || wantTitle.startsWith(got));
+  };
+  const score = (t: any) => (sameTitle(t) ? 2 : 0) + (t.preview ? 1 : 0);
+  let best: any;
   for (const q of [`artist:"${artist}" track:"${title}"`, `${artist} ${title}`]) {
-    const r = await getJson(`https://api.deezer.com/search?${qs({ q, limit: 5 })}`).catch(() => null);
-    const hit = (r?.data ?? []).find((t: any) => norm(t.artist?.name ?? '').includes(norm(artist)) || norm(artist).includes(norm(t.artist?.name ?? '')));
-    if (hit) return { link: hit.link, preview: hit.preview || undefined, explicit: typeof hit.explicit_lyrics === 'boolean' ? hit.explicit_lyrics : undefined };
+    for (const t of (await deezerSearch(q)).filter(sameArtist)) {
+      if (!best || score(t) > score(best)) best = t;
+    }
+    // the right song with a clip: no need for the loose search
+    if (best && score(best) === 3) break;
   }
-  return {};
+  if (!best) return {};
+  return { link: best.link, preview: best.preview || undefined, explicit: typeof best.explicit_lyrics === 'boolean' ? best.explicit_lyrics : undefined };
 }
 const cache = new Map<string, { at: number; data: Promise<Chart> }>();
 /** The last copy of each chart that loaded, shown (marked as older) when fetching it again fails. */
