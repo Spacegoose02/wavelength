@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Clean titles on iHeartRadio stations.** iHeart streams send their tags inside the song title
+  (`zc2485 - text="Bobby Bones Show" song_spot="T" …`). Radio now shows just `Artist - Song`, or the show's name
+  between songs.
 
 ## 0.24.4
 - **US spelling.** Labels and messages use US English: **Your favorites**, **Forgotten favorites**, **Favorites (kept
