@@ -80,7 +80,7 @@ function NavidromeFavs({ sourceId }: { sourceId: string }) {
       <section>
         <h2>Tracks <small className="muted">{favs.tracks.length}</small></h2>
         <PlayBar tracks={favs.tracks} share />
-        <TrackList tracks={favs.tracks} showAlbum showCover />
+        <TrackList tracks={favs.tracks} showAlbum showCover grow />
       </section>
     </>
   );

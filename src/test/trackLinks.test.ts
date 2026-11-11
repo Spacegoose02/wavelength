@@ -68,3 +68,22 @@ describe('creditLinks: each artist in a credit', () => {
     expect(creditLinks('the weeknd feat. DRAKE', lib('The Weeknd', 'Drake')).filter((p) => p.artist)).toHaveLength(2);
   });
 });
+
+describe('lookups over a big library', () => {
+  it('keeps the first match in list order, and answers a long list quickly', () => {
+    const artists: Artist[] = Array.from({ length: 5000 }, (_, i) => ({ id: `r${i}`, sourceId: 'nd', name: `Artist ${i}` }));
+    const albums: Album[] = Array.from({ length: 8000 }, (_, i) => ({ id: `a${i}`, sourceId: 'nd', title: `Album ${i}`, artist: `Artist ${i % 5000}`, artistId: `r${i % 5000}` }));
+    const twin = { ...artists[10], id: 'r-twin' };
+    const lib = [...artists, twin];
+    expect(artistOfTrack(track({ artist: 'artist 10' }), lib)).toBe(artists[10]);
+    expect(albumOfTrack(track({ albumId: 'a7000', album: 'x' }), albums)).toBe(albums[7000]);
+    expect(albumOfTrack(track({ albumId: 'nope', sourceId: 'other', album: 'album 42', artist: 'Artist 42' }), albums)).toBe(albums[42]);
+    const started = performance.now();
+    for (let i = 0; i < 2000; i++) {
+      const t = track({ id: `t${i}`, albumId: `a${i}`, album: `Album ${i}`, artist: `Artist ${i % 5000} feat. Artist ${(i + 1) % 5000}` });
+      creditLinks(t.artist, lib);
+      artistOfTrack(t, lib, albumOfTrack(t, albums));
+    }
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+});

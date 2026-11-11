@@ -40,7 +40,7 @@ const changed = (db: Db, userId: number) => kept.get(db)?.delete(userId);
 export function starredOf(db: Db, userId: number): Starred {
   const k = keptFor(db, userId);
   if (k.stars) return k.stars;
-  const rows = db.prepare('SELECT item_id, starred_at FROM user_stars WHERE user_id = ?').all(userId) as { item_id: string; starred_at: number }[];
+  const rows = db.prepare('SELECT item_id, starred_at FROM user_stars WHERE user_id = ? ORDER BY starred_at DESC').all(userId) as { item_id: string; starred_at: number }[];
   return (k.stars = new Map(rows.map((r) => [r.item_id, new Date(r.starred_at).toISOString()])));
 }
 

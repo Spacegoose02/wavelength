@@ -95,3 +95,17 @@ test('hearts and plays are read once, and again after they change', () => {
   assert.notEqual(starredOf(db, 1), stars);
   assert.ok(starredOf(db, 1).has('s1'));
 });
+
+test('Favorites from the Hub list the newest heart first, as Navidrome does', () => {
+  const db = library();
+  db.exec('PRAGMA foreign_keys = OFF');
+  // hearted in this order; ids chosen so their own order (the table's key) is a different one
+  star(db, 1, ['s30'], true, Date.parse('2026-01-01T00:00:00Z'));
+  star(db, 1, ['s5', 'al2'], true, Date.parse('2026-03-01T00:00:00Z'));
+  star(db, 1, ['s12'], true, Date.parse('2026-02-01T00:00:00Z'));
+  star(db, 1, ['s7', 'al0'], true, Date.parse('2026-04-01T00:00:00Z'));
+  const r = answer(db, 'getStarred2', {}, starredOf(db, 1), playsOf(db, 1)) as any;
+  const body = r['subsonic-response'].starred2;
+  assert.deepEqual(body.song.map((s: { id: string }) => s.id), ['s7', 's5', 's12', 's30']);
+  assert.deepEqual(body.album.map((a: { id: string }) => a.id), ['al0', 'al2']);
+});
