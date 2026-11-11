@@ -34,6 +34,46 @@ export const radioBrowser = {
   },
 };
 
+/** A stream link without the scheme, `www.`, trailing slash or query, for comparing two links to one stream. */
+export function sameStream(a: string, b: string) {
+  const norm = (u: string) => u.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+  return !!a && !!b && norm(a) === norm(b);
+}
+
+const host = (u: string) => {
+  try {
+    return new URL(u).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+/**
+ * A logo for a station, from the radio directory: the station listed with this stream link, else one with the same
+ * name streaming from the same server (stream links change; "The Mix" alone would match dozens of stations).
+ * undefined when the directory has none.
+ */
+export async function findStationLogo(st: { name: string; streamUrl: string }): Promise<string | undefined> {
+  const withLogo = (l: any[]) => l.filter((x) => x.favicon && /^https?:/i.test(x.favicon));
+  try {
+    const byUrl = withLogo(await getJson<any[]>(`${RB}/stations/byurl?${qs({ url: st.streamUrl })}`));
+    if (byUrl[0]) return byUrl[0].favicon;
+  } catch {
+    /* try the name */
+  }
+  const name = st.name.trim();
+  if (!name) return undefined;
+  try {
+    const h = host(st.streamUrl);
+    const l = withLogo(await getJson<any[]>(`${RB}/stations/search?${qs({ name, limit: 40, hidebroken: true, order: 'clickcount', reverse: true })}`));
+    const hit = l.find((x) => sameStream(x.url_resolved || '', st.streamUrl) || sameStream(x.url || '', st.streamUrl))
+      ?? l.find((x) => h && (host(x.url_resolved || '') === h || host(x.url || '') === h));
+    return hit?.favicon;
+  } catch {
+    return undefined;
+  }
+}
+
 export function stationToTrack(s: Station): Track {
   return {
     id: `radio:${s.id}`,

@@ -319,7 +319,7 @@ export class NavidromeSource implements MusicSource {
 
   async getStations(): Promise<Station[]> {
     const hub = await this.hubStations();
-    if (hub) return hub.list.map((s) => ({ id: s.id, sourceId: this.config.id, name: s.name, streamUrl: s.streamUrl, homepage: s.homePageUrl || undefined }));
+    if (hub) return hub.list.map((s) => ({ id: s.id, sourceId: this.config.id, name: s.name, streamUrl: s.streamUrl, homepage: s.homePageUrl || undefined, favicon: s.logoUrl || undefined }));
     const r = await this.call('getInternetRadioStations');
     return (r.internetRadioStations?.internetRadioStation ?? []).map((s: any) => ({
       id: s.id,
@@ -328,6 +328,22 @@ export class NavidromeSource implements MusicSource {
       streamUrl: s.streamUrl,
       homepage: s.homePageUrl,
     }));
+  }
+
+  async addStation(st: { name: string; streamUrl: string; homepage?: string; logo?: string }) {
+    const hub = await this.hubStations();
+    if (hub) {
+      await hub.c.addRadioStation({ name: st.name, streamUrl: st.streamUrl, homePageUrl: st.homepage || undefined, logoUrl: st.logo || undefined });
+      return;
+    }
+    // a Navidrome the Hub doesn't keep stations for: no logos there, and only its admins may add
+    await this.call('createInternetRadioStation', { name: st.name, streamUrl: st.streamUrl, homepageUrl: st.homepage || undefined });
+  }
+
+  async setStationLogo(id: string, logo: string) {
+    const hub = await this.hubStations();
+    if (!hub) throw new Error('Only stations kept on the Wavelength Hub can have a logo');
+    await hub.c.updateRadioStation(id, { logoUrl: logo });
   }
 
   async deleteStation(id: string) {

@@ -56,6 +56,15 @@ test('the Hub copies Navidrome’s radio stations once, keeps their ids, and adm
   assert.equal(added.status, 200);
   const rp = added.body.station.id;
   assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { name: 'Radio Paradise FLAC' } })).body.station.name, 'Radio Paradise FLAC');
+  // a logo for the card: kept, changed, taken off; only http(s) links
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { logoUrl: 'javascript:alert(1)' } })).status, 400);
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.member, body: { logoUrl: 'https://rp.example/logo.png' } })).status, 403);
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { logoUrl: 'https://rp.example/logo.png' } })).body.station.logoUrl, 'https://rp.example/logo.png');
+  assert.equal((await json(app, 'GET', '/api/radio/stations', { token: tokens.kid })).body.stations.find((x: { id: string }) => x.id === rp).logoUrl, 'https://rp.example/logo.png', 'everyone sees it');
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { logoUrl: '' } })).body.station.logoUrl, '');
+  const withLogo = await json(app, 'POST', '/api/admin/radio/stations', { token: tokens.admin, body: { name: 'Z100', streamUrl: 'https://stream.revma.ihrhls.com/zc1469', logoUrl: 'https://i.example/z100.png' } });
+  assert.equal(withLogo.body.station.logoUrl, 'https://i.example/z100.png');
+  await json(app, 'DELETE', `/api/admin/radio/stations/${withLogo.body.station.id}`, { token: tokens.admin });
   assert.equal((await json(app, 'DELETE', `/api/admin/radio/stations/nd-r2`, { token: tokens.admin })).body.stations.length, 2);
   assert.equal((await json(app, 'DELETE', `/api/admin/radio/stations/nd-r2`, { token: tokens.admin })).status, 404);
 

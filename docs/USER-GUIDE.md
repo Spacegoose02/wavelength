@@ -1658,7 +1658,28 @@ Tap **Edit** next to the heading to change them:
 - Tap **Done** when you're finished.
 
 Your **Favorites** (stations you hearted, and streams you added by URL) have ▲ ▼ arrows to reorder them,
-and the heart removes one.
+and the heart removes one. Favorites are only yours; **Your stations** are the same for everyone.
+
+### Adding a station for everyone
+
+Hub admins can add a station to **Your stations** for everyone on the Hub:
+
+- In the **Directory** (or Favorites), tap **+ Everyone** on a station. The button goes away once the station is
+  in Your stations.
+- Or tap **Edit** and fill in **Add a station for everyone**: a name, the stream link, and optionally a logo link.
+- Leave the logo empty and Wavelength looks the stream up in the radio directory and uses its logo. **Find missing
+  logos** (in Edit) does this for every station that has none, and **Logo** on a card sets or removes one by hand.
+
+What can be added: any internet radio stream the app can play, given as an `http(s)://` link. MP3, AAC and Ogg
+streams (Icecast, Shoutcast, most station "listen live" links) work everywhere. Playlist files (`.pls`, `.m3u`)
+and HLS (`.m3u8`) usually don't: open the playlist file and use the stream link inside it. **iHeartRadio
+stations** work when you have their direct stream link (`https://stream.revma.ihrhls.com/zc…`); many of them are in
+the Directory under their call letters or name (try *Z100* or *KIIS*), so **+ Everyone** is the easy way. The
+iheart.com page link itself isn't a stream and won't play.
+
+Stations added in Navidrome's own web page after the Hub copied Navidrome's list don't appear here, because the Hub
+keeps the list now. Add them in Wavelength instead. With a Navidrome that isn't through the Hub, **Add for
+everyone** adds the station to that Navidrome (it needs a Navidrome admin account, and there are no logos).
 
 > **Developer notes.** `src/views/Radio.tsx`. The tidy names, genre families, marks and grouping are
 > `src/lib/stationLabel.ts` (tests in `src/test/stationLabel.test.ts`); add words to `FAMILY_WORDS` there when a
@@ -1666,7 +1687,10 @@ and the heart removes one.
 > skin's `--accent`; the one-colour skins (CRT, Amber, Game Boy, High contrast) use the accent alone. By genre /
 > My order is `stationGroups` in the settings store. Hidden stations and the order are `hiddenStations` and
 > `stationOrder` in the settings store, keyed `<sourceId>:<stationId>` because ids are only unique per
-> server. Stations the order doesn't know yet go at the end. Delete calls `deleteStation` on the source
+> server. Stations the order doesn't know yet go at the end. **Add for everyone** calls `addStation` on the Hub's
+> own Navidrome source (`hubId`) or else the first Navidrome, and `findStationLogo` (`sources/radio.ts`, radio-browser
+> `byurl`, then the same name on the same stream host) fills the logo; **Logo** is `setStationLogo`, Hub only.
+> Delete calls `deleteStation` on the source
 > (`deleteInternetRadioStation` in `sources/navidrome.ts`); Navidrome enforces the admin check. When the
 > Wavelength Hub arrives (see [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)) the hidden list and order are
 > meant to sync per user; today they're per device.

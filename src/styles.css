@@ -2348,6 +2348,11 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .station-card.editing { cursor: grab; flex-wrap: wrap; }
 .station-card.dragging { opacity: 0.5; }
 .station-edit { display: flex; align-items: center; gap: 6px; width: 100%; }
+.share-stations { margin-top: 14px; display: grid; gap: 8px; }
+.share-stations .inline-form { margin-top: 0; flex-wrap: wrap; }
+.share-stations .inline-form input { min-width: 180px; }
+.share-stations > .btn { justify-self: start; }
+.share-station { white-space: nowrap; }
 .station-edit .icon-btn { color: inherit; }
 .station-edit .btn { color: inherit; border-color: var(--line); }
 .btn.danger { color: #ff5a5a; }
