@@ -22,10 +22,23 @@ export function parseIcyMetadata(bytes: Uint8Array): string | undefined {
 
 /** Trim a station's title and drop the placeholders some send between songs ("-", " - ", "Unknown"). */
 export function cleanIcyTitle(raw: string): string {
-  const t = raw.replace(/\s+/g, ' ').trim();
+  const t = iheartTitle(raw).replace(/\s+/g, ' ').trim();
   if (!/[\p{L}\p{N}]/u.test(t)) return '';
   if (/^(unknown|unknown - unknown|n\/a|null|undefined)$/i.test(t)) return '';
   return t;
+}
+
+/**
+ * iHeartRadio streams pack their tags into the title: `Artist - text="Song" song_spot="M" MediaBaseId="…" …`.
+ * Keep `Artist - Song`; between songs the "artist" is the station's own code (`zc2485`), so keep just the text
+ * (the show's name, e.g. "Bobby Bones Show"). Any other title is returned unchanged.
+ */
+export function iheartTitle(raw: string): string {
+  const m = /^([\s\S]*?)\s*-?\s*\btext="([^"]*)"/.exec(raw);
+  if (!m || !/\b(?:song_spot|MediaBaseId|TPID)="/.test(raw)) return raw;
+  const artist = /^zc\d+$/i.test(m[1].trim()) ? '' : m[1].trim();
+  const text = m[2].trim();
+  return artist && text ? `${artist} - ${text}` : text || artist;
 }
 
 /** UTF-8 when it decodes cleanly, else Latin-1 (what older Shoutcast servers send). */

@@ -8,6 +8,9 @@
   over the genres in the name and picks the **By genre** group; a Navidrome without the Hub keeps the name and links
   (`src/components/EditStation.tsx`, `src/views/Radio.tsx`, `hub/src/radioStations.ts`).
 
+- **Clean titles on iHeartRadio stations.** iHeart streams send their tags inside the song title
+  (`zc2485 - text="Bobby Bones Show" song_spot="T" …`). Radio now shows just `Artist - Song`, or the show's name
+  between songs.
 ## 0.41.0
 - **Radio: add stations for everyone, with logos.** Hub admins can add a station to **Your stations** for everyone,
   from **Edit → Add a station for everyone** or **+ Everyone** on any directory station. Until now the only way was
