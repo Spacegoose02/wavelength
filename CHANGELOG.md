@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.40.3
+- **Fix: Favorites show your newest heart first again.** With the Hub keeping hearts, it listed them by item id, so
+  Favorites came out in a near-random order. The Hub now sorts hearted songs, albums and artists by when they were
+  hearted, newest first (`hub/src/subsonicCatalog.ts`, `hub/src/userData.ts`, #282).
+- **Fix: no lag on long song lists.** Each song row looked up its album and artist by scanning the whole library, so
+  a long Favorites list took seconds to draw every time the song changed. The lookups now use indexes (about 2.3 s
+  down to 14 ms for 500 rows), and Favorites draws 100 rows at a time, more as you scroll (`src/lib/trackLinks.ts`,
+  `src/components/common.tsx`, #282).
+
 ## 0.40.2
 - **SUB/WAVE: Skip on the On air card.** Admins get a **Skip** button next to **Like**, the same skip as DJ control's
   "Skip track" (works with the admin login on the device or kept on the Hub). It says "Skipping…" while it runs and
