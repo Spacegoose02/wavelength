@@ -30,10 +30,19 @@ export function parseIcyMetadata(bytes: Uint8Array): string | undefined {
 }
 
 export function cleanIcyTitle(raw: string): string {
-  const t = raw.replace(/\s+/g, ' ').trim();
+  const t = iheartTitle(raw).replace(/\s+/g, ' ').trim();
   if (!/[\p{L}\p{N}]/u.test(t)) return '';
   if (/^(unknown|unknown - unknown|n\/a|null|undefined)$/i.test(t)) return '';
   return t;
+}
+
+/** Same as src/lib/icy.ts iheartTitle: `Artist - text="Song" song_spot="M" …` → `Artist - Song`. */
+export function iheartTitle(raw: string): string {
+  const m = /^([\s\S]*?)\s*-?\s*\btext="([^"]*)"/.exec(raw);
+  if (!m || !/\b(?:song_spot|MediaBaseId|TPID)="/.test(raw)) return raw;
+  const artist = /^zc\d+$/i.test(m[1].trim()) ? '' : m[1].trim();
+  const text = m[2].trim();
+  return artist && text ? `${artist} - ${text}` : text || artist;
 }
 
 function decode(bytes: Uint8Array): string {

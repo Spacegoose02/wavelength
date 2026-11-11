@@ -50,6 +50,8 @@ const CASES: [string, Buffer, string | undefined][] = [
   ['placeholder', block("StreamTitle=' - ';"), ''],
   ['unknown', block("StreamTitle='Unknown';"), ''],
   ['no title', block("StreamUrl='http://x';"), undefined],
+  ['iHeart song', block('StreamTitle=\'Morgan Wallen - text="Last Night" song_spot="M" MediaBaseId="2829355" TPID="91818958" length="00:02:43"\';'), 'Morgan Wallen - Last Night'],
+  ['iHeart show', block('StreamTitle=\'zc2485 - text="Bobby Bones Show" song_spot="T" MediaBaseId="0"\';'), 'Bobby Bones Show'],
 ];
 
 test('ICY metadata blocks: the Hub and the app read titles the same way', async () => {

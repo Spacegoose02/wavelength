@@ -42,6 +42,13 @@ describe('radio titles from inside the stream', () => {
     expect(cleanIcyTitle('Unknown')).toBe('');
     expect(cleanIcyTitle('  Real   Song ')).toBe('Real Song');
   });
+
+  test('iHeartRadio tags are cut down to the song, or the show between songs', () => {
+    expect(cleanIcyTitle('Luke Combs - text="Fast Car" song_spot="M" MediaBaseId="1" amgArtworkURL="http://x/y.jpg" length="00:04:25"')).toBe('Luke Combs - Fast Car');
+    expect(cleanIcyTitle('zc2485 - text="Bobby Bones Show" song_spot="T" MediaBaseId="0"')).toBe('Bobby Bones Show');
+    expect(cleanIcyTitle('zc2485 - text="" song_spot="F" MediaBaseId="0"')).toBe('');
+    expect(cleanIcyTitle('Band - text="not iHeart"')).toBe('Band - text="not iHeart"');
+  });
 });
 
 describe('in-app updates', () => {
