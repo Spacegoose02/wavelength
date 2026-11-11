@@ -65,6 +65,17 @@ test('the Hub copies Navidrome’s radio stations once, keeps their ids, and adm
   const withLogo = await json(app, 'POST', '/api/admin/radio/stations', { token: tokens.admin, body: { name: 'Z100', streamUrl: 'https://stream.revma.ihrhls.com/zc1469', logoUrl: 'https://i.example/z100.png' } });
   assert.equal(withLogo.body.station.logoUrl, 'https://i.example/z100.png');
   await json(app, 'DELETE', `/api/admin/radio/stations/${withLogo.body.station.id}`, { token: tokens.admin });
+  // everything else can be changed after adding too: genre (tidied, '' goes back to the name), stream and home page links
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.member, body: { genre: 'Rock' } })).status, 403);
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { genre: ' Eclectic ,  rock/ ' } })).body.station.genre, 'Eclectic, rock');
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { genre: 'x'.repeat(201) } })).status, 400);
+  const moved = (await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { streamUrl: 'https://rp.example/aac', homePageUrl: 'https://radioparadise.com' } })).body.station;
+  assert.deepEqual([moved.name, moved.streamUrl, moved.homePageUrl, moved.genre], ['Radio Paradise FLAC', 'https://rp.example/aac', 'https://radioparadise.com', 'Eclectic, rock'], 'the rest is kept');
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { streamUrl: 'not a link' } })).status, 400);
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { name: '' } })).status, 400);
+  assert.equal((await json(app, 'PUT', `/api/admin/radio/stations/${rp}`, { token: tokens.admin, body: { genre: '' } })).body.station.genre, '');
+  assert.equal((await json(app, 'POST', '/api/admin/radio/stations', { token: tokens.admin, body: { name: 'G', streamUrl: 'https://g.example', genre: 'Jazz' } })).body.station.genre, 'Jazz');
+  await json(app, 'DELETE', `/api/admin/radio/stations/${(await json(app, 'GET', '/api/radio/stations', { token: tokens.admin })).body.stations.find((x: { name: string }) => x.name === 'G').id}`, { token: tokens.admin });
   assert.equal((await json(app, 'DELETE', `/api/admin/radio/stations/nd-r2`, { token: tokens.admin })).body.stations.length, 2);
   assert.equal((await json(app, 'DELETE', `/api/admin/radio/stations/nd-r2`, { token: tokens.admin })).status, 404);
 

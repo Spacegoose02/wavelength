@@ -7,8 +7,10 @@ import { IconPencil, IconX } from './Icons';
  * phone), the section's fields on the right, and Cancel / Save along the bottom. Esc or a click outside closes it,
  * except while it's saving.
  */
-export function EditDialog<T extends string>({ title, tabs, tab, onTab, busy, onClose, footer, children }: {
+export function EditDialog<T extends string>({ title, tabs, tab, onTab, busy, onClose, footer, children, className }: {
   title: string;
+  /** extra classes on the dialog ("narrow" for a dialog with one section) */
+  className?: string;
   tabs: readonly (readonly [T, string])[];
   tab: T;
   onTab: (t: T) => void;
@@ -24,18 +26,20 @@ export function EditDialog<T extends string>({ title, tabs, tab, onTab, busy, on
   }, [busy, onClose]);
   return (
     <div className="pin-backdrop" onMouseDown={() => !busy && onClose()}>
-      <div className="edit-dialog" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}>
+      <div className={`edit-dialog ${className ?? ''}`} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()}>
         <header className="edit-dialog-head">
           <IconPencil aria-hidden />
           <h3>{title}</h3>
           <button className="icon-btn" title="Close" onClick={onClose} disabled={busy}><IconX /></button>
         </header>
         <div className="edit-dialog-body">
-          <nav className="edit-dialog-tabs" role="tablist" aria-label="Sections">
-            {tabs.map(([k, label]) => (
-              <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => onTab(k)}>{label}</button>
-            ))}
-          </nav>
+          {tabs.length > 1 && (
+            <nav className="edit-dialog-tabs" role="tablist" aria-label="Sections">
+              {tabs.map(([k, label]) => (
+                <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => onTab(k)}>{label}</button>
+              ))}
+            </nav>
+          )}
           <div className="edit-dialog-pane">{children}</div>
         </div>
         <footer className="edit-dialog-foot">{footer}</footer>

@@ -162,6 +162,8 @@ export interface Station {
   homepage?: string;
   favicon?: string;
   tags?: string;
+  /** Genres someone set for the station (Edit station), comma separated. Wins over the genres in its name and `tags`. */
+  genre?: string;
   country?: string;
   codec?: string;
   bitrate?: number;
@@ -234,9 +236,14 @@ export interface MusicSource {
    * Add a radio station to the server, for everyone on it (Radio → Your stations). Navidrome only allows this for admin
    * accounts; the Hub for `library.edit`. `logo` is kept only by the Hub.
    */
-  addStation?(s: { name: string; streamUrl: string; homepage?: string; logo?: string }): Promise<void>;
+  addStation?(s: { name: string; streamUrl: string; homepage?: string; logo?: string; genre?: string }): Promise<void>;
   /** Change a server station's logo (Hub stations only; '' takes it off). */
   setStationLogo?(id: string, logo: string): Promise<void>;
+  /**
+   * Change a server station after adding it (Radio → Your stations → Edit → Edit). Give every field: Navidrome wants the
+   * name and stream link each time. `logo` and `genre` are kept only for stations on the Wavelength Hub ('' clears them).
+   */
+  updateStation?(id: string, s: { name: string; streamUrl: string; homepage?: string; logo?: string; genre?: string }): Promise<void>;
   getBooks?(): Promise<Book[]>;
   startBook?(bookId: string): Promise<BookPlayback>;
   syncBook?(track: Track, absoluteTime: number, listened: number): Promise<void>;

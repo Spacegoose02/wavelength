@@ -24,6 +24,12 @@ describe('station labels', () => {
     expect(l('SUB/WAVE', 'agentic radio')).toMatchObject({ title: 'SUB/WAVE', genres: ['agentic radio'], family: 'ai' });
   });
 
+  test('a genre set with Edit station wins over the name and tags', () => {
+    expect(stationLabel({ name: 'The Mix @ 181.fm(Pop/Rock/Hits)', genre: 'Country, Americana' })).toMatchObject({ title: 'The Mix', genres: ['Country', 'Americana'], family: 'country' });
+    expect(stationLabel({ name: 'KEXP', genre: 'Indie/Alt' })).toMatchObject({ genres: ['Indie', 'Alt'], family: 'rock' });
+    expect(stationLabel({ name: 'BigRigFM (Rock)', genre: '' }).family).toBe('rock');
+  });
+
   test('group in family order, keeping order inside a group', () => {
     const g = groupByFamily([{ name: 'B (Rock)' }, { name: 'A (Pop)' }, { name: 'C (Rock)' }]);
     expect(g.map((x) => [x.family, x.stations.map((s) => s.name)])).toEqual([['pop', ['A (Pop)']], ['rock', ['B (Rock)', 'C (Rock)']]]);

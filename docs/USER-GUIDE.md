@@ -1649,17 +1649,42 @@ the rest get a tile with a short mark (*93*, *80s*, *CH*) in their genre's colou
 
 Tap **Edit** next to the heading to change them:
 
-<img src="screenshots/radio-edit.png" alt="Radio, Your stations in edit mode: move arrows, Hide and Delete on each station, and a hidden station with a Show button" width="80%">
+<img src="screenshots/radio-edit.png" alt="Radio, Your stations in edit mode: move arrows, Hide, Edit and Delete on each station card, and the Add a station for everyone form under them" width="80%">
 
 - **Reorder** with the ◀ ▶ arrows, or drag a station onto another on desktop.
 - **Hide** removes a station from the row on this device only. Hidden stations are listed under the row
   while editing, each with **Show** to bring it back.
+- **Edit** opens **Edit station**, to change a station after adding it: see below.
 - **Delete** (Navidrome stations only) removes the station from the Navidrome server for everyone. Navidrome
   only lets admin accounts do this; if your account isn't an admin you'll get an error, and you can hide it instead.
 - Tap **Done** when you're finished.
 
 Your **Favorites** (stations you hearted, and streams you added by URL) have ▲ ▼ arrows to reorder them,
-and the heart removes one. Favorites are only yours; **Your stations** are the same for everyone.
+the pencil opens **Edit station**, and the heart removes one. Favorites are only yours; **Your stations** are the
+same for everyone.
+
+### Changing a station's name, stream link, genre or logo
+
+Anything about a station can be changed after it's added. Tap **Edit** next to **Your stations**, then **Edit** on
+the station's card; for a favorite, tap its pencil. **Edit station** has:
+
+- **Name**: what the card shows. Brackets still work: “Energy 93 (Dance/Techno)” shows *Energy 93* with those genres.
+- **Stream link**: the `http(s)://` link that plays. Use this when a station moves its stream.
+- **Genre**: one or more, separated by commas (*Rock, Indie*). It wins over any genres in the name, and puts the
+  station in that **By genre** group. Leave it empty to go by the name again. The box suggests common genres.
+- **Home page**: the station's website (optional).
+- **Logo picture link**: the card's picture. **Find logo** looks the stream up in the radio directory; leave it empty
+  for a tile in the genre's colour.
+
+The box at the top shows how the card will look and which group it goes in, before you save.
+
+<img src="screenshots/radio-edit-station.png" alt="Edit station dialog for a favorite: a preview of the card (LG tile, Lofi Girl Radio, Lo-fi · Chill · in Chill & lounge), then Name, Stream link, Genre, Home page and Logo picture link with Find logo, and Cancel / Save changes" width="45%">
+
+Changes to **Your stations** are for everyone on the server and need an admin account (you'll get an error
+otherwise). Changes to a favorite stay on your profile. A Navidrome that isn't through the Hub only keeps a
+station's name and links, so there's no Genre or Logo box for its stations; put the genre in brackets in the name.
+
+<img src="screenshots/radio-edit-station-navidrome.png" alt="Edit station for a Navidrome station without the Hub: Name, Stream link, a note that this server keeps no genre and to put it in brackets in the name, and Home page" width="45%">
 
 ### Adding a station for everyone
 
@@ -1667,9 +1692,10 @@ Hub admins can add a station to **Your stations** for everyone on the Hub:
 
 - In the **Directory** (or Favorites), tap **+ Everyone** on a station. The button goes away once the station is
   in Your stations.
-- Or tap **Edit** and fill in **Add a station for everyone**: a name, the stream link, and optionally a logo link.
+- Or tap **Edit** and fill in **Add a station for everyone**: a name, the stream link, and optionally a genre and a
+  logo link.
 - Leave the logo empty and Wavelength looks the stream up in the radio directory and uses its logo. **Find missing
-  logos** (in Edit) does this for every station that has none, and **Logo** on a card sets or removes one by hand.
+  logos** (in Edit) does this for every station that has none, and **Edit** on a card changes or removes one by hand.
 
 What can be added: any internet radio stream the app can play, given as an `http(s)://` link. MP3, AAC and Ogg
 streams (Icecast, Shoutcast, most station "listen live" links) work everywhere. Playlist files (`.pls`, `.m3u`)
@@ -1690,7 +1716,11 @@ everyone** adds the station to that Navidrome (it needs a Navidrome admin accoun
 > `stationOrder` in the settings store, keyed `<sourceId>:<stationId>` because ids are only unique per
 > server. Stations the order doesn't know yet go at the end. **Add for everyone** calls `addStation` on the Hub's
 > own Navidrome source (`hubId`) or else the first Navidrome, and `findStationLogo` (`sources/radio.ts`, radio-browser
-> `byurl`, then the same name on the same stream host) fills the logo; **Logo** is `setStationLogo`, Hub only.
+> `byurl`, then the same name on the same stream host) fills the logo. **Edit station** is
+> `src/components/EditStation.tsx`: for Your stations it calls `updateStation` on the source (the Hub's
+> `PUT /api/admin/radio/stations/:id` with every field, or Navidrome's `updateInternetRadioStation` with the name and
+> links), for favorites `updateSavedStation` in the settings store. A station's `genre` (comma separated) wins over
+> the name's brackets and `tags` in `stationLabel`.
 > Delete calls `deleteStation` on the source
 > (`deleteInternetRadioStation` in `sources/navidrome.ts`); Navidrome enforces the admin check. When the
 > Wavelength Hub arrives (see [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md)) the hidden list and order are

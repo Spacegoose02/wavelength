@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Radio: edit a station after adding it.** **Edit station** changes a station's name, stream link, genre, home page
+  and logo, with a preview of its card. Open it with **Edit** on a card in Your stations (admins, for everyone) or the
+  pencil on a favorite (just you). Until now only the logo could be changed, so a moved stream or a station in the
+  wrong genre group meant deleting it and adding it again. Hub stations keep a genre now (migration 39), which wins
+  over the genres in the name and picks the **By genre** group; a Navidrome without the Hub keeps the name and links
+  (`src/components/EditStation.tsx`, `src/views/Radio.tsx`, `hub/src/radioStations.ts`).
+
 - **Clean titles on iHeartRadio stations.** iHeart streams send their tags inside the song title
   (`zc2485 - text="Bobby Bones Show" song_spot="T" …`). Radio now shows just `Artist - Song`, or the show's name
   between songs.

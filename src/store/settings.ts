@@ -224,6 +224,8 @@ interface SettingsState {
   removeSource(id: string): void;
   moveSource(id: string, dir: -1 | 1): void;
   toggleStation(s: Station): void;
+  /** Change a saved (favorite) station: its name, stream link, genre, home page or logo (Radio → Favorites → Edit). */
+  updateSavedStation(id: string, patch: Partial<Pick<Station, 'name' | 'streamUrl' | 'homepage' | 'favicon' | 'genre'>>): void;
   /** Move a saved (favorite) station up or down the list. */
   moveStation(id: string, dir: -1 | 1): void;
   setStationHidden(key: string, hidden: boolean): void;
@@ -405,6 +407,7 @@ export const useSettings = create<SettingsState>()(
             ? { stations: st.stations.filter((x) => x.id !== s.id) }
             : { stations: [...st.stations, s] },
         ),
+      updateSavedStation: (id, patch) => set((st) => ({ stations: st.stations.map((s) => (s.id === id ? { ...s, ...patch } : s)) })),
       moveStation: (id, dir) =>
         set((st) => {
           const i = st.stations.findIndex((s) => s.id === id);

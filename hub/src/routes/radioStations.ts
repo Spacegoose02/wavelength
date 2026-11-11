@@ -19,7 +19,7 @@ export function radioStationRoutes(app: FastifyInstance, { db, config }: Ctx) {
 
   app.post('/api/admin/radio/stations', async (req) => {
     const { user } = need(req, 'library.edit');
-    const s = addStation(db, readStation(req.body as Record<string, unknown>) as { name: string; streamUrl: string; homePageUrl?: string; logoUrl?: string });
+    const s = addStation(db, readStation(req.body as Record<string, unknown>) as { name: string; streamUrl: string; homePageUrl?: string; logoUrl?: string; genre?: string });
     audit(db, { actorId: user.id, action: 'radio.added', target: s.name, ip: clientIp(req) });
     return { station: s, ...out() };
   });

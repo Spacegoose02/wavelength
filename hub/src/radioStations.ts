@@ -18,6 +18,8 @@ export interface RadioStation {
   homePageUrl: string;
   /** a picture for the station's card ('' for none) */
   logoUrl: string;
+  /** the genres people set for it, comma separated ('' to go by its name), for its card and the "By genre" groups */
+  genre: string;
 }
 
 const IMPORTED_KEY = 'radio.imported';
@@ -29,14 +31,16 @@ export function radioImportedAt(db: Db): number | null {
 }
 
 export function listStations(db: Db): RadioStation[] {
-  return (db.prepare('SELECT id, name, stream_url, homepage_url, logo_url FROM radio_stations ORDER BY name COLLATE NOCASE, id').all() as { id: string; name: string; stream_url: string; homepage_url: string; logo_url: string }[])
-    .map((r) => ({ id: r.id, name: r.name, streamUrl: r.stream_url, homePageUrl: r.homepage_url, logoUrl: r.logo_url }));
+  return (db.prepare('SELECT id, name, stream_url, homepage_url, logo_url, genre FROM radio_stations ORDER BY name COLLATE NOCASE, id').all() as { id: string; name: string; stream_url: string; homepage_url: string; logo_url: string; genre: string }[])
+    .map((r) => ({ id: r.id, name: r.name, streamUrl: r.stream_url, homePageUrl: r.homepage_url, logoUrl: r.logo_url, genre: r.genre }));
 }
 
-/** A station's fields checked: a name, and http(s) links. */
+/** A station's fields checked: a name, http(s) links, and a short genre list ("Rock, Indie"). */
 export function readStation(b: Record<string, unknown> | null | undefined, partial = false): Partial<Omit<RadioStation, 'id'>> {
   const str = (k: string) => (typeof b?.[k] === 'string' ? (b[k] as string).trim() : undefined);
   const name = str('name'), streamUrl = str('streamUrl'), homePageUrl = str('homePageUrl'), logoUrl = str('logoUrl');
+  // "Rock,  indie ," → "Rock, indie"
+  const genre = str('genre')?.split(/\s*[,/|]\s*/).filter(Boolean).join(', ');
   const link = (v: string | undefined, what: string) => {
     if (v && (!/^https?:\/\/[^\s]+$/i.test(v) || v.length > 2000)) throw new HttpError(400, `${what} must be an http(s) link`);
   };
@@ -46,27 +50,29 @@ export function readStation(b: Record<string, unknown> | null | undefined, parti
   link(streamUrl, 'The stream');
   link(homePageUrl, 'The home page');
   link(logoUrl, 'The logo');
+  if (genre && genre.length > 200) throw new HttpError(400, 'A genre is up to 200 characters');
   return {
     ...(name !== undefined && { name }),
     ...(streamUrl !== undefined && { streamUrl }),
     ...(homePageUrl !== undefined && { homePageUrl }),
     ...(logoUrl !== undefined && { logoUrl }),
+    ...(genre !== undefined && { genre }),
   };
 }
 
-export function addStation(db: Db, s: { name: string; streamUrl: string; homePageUrl?: string; logoUrl?: string }, id: string = randomUUID()): RadioStation {
+export function addStation(db: Db, s: { name: string; streamUrl: string; homePageUrl?: string; logoUrl?: string; genre?: string }, id: string = randomUUID()): RadioStation {
   const now = Date.now();
-  db.prepare('INSERT INTO radio_stations (id, name, stream_url, homepage_url, logo_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(id, s.name, s.streamUrl, s.homePageUrl ?? '', s.logoUrl ?? '', now, now);
-  return { id, name: s.name, streamUrl: s.streamUrl, homePageUrl: s.homePageUrl ?? '', logoUrl: s.logoUrl ?? '' };
+  db.prepare('INSERT INTO radio_stations (id, name, stream_url, homepage_url, logo_url, genre, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, s.name, s.streamUrl, s.homePageUrl ?? '', s.logoUrl ?? '', s.genre ?? '', now, now);
+  return { id, name: s.name, streamUrl: s.streamUrl, homePageUrl: s.homePageUrl ?? '', logoUrl: s.logoUrl ?? '', genre: s.genre ?? '' };
 }
 
 export function updateStation(db: Db, id: string, s: Partial<Omit<RadioStation, 'id'>>): RadioStation {
   const cur = listStations(db).find((x) => x.id === id);
   if (!cur) throw new HttpError(404, 'No such station');
   const next = { ...cur, ...s };
-  db.prepare('UPDATE radio_stations SET name = ?, stream_url = ?, homepage_url = ?, logo_url = ?, updated_at = ? WHERE id = ?')
-    .run(next.name, next.streamUrl, next.homePageUrl, next.logoUrl, Date.now(), id);
+  db.prepare('UPDATE radio_stations SET name = ?, stream_url = ?, homepage_url = ?, logo_url = ?, genre = ?, updated_at = ? WHERE id = ?')
+    .run(next.name, next.streamUrl, next.homePageUrl, next.logoUrl, next.genre, Date.now(), id);
   return next;
 }
 

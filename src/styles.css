@@ -2843,6 +2843,12 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
 .edit-dialog .art-dialog.inline { width: auto; max-height: none; padding: 0; background: none; overflow: visible; }
 .edit-dialog .art-dialog.inline .art-results { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
 .edit-dialog-foot .btn.ghost { white-space: nowrap; }
+.edit-dialog.narrow { width: min(520px, 100%); }
+.edit-dialog.narrow .edit-dialog-pane { min-height: 0; }
+.station-edit-preview { --fam: #6b7280; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); }
+.station-edit-preview > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.station-edit-preview b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edit-field small.danger { color: #ff5d6c; font-weight: 500; }
 .art-results > p { grid-column: 1 / -1; }
 
 /* Smart playlists → Advanced (components/RuleBuilder.tsx): Plex-style rule groups */

@@ -319,7 +319,7 @@ export class NavidromeSource implements MusicSource {
 
   async getStations(): Promise<Station[]> {
     const hub = await this.hubStations();
-    if (hub) return hub.list.map((s) => ({ id: s.id, sourceId: this.config.id, name: s.name, streamUrl: s.streamUrl, homepage: s.homePageUrl || undefined, favicon: s.logoUrl || undefined }));
+    if (hub) return hub.list.map((s) => ({ id: s.id, sourceId: this.config.id, name: s.name, streamUrl: s.streamUrl, homepage: s.homePageUrl || undefined, favicon: s.logoUrl || undefined, genre: s.genre || undefined }));
     const r = await this.call('getInternetRadioStations');
     return (r.internetRadioStations?.internetRadioStation ?? []).map((s: any) => ({
       id: s.id,
@@ -330,10 +330,10 @@ export class NavidromeSource implements MusicSource {
     }));
   }
 
-  async addStation(st: { name: string; streamUrl: string; homepage?: string; logo?: string }) {
+  async addStation(st: { name: string; streamUrl: string; homepage?: string; logo?: string; genre?: string }) {
     const hub = await this.hubStations();
     if (hub) {
-      await hub.c.addRadioStation({ name: st.name, streamUrl: st.streamUrl, homePageUrl: st.homepage || undefined, logoUrl: st.logo || undefined });
+      await hub.c.addRadioStation({ name: st.name, streamUrl: st.streamUrl, homePageUrl: st.homepage || undefined, logoUrl: st.logo || undefined, genre: st.genre || undefined });
       return;
     }
     // a Navidrome the Hub doesn't keep stations for: no logos there, and only its admins may add
@@ -344,6 +344,16 @@ export class NavidromeSource implements MusicSource {
     const hub = await this.hubStations();
     if (!hub) throw new Error('Only stations kept on the Wavelength Hub can have a logo');
     await hub.c.updateRadioStation(id, { logoUrl: logo });
+  }
+
+  async updateStation(id: string, st: { name: string; streamUrl: string; homepage?: string; logo?: string; genre?: string }) {
+    const hub = await this.hubStations();
+    if (hub) {
+      await hub.c.updateRadioStation(id, { name: st.name, streamUrl: st.streamUrl, homePageUrl: st.homepage ?? '', logoUrl: st.logo ?? '', genre: st.genre ?? '' });
+      return;
+    }
+    // a Navidrome the Hub doesn't keep stations for: name and links only, and only its admins may change them
+    await this.call('updateInternetRadioStation', { id, name: st.name, streamUrl: st.streamUrl, homepageUrl: st.homepage || undefined });
   }
 
   async deleteStation(id: string) {

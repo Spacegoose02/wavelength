@@ -61,7 +61,7 @@ export function familyOf(text: string): GenreFamily {
 
 const isNetwork = (s: string) => /^[\w-]+(\.[\w-]+)+$/.test(s.trim()) && !/\s/.test(s.trim());
 
-export function stationLabel(s: Pick<Station, 'name' | 'tags'>): StationLabel {
+export function stationLabel(s: Pick<Station, 'name' | 'tags' | 'genre'>): StationLabel {
   let rest = s.name.trim();
   const genres: string[] = [];
   let network: string | undefined;
@@ -95,11 +95,12 @@ export function stationLabel(s: Pick<Station, 'name' | 'tags'>): StationLabel {
   }
   title = title.replace(/[-–·,\s]+$/, '') || s.name.trim();
 
-  // tags from the server ("agentic radio") count as genres when the name had none
+  // a genre someone set (Edit station) wins; else tags from the server ("agentic radio") count when the name had none
+  const set = s.genre?.split(/\s*[,/|]\s*/).map((t) => t.trim()).filter(Boolean) ?? [];
   const tagWords = s.tags?.split(',').map((t) => t.trim()).filter(Boolean) ?? [];
-  const all = genres.length ? genres : tagWords;
+  const all = set.length ? set : genres.length ? genres : tagWords;
   // the first genre that says anything wins ("Pop/Rock/Hits" is pop), then the title ("BigRigFM")
-  const family = [...genres, ...tagWords, title].map(familyOf).find((f) => f !== 'other') ?? 'other';
+  const family = [...(set.length ? set : [...genres, ...tagWords]), title].map(familyOf).find((f) => f !== 'other') ?? 'other';
 
   return { title, genres: all, network, place, family, mark: markOf(title) };
 }
@@ -116,7 +117,7 @@ export function markOf(title: string): string {
 }
 
 /** Group stations by family, keeping each group in the order given and the groups in FAMILY_NAMES order. */
-export function groupByFamily<T extends Pick<Station, 'name' | 'tags'>>(list: T[]): { family: GenreFamily; stations: T[] }[] {
+export function groupByFamily<T extends Pick<Station, 'name' | 'tags' | 'genre'>>(list: T[]): { family: GenreFamily; stations: T[] }[] {
   const groups = new Map<GenreFamily, T[]>();
   for (const s of list) {
     const f = stationLabel(s).family;
