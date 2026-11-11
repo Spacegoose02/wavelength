@@ -461,9 +461,11 @@ function answerFor(db: Db, method: string, q: Record<string, string>, starred: S
     }
     case 'getStarred':
     case 'getStarred2': {
-      const songs = [...starred.keys()].map((id) => v.songs.get(id)).filter((r): r is Row => !!r);
-      const albums = [...starred.keys()].map((id) => v.albums.get(id)).filter((a): a is Album => !!a);
-      const artists = [...starred.keys()].map((id) => v.artists.get(id)).filter((a): a is Artist => !!a);
+      // newest heart first, as Navidrome answers (Favorites shows them in this order)
+      const ids = [...starred].sort((a, b) => b[1].localeCompare(a[1])).map(([id]) => id);
+      const songs = ids.map((id) => v.songs.get(id)).filter((r): r is Row => !!r);
+      const albums = ids.map((id) => v.albums.get(id)).filter((a): a is Album => !!a);
+      const artists = ids.map((id) => v.artists.get(id)).filter((a): a is Artist => !!a);
       const body = { artist: artists.map((a) => artist(a, starred)), album: albums.map((a) => album(a, starred)), song: songs.map((r) => song(r, starred)) };
       return ok(method === 'getStarred2' ? { starred2: body } : { starred: body });
     }

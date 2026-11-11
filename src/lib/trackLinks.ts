@@ -12,6 +12,61 @@ export function isLibraryTrack(t: Track) {
 }
 
 /**
+ * Lookups over the catalog's albums and artists, built once per list and kept until the catalog hands over a new
+ * one. A long song list (Favorites, a big playlist) asks for every row's album and artist, and searching the whole
+ * library for each, normalizing every name as it went, made those pages lag.
+ */
+const refKey = (sourceId: string, id: string) => `${sourceId}\u0000${id}`;
+const firstOf = <T>(m: Map<string, T>, k: string, v: T) => void (m.has(k) || m.set(k, v));
+
+interface ArtistIndex { byName: Map<string, Artist>; byRef: Map<string, { artist: Artist; at: number }> }
+const artistIndexes = new WeakMap<Artist[], ArtistIndex>();
+function artistIndex(artists: Artist[]): ArtistIndex {
+  let ix = artistIndexes.get(artists);
+  if (ix) return ix;
+  ix = { byName: new Map(), byRef: new Map() };
+  artists.forEach((a, at) => {
+    const key = norm(a.name);
+    if (key) firstOf(ix!.byName, key, a);
+    for (const r of a.refs ?? [a]) firstOf(ix!.byRef, refKey(r.sourceId, r.id), { artist: a, at });
+  });
+  artistIndexes.set(artists, ix);
+  return ix;
+}
+
+interface AlbumIndex { byRef: Map<string, Album>; byTitle: Map<string, Album[]> }
+const albumIndexes = new WeakMap<Album[], AlbumIndex>();
+function albumIndex(albums: Album[]): AlbumIndex {
+  let ix = albumIndexes.get(albums);
+  if (ix) return ix;
+  ix = { byRef: new Map(), byTitle: new Map() };
+  for (const a of albums) {
+    for (const r of a.refs ?? [a]) firstOf(ix.byRef, refKey(r.sourceId, r.id), a);
+    const title = norm(a.title);
+    ix.byTitle.set(title, [...(ix.byTitle.get(title) ?? []), a]);
+  }
+  albumIndexes.set(albums, ix);
+  return ix;
+}
+
+/** The library artist with this name (normalized), the first in the list. */
+const artistNamed = (artists: Artist[], name: string) => {
+  const key = norm(name);
+  return key ? artistIndex(artists).byName.get(key) : undefined;
+};
+
+/** The first library artist (in list order) holding the artist id of any of an album's copies. */
+const artistOfRefs = (artists: Artist[], refs: Album[]) => {
+  const byRef = artistIndex(artists).byRef;
+  let best: { artist: Artist; at: number } | undefined;
+  for (const x of refs) {
+    const hit = x.artistId ? byRef.get(refKey(x.sourceId, x.artistId)) : undefined;
+    if (hit && (!best || hit.at < best.at)) best = hit;
+  }
+  return best?.artist;
+};
+
+/**
  * The library album a song is on: the catalog album holding the song's album id on its server, else the one
  * with the same name and artist. A song whose album isn't in the catalog yet (still loading, or only on a
  * server the catalog couldn't list) still opens its album when its server gave an album id.
@@ -19,12 +74,11 @@ export function isLibraryTrack(t: Track) {
 export function albumOfTrack(t: Track, albums: Album[]): Album | undefined {
   if (!isLibraryTrack(t)) return undefined;
   if (t.albumId) {
-    const byId = albums.find((a) => (a.refs ?? [a]).some((r) => r.id === t.albumId && r.sourceId === t.sourceId));
+    const byId = albumIndex(albums).byRef.get(refKey(t.sourceId, t.albumId));
     if (byId) return byId;
   }
   if (t.album) {
-    const title = norm(t.album);
-    const same = albums.filter((a) => norm(a.title) === title);
+    const same = albumIndex(albums).byTitle.get(norm(t.album)) ?? [];
     const artist = norm(t.artist);
     const hit = same.find((a) => norm(a.artist) === artist) ?? (same.length === 1 ? same[0] : undefined);
     if (hit) return hit;
@@ -40,18 +94,13 @@ export function albumOfTrack(t: Track, albums: Album[]): Album | undefined {
  */
 export function artistOfTrack(t: Track, artists: Artist[], album?: Album): Artist | undefined {
   if (!isLibraryTrack(t)) return undefined;
-  const named = (name: string) => {
-    const key = norm(name);
-    return key ? artists.find((a) => norm(a.name) === key) : undefined;
-  };
+  const named = (name: string) => artistNamed(artists, name);
   const exact = named(t.artist);
   if (exact) return exact;
   const first = named(primaryArtist(t.artist));
   if (first) return first;
   if (album) {
-    const refs = album.refs ?? [album];
-    const byId = artists.find((a) => (a.refs ?? [a]).some((r) => refs.some((x) => x.artistId === r.id && x.sourceId === r.sourceId)));
-    return byId ?? named(album.artist);
+    return artistOfRefs(artists, album.refs ?? [album]) ?? named(album.artist);
   }
   return undefined;
 }
@@ -64,12 +113,9 @@ export function artistOfTrack(t: Track, artists: Artist[], album?: Album): Artis
  */
 export function artistOfAlbum(album: Album, artists: Artist[]): Artist | undefined {
   const refs = album.refs ?? [album];
-  const byId = artists.find((a) => (a.refs ?? [a]).some((r) => refs.some((x) => x.artistId === r.id && x.sourceId === r.sourceId)));
+  const byId = artistOfRefs(artists, refs);
   if (byId) return byId;
-  const named = (name: string) => {
-    const key = norm(name);
-    return key ? artists.find((a) => norm(a.name) === key) : undefined;
-  };
+  const named = (name: string) => artistNamed(artists, name);
   const hit = named(album.artist) ?? named(primaryArtist(album.artist));
   if (hit) return hit;
   const withId = refs.find((r) => r.artistId);
@@ -104,10 +150,7 @@ const WEAK = /(\s*,\s*(?:(?:and|&)\s+)?|\s+(?:&|and|x|×|with)\s+)/i;
  * "Simon & Garfunkel" stays one name when the library doesn't know it.
  */
 export function creditLinks(credit: string, artists: Artist[]): CreditPart[] {
-  const find = (name: string) => {
-    const key = norm(name);
-    return key ? artists.find((a) => norm(a.name) === key) : undefined;
-  };
+  const find = (name: string) => artistNamed(artists, name);
   const whole = find(credit);
   if (whole || !credit.trim()) return credit ? [{ text: credit, name: credit.trim() || undefined, artist: whole }] : [];
   const out: CreditPart[] = [];

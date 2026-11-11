@@ -134,11 +134,31 @@ interface TrackListProps {
   onMove?: (i: number, to: number) => void;
   /** A song to scroll to and flash once (Now Playing's song title link); matched by id, else by title. */
   focus?: { id: string; sourceId: string; title?: string };
+  /**
+   * For long lists (Favorites): draw the first rows, and more as the list is scrolled to its end, instead of every
+   * row at once. Playing a row still plays from the whole list.
+   */
+  grow?: boolean;
 }
 
-export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, onMove, focus }: TrackListProps) {
+/** Rows a growing TrackList draws at first, and adds each time its end comes into view. */
+export const GROW_ROWS = 100;
+
+export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, onMove, focus, grow }: TrackListProps) {
   const phone = useIsPhone();
   const focusIdx = focusIndex(tracks, focus);
+  const [rows, setRows] = useState(GROW_ROWS);
+  const shown = grow ? Math.max(rows, focusIdx + 1) : tracks.length;
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const end = endRef.current;
+    if (!end || typeof IntersectionObserver === 'undefined') return;
+    const seen = new IntersectionObserver((e) => {
+      if (e.some((x) => x.isIntersecting)) setRows((n) => n + GROW_ROWS);
+    }, { rootMargin: '600px' });
+    seen.observe(end);
+    return () => seen.disconnect();
+  }, [shown, tracks.length]);
   const focusRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // braces, not an expression body: newer Chromium (WebView2, so the Windows app) has scrollIntoView return a
@@ -155,7 +175,7 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
   useArtworkList();
   return (
     <div className="tracklist">
-      {tracks.map((t, i) => hidden.track(t) ? null : (
+      {(shown < tracks.length ? tracks.slice(0, shown) : tracks).map((t, i) => hidden.track(t) ? null : (
         <div key={`${i}:${t.sourceId}:${t.id}`} ref={i === focusIdx ? focusRef : undefined}
           className={`track-row ${current?.id === t.id && current.sourceId === t.sourceId ? 'active' : ''} ${openRow === i ? 'open' : ''} ${i === focusIdx ? 'focus' : ''}`}
           onDoubleClick={() => playTracks(tracks, i)}
@@ -193,6 +213,11 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
           <div className="track-time">{t.kind === 'radio' ? 'LIVE' : fmtTime(t.duration)}</div>
         </div>
       ))}
+      {shown < tracks.length && (
+        <div ref={endRef} className="row center muted small" style={{ padding: 12 }}>
+          <button className="btn" onClick={() => setRows((n) => n + GROW_ROWS)}>Show more ({tracks.length - shown} left)</button>
+        </div>
+      )}
     </div>
   );
 }
