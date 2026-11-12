@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
 import { catalogChangesSince, catalogVersion } from './catalog.ts';
 import { creditNames } from './credits.ts';
@@ -577,17 +578,19 @@ function searchArtists(v: View, query: string, match: (text: string) => boolean)
 }
 
 /**
- * The file a cover id points at: "al-<album id>" or "mf-<song id>" (with or without Navidrome's "_<time>"), or a bare
- * album or song id. null for artists ("ar-…", their pictures come from the internet) and ids the catalog doesn't know.
+ * The files a cover id points at, best first: "al-<album id>" or "mf-<song id>" (with or without Navidrome's
+ * "_<time>"), or a bare album or song id. A song comes first and then the rest of its album, so a song whose file has
+ * no picture still gets its album's cover, as with Navidrome. An artist ("ar-…") gets their latest album's cover;
+ * an id the catalog doesn't know, nothing.
  */
-export function coverSource(db: Db, id: string): { dir: string; file: string } | null {
+export function coverSources(db: Db, id: string): { dir: string; file: string }[] {
   const v = view(db);
   const m = /^(al|mf|ar)-(.+?)(_[0-9a-f]+)?$/.exec(id);
   const kind = m?.[1], key = m ? m[2] : id;
-  // an artist's picture is their latest album's cover
-  const r = kind === 'mf' ? v.songs.get(key) : kind === 'al' ? v.albums.get(key)?.songs[0] : kind === 'ar' ? v.artists.get(key)?.albums.at(-1)?.songs[0]
-    : v.albums.get(key)?.songs[0] ?? v.songs.get(key);
-  return r ? { dir: dirname(r.path), file: r.path } : null;
+  const song = kind === 'mf' || !kind ? v.songs.get(key) : undefined;
+  const album = kind === 'al' ? v.albums.get(key) : kind === 'ar' ? v.artists.get(key)?.albums.at(-1) : song ? v.albums.get(song.nd_album_id) : v.albums.get(key);
+  const rows = [...(song ? [song] : []), ...(album?.songs ?? []).filter((r) => r !== song)];
+  return rows.map((r) => ({ dir: dirname(r.path), file: r.path }));
 }
 
 function run(args: string[]): Promise<Buffer | null> {
@@ -600,36 +603,85 @@ function run(args: string[]): Promise<Buffer | null> {
   });
 }
 
+/** Songs of an album looked inside for a picture before giving up (each one is an ffmpeg run). */
+const COVER_TRIES = 3;
+/** How long "this has no cover" is remembered, so a list of songs without art doesn't run ffmpeg on every look. */
+const NO_COVER_MS = 10 * 60_000;
+const noCover = new Map<string, number>();
+/** Covers being made right now, so the same cover asked for by several rows at once is made once. */
+const making = new Map<string, Promise<{ body: Buffer; type: string } | null>>();
+
 /**
- * A cover from the music folder: the album folder's cover/folder/front picture, else the picture in the file, made
- * `size` pixels across (JPEG) when asked. Kept in `<data>/covers` by file and size. null when there is none (the relay
- * then asks Navidrome, which has its own fallbacks).
+ * A cover from the music folder: the album folder's cover/folder/front picture, else the picture in the file (the
+ * song's own, then the album's other songs'), made `size` pixels across (JPEG) when asked. Kept in `<data>/covers`
+ * by file and size, and "none" is remembered for a while. null when there is none (the relay then asks Navidrome,
+ * which has its own fallbacks).
+ *
+ * Covers come in bursts (a playlist of 30 songs asks for 30 at once), and a browser only opens 6 connections to the
+ * Hub: a slow cover holds up the song that's starting to play behind it. So the disk is read without blocking, a
+ * miss is answered at once the next time, and the same cover asked for twice at once is made once.
  */
 export async function cover(db: Db, musicDir: string, cacheDir: string, id: string, size: number): Promise<{ body: Buffer; type: string } | null> {
-  const src = coverSource(db, id);
-  if (!src) return null;
-  let picture: string | null = null;
-  try {
-    picture = readdirSync(join(musicDir, src.dir)).find((f) => COVER_FILES.test(f)) ?? null;
-  } catch {
-    return null;
+  const px = size > 0 ? Math.min(Math.max(size, 32), 1500) : 0;
+  const ask = `${musicDir}\n${catalogVersion()}\n${id}\n${px}`;
+  const missed = noCover.get(ask);
+  if (missed !== undefined) {
+    if (Date.now() - missed < NO_COVER_MS) return null;
+    noCover.delete(ask);
   }
-  const input = join(musicDir, picture ? join(src.dir, picture) : src.file);
+  let p = making.get(ask);
+  if (!p) {
+    p = findCover(db, musicDir, cacheDir, id, px).finally(() => making.delete(ask));
+    making.set(ask, p);
+  }
+  const art = await p;
+  if (!art) {
+    if (noCover.size > 5000) noCover.clear();
+    noCover.set(ask, Date.now());
+  }
+  return art;
+}
+
+async function findCover(db: Db, musicDir: string, cacheDir: string, id: string, px: number): Promise<{ body: Buffer; type: string } | null> {
+  const sources = coverSources(db, id);
+  const pictures = new Map<string, string | null>();
+  const pictureIn = async (dir: string) => {
+    if (!pictures.has(dir)) pictures.set(dir, await readdir(join(musicDir, dir)).then((fs) => fs.find((f) => COVER_FILES.test(f)) ?? null, () => null));
+    return pictures.get(dir)!;
+  };
+  // a picture next to any of the files first (no ffmpeg needed to find it), then the pictures inside the files
+  const inputs: { input: string; picture: string | null }[] = [];
+  for (const src of sources.slice(0, 50)) {
+    const picture = await pictureIn(src.dir);
+    if (picture) {
+      inputs.push({ input: join(musicDir, src.dir, picture), picture });
+      break;
+    }
+  }
+  for (const src of sources.slice(0, COVER_TRIES)) inputs.push({ input: join(musicDir, src.file), picture: null });
+  for (const { input, picture } of inputs) {
+    const art = await coverFrom(input, picture, cacheDir, px);
+    if (art) return art;
+  }
+  return null;
+}
+
+async function coverFrom(input: string, picture: string | null, cacheDir: string, px: number): Promise<{ body: Buffer; type: string } | null> {
   let st;
   try {
-    st = statSync(input);
+    st = await stat(input);
   } catch {
     return null;
   }
-  const px = size > 0 ? Math.min(Math.max(size, 32), 1500) : 0;
   // an untouched cover file needs no ffmpeg at all
   if (picture && !px) {
     const ext = extname(picture).slice(1).toLowerCase();
-    return { body: readFileSync(input), type: ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}` };
+    return { body: await readFile(input), type: ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}` };
   }
   const key = createHash('sha256').update(`${input}\n${st.size}\n${st.mtimeMs}\n${px}`).digest('hex');
   const file = join(cacheDir, key.slice(0, 2), `${key}.jpg`);
-  if (existsSync(file)) return { body: readFileSync(file), type: 'image/jpeg' };
+  const cached = await readFile(file).catch(() => null);
+  if (cached) return { body: cached, type: 'image/jpeg' };
   const scale = px ? ['-vf', `scale=${px}:${px}:force_original_aspect_ratio=decrease`] : [];
   const body = await run(['-v', 'error', '-nostdin', '-i', input, '-map', '0:v:0', '-frames:v', '1', ...scale, '-q:v', '3', '-f', 'image2', '-c:v', 'mjpeg', 'pipe:1']);
   if (!body) return null;

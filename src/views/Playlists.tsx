@@ -3,7 +3,9 @@ import { folderNames, groupPlaylists, type PlaylistSort } from '../lib/playlistF
 import { matchAll } from '../lib/match';
 import { sourceFor } from '../sources/registry';
 import { SOURCE_COLORS, type ServerPlaylist, type SourceConfig, type Track } from '../sources/types';
-import { copyAllPlaylists, copySummary } from '../lib/copyPlaylists';
+import { copySummary, syncPlaylists } from '../lib/copyPlaylists';
+import { newSmartPlaylist } from '../lib/smartPlaylists';
+import { smartFromPlex } from '../lib/plexSmart';
 import { useLibrary, type Playlist } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useServerPlaylists } from '../store/serverPlaylists';
@@ -100,12 +102,19 @@ function ServerSectionActions({ cfg }: { cfg: SourceConfig }) {
     setBusy(true);
     setDone(false);
     try {
-      const r = await copyAllPlaylists(
+      const lib = useLibrary.getState();
+      const r = await syncPlaylists(
         list,
-        useLibrary.getState().playlists.map((p) => p.name),
-        (id) => src.getPlaylistTracks!(id),
-        (name, tracks) => useLibrary.getState().createPlaylist(name, tracks),
-        (n, total, name) => setStatus(name ? `Copying ${n + 1} of ${total}: ${name}…` : undefined),
+        lib.playlists,
+        useSettings.getState().smartPlaylists.map((p) => p.name),
+        {
+          tracksOf: (id) => src.getPlaylistTracks!(id),
+          smartOf: src.getSmartRules ? (id) => src.getSmartRules!(id) : undefined,
+          create: (name, tracks) => useLibrary.getState().createPlaylist(name, tracks),
+          add: (id, tracks) => useLibrary.getState().addToPlaylist(id, tracks),
+          saveSmart: (name, rules) => useSettings.getState().saveSmartPlaylist(smartFromPlex(name, rules, newSmartPlaylist())),
+          progress: (n, total, name) => setStatus(name ? `Syncing ${n + 1} of ${total}: ${name}…` : undefined),
+        },
       );
       setStatus(copySummary(r));
       setDone(!r.failed.length);
@@ -115,10 +124,11 @@ function ServerSectionActions({ cfg }: { cfg: SourceConfig }) {
   };
   return (
     <div className="row gap wrap">
-      <button className="btn small" disabled={busy || !list.length} onClick={copyAll}>{busy ? 'Copying…' : 'Copy all to Wavelength'}</button>
+      <button className="btn small" disabled={busy || !list.length} onClick={copyAll}
+        title={`Copy ${cfg.name} playlists Wavelength doesn’t have, add missing songs to the ones it does${cfg.kind === 'plex' ? ', and make Plex smart playlists smart playlists here too' : ''}. Safe to run again.`}>{busy ? 'Syncing…' : 'Sync to Wavelength'}</button>
       <button className={`btn small ${done ? 'primary' : 'ghost'}`} disabled={busy} title={`Stop showing ${cfg.name}’s own playlists in Wavelength. Nothing is deleted from ${cfg.name}.`}
         onClick={() => {
-          if (!done && !confirm(`Hide ${cfg.name}’s playlists? Copy them to Wavelength first if you want to keep using them. Nothing is deleted, and you can show them again.`)) return;
+          if (!done && !confirm(`Hide ${cfg.name}’s playlists? Sync them to Wavelength first if you want to keep using them. Nothing is deleted, and you can show them again.`)) return;
           hide(cfg.id, true);
           useServerPlaylists.getState().load();
         }}>Hide {cfg.name} playlists</button>
