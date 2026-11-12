@@ -16,7 +16,7 @@ import { addStation, deleteStation, radioImportedAt, readStation, subsonicStatio
 import { HttpError } from '../http.ts';
 import { importUserData, played, playsOf, rate, star, starredOf, userDataImported } from '../userData.ts';
 import { createPlaylist, deletePlaylist, getPlaylist, importPlaylists, playlistsImported, replaceSongs, updatePlaylist, visiblePlaylists, type HubPlaylist } from '../playlists.ts';
-import { playlistDuration, playlistEntries } from '../subsonicCatalog.ts';
+import { knownPositions, playlistDuration, playlistEntries } from '../subsonicCatalog.ts';
 
 /**
  * Navidrome through the Hub (docs/USERS-AND-ADMIN.md Phase 4). A device gets a Subsonic login for
@@ -242,10 +242,12 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog, sonic }
       const usable = !!config.musicDir && catalog.serving();
       /** a playlist, with its songs (`withSongs`), or only their count and length (the list of playlists) */
       const entry = (p: HubPlaylist, withSongs = true) => {
-        const songs = withSongs && usable ? playlistEntries(db, p.songs, mineOnHub ? starredOf(db, user.id) : new Map(), mineOnHub ? playsOf(db, user.id) : null) : null;
+        // without Navidrome there's no one else to ask: a song the catalog doesn't know (its file gone, or never
+        // matched when Navidrome was turned off) is left out rather than the whole playlist failing
+        const songs = withSongs && usable ? playlistEntries(db, p.songs, mineOnHub ? starredOf(db, user.id) : new Map(), mineOnHub ? playsOf(db, user.id) : null, off) : null;
         const duration = songs ? songs.reduce((n, x) => n + Number(x.duration ?? 0), 0) : usable ? playlistDuration(db, p.songs) : 0;
         return {
-          id: p.id, name: p.name, ...(p.comment && { comment: p.comment }), owner: ownerName(p), public: p.public, songCount: p.songs.length,
+          id: p.id, name: p.name, ...(p.comment && { comment: p.comment }), owner: ownerName(p), public: p.public, songCount: songs ? songs.length : p.songs.length,
           duration, created: new Date(p.created).toISOString(), changed: new Date(p.changed).toISOString(),
           coverArt: `pl-${p.id}`, songs,
         };
@@ -327,12 +329,15 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog, sonic }
             deletePlaylist(db, id);
             deleted.set(user.id, new Set([...(deleted.get(user.id) ?? []), id]));
           } else {
+            const seen = off && usable ? knownPositions(db, p.songs) : null;
             updatePlaylist(db, id, {
               name: q.name || undefined,
               comment: q.comment,
               public: q.public === undefined ? undefined : q.public === 'true',
               add: all('songIdToAdd'),
-              removeAt: all('songIndexToRemove').map(Number).filter((n) => Number.isInteger(n) && n >= 0),
+              // without Navidrome, devices saw only the songs the catalog knows (entry() above): their positions
+              removeAt: all('songIndexToRemove').map(Number).filter((n) => Number.isInteger(n) && n >= 0)
+                .map((n) => (seen ? seen[n] ?? -1 : n)).filter((n) => n >= 0),
             });
           }
           void navidromeToo(asked()).catch(() => undefined);

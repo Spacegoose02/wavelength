@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { folderNames, groupPlaylists, type PlaylistSort } from '../lib/playlistFolders';
 import { matchAll } from '../lib/match';
 import { sourceFor } from '../sources/registry';
-import { SOURCE_COLORS, type ServerPlaylist, type Track } from '../sources/types';
+import { SOURCE_COLORS, type ServerPlaylist, type SourceConfig, type Track } from '../sources/types';
+import { copyAllPlaylists, copySummary } from '../lib/copyPlaylists';
 import { useLibrary, type Playlist } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useServerPlaylists } from '../store/serverPlaylists';
@@ -83,6 +84,49 @@ function FolderButton({ id }: { id: string }) {
   );
 }
 
+/**
+ * On a Navidrome / Plex section: copy every playlist there to Wavelength in one go, and hide that server's own
+ * playlists (all of Wavelength stops listing them; Show brings them back, nothing on the server is deleted).
+ */
+function ServerSectionActions({ cfg }: { cfg: SourceConfig }) {
+  const list = useServerPlaylists((s) => s.bySource[cfg.id] ?? []);
+  const hide = useSettings((s) => s.setPlaylistSourceHidden);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string>();
+  const [done, setDone] = useState(false);
+  const copyAll = async () => {
+    const src = sourceFor(cfg);
+    if (!src.getPlaylistTracks || !list.length) return;
+    setBusy(true);
+    setDone(false);
+    try {
+      const r = await copyAllPlaylists(
+        list,
+        useLibrary.getState().playlists.map((p) => p.name),
+        (id) => src.getPlaylistTracks!(id),
+        (name, tracks) => useLibrary.getState().createPlaylist(name, tracks),
+        (n, total, name) => setStatus(name ? `Copying ${n + 1} of ${total}: ${name}…` : undefined),
+      );
+      setStatus(copySummary(r));
+      setDone(!r.failed.length);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="row gap wrap">
+      <button className="btn small" disabled={busy || !list.length} onClick={copyAll}>{busy ? 'Copying…' : 'Copy all to Wavelength'}</button>
+      <button className={`btn small ${done ? 'primary' : 'ghost'}`} disabled={busy} title={`Stop showing ${cfg.name}’s own playlists in Wavelength. Nothing is deleted from ${cfg.name}.`}
+        onClick={() => {
+          if (!done && !confirm(`Hide ${cfg.name}’s playlists? Copy them to Wavelength first if you want to keep using them. Nothing is deleted, and you can show them again.`)) return;
+          hide(cfg.id, true);
+          useServerPlaylists.getState().load();
+        }}>Hide {cfg.name} playlists</button>
+      {status && <span className="muted small">{status}</span>}
+    </div>
+  );
+}
+
 export function Playlists() {
   const { playlists, createPlaylist } = useLibrary();
   const server = useServerPlaylists();
@@ -91,6 +135,8 @@ export function Playlists() {
   const [name, setName] = useState('');
   const [q, setQ] = useState('');
   const signedIn = useHub((s) => !!s.token);
+  const hiddenSources = useSettings((s) => s.hiddenPlaylistSources);
+  const showSource = useSettings((s) => s.setPlaylistSourceHidden);
   const folders = useSettings((s) => s.playlistFolders);
   const pinned = useSettings((s) => s.pinnedPlaylists);
   const [sort, setSort] = useState<PlaylistSort>(() => {
@@ -193,6 +239,7 @@ export function Playlists() {
       {serverSections.filter((cfg) => !searching || remote(cfg.id).length > 0).map((cfg) => (
         <section key={cfg.id}>
           <h2><i className="dot big" style={{ background: SOURCE_COLORS[cfg.kind] }} /> {cfg.name} <small className="muted">{cfg.kind === 'plex' ? 'synced with Plexamp' : 'synced with Navidrome'}</small></h2>
+          {!searching && server.bySource[cfg.id].length > 0 && <ServerSectionActions cfg={cfg} />}
           {!server.bySource[cfg.id].length ? <p className="muted">No playlists on this server.</p> : (
             <Grid>
               {remote(cfg.id).map((p) => (
@@ -205,6 +252,12 @@ export function Playlists() {
             </Grid>
           )}
         </section>
+      ))}
+      {!searching && sources.filter((s) => s.enabled && hiddenSources.includes(s.id)).map((cfg) => (
+        <p key={cfg.id} className="muted small">
+          {cfg.name}’s own playlists are hidden.{' '}
+          <button className="btn small ghost" onClick={() => { showSource(cfg.id, false); server.load(); }}>Show them</button>
+        </p>
       ))}
     </div>
   );
@@ -362,6 +415,9 @@ export function ServerPlaylistView({ playlist }: { playlist: ServerPlaylist }) {
             <h1 className={editable ? 'editable' : ''} onClick={() => editable && setEditing(true)} title={editable ? 'Click to rename' : undefined}>{name}</h1>
           )}
           <div className="muted">{tracks ? `${tracks.length} tracks · ${fmtTime(total)}` : ''}</div>
+          {tracks && playlist.trackCount !== undefined && playlist.trackCount > tracks.length && (
+            <div className="muted small">{playlist.trackCount - tracks.length} of its {playlist.trackCount} songs couldn’t be found in the music folder and are left out.</div>
+          )}
           <div className="hero-actions">
             <button className="btn primary" disabled={!tracks?.length} onClick={() => tracks && playTracks(tracks)}><IconPlay /> Play</button>
             <button className="btn" disabled={!tracks?.length} onClick={() => tracks && shuffleAndPlay(tracks)}><IconShuffle /> Shuffle</button>

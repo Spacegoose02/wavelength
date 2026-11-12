@@ -12,7 +12,7 @@ const servers: Server[] = [];
 after(() => servers.forEach((s) => s.close()));
 const md5 = (s: string) => createHash('md5').update(s).digest('hex');
 
-/** A fake Navidrome with Mia's hearts, plays and one playlist; records every call that reaches it. */
+/** A fake Navidrome with Mia's hearts, plays and one playlist (with nd9, a song whose file is gone); records every call that reaches it. */
 async function fakeNavidrome() {
   const calls: string[] = [];
   const srv = createServer((req, res) => {
@@ -22,7 +22,7 @@ async function fakeNavidrome() {
     if (url.pathname === '/auth/login') return res.end(JSON.stringify({ token: 'nd-token' }));
     if (url.pathname === '/api/song') return res.end(JSON.stringify(url.searchParams.get('_sort') === 'play_count' ? [{ id: 'nd1', playCount: 4, playDate: '2026-03-01T00:00:00Z' }] : []));
     if (url.pathname === '/api/playlist') return res.end(JSON.stringify([{ id: 'pl1', name: 'Mine', ownerName: 'mia', rules: null }]));
-    if (url.pathname === '/api/playlist/pl1/tracks') return res.end(JSON.stringify([{ mediaFileId: 'nd2' }, { mediaFileId: 'nd1' }]));
+    if (url.pathname === '/api/playlist/pl1/tracks') return res.end(JSON.stringify([{ mediaFileId: 'nd2' }, { mediaFileId: 'nd9' }, { mediaFileId: 'nd1' }]));
     const q = Object.fromEntries(url.searchParams);
     if (q.u !== 'mia' || md5('mia-real-pw' + q.s) !== q.t) return res.end(JSON.stringify({ 'subsonic-response': { status: 'failed', error: { code: 40 } } }));
     if (url.pathname === '/rest/getStarred2') return res.end(JSON.stringify({ 'subsonic-response': { status: 'ok', starred2: { song: [{ id: 'nd2', starred: '2026-01-01T00:00:00Z' }] } } }));
@@ -129,6 +129,20 @@ test('turning Navidrome off copies everyone first, then devices only ever talk t
   // back on: Navidrome answers what the Hub doesn't again
   const on = await json(app, 'PUT', '/api/admin/catalog/navidrome', { token: tokens.admin, body: { off: false } });
   assert.equal(on.body.standalone, false);
+});
+
+test('without Navidrome, a playlist with a song the Hub can’t find still opens, and removing goes by what was shown', async () => {
+  const { app, tokens, login, as } = await setup();
+  await json(app, 'PUT', '/api/admin/catalog/navidrome', { token: tokens.admin, body: { off: true } });
+  const rest = as(await login(tokens.member));
+  const one = await rest('getPlaylist', { id: 'pl1' });
+  assert.equal(one.by, 'hub');
+  assert.deepEqual(one.body.playlist.entry.map((x: { id: string }) => x.id), ['nd2', 'nd1'], 'nd9 left out, not the whole playlist');
+  assert.equal(one.body.playlist.songCount, 2);
+  // the device removes its second song (nd1): position 2 on the Hub, where nd9 still sits at 1
+  assert.equal((await rest('updatePlaylist', { playlistId: 'pl1', songIndexToRemove: '1' })).body.status, 'ok');
+  const kept = (app as any).hubCatalog.db.prepare('SELECT song_id FROM server_playlist_songs WHERE playlist_id = ? ORDER BY pos').all('pl1').map((r: { song_id: string }) => r.song_id);
+  assert.deepEqual(kept, ['nd2', 'nd9']);
 });
 
 test('without Navidrome, new songs get the Hub’s ids, join their album, and albums follow their tags', async () => {

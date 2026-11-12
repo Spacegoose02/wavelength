@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { sourceFor } from '../sources/registry';
 import type { ServerPlaylist } from '../sources/types';
-import { enabledSources } from './settings';
+import { enabledSources, useSettings } from './settings';
 
 interface ServerPlaylistsState {
   bySource: Record<string, ServerPlaylist[]>;
@@ -10,7 +10,7 @@ interface ServerPlaylistsState {
   load(): Promise<void>;
 }
 
-/** Playlists stored on Navidrome / Plex. Edits go straight to the server. */
+/** Playlists stored on Navidrome / Plex (not the hidden ones). Edits go straight to the server. */
 export const useServerPlaylists = create<ServerPlaylistsState>()((set) => ({
   bySource: {},
   errors: {},
@@ -20,7 +20,8 @@ export const useServerPlaylists = create<ServerPlaylistsState>()((set) => ({
     const bySource: Record<string, ServerPlaylist[]> = {};
     const errors: Record<string, string> = {};
     await Promise.all(
-      enabledSources().map(async (cfg) => {
+      // a server whose playlists were hidden (Playlists → "Hide") isn't asked, so they leave every list
+      enabledSources().filter((cfg) => !useSettings.getState().hiddenPlaylistSources.includes(cfg.id)).map(async (cfg) => {
         const src = sourceFor(cfg);
         if (!src.getPlaylists) return;
         try {

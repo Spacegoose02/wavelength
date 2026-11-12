@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+- **Playlists: copy all of a Navidrome or Plex server's playlists to Wavelength, then hide them.** Each server on
+  Playlists has **Copy all to Wavelength** (skips names you already have) and **Hide** (stops listing that server's
+  own playlists everywhere in Wavelength, synced; **Show them** brings them back, nothing is deleted)
+  (`src/lib/copyPlaylists.ts`, `src/views/Playlists.tsx`).
+- **Fix: a playlist wouldn't open with the Hub's Navidrome off switch on** ("The Hub doesn't know that
+  (getPlaylist), and Navidrome is off"; Play, Shuffle and Copy to Wavelength greyed out) when even one of its songs
+  wasn't in the music catalog. The Hub now answers with the songs it has and the page says how many were left out
+  (`hub/src/routes/relay.ts`, `hub/src/subsonicCatalog.ts`).
+
 ## 0.42.0
 - **Radio: edit a station after adding it.** **Edit station** changes a station's name, stream link, genre, home page
   and logo, with a preview of its card. Open it with **Edit** on a card in Your stations (admins, for everyone) or the
