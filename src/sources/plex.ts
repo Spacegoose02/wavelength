@@ -1,7 +1,8 @@
 import { splitGenres } from '../lib/genreNames';
 import { http, qs, trimSlash } from '../lib/http';
 import { withoutTrackNumber } from '../lib/trackTitles';
-import type { Album, Artist, MusicSource, SearchResults, ServerPlaylist, SourceConfig, Track } from './types';
+import { parsePlexSmart, plexTagRefs, resolvePlexTags } from '../lib/plexSmart';
+import type { Album, Artist, MusicSource, PlexSmartRules, SearchResults, ServerPlaylist, SourceConfig, Track } from './types';
 
 function clientId() {
   try {
@@ -115,8 +116,40 @@ export class PlexSource implements MusicSource {
       trackCount: p.leafCount,
       duration: p.duration ? p.duration / 1000 : undefined,
       coverUrl: this.img(p.composite ?? p.thumb),
-      readOnly: p.smart === true || p.smart === 1,
+      readOnly: p.smart === true || p.smart === 1 || p.smart === '1',
+      smart: p.smart === true || p.smart === 1 || p.smart === '1',
     }));
+  }
+
+  /**
+   * A smart playlist's rules (Plex keeps them as a library link in `content`, lib/plexSmart.ts), with the tag ids
+   * in them (genres, styles, moods, collections) swapped for names from the library section's tag lists.
+   */
+  async getSmartRules(id: string): Promise<PlexSmartRules> {
+    const mc = await this.get(`/playlists/${id}`);
+    const content: string | undefined = mc.Metadata?.[0]?.content;
+    if (!content) throw new Error('Plex didn’t send this smart playlist’s rules');
+    const parsed = parsePlexSmart(content);
+    const refs = plexTagRefs(parsed.rules);
+    const names: Record<string, string> = {};
+    const sections = parsed.section ? [parsed.section] : await this.musicSections();
+    const lists = new Map<string, Promise<void>>();
+    const TYPE = { artist: 8, album: 9, track: 10 } as const;
+    for (const r of refs) {
+      const key = `${r.kind}.${r.tag}`;
+      if (lists.has(key)) continue;
+      lists.set(key, Promise.all(sections.map(async (sec) => {
+        const dir = await this.get(`/library/sections/${sec}/${r.tag}`, { type: TYPE[r.kind] }).catch(() => ({}));
+        for (const d of (dir as any).Directory ?? []) {
+          const tagId = /^\d+$/.test(String(d.key)) ? String(d.key) : String(d.fastKey ?? d.key ?? '').match(/=(\d+)(?:&|$)/)?.[1];
+          if (tagId && d.title) names[`${key}:${tagId}`] = d.title;
+        }
+      })).then(() => undefined));
+    }
+    await Promise.all(lists.values());
+    const dropped = [...parsed.dropped];
+    const rules = resolvePlexTags(parsed.rules, names, dropped);
+    return { rules, sort: parsed.sort, limit: parsed.limit, dropped };
   }
 
   async getPlaylistTracks(id: string) {
