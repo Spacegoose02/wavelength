@@ -11,6 +11,7 @@ import type { HubTagKey, HubTags, HubTagSong } from '../sources/hub';
 import type { Album } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useUi } from '../store/ui';
+import { LibraryServer, libraryServer } from '../lib/serverName';
 
 /**
  * Edit album (docs/USER-GUIDE.md, "Editing an album"): an album's own tags in one dialog, Plex style. **General**
@@ -158,7 +159,7 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
         await useItemTagStore.getState().load(true);
       }
       setSaved(undefined);
-      setMsg(saved.batches.length ? 'Put the album back as it was. Navidrome shows it after its rescan, in a minute or so' : 'Put the album back as it was');
+      setMsg(saved.batches.length ? `Put the album back as it was. ${LibraryServer()} shows it after its rescan, in a minute or so` : 'Put the album back as it was');
       await load();
     } catch (e) {
       setMsg(errText(e));
@@ -188,7 +189,7 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
     <EditDialog title={`Edit ${album.artist} – ${album.title}`} tabs={TABS} tab={tab} onTab={setTab} busy={busy} onClose={onClose}
       footer={<>
         <span className="small edit-dialog-msg" role="status">
-          {saved ? (saved.files ? <>Saved {plural(saved.files, 'song')}. Navidrome shows it after its rescan, in a minute or so.</> : <>Saved.</>)
+          {saved ? (saved.files ? <>Saved {plural(saved.files, 'song')}. {LibraryServer()} shows it after its rescan, in a minute or so.</> : <>Saved.</>)
             : msg && vals ? msg : dirty ? [changes.length && `${changedKeys.map((k) => LABELS[k]).join(', ')} on ${plural(changes.length, 'song')}`, hubDirty && `${HUB_FACETS.filter(([f]) => hub && hubStart && !sameList(hub[f], hubStart[f])).map(([, l]) => l).join(', ')} on your Hub`].filter(Boolean).join('; ') : ''}
         </span>
         {saved && <button className="btn ghost" onClick={undo} disabled={busy}>Undo</button>}
@@ -221,7 +222,7 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
             <span className="edit-field-label">Genres</span>
             <ChipInput values={splitGenres(vals.genre)} onChange={(v) => set('genre', joinGenres(v))} list="tag-genres" placeholder={mixed.has('genre') && !touched.has('genre') ? 'Differs per song' : 'Add a genre'} split={splitGenres} label="genre" />
           </div>
-          <p className="span2 muted small">Genres are written into one tag separated by “; ” on every song of the album, which Navidrome reads as separate genres. They can differ from the artist’s own genres.</p>
+          <p className="span2 muted small">Genres are written into one tag separated by “; ” on every song of the album, which {libraryServer()} reads as separate genres. They can differ from the artist’s own genres.</p>
           {hub ? HUB_FACETS.map(([f, label, placeholder]) => (
             <div key={f} className="span2 edit-field">
               <span className="edit-field-label">{label}</span>

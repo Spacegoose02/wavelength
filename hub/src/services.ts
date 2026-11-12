@@ -93,6 +93,11 @@ export interface DeviceService {
    * empty, the device knows the Hub's address) and the person's real Navidrome login stays on the Hub.
    */
   relay?: boolean;
+  /**
+   * Navidrome is off for this household (`navidromeOff`): the Hub itself is the music server behind this login, so
+   * the app labels it as the Hub rather than Navidrome. Missing (not false) when Navidrome is on.
+   */
+  hubServed?: boolean;
 }
 
 const aadShared = (id: number) => `service:${id}`;
@@ -295,7 +300,7 @@ export function servicesFor(db: Db, key: Buffer, { user, device, permissions }: 
     if (r.kind === 'navidrome' && !off && !(own.username && own.password)) continue;
     const config = JSON.parse(r.config) as Config;
     if (r.kind === 'navidrome' && (off || relayed(user.role, config))) {
-      out.push({ id: r.id, kind: r.kind, name: r.name, url: '', config, secrets: { username: relayUsername(user.username, device.id), password: relayPassword(key, device.id) }, ownLogin: true, relay: true });
+      out.push({ id: r.id, kind: r.kind, name: r.name, url: '', config, secrets: { username: relayUsername(user.username, device.id), password: relayPassword(key, device.id) }, ownLogin: true, relay: true, ...(off && { hubServed: true }) });
       continue;
     }
     const secrets = { ...open(key, r.secrets, aadShared(r.id)).fields, ...own };

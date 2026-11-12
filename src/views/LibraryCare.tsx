@@ -13,6 +13,7 @@ import { useUi } from '../store/ui';
 import { Cover, Spinner } from '../components/common';
 import { ReleaseCards } from '../components/ReleaseRadar';
 import { UnmatchedSongs } from './UnmatchedSongs';
+import { LibraryServer } from '../lib/serverName';
 
 /**
  * Library → Library care: duplicates and missing albums (lib/libraryCare.ts), and for Hub admins numbered song titles
@@ -204,7 +205,7 @@ function NumberedTitles() {
     const n = `${changed.size} title${changed.size === 1 ? '' : 's'}`;
     setDone(r.error
       ? `Fixed ${n}, then the Hub stopped answering (${r.error}). Fix again to carry on; titles that are already clean are skipped.`
-      : `Fixed ${n}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. Navidrome rescans in a minute to show them. Settings → Server → Tag edits can undo this.`);
+      : `Fixed ${n}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. ${LibraryServer()} rescans in a minute to show them. Settings → Server → Tag edits can undo this.`);
     setBusy(false);
   };
 

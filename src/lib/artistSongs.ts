@@ -1,6 +1,7 @@
 import type { HubClient, HubTagSong } from '../sources/hub';
 import { sourceFor } from '../sources/registry';
 import type { Artist, SourceConfig } from '../sources/types';
+import { LibraryServer } from './serverName';
 
 /** A song on one of an artist's albums, with the tags in its file and the Navidrome album it's on. */
 export type ArtistSong = HubTagSong & { albumId: string };
@@ -17,7 +18,7 @@ export async function loadArtistSongs(artist: Artist, sources: SourceConfig[], c
     const own = (await src.getArtistAlbums?.(r.id)) ?? [];
     return own.length ? own : ((await src.getAppearsOn?.({ id: r.id, name: artist.name }).catch(() => [])) ?? []);
   }))).flat();
-  if (!albums.length) throw new Error('Navidrome has no albums for this artist');
+  if (!albums.length) throw new Error(`${LibraryServer()} has no albums for this artist`);
   const r = await c.tagAlbums(albums.map((a) => a.id).slice(0, 200));
   return { songs: r.songs, titles: Object.fromEntries(albums.map((a) => [a.id, a.title])), missing: r.missing };
 }

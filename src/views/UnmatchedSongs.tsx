@@ -10,6 +10,7 @@ import type { Album } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { hubClient } from '../store/hub';
 import { useUi } from '../store/ui';
+import { LibraryServer, libraryServer } from '../lib/serverName';
 
 /**
  * Library care → Unmatched songs (lib/songIssues.ts), for Hub admins: every song whose tags stop Navidrome
@@ -130,7 +131,7 @@ export function UnmatchedSongs() {
       setTicked(new Set());
       setUndo(batches);
       forgetTagValues();
-      setMsg(`Saved ${plural(done.size, 'song')}${failed.length ? `; ${failed.length} failed: ${failed[0]}` : ''}${r.error ? `, then the Hub stopped answering (${r.error}); save again to carry on` : ''}. Navidrome rescans in a minute to show them.`);
+      setMsg(`Saved ${plural(done.size, 'song')}${failed.length ? `; ${failed.length} failed: ${failed[0]}` : ''}${r.error ? `, then the Hub stopped answering (${r.error}); save again to carry on` : ''}. ${LibraryServer()} rescans in a minute to show them.`);
     } catch (e) {
       setMsg(errText(e));
     } finally {
@@ -167,7 +168,7 @@ export function UnmatchedSongs() {
   const autoBox = auto !== undefined && (
     <label className="check">
       <input type="checkbox" checked={auto} onChange={(e) => void toggleAuto(e.target.checked)} />
-      <small>Split joined artists in new downloads by themselves (“Lil Wayne;Drake” becomes “Lil Wayne feat. Drake” with “Lil Wayne” as album artist, and “Lil Durk;Lil Durk” becomes “Lil Durk”, before Navidrome scans them)</small>
+      <small>Split joined artists in new downloads by themselves (“Lil Wayne;Drake” becomes “Lil Wayne feat. Drake” with “Lil Wayne” as album artist, and “Lil Durk;Lil Durk” becomes “Lil Durk”, before {libraryServer()} scans them)</small>
     </label>
   );
 
@@ -175,8 +176,8 @@ export function UnmatchedSongs() {
     return (
       <>
         <p className="muted">
-          Finds songs whose tags keep Navidrome from filing them under the right artist or album: several artists joined
-          with a semicolon and no space (“Lil Wayne;Drake”, which Navidrome takes for one artist), the same artist written
+          Finds songs whose tags keep {libraryServer()} from filing them under the right artist or album: several artists joined
+          with a semicolon and no space (“Lil Wayne;Drake”, which {libraryServer()} takes for one artist), the same artist written
           twice (“Lil Durk;Lil Durk”, “Lil Durk Lil Durk”), and songs with no
           artist, album, title, genre, year or track number. Filter them by what’s wrong, then fix them here.
         </p>
@@ -223,7 +224,7 @@ export function UnmatchedSongs() {
       )}
       {autoBox}
       {!songs.length ? (
-        <p className="muted">Every one of your {scanned} songs is tagged well enough for Navidrome. <button className="link" onClick={() => void scan()}>Check again</button></p>
+        <p className="muted">Every one of your {scanned} songs is tagged well enough for {libraryServer()}. <button className="link" onClick={() => void scan()}>Check again</button></p>
       ) : (
         <>
           <div className="row gap wrap">

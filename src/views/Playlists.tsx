@@ -248,7 +248,7 @@ export function Playlists() {
 
       {serverSections.filter((cfg) => !searching || remote(cfg.id).length > 0).map((cfg) => (
         <section key={cfg.id}>
-          <h2><i className="dot big" style={{ background: SOURCE_COLORS[cfg.kind] }} /> {cfg.name} <small className="muted">{cfg.kind === 'plex' ? 'synced with Plexamp' : 'synced with Navidrome'}</small></h2>
+          <h2><i className="dot big" style={{ background: SOURCE_COLORS[cfg.kind] }} /> {cfg.name} <small className="muted">{cfg.kind === 'plex' ? 'synced with Plexamp' : cfg.hubServed ? 'your music server' : 'synced with Navidrome'}</small></h2>
           {!searching && server.bySource[cfg.id].length > 0 && <ServerSectionActions cfg={cfg} />}
           {!server.bySource[cfg.id].length ? <p className="muted">No playlists on this server.</p> : (
             <Grid>

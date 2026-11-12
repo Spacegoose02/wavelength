@@ -95,6 +95,8 @@ test('turning Navidrome off copies everyone first, then devices only ever talk t
   const kit = await login(tokens.kid);
   assert.equal(mia.relay, true);
   assert.equal(kit.relay, true);
+  // marked as the Hub's own library, so the app stops calling it Navidrome
+  assert.equal(mia.hubServed, true);
   const rest = as(mia);
 
   assert.equal((await rest('ping')).by, 'hub');
@@ -129,6 +131,7 @@ test('turning Navidrome off copies everyone first, then devices only ever talk t
   // back on: Navidrome answers what the Hub doesn't again
   const on = await json(app, 'PUT', '/api/admin/catalog/navidrome', { token: tokens.admin, body: { off: false } });
   assert.equal(on.body.standalone, false);
+  assert.equal((await login(tokens.member)).hubServed, undefined);
 });
 
 test('without Navidrome, a playlist with a song the Hub can’t find still opens, and removing goes by what was shown', async () => {

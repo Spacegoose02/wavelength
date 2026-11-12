@@ -190,7 +190,7 @@ function shuffle<T>(a: T[]): T[] {
 /** The songs for a smart playlist right now, from every Navidrome server in use. */
 export async function smartTracks(p: SmartPlaylist): Promise<Track[]> {
   const servers = enabledSources().filter((s) => s.kind === 'navidrome').map((s) => sourceFor(s) as NavidromeSource);
-  if (!servers.length) throw new Error('Smart playlists need a Navidrome server (Settings → Sources)');
+  if (!servers.length) throw new Error('Smart playlists need your library server (Navidrome or the Hub, Settings → Sources)');
   const now = Date.now();
   if (p.rules) return ruleTracks(p, p.rules, servers, now);
   if (byAlbum(p)) return pickSounds(p, await albumTracks(p, servers, now));
