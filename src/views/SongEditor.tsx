@@ -9,6 +9,7 @@ import { hubClient } from '../store/hub';
 import { HubTagLists } from '../components/TagLists';
 import { type TrackFacets, useItemTagStore } from '../lib/itemTags';
 import { useSongEditor } from '../components/EditSong';
+import { LibraryServer, libraryServer } from '../lib/serverName';
 
 /**
  * Edit song (docs/USER-GUIDE.md, "Editing a song"): one song's tags, Plex style, from a song's menu or its row's
@@ -186,7 +187,7 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
     try {
       await c.undoTags(saved.batch);
       setSaved(undefined);
-      setMsg('Put the song back as it was. Navidrome shows it after its rescan, in a minute or so');
+      setMsg(`Put the song back as it was. ${LibraryServer()} shows it after its rescan, in a minute or so`);
       await load();
     } catch (e) {
       setMsg(errText(e));
@@ -199,7 +200,7 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
     <EditDialog title={`Edit ${t.artist} – ${t.title}`} tabs={TABS} tab={tab} onTab={setTab} busy={busy} onClose={onClose}
       footer={<>
           <span className="small edit-dialog-msg" role="status">
-            {saved ? <>Saved {saved.what}. Navidrome shows it after its rescan, in a minute or so.</> : msg && draft ? msg : changed.length || hubChanged.length ? `Changes: ${[...changed.map((k) => LABELS[k]), ...hubChanged.map((f) => (f === 'style' ? 'Styles' : 'Moods'))].join(', ')}` : ''}
+            {saved ? <>Saved {saved.what}. {LibraryServer()} shows it after its rescan, in a minute or so.</> : msg && draft ? msg : changed.length || hubChanged.length ? `Changes: ${[...changed.map((k) => LABELS[k]), ...hubChanged.map((f) => (f === 'style' ? 'Styles' : 'Moods'))].join(', ')}` : ''}
           </span>
           {saved && <button className="btn ghost" onClick={undo} disabled={busy}>Undo</button>}
           <button className="btn" onClick={onClose} disabled={busy}>{saved ? 'Close' : 'Cancel'}</button>
@@ -227,7 +228,7 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
             </div>
             {untidy && !tidy && (
               <div className="edit-hint span2">
-                <span>The file says “{song?.tags.artist}”, which Navidrome may not split into these artists.</span>
+                <span>The file says “{song?.tags.artist}”, which {libraryServer()} may not split into these artists.</span>
                 <button className="btn small" onClick={() => setTidy(true)}>Write it as “{credit}”</button>
               </div>
             )}
@@ -259,7 +260,7 @@ function SongEditor({ track: t, onClose }: { track: Track; onClose: () => void }
               <span className="edit-field-label">Genres</span>
               <ChipInput values={draft.genres} onChange={(v) => set('genres', v)} list="tag-genres" placeholder="Add a genre" split={splitGenres} label="genre" />
             </div>
-            <p className="span2 muted small">Genres are written into one tag separated by “; ”, which Navidrome reads as separate genres.</p>
+            <p className="span2 muted small">Genres are written into one tag separated by “; ”, which {libraryServer()} reads as separate genres.</p>
             {hub && (
               <>
                 <HubTagLists />

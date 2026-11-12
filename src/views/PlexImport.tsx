@@ -3,6 +3,7 @@ import { Spinner } from '../components/common';
 import { FACET_LABELS, useItemTagStore } from '../lib/itemTags';
 import type { HubFacet, HubPlexImport } from '../sources/hub';
 import { hubClient } from '../store/hub';
+import { LibraryServer } from '../lib/serverName';
 
 const errText = (e: unknown) => String((e as Error).message ?? e);
 const plural = (n: number, one: string) => `${n.toLocaleString()} ${one}${n === 1 ? '' : 's'}`;
@@ -67,7 +68,7 @@ export function PlexImport() {
         files += r.changed.length;
       }
       setSkip(new Set(suggestions.map((g) => g.id)));
-      setMsg(`Wrote genres into ${plural(files, 'song')}. Undo is under Tag edits; Navidrome shows them after its rescan.`);
+      setMsg(`Wrote genres into ${plural(files, 'song')}. Undo is under Tag edits; ${LibraryServer()} shows them after its rescan.`);
     } catch (e) {
       setMsg(errText(e));
     } finally {

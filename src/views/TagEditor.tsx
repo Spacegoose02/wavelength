@@ -7,6 +7,7 @@ import { hubClient } from '../store/hub';
 import { useUi } from '../store/ui';
 import { Cover, Spinner } from '../components/common';
 import { forgetTagValues, TagLists, tagList } from '../components/TagLists';
+import { LibraryServer } from '../lib/serverName';
 
 /**
  * The tag editor (hub/src/routes/tags.ts): an album's tags as they are in its files, a lookup on Deezer and
@@ -111,7 +112,7 @@ export function TagEditor({ album }: { album: Album }) {
       }));
       setLastBatch(r.batch);
       forgetTagValues();
-      setMsg(`Saved ${r.changed.length} file${r.changed.length === 1 ? '' : 's'}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. Navidrome rescans in a minute to show them`);
+      setMsg(`Saved ${r.changed.length} file${r.changed.length === 1 ? '' : 's'}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. ${LibraryServer()} rescans in a minute to show them`);
       await load();
     } catch (e) {
       setMsg(errText(e));

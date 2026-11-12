@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Fix: the app still called the Hub "Navidrome" with the Hub's Navidrome off.** The Hub's music login was made as
+  a server named "Navidrome", and the app showed that name on Playlists ("Navidrome playlist", "Save to Navidrome",
+  "Hide Navidrome playlists"), in Sources and in messages such as "Navidrome rescans in a minute". With Navidrome off
+  the Hub now marks the login it hands out (`hubServed`), and the app calls it **Hub** and says "the Hub" in those
+  messages. Turn Navidrome back on and the mark goes, so everything says Navidrome again and the two can't be mixed up
+  (`hub/src/services.ts`, `src/lib/serverName.ts`).
+
 ## 0.44.0
 - **Fix: sidebar playlist names turned into rows of dashes** once there were more playlists than fit (for example
   after **Copy all to Wavelength**). The rows were being squeezed to a few pixels tall instead of the list scrolling

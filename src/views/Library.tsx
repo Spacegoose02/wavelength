@@ -43,6 +43,7 @@ import { ALBUM_SORTS, ARTIST_SORTS, BrowseFilters } from '../components/BrowseFi
 import { isFiltered, queryAlbums, queryArtists } from '../lib/browse';
 import { useBrowseFilters } from '../store/browse';
 import { isMusicSource } from '../lib/musicSources';
+import { libraryServer } from '../lib/serverName';
 
 const openAlbum = (album: Album) => useUi.getState().go({ view: 'album', album });
 
@@ -298,7 +299,7 @@ function AlbumSelectActions({ sel, busy, setBusy }: { sel: Selection<Album>; bus
   const chosen = sel.chosen;
   const removeChosen = async () => {
     const copies = chosen.flatMap((a) => navidromeRefs(a));
-    if (!copies.length) return alert('None of these are on a Navidrome server the Hub can delete from.');
+    if (!copies.length) return alert(`None of these are on ${libraryServer() === 'the Hub' ? 'the Hub\'s library' : 'a Navidrome server the Hub can delete from'}.`);
     const names = chosen.slice(0, 8).map((a) => `• ${a.title} – ${a.artist}`).join('\n') + (chosen.length > 8 ? `\n…and ${chosen.length - 8} more` : '');
     if (!confirm(`Delete ${chosen.length} album${chosen.length === 1 ? '' : 's'} (${copies.length} cop${copies.length === 1 ? 'y' : 'ies'}) from your server?\n\n${names}\n\nTheir files go to the Hub's trash. You can put them back under Settings → Server → Deleted albums for 30 days.`)) return;
     const failed: string[] = [];

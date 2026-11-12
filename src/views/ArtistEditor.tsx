@@ -14,6 +14,7 @@ import type { Artist } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
+import { LibraryServer } from '../lib/serverName';
 
 /**
  * Edit artist (docs/USER-GUIDE.md, "Editing an artist"): an artist in one dialog, Plex style.
@@ -193,7 +194,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
       }
       setName(saved.name);
       setSaved(undefined);
-      setMsg('Put the artist back as they were. Navidrome shows it after its rescan, in a minute or so');
+      setMsg(`Put the artist back as they were. ${LibraryServer()} shows it after its rescan, in a minute or so`);
       await load(saved.name);
     } catch (e) {
       setMsg(errText(e));
@@ -215,7 +216,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
     <EditDialog title={`Edit ${artist.name}`} tabs={TABS} tab={tab} onTab={setTab} busy={busy} onClose={onClose}
       footer={<>
         <span className="small edit-dialog-msg" role="status">
-          {saved ? <>Saved{saved.files ? ` ${plural(saved.files, 'song')}` : ''}. {saved.files ? 'Navidrome shows it after its rescan, in a minute or so.' : ''}</>
+          {saved ? <>Saved{saved.files ? ` ${plural(saved.files, 'song')}` : ''}. {saved.files ? `${LibraryServer()} shows it after its rescan, in a minute or so.` : ''}</>
             : msg && draft ? msg : dirty ? `Changes: ${what}${changes.length ? ` (${plural(changes.length, 'song')})` : ''}` : ''}
         </span>
         {saved && <button className="btn ghost" onClick={undo} disabled={busy}>Undo</button>}

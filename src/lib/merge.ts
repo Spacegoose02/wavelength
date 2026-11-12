@@ -3,6 +3,7 @@ import type { HubTags, HubTagSong } from '../sources/hub';
 import type { Album, Artist } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useSettings } from '../store/settings';
+import { LibraryServer, libraryServer } from './serverName';
 
 /**
  * Merging albums and artists, the way Plex does it (docs/USER-GUIDE.md "Selecting several albums or artists"):
@@ -161,10 +162,10 @@ export async function planAlbums(albums: Album[]): Promise<MergePlan> {
   if (albums.length < 2) throw new Error('Pick at least two albums: the first one is the one the others merge into');
   const [first, ...rest] = albums;
   const targetIds = navidromeRefs(first).map((r) => r.id);
-  if (!targetIds.length) throw new Error(`${first.title} isn’t on a Navidrome server, so the Hub can’t merge into it`);
+  if (!targetIds.length) throw new Error(`${first.title} isn’t on ${libraryServer() === 'the Hub' ? 'the Hub\'s library' : 'a Navidrome server'}, so the Hub can’t merge into it`);
   // a copy that is also one of the target's (the same album ticked twice) stays as it is
   const otherIds = rest.flatMap((a) => navidromeRefs(a).map((r) => r.id)).filter((id) => !targetIds.includes(id));
-  if (!otherIds.length) throw new Error('None of the other albums are on a Navidrome server the Hub can retag');
+  if (!otherIds.length) throw new Error(`None of the other albums are on ${libraryServer() === 'the Hub' ? 'the Hub\'s library' : 'a Navidrome server the Hub can retag'}`);
   const [t, o] = await Promise.all([songsOf(targetIds), songsOf(otherIds)]);
   if (!t.songs.length) throw new Error(`The Hub can’t find ${first.title}’s files in its music folder`);
   const target = albumTarget(t.songs, first);
@@ -181,7 +182,7 @@ export async function planArtists(artists: Artist[]): Promise<MergePlan> {
   if (artists.length < 2) throw new Error('Pick at least two artists: the first one is the one the others merge into');
   const [first, ...rest] = artists;
   const refs = rest.flatMap((a) => navidromeRefs(a));
-  if (!refs.length) throw new Error('None of the other artists are on a Navidrome server the Hub can retag');
+  if (!refs.length) throw new Error(`None of the other artists are on ${libraryServer() === 'the Hub' ? 'the Hub\'s library' : 'a Navidrome server the Hub can retag'}`);
   const sources = useSettings.getState().sources;
   // their own albums, and the albums they're only featured on or credited jointly on ("Lil Baby;Jeremih" has
   // no albums of its own in Navidrome), so no song is left under the old name
@@ -191,7 +192,7 @@ export async function planArtists(artists: Artist[]): Promise<MergePlan> {
     const on = (await src.getAppearsOn?.({ id: r.id, name: r.name }, own.map((a) => a.id)).catch(() => [])) ?? [];
     return [...own, ...on];
   }))).flat();
-  if (!albums.length) throw new Error(`Navidrome has no songs by ${rest.map((a) => a.name).join(', ')}`);
+  if (!albums.length) throw new Error(`${LibraryServer()} has no songs by ${rest.map((a) => a.name).join(', ')}`);
   const { songs, missing } = await songsOf(albums.map((a) => a.id));
   return {
     into: first.name,
