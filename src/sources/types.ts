@@ -93,6 +93,8 @@ export interface ServerPlaylist {
   duration?: number;
   coverUrl?: string;
   readOnly?: boolean;
+  /** Plex: a smart playlist (rules, not a list of songs), read with `getSmartRules` (lib/plexSmart.ts). */
+  smart?: boolean;
 }
 
 export interface Podcast {
@@ -281,6 +283,15 @@ export interface MusicSource {
   removeFromPlaylist?(id: string, index: number, tracks: Track[]): Promise<void>;
   renamePlaylist?(id: string, name: string): Promise<void>;
   deletePlaylist?(id: string): Promise<void>;
+  /** Plex: a smart playlist's rules as Wavelength rules (lib/plexSmart.ts), with what couldn't be carried over. */
+  getSmartRules?(id: string): Promise<PlexSmartRules>;
+}
+
+export interface PlexSmartRules {
+  rules: import('../lib/smartRules').RuleGroup;
+  sort?: import('../lib/smartRules').SortId;
+  limit?: number;
+  dropped: string[];
 }
 
 export const SOURCE_COLORS: Record<SourceKind | 'radio', string> = {

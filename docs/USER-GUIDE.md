@@ -1350,29 +1350,73 @@ for kids are left out.
 
 Each Navidrome or Plex server on **Playlists** has two buttons under its name:
 
-- **Copy all to Wavelength** makes a Wavelength playlist of every playlist on that server, with the same name and
-  songs. Wavelength playlists sync to every device you sign in on and can mix in any source. A playlist you already
-  have in Wavelength (same name) is skipped, so pressing it twice doesn't make doubles. When it's done it says how
-  many it copied, and how many songs the server couldn't find (see below).
+- **Sync to Wavelength** makes Wavelength's playlists match that server's. Wavelength playlists sync to every device
+  you sign in on and can mix in any source. Press it as often as you like:
+  - A playlist Wavelength doesn't have yet is copied, with the same name and songs.
+  - A playlist Wavelength already has (same name, ignoring capitals) gets the songs it's missing, added at the end.
+    Nothing is removed or reordered. A song counts as already there when it's the same track, or the same title and
+    artist from another server (the Navidrome copy of a Plex song).
+  - A **Plex smart playlist** becomes a Wavelength **smart playlist** with the same rules, so it keeps up with what
+    you add, rate and play instead of freezing today's songs. If Wavelength already has a smart playlist with that
+    name it's left alone. If Plex won't send the rules, its songs are synced like a regular playlist instead.
+
+  When it's done it says what it copied, how many songs it added, which smart playlists it made, and how many songs
+  the server couldn't find (see below).
 - **Hide *server* playlists** stops showing that server's own playlists anywhere in Wavelength: Playlists,
   **+ Playlist**, and the AI DJ. Nothing is deleted on the server, and other apps still see them. **Show them** at
   the bottom of Playlists brings them back. Hiding syncs to your other devices.
 
-To move over for good: press **Copy all to Wavelength**, check the new playlists look right, then press **Hide**.
+To move over for good: press **Sync to Wavelength**, check the new playlists look right, then press **Hide**.
 
 **Songs left out.** With the Hub's **Navidrome off** switch on, the Hub keeps the playlists it copied from Navidrome
 and plays them from the music folder. A song whose file the Hub can't find (moved, deleted, or never matched when
 Navidrome was turned off) is left out of the playlist rather than the whole playlist failing to open, and the
 playlist's page says how many. Removing a song still removes the one you picked.
 
-> **Developer notes:** `copyAllPlaylists()` in `src/lib/copyPlaylists.ts` does the copying (skips names already in
-> the library, counts songs missing from `getPlaylist` against the list's `songCount`); the buttons are
+> **Developer notes:** `syncPlaylists()` in `src/lib/copyPlaylists.ts` does the syncing: new names are created,
+> same names get `missingSongs()` (by `sourceId:id` or primary artist + `cleanTitle`), Plex smart playlists go
+> through `PlexSource.getSmartRules()` and are saved with `smartFromPlex()`. It counts songs missing from
+> `getPlaylist` against the list's `songCount`; the buttons are
 > `ServerSectionActions` in `src/views/Playlists.tsx`. Hidden servers are the synced setting
 > `hiddenPlaylistSources`, and `useServerPlaylists.load()` doesn't ask them. On the Hub, `getPlaylist` with Navidrome
 > off answers `playlistEntries(…, partial)` (only the songs the catalog knows) and `updatePlaylist` maps
 > `songIndexToRemove` back through `knownPositions()` (`hub/src/routes/relay.ts`, `hub/src/subsonicCatalog.ts`).
 > Before, one unknown song made the Hub fall through to Navidrome, which is off, so the playlist wouldn't open
 > ("The Hub doesn't know that (getPlaylist), and Navidrome is off").
+
+### Plex smart playlists in Wavelength
+
+Plex keeps a smart playlist as its filter rules, not a list of songs. **Sync to Wavelength** reads those rules and
+makes a Wavelength smart playlist with the advanced rules builder (see [Smart playlists](#smart-playlists)), so it
+plays whatever fits today. Open it under **Smart playlists** to see or change the rules.
+
+| In Plex | In Wavelength |
+| --- | --- |
+| Match all / match any, and groups inside groups | The same groups |
+| Artist, album and track title (contains, is, begins with, ends with, and their "not"s) | Artist, Album title, Track title |
+| Artist / album genre, style, mood, collection; track mood | The same fields, by name |
+| Album year, decade, plays, rating; record label (studio) | Year, Album decade, Album plays, Album rating, Record label |
+| Track rating, plays, last played, date added | Track rating, Track plays, Track last played, Track added |
+| Album last played, date added | Album last played, Date album added |
+| "in the last 30 days" / "not in the last" | The same, in days (weeks, months and years are turned into days) |
+| Limit to N, sorted by plays, last played, added, rating, year, or random | The same limit and order; no limit becomes 500 songs |
+
+Ratings are half stars in Plex (0 to 10) and whole stars in Wavelength, so "rating is greater than 3½ stars" keeps
+4 and 5 stars. A rule on a fixed date ("added after 1 Jan 2025") becomes "in the last N days" counted from the day
+you synced. Rules Wavelength has no field for (country, skips, where the song came from, an unknown sort) are left
+out, and the message after syncing lists them per playlist, so you can see what changed.
+
+Smart playlists find their songs on Navidrome (or the Hub's catalog with Navidrome off), so a Plex smart playlist
+plays the same songs from there. A Plex smart playlist you copied with the old **Copy all to Wavelength** is a
+regular playlist with the same name: syncing makes the smart one alongside it and tells you, so you can delete the
+old copy.
+
+> **Developer notes:** `src/lib/plexSmart.ts` parses the playlist's `content` (`library://…/directory/<encoded
+> /library/sections/N/all?…>`): `push=1`/`pop=1` groups, `or=1` makes a group "any", rows are
+> `<kind>.<field><op><value>` with Plex's operators (`=`, `!=`, `==`, `!==`, `<=`, `>=`, `>>=`, `<<=`), plus `sort`
+> and `limit`. Tag rows hold Plex tag ids; `PlexSource.getSmartRules()` names them from
+> `/library/sections/N/<tag>?type=8|9|10` and `resolvePlexTags()` drops ids Plex no longer has. Tests in
+> `src/test/plexSmart.test.ts` and `src/test/copyPlaylists.test.ts`.
 
 ## Cast to a speaker
 
