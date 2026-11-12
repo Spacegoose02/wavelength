@@ -192,6 +192,32 @@ test('covers come from the album folder, sized, and from the file when there is 
   assert.deepEqual(nd.calls, ['getCoverArt', 'getCoverArt']);
 });
 
+test('a song whose file has no picture gets its album’s cover, and the relay lets the player read what it sends', { skip: !hasFfmpeg && 'needs ffmpeg' }, async () => {
+  const { app, tokens, musicDir, nd, rest } = await setup();
+  await json(app, 'PUT', '/api/admin/catalog', { token: tokens.admin, body: { serve: true } });
+  // no picture in the folder; 01.mp3 has none inside either, 02.mp3 does
+  const art = join(musicDir, 'art.jpg');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=blue:s=300x300', '-frames:v', '1', '-y', art]);
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=duration=1', '-i', art, '-map', '0', '-map', '1', '-c:a', 'libmp3lame', '-c:v', 'mjpeg', '-disposition:v', 'attached_pic', '-y', join(musicDir, 'Drake/Scorpion/02.mp3')]);
+  nd.calls.length = 0;
+  for (const id of ['mf-nd1', 'nd1', 'al-al1']) {
+    const c = await rest('getCoverArt', { id, size: '100' });
+    assert.equal(c.by, 'hub', id);
+    assert.equal(c.type, 'image/jpeg', id);
+  }
+  // asked for by many rows at once: all answered
+  const many = await Promise.all(Array.from({ length: 8 }, () => rest('getCoverArt', { id: 'mf-nd2', size: '200' })));
+  assert.ok(many.every((c) => c.by === 'hub'));
+  assert.deepEqual(nd.calls, []);
+  // nothing anywhere in the album: Navidrome's, and asking again is answered the same
+  await rest('getCoverArt', { id: 'al-al2' });
+  await rest('getCoverArt', { id: 'al-al2' });
+  assert.deepEqual(nd.calls, ['getCoverArt', 'getCoverArt']);
+
+  const r = await app.inject({ method: 'GET', url: '/nd/1/rest/ping?u=nobody~1&p=x' });
+  assert.equal(r.headers['access-control-allow-origin'], '*', 'the app’s audio decks need it to play the stream');
+});
+
 test('with the play switch on, the Hub sends the files itself, with seeking, and converts when asked', { skip: !hasFfmpeg && 'needs ffmpeg' }, async () => {
   const { app, tokens, musicDir, nd, rest } = await setup();
   // a real song for the converting part

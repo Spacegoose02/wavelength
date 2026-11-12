@@ -133,6 +133,10 @@ export function relayRoutes(app: FastifyInstance, { db, config, catalog, sonic }
     const q: Record<string, string> = {};
     for (const [k, v] of Object.entries(req.query ?? {})) q[k] = one(v);
     const method = req.params.method.replace(/\.view$/, '');
+    // Navidrome sends this itself, and the player needs it: without it the app's audio decks (EQ, visualizer,
+    // crossfade, gapless) refuse the stream and every song starts over on the plain player (player/engine.ts).
+    // The login is in the address, never a cookie, so any origin may read it.
+    reply.header('access-control-allow-origin', '*');
 
     const who = signIn(serviceId, q.u, (expected) => passwordOf(q, expected));
     if (who === 'login') return fail(reply, 40, wrongLogin(q.u));

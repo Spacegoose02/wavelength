@@ -96,7 +96,7 @@ export function fromHub(t: Track): Track {
   if (cfg?.kind !== 'navidrome' || t.kind !== 'track' || t.coverUrl) return t;
   const src = sourceFor(cfg);
   if (!(src instanceof NavidromeSource)) return t;
-  const built = src.trackFromId(t.id);
+  const built = src.trackFromId(t.id, { albumId: t.albumId });
   return { ...t, coverUrl: built.coverUrl, streamUrl: built.streamUrl };
 }
 const toHub = (p: Playlist): HubPlaylist => ({ id: p.id, name: p.name, tracks: p.tracks.map(forHub), createdAt: p.createdAt, updatedAt: p.updatedAt });

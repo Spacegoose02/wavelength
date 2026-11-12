@@ -150,8 +150,10 @@ export class NavidromeSource implements MusicSource {
   }
 
   /** Build a playable track from just an id (e.g. a SubWave like — same Navidrome library). */
-  trackFromId(id: string, meta: { title?: string; artist?: string; album?: string; duration?: number } = {}): Track {
-    return this.track({ id, coverArt: id, title: meta.title ?? 'Unknown', artist: meta.artist, album: meta.album, duration: meta.duration });
+  trackFromId(id: string, meta: { title?: string; artist?: string; album?: string; albumId?: string; duration?: number } = {}): Track {
+    // the album's cover when the album is known: one picture for all its songs (the browser and the server keep it
+    // once), and a song whose own file has no picture still gets one
+    return this.track({ id, coverArt: meta.albumId ? `al-${meta.albumId}` : id, title: meta.title ?? 'Unknown', artist: meta.artist, album: meta.album, albumId: meta.albumId, duration: meta.duration });
   }
 
   /** The library's genres, most songs first (Subsonic getGenres). */
