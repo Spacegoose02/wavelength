@@ -637,6 +637,9 @@ input[type='range']:hover::-webkit-slider-thumb { opacity: 1; }
 .side-head > button:first-child svg { font-size: 18px; }
 .side-head > button.on, .side-head > button:first-child:hover { color: var(--text); }
 .side-list { overflow-y: auto; display: flex; flex-direction: column; }
+/* never squeeze the rows to fit: with many playlists, flex shrank each row (overflow: hidden lets it go below its
+   text) until the names were a few pixels of dashes; the list scrolls instead */
+.side-list > *, .side-folder-items > * { flex-shrink: 0; }
 .side-item { padding: 6px 12px 6px 42px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: var(--radius); font-size: 13.5px; }
 .side-item:hover { color: var(--text); background: var(--panel); }
 .side-item.on { color: var(--accent); }

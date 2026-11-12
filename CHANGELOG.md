@@ -1,6 +1,10 @@
 # Changelog
 
 ## 0.44.0
+## Unreleased
+- **Fix: sidebar playlist names turned into rows of dashes** once there were more playlists than fit (for example
+  after **Copy all to Wavelength**). The rows were being squeezed to a few pixels tall instead of the list scrolling
+  (`src/styles.css`).
 - **Fix: songs from a long playlist could sit on BUF for a long time** with the Hub's Navidrome off (seen on
   playlists copied with **Copy all to Wavelength**). Opening the playlist asks the Hub for a cover per row, a
   browser only opens 6 connections to the Hub at once, and the song waited in line behind covers the Hub was still
