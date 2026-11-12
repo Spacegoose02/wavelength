@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **Playlists: sync with Plexamp, and Plex smart playlists stay smart.** **Copy all to Wavelength** is now **Sync to
+  Wavelength**: playlists Wavelength doesn't have are copied, same-named ones get the songs they're missing (matched
+  by track, or by title and artist so a Navidrome copy counts), and a Plex smart playlist becomes a Wavelength smart
+  playlist with the same rules, sort and limit instead of a frozen list. Plex rules Wavelength has no field for are
+  listed when it's done. Safe to run again (`src/lib/copyPlaylists.ts`, `src/lib/plexSmart.ts`, `src/sources/plex.ts`).
+
 ## 0.43.0
 - **Playlists: copy all of a Navidrome or Plex server's playlists to Wavelength, then hide them.** Each server on
   Playlists has **Copy all to Wavelength** (skips names you already have) and **Hide** (stops listing that server's
