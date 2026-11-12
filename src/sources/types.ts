@@ -20,6 +20,11 @@ export interface SourceConfig {
   hubAdmin?: boolean;
   /** Navidrome through the Hub's relay (`/nd/<id>`): the login is one the Hub made for this device, not the person's own. */
   hubRelay?: boolean;
+  /**
+   * Navidrome is off on the Hub, which is the music server behind this login now. The app calls it "Hub" instead of
+   * "Navidrome" (lib/serverName.ts); turning Navidrome back on clears it, so the two can always be told apart.
+   */
+  hubServed?: boolean;
 }
 
 export type TrackKind = 'track' | 'radio' | 'book' | 'episode';

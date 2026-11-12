@@ -35,6 +35,7 @@ import { UpdatesTab } from '../components/Updates';
 import { SEASONS, activeSkin, seasonFor } from '../lib/seasons';
 import { CHART_LABELS, GENRES, chartProvider, chartsFor, defaultSourcesFor, sourcesFor, type ChartSource, type Genre } from '../sources/charts';
 import { useTabStrip } from '../components/TabStrip';
+import { libraryServers } from '../lib/serverName';
 
 /** Settings → Discover charts: tick which charts feed each genre's tabs and Mix. */
 function DiscoverCharts() {
@@ -155,6 +156,7 @@ function SourceEditor({ initial, isNew, onDone }: { initial: SourceConfig; isNew
         ))}
       </div>
       <p className="muted small">{!hubLogin ? hint.help
+        : cfg.hubServed ? 'Your Hub is your music server (Navidrome is off on the Hub). This device has a login of its own for the Hub.'
         : cfg.hubRelay ? 'Signed in through your Hub. This device has a login of its own for the Hub, and your Navidrome password stays on the Hub. An admin sets your Navidrome login under Settings → Server.'
         : 'Your Navidrome login comes from your Hub. An admin sets it under Settings → Server.'}</p>
       {toHub && <p className="muted small">Saved on your Hub, not this device. Devices signed in to the Hub get this server{cfg.kind === 'subwave' ? ', but only admins get the SUB/WAVE admin login' : ''}.</p>}
@@ -211,7 +213,7 @@ function SourcesTab() {
               <div className="track-main">
                 <div className="track-title">{s.name}</div>
                 <div className="track-sub">
-                  {SOURCE_LABELS[s.kind]} · {s.url}
+                  {s.hubServed ? 'Wavelength Hub' : SOURCE_LABELS[s.kind]} · {s.url}
                   {s.hubId !== undefined ? ' · from your Hub' : signedIn && hubKeeps(s.kind) ? ' · this device only' : ''}
                 </div>
               </div>
@@ -349,7 +351,7 @@ function DownloadsTab() {
         <div className="editor">
           {hubYt ? (
             <>
-              <p className="muted small">For anything deemix can't find: YouTube, YouTube Music, SoundCloud, Bandcamp and more. Your Hub downloads into a folder inside its music folder, so new songs show up after a Navidrome scan.</p>
+              <p className="muted small">For anything deemix can't find: YouTube, YouTube Music, SoundCloud, Bandcamp and more. Your Hub downloads into a folder inside its music folder, so new songs show up after {libraryServers()} next scan.</p>
               <fieldset className="plain" disabled={locked}>
                 <div className="editor-grid">
                   <label>Folder inside the Hub's music folder<input value={ytdlp.hubFolder} onChange={(e) => setYtdlp({ hubFolder: e.target.value })} placeholder="yt-dlp" /></label>

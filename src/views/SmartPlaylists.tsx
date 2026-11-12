@@ -13,6 +13,7 @@ import { ChipInput } from '../components/EditDialog';
 import { HubTagLists } from '../components/TagLists';
 import { splitGenres } from '../lib/genreNames';
 import { useItemTags } from '../lib/itemTags';
+import { libraryServer } from '../lib/serverName';
 
 /** Playlists → Smart playlists: rules that pick songs from your Navidrome library each time (lib/smartPlaylists.ts). */
 export function SmartPlaylists() {
@@ -52,7 +53,7 @@ export function SmartPlaylists() {
 
   return (
     <section>
-      <h2>Smart playlists <small className="muted">songs picked by rules from your Navidrome library, fresh each time</small></h2>
+      <h2>Smart playlists <small className="muted">songs picked by rules from your {libraryServer() === 'the Hub' ? 'library' : 'Navidrome library'}, fresh each time</small></h2>
       <div className="smart-list">
         {list.map((p) => (
           <div key={p.id} className="source-row">
@@ -158,7 +159,7 @@ function SmartEditor({ initial, onDone }: { initial: SmartPlaylist; onDone: () =
           </select>
         </div>
         {sound}
-        <p className="muted small">Album and artist rules are checked on the whole library; track rules (plays, ratings, format…) on the songs of up to 400 albums that fit the rest, read fresh each time. Styles, moods and collections are your Hub’s; ratings and plays are your own on Navidrome.</p>
+        <p className="muted small">Album and artist rules are checked on the whole library; track rules (plays, ratings, format…) on the songs of up to 400 albums that fit the rest, read fresh each time. Styles, moods and collections are your Hub’s; ratings and plays are your own on {libraryServer()}.</p>
         {buttons}
       </form>
     );
@@ -191,7 +192,7 @@ function SmartEditor({ initial, onDone }: { initial: SmartPlaylist; onDone: () =
       )}
       {sound}
       <label className="check"><span className="switch"><input type="checkbox" checked={p.starred} onChange={(e) => setP({ ...p, starred: e.target.checked })} /><span /></span> Only songs I ♥</label>
-      <p className="muted small">Genres match your tags, so tidy genres (Settings → Server → Genres) make these work best. Styles, moods and collections are your Hub’s (Edit album, or Import from Plex); with any of them, songs come from the albums that fit. Ratings and plays are your own on Navidrome.</p>
+      <p className="muted small">Genres match your tags, so tidy genres (Settings → Server → Genres) make these work best. Styles, moods and collections are your Hub’s (Edit album, or Import from Plex); with any of them, songs come from the albums that fit. Ratings and plays are your own on {libraryServer()}.</p>
       {buttons}
     </form>
   );

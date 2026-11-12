@@ -3,6 +3,7 @@ import { applyMerge, navidromeRefs, planAlbums, planArtists, type MergePlan } fr
 import type { Album, Artist } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { useUi } from '../store/ui';
+import { LibraryServer, libraryServer } from '../lib/serverName';
 
 /**
  * Plex's way of merging, from the duplicate: **Merge into…** on an artist or album page opens a list of the
@@ -110,7 +111,7 @@ export function MergeIntoButton(props: Props) {
         <div className="menu merge-menu">
           <input autoFocus placeholder={kind === 'artist' ? 'Find the artist to keep…' : 'Find the album to keep…'} value={q} onChange={(e) => setQ(e.target.value)} />
           {!q.trim() && <div className="menu-hint">{list.length ? 'Looks like the same one:' : `Type to find the ${kind} to keep`}</div>}
-          {q.trim() && !list.length && <div className="menu-hint">Nothing called that{kind === 'album' ? ' on Navidrome' : ''}</div>}
+          {q.trim() && !list.length && <div className="menu-hint">Nothing called that{kind === 'album' ? ` on ${libraryServer()}` : ''}</div>}
           {list.map(({ x }) => (
             <button key={[...refKeys(x)].join('|')} className="menu-item" onClick={() => void pick(x)}>
               <span>{kind === 'artist' ? (x as Artist).name : (x as Album).title}</span>
@@ -134,7 +135,7 @@ export async function confirmMerge(plan: MergePlan, others: string[], setBusy: (
   if (!confirm(`Merge into ${plan.into}?\n\n${list}\n\nThis rewrites the tags of ${plan.changes.length} song${plan.changes.length === 1 ? '' : 's'}. The audio isn't touched, and you can undo it under Settings → Server → Tag edits.${missing}`)) return false;
   setBusy('Merging…');
   const r = await applyMerge(plan);
-  alert(`Merged: ${r.changed.length} song${r.changed.length === 1 ? '' : 's'} retagged${r.failed.length ? `; ${r.failed.length} failed (${r.failed[0].error})` : ''}. Navidrome rescans in a minute or two to show it.`);
+  alert(`Merged: ${r.changed.length} song${r.changed.length === 1 ? '' : 's'} retagged${r.failed.length ? `; ${r.failed.length} failed (${r.failed[0].error})` : ''}. ${LibraryServer()} rescans in a minute or two to show it.`);
   // the library refreshes once Navidrome has had time to rescan
   window.setTimeout(() => void useCatalog.getState().load(), 120_000);
   return r.changed.length > 0;

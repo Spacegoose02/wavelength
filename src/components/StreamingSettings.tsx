@@ -1,5 +1,6 @@
 import { useSettings } from '../store/settings';
 import { QUALITIES, onMobileData, type StreamQuality } from '../lib/streamQuality';
+import { LibraryServer } from '../lib/serverName';
 
 /** Settings → Playback: streaming quality on Wi-Fi and mobile data (lib/streamQuality.ts), and resuming (lib/resume.ts). */
 export function StreamingSettings() {
@@ -23,7 +24,7 @@ export function StreamingSettings() {
       <section id="streaming-quality">
         <h2>Streaming quality</h2>
         <p className="muted small">
-          Music from Navidrome can stream smaller on mobile data, so a FLAC library doesn't eat your plan. The server converts each song
+          Music from {LibraryServer()} can stream smaller on mobile data, so a FLAC library doesn't eat your plan. The server converts each song
           as it plays. Downloads, bit-perfect output and speakers always get the original.
         </p>
         {row('wifi', 'On Wi-Fi')}

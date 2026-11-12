@@ -4,6 +4,7 @@ import type { HubService, HubServiceInput, HubServiceKind } from '../sources/hub
 import type { SourceConfig, SourceKind } from '../sources/types';
 import { hubClient, useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
+import { hubSourceName } from './serverName';
 
 /**
  * Server logins kept by the signed-in Wavelength Hub (docs/HUB.md "Server logins").
@@ -33,7 +34,8 @@ function toSource(s: HubService, keep?: SourceConfig): SourceConfig {
     id: keep?.id ?? `hub-${s.id}`,
     hubId: s.id,
     kind: s.kind as SourceKind,
-    name: s.name,
+    // with Navidrome off the Hub is the server, so its "Navidrome" login is shown as the Hub
+    name: hubSourceName(s.name, s.hubServed),
     // relayed Navidrome: the Hub passes calls on with this person's real login, which stays there
     url: s.relay ? `${trimSlash(useHub.getState().url)}/nd/${s.id}` : s.url,
     username: str(s.secrets.username),
@@ -44,6 +46,7 @@ function toSource(s: HubService, keep?: SourceConfig): SourceConfig {
     nowPlayingUrl: str(s.config.nowPlayingUrl),
     hubAdmin: s.hubAdmin || undefined,
     hubRelay: s.relay || undefined,
+    hubServed: s.hubServed || undefined,
     // switching a Hub server off is a per-device choice
     enabled: keep?.enabled ?? true,
   };

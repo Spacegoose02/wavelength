@@ -9,6 +9,7 @@ import type { Artist } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
+import { LibraryServer } from '../lib/serverName';
 
 /**
  * Edit an artist across all their albums (hub/src/routes/tags.ts): rename them, or merge two spellings by
@@ -83,7 +84,7 @@ export function ArtistTagEditor({ artist }: { artist: Artist }) {
       const r = await c.saveTags(label, included.map((x) => ({ path: x.song.path, tags: x.tags })));
       setLastBatch(r.batch);
       forgetTagValues();
-      setMsg(`Saved ${r.changed.length} file${r.changed.length === 1 ? '' : 's'}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. Navidrome rescans in a minute to show them`);
+      setMsg(`Saved ${r.changed.length} file${r.changed.length === 1 ? '' : 's'}${r.failed.length ? `; ${r.failed.length} failed: ${r.failed[0].error}` : ''}. ${LibraryServer()} rescans in a minute to show them`);
       if (to.trim()) setFrom(to.trim());
       setGenre('');
       await load();

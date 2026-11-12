@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { HubGenreReview, HubGenreRule, HubGenreSettings } from '../sources/hub';
 import { hubClient } from '../store/hub';
 import { genreKey } from '../lib/genreNames';
+import { LibraryServer, libraryServer } from '../lib/serverName';
 
 const errText = (e: unknown) => String((e as Error).message ?? e);
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
@@ -73,7 +74,7 @@ export function GenreReview() {
         songs += r.changed.length;
         failed += r.failed.length + r.missing.length;
       }
-      setMsg(`Changed the genre of ${plural(songs, 'song')} in ${plural(ids.length, 'album')}${failed ? `; ${failed} couldn’t be changed` : ''}. Navidrome shows it after its rescan.`);
+      setMsg(`Changed the genre of ${plural(songs, 'song')} in ${plural(ids.length, 'album')}${failed ? `; ${failed} couldn’t be changed` : ''}. ${LibraryServer()} shows it after its rescan.`);
     } catch (e) {
       setMsg(errText(e));
     }
@@ -141,7 +142,7 @@ export function GenreReview() {
             setMsg(errText(err));
           }
         }} />
-        Tidy the genre of new downloads (deemix, Soulseek and YouTube) before Navidrome adds them
+        Tidy the genre of new downloads (deemix, Soulseek and YouTube) before {libraryServer()} adds them
       </label>
       <div className="row gap wrap" style={{ margin: '10px 0' }}>
         <button className="btn primary" disabled={loading || busy} onClick={load}>{loading ? 'Looking through the library…' : review ? 'Look again' : 'Review library genres'}</button>

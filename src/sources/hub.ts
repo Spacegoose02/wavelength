@@ -173,6 +173,8 @@ export interface HubService {
   hubAdmin?: boolean;
   /** Navidrome through the Hub's relay at `/nd/<id>`: the login is for the Hub, the real one stays there. */
   relay?: boolean;
+  /** Navidrome is off on the Hub: the Hub is the music server behind this login (docs/HUB.md "Without Navidrome"). */
+  hubServed?: boolean;
 }
 
 /** Tags the tag editor reads and writes (hub/src/tags.ts). */

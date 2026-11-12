@@ -878,6 +878,10 @@ one household's switch, and `{ off: false }` lets Navidrome answer again.
   Navidrome split for another reason (same title, artist and year) become one.
 - **Every device goes through the Hub** (`navidromeOff` in services.ts): `/api/me/services` hands each device a relay
   login whether or not the person has a Navidrome account, and nobody needs one any more (creating one is refused).
+- **Labelled as the Hub.** The login the Hub hands out carries `hubServed: true`, and the app shows that server as
+  **Hub** (when it has the default name "Navidrome") and says "the Hub" instead of "Navidrome" in its messages
+  (`src/lib/serverName.ts`). With Navidrome back on the mark is gone, so the app says Navidrome again and a Hub-served
+  library is never mistaken for Navidrome's.
 - **The relay answers everything itself** and never calls Navidrome: browsing, search, covers (a playlist's is its
   first song's, an artist's their latest album's), streaming, hearts, plays, ratings, playlists (new ones get a UUID; one with a song the catalog doesn't know answers with the songs it does, and `songIndexToRemove` counts only those),
   radio stations, play history (Navidrome's native `/api/song` shape, from the Hub's plays), plus `ping`,

@@ -19,6 +19,7 @@ import { SoulseekTab } from './SoulseekTab';
 import { BrowseBar, CleanChips, DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, useDeezerBrowse } from './DeezerBrowse';
 import { cleanOnly, withVersions } from '../lib/deezerVersions';
 import { useTabStrip } from '../components/TabStrip';
+import { libraryServer } from '../lib/serverName';
 
 type Tab = 'deezer' | 'ytdlp' | 'slskd';
 
@@ -45,7 +46,7 @@ export function Downloads({ soulseek }: { soulseek?: { q: string; requestId?: nu
     <div className="page">
       <header className="page-head">
         <h1>Downloads</h1>
-        <button className="btn" onClick={rescan} title="Ask Navidrome to rescan, then reload the catalog"><IconRefresh /> Rescan library</button>
+        <button className="btn" onClick={rescan} title={`Ask ${libraryServer()} to rescan, then reload the catalog`}><IconRefresh /> Rescan library</button>
       </header>
       {ask ? <>
         <p className="muted">Your Hub admin looks after downloads, so <b>Request</b> sends them what you'd like. You'll see their answer in your <button className="link" onClick={() => useUi.getState().go({ view: 'inbox' })}>Inbox</button>.</p>
@@ -184,7 +185,7 @@ function YtTab({ q }: { q: string }) {
       <div>
         {!hubYt && !settings.outDir && (
           <div className="errors">
-            Choose where yt-dlp saves files in <button className="link" onClick={() => useUi.getState().go({ view: 'settings', tab: 'downloads' })}>Settings</button> — ideally your Navidrome music folder (e.g. a network share).
+            Choose where yt-dlp saves files in <button className="link" onClick={() => useUi.getState().go({ view: 'settings', tab: 'downloads' })}>Settings</button> — ideally your {libraryServer() === 'the Hub' ? 'Hub' : 'Navidrome'} music folder (e.g. a network share).
           </div>
         )}
         {busy && <Spinner />}

@@ -23,7 +23,7 @@ export function Favorites() {
   const [tab, setTab] = useState(sources[0]?.id);
   const cfg = sources.find((s) => s.id === tab) ?? sources[0];
 
-  if (!cfg) return <Empty title="No favorites source">Connect Navidrome to see favorites.</Empty>;
+  if (!cfg) return <Empty title="No favorites source">Connect Navidrome or your Hub to see favorites.</Empty>;
   return (
     <div className="page">
       <header className="page-head"><h1>Favorites</h1></header>
@@ -68,7 +68,7 @@ function NavidromeFavs({ sourceId }: { sourceId: string }) {
   }, [sourceId]);
   if (error) return <div className="errors">{error}</div>;
   if (!favs) return <Spinner />;
-  if (!favs.tracks.length && !favs.albums.length) return <Empty title="Nothing starred yet">Tap the ♥ on any Navidrome track.</Empty>;
+  if (!favs.tracks.length && !favs.albums.length) return <Empty title="Nothing starred yet">Tap the ♥ on any track from {cfg.name}.</Empty>;
   return (
     <>
       {favs.albums.length > 0 && (
