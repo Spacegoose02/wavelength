@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+- **Fix: Sync to Wavelength failed on most playlists** with "Setting the value of 'tonearm.library' exceeded the
+  quota". Wavelength's playlists were saved twice in localStorage, which holds about 5 MB. They're in IndexedDB
+  now, with room for hundreds of MB, and playlists saved the old way move over at startup (`src/lib/bigStore.ts`).
+- **Sync to Wavelength says what happened in one line**, with a **Details** list grouped by problem (one line for
+  the same error on 80 playlists, one per left-out Plex rule) instead of a wall of text.
+- **More Plex smart playlist rules come over:** release dates (by year), Plex's artist-and-album order and its
+  one-version-per-song setting no longer show up as left out, and left-out rules are in words
+  (`src/lib/plexSmart.ts`).
+
 ## 0.44.0
 - **Fix: sidebar playlist names turned into rows of dashes** once there were more playlists than fit (for example
   after **Copy all to Wavelength**). The rows were being squeezed to a few pixels tall instead of the list scrolling

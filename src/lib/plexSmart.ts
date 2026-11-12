@@ -24,7 +24,7 @@ type Kind = 'artist' | 'album' | 'track';
 type Tag = 'genre' | 'style' | 'mood' | 'collection';
 
 /** Plex `<kind>.<field>` → the Wavelength field, and what sort of value it takes. */
-const FIELD_MAP: Record<string, { field: FieldId; type: 'text' | 'tag' | 'number' | 'decade' | 'rating' | 'date' }> = {
+const FIELD_MAP: Record<string, { field: FieldId; type: 'text' | 'tag' | 'number' | 'decade' | 'rating' | 'date' | 'released' }> = {
   'artist.title': { field: 'artist', type: 'text' },
   'artist.genre': { field: 'artistGenre', type: 'tag' },
   'artist.style': { field: 'artistStyle', type: 'tag' },
@@ -42,6 +42,9 @@ const FIELD_MAP: Record<string, { field: FieldId; type: 'text' | 'tag' | 'number
   'album.viewCount': { field: 'albumPlays', type: 'number' },
   'album.lastViewedAt': { field: 'albumPlayed', type: 'date' },
   'album.addedAt': { field: 'albumAdded', type: 'date' },
+  // release date: Wavelength knows the year, so "released after 1 Jan 2025" / "in the last 60 days" go by year
+  'album.originallyAvailableAt': { field: 'year', type: 'released' },
+  'track.originallyAvailableAt': { field: 'year', type: 'released' },
   'track.title': { field: 'title', type: 'text' },
   'track.genre': { field: 'trackGenre', type: 'tag' },
   'track.mood': { field: 'trackMood', type: 'tag' },
@@ -106,6 +109,7 @@ export function plexDays(v: string, now = Date.now()): number | undefined {
 /** Plex's sort ("viewCount:desc", "track.lastViewedAt:desc", "random") → which songs the limit keeps. */
 export function plexSort(v: string | undefined): SortId | undefined {
   if (!v) return undefined;
+  if (libraryOrder(v)) return 'random';
   const [key, dir] = v.split(',')[0].split(':');
   const field = key.replace(/^(artist|album|track)\./, '');
   const desc = dir === 'desc';
@@ -119,6 +123,33 @@ export function plexSort(v: string | undefined): SortId | undefined {
     case 'originallyAvailableAt': return desc ? 'newest' : 'oldest';
     default: return undefined;
   }
+}
+
+/**
+ * Plex's default order ("artist.titleSort,album.titleSort,album.index,album.id,…"): by artist and album. Wavelength's
+ * smart playlists have no such order, so it plays them shuffled; not worth a warning.
+ */
+const libraryOrder = (v: string) => /^(?:(?:artist|album|track)\.)?(?:titleSort|title|index|id)(?::(?:asc|desc))?(?:,|$)/.test(v);
+
+const SORT_WORDS: Record<string, string> = { lastViewedAt: 'last played', lastRatedAt: 'last rated', addedAt: 'date added', userRating: 'rating', viewCount: 'plays', skipCount: 'skips' };
+const OP_WORDS: Record<string, string> = { '=': 'is', '==': 'is', '!=': 'is not', '!==': 'is not', '<=': 'begins with', '>=': 'ends with', '>>=': 'after', '<<=': 'before' };
+const camelWords = (s: string) => s.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+const FIELD_WORDS: Record<string, string> = { originallyAvailableAt: 'release date', lastViewedAt: 'last played', lastRatedAt: 'last rated', viewCount: 'plays', skipCount: 'skips', userRating: 'rating', studio: 'label', country: 'country', source: 'source' };
+
+/** A Plex rule Wavelength can't do, in words: "Track skips is 3", "Artist country" (tag ids left out). */
+export function plexRuleWords(full: string, op: string, value: string): string {
+  const [kind, field = ''] = full.split('.');
+  const label = `${kind[0].toUpperCase()}${kind.slice(1)} ${FIELD_WORDS[field] ?? camelWords(field)}`;
+  if (/^\d+(,\d+)*$/.test(value) && !/count|rating|year|decade/i.test(field)) return label;
+  const v = value.length > 30 ? `${value.slice(0, 29)}…` : value;
+  return `${label} ${OP_WORDS[op] ?? op} ${v}`;
+}
+
+/** A sort Wavelength can't do, in words. */
+export function plexSortWords(v: string): string {
+  const [key, dir] = v.split(',')[0].split(':');
+  const field = key.replace(/^(artist|album|track)\./, '');
+  return `Sorted by ${SORT_WORDS[field] ?? camelWords(field)}${dir === 'desc' ? ' (newest first)' : ''}`;
 }
 
 /** Half stars (0–10) as whole stars for an operator, so "rated above 3½" keeps 4 and 5. */
@@ -139,7 +170,7 @@ const NUM_OPS: Record<string, Op> = { '=': 'is', '==': 'is', '!=': 'isNot', '!==
 function row(key: string, op: string, value: string, kind: Kind, now: number): Rule | RuleGroup | string {
   const full = key.includes('.') ? key : `${kind}.${key}`;
   const map = FIELD_MAP[full];
-  const words = `${full} ${op} ${value}`;
+  const words = plexRuleWords(full, op, value);
   if (!map) return words;
   const { field, type } = map;
   switch (type) {
@@ -181,6 +212,18 @@ function row(key: string, op: string, value: string, kind: Kind, now: number): R
       if (op === '<<=') return { field, op: 'notInLast', value: String(days) };
       return words;
     }
+    case 'released': {
+      const days = plexDays(value, now);
+      if (days === undefined) return words;
+      const fixed = !/^-?\d+\s*(mon|[mhdwy])$/i.test(value.trim());
+      const d = new Date(fixed && !/^\d{9,}$/.test(value) ? Date.parse(value) : now - days * DAY);
+      const y = d.getUTCFullYear();
+      const jan1 = d.getUTCMonth() === 0 && d.getUTCDate() === 1;
+      // after a day in year Y: from Y on; before it: up to Y (before 1 Jan Y: up to Y - 1)
+      if (op === '>>=') return { field, op: 'gt', value: String(y - 1) };
+      if (op === '<<=') return { field, op: 'lt', value: String(jan1 ? y : y + 1) };
+      return words;
+    }
   }
 }
 
@@ -207,8 +250,10 @@ export function parsePlexSmart(content: string, now = Date.now()): PlexSmartPars
   const root: RuleGroup = { match: 'all', rules: [] };
   const stack: RuleGroup[] = [root];
   for (const raw of tokens) {
-    const tok = decode(raw);
+    // push / pop / or / and, sometimes with a kind in front ("album.and=1")
+    const tok = decode(raw).replace(/^(?:artist|album|track)\.(push|pop|or|and)=1$/, '$1=1');
     const top = stack[stack.length - 1];
+    if (tok === 'and=1') continue;
     if (tok === 'push=1') {
       const g: RuleGroup = { match: 'all', rules: [] };
       top.rules.push(g);
@@ -226,10 +271,13 @@ export function parsePlexSmart(content: string, now = Date.now()): PlexSmartPars
     const m = tok.match(ROW);
     if (!m) continue;
     const [, key, op, value] = m;
-    if (key === 'type' || key === 'push' || key === 'pop' || key === 'includeGuids' || key.startsWith('X-Plex')) continue;
+    // group / having: Plex's "one version of each song" (group by guid, keep the oldest release); the songs a
+    // smart playlist finds are already one each
+    const bare = key.replace(/^(?:artist|album|track)\./, '');
+    if (['type', 'push', 'pop', 'includeGuids', 'group', 'having'].includes(bare) || key.startsWith('X-Plex')) continue;
     if (key === 'sort') {
       sort = plexSort(value);
-      if (!sort) dropped.push(`sort by ${value}`);
+      if (!sort) dropped.push(plexSortWords(value));
       continue;
     }
     if (key === 'limit') {
@@ -275,7 +323,7 @@ export function resolvePlexTags(g: RuleGroup, names: Record<string, string>, dro
       if (!m) return [r];
       const name = names[`${m[1]}:${m[2]}`];
       if (!name) {
-        dropped.push(`${m[1]} ${r.op === 'isNot' ? 'is not' : 'is'} tag #${m[2]} (no longer in Plex)`);
+        dropped.push(`${plexRuleWords(m[1], '=', m[2])} (a tag Plex no longer has)`);
         return [];
       }
       return [{ ...r, value: name }];

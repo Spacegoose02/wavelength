@@ -149,3 +149,17 @@ test('Playback settings show streaming quality, resume and the wake-up alarm', a
   await page.getByRole('group', { name: 'On mobile data' }).getByRole('button', { name: 'Data saver' }).click();
   await expect(page.getByText('On mobile data: 96 kbps')).toBeVisible();
 });
+
+test('playlists move from localStorage to IndexedDB and are still there after a reload', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('tonearm.library', JSON.stringify({ state: { playlists: [{ id: 'p1', name: 'Moved over', tracks: [], createdAt: 0, updatedAt: 0 }], history: [] }, version: 0 }));
+  });
+  await page.goto('/');
+  await expect(page.locator('.side-item', { hasText: 'Moved over' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('tonearm.library'))).toBeNull();
+  await page.reload();
+  await expect(page.locator('.side-item', { hasText: 'Moved over' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('tonearm.library'))).toBeNull();
+});

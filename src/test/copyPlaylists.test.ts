@@ -57,9 +57,15 @@ describe('syncPlaylists', () => {
     expect(r.staleCopies).toEqual(['Country Hits']);
     expect(r.failed).toEqual([{ name: 'Broken', error: 'Not found' }]);
     expect(r.missing).toBe(1);
-    expect(copySummary(r)).toBe(
-      'Copied 2 playlists · added 1 missing song to 1 playlist you had · 1 smart playlist made with its rules · 2 already up to date · 1 song the server couldn’t find was left out · rules Wavelength doesn’t have were left out of Country Hits (artist.country = 3) · your earlier regular copy of Country Hits is still there, delete it if you like · couldn’t sync Broken (Not found)',
-    );
+    expect(copySummary(r)).toEqual({
+      headline: 'Copied 2 playlists · added 1 missing song to 1 playlist you had · made 1 smart playlist · 2 already up to date · 1 couldn’t be synced',
+      details: [
+        'Couldn’t sync 1 playlist: Not found. Broken',
+        '1 song the server couldn’t find was left out.',
+        'Plex rule Wavelength doesn’t have, left out: “artist.country = 3” in Country Hits',
+        'Your earlier regular copy of Country Hits is still there; delete it if you like.',
+      ],
+    });
   });
 
   it('syncs smart playlists as songs on servers without smart rules (Navidrome)', async () => {
@@ -70,7 +76,42 @@ describe('syncPlaylists', () => {
 
   it('says so when there is nothing to do', async () => {
     const r = await syncPlaylists([], [], [], { tracksOf: async () => [], create: () => '', add: () => {}, saveSmart: () => {} });
-    expect(copySummary(r)).toBe('Nothing to sync');
+    expect(copySummary(r)).toEqual({ headline: 'Nothing to sync', details: [] });
+  });
+});
+
+describe('copySummary', () => {
+  it('turns the same failure on many playlists into one line', async () => {
+    const quota = "Failed to execute 'setItem' on 'Storage': Setting the value of 'tonearm.library' exceeded the quota.";
+    const names = Array.from({ length: 12 }, (_, i) => `List ${i}`);
+    const r = await syncPlaylists(
+      [...names.map((x, i) => pl(String(i), x)), pl('a', 'Radio', 5, true), pl('b', 'Radio 2', 5, true)],
+      [],
+      [],
+      {
+        tracksOf: async (id) => {
+          if (id === 'a') throw new Error('500 from Plex — /playlists/a/items');
+          return [song(id)];
+        },
+        smartOf: async (id) => {
+          if (id === 'a') throw new Error('Plex didn’t send this smart playlist’s rules');
+          return { rules: { match: 'all', rules: [] }, dropped: ['Sorted by last rated (newest first)'] };
+        },
+        create: () => {
+          throw new Error(quota);
+        },
+        add: () => {},
+        saveSmart: () => {},
+      },
+    );
+    const s = copySummary(r);
+    expect(s.headline).toBe('Made 1 smart playlist · 13 couldn’t be synced');
+    expect(s.details).toEqual([
+      'Couldn’t sync 12 playlists: Wavelength ran out of room to save them. List 0, List 1, List 2, List 3, List 4, List 5, List 6, List 7 and 4 more',
+      'Couldn’t sync 1 playlist: Plex answered with an error (500). Radio',
+      'Plex rule Wavelength doesn’t have, left out: “Sorted by last rated (newest first)” in Radio 2',
+    ]);
+    expect(r.failed.find((f) => f.name === 'Radio')?.error).toContain('its rules: Plex didn’t send');
   });
 });
 

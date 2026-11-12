@@ -5,6 +5,7 @@ import type { Track } from '../sources/types';
 import { hubClient, useHub } from '../store/hub';
 import { useLibrary, type LocalPlay, type Playlist } from '../store/library';
 import { useSettings } from '../store/settings';
+import { bigGet, bigSet } from './bigStore';
 
 /**
  * Wavelength's own playlists and play history belong to the person, not the device (docs/HUB.md "Your
@@ -43,6 +44,16 @@ const write = (key: string, v: unknown) => {
     /* full or blocked: the copy in memory still works */
   }
 };
+/** A profile's copy of their playlists and history: big, so in IndexedDB (lib/bigStore.ts). */
+const readCopy = (o: string): { playlists: Playlist[]; history: LocalPlay[] } => {
+  try {
+    const v = bigGet(copyKey(o));
+    return v ? JSON.parse(v) : { playlists: [], history: [] };
+  } catch {
+    return { playlists: [], history: [] };
+  }
+};
+const writeCopy = (o: string, v: { playlists: Playlist[]; history: LocalPlay[] }) => bigSet(copyKey(o), JSON.stringify(v));
 const emptySync = (): SyncState => ({ dirty: [], deleted: [], plays: [] });
 
 const ownerOf = () => String(useHub.getState().token ? useHub.getState().user?.id ?? '' : '');
@@ -76,8 +87,8 @@ function switchOwner() {
   owner = known;
   if (next === owner) return;
   const { playlists, history } = useLibrary.getState();
-  write(copyKey(owner), { playlists, history });
-  const theirs = read<{ playlists: Playlist[]; history: LocalPlay[] }>(copyKey(next), { playlists: [], history: [] });
+  writeCopy(owner, { playlists, history });
+  const theirs = readCopy(next);
   owner = next;
   localStorage.setItem(OWNER_KEY, next);
   setQuietly({ playlists: theirs.playlists ?? [], history: theirs.history ?? [] });
@@ -180,7 +191,7 @@ export function startLibrarySync() {
     if (applying) return;
     const me = ownerOf();
     // keep a copy per profile, so switching back finds it
-    write(copyKey(owner), { playlists: s.playlists, history: s.history });
+    writeCopy(owner, { playlists: s.playlists, history: s.history });
     if (!me || me !== owner) return;
     const st = read<SyncState>(syncKey(me), emptySync());
     let changed = false;
