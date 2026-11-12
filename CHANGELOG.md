@@ -1,22 +1,22 @@
 # Changelog
 
-## Unreleased
+## 0.44.0
 - **Fix: songs from a long playlist could sit on BUF for a long time** with the Hub's Navidrome off (seen on
   playlists copied with **Copy all to Wavelength**). Opening the playlist asks the Hub for a cover per row, a
   browser only opens 6 connections to the Hub at once, and the song waited in line behind covers the Hub was still
   making. The Hub now reads the disk without blocking, makes a cover asked for by several rows once, and remembers
-  songs that have none instead of looking again on every visit (`hub/src/subsonicCatalog.ts`).
+  songs that have none instead of looking again on every visit (`hub/src/subsonicCatalog.ts`, #294).
 - **Fix: some songs in a playlist had no cover** when their own file had no picture. They get their album's cover
   now, like Navidrome does, and playlists synced through the Hub ask for the album's cover (one picture per album
-  instead of one per song) (`hub/src/subsonicCatalog.ts`, `src/sources/navidrome.ts`, `src/lib/librarySync.ts`).
+  instead of one per song) (`hub/src/subsonicCatalog.ts`, `src/sources/navidrome.ts`, `src/lib/librarySync.ts`, #294).
 - **Fix: songs through the Hub played without the EQ, visualizer, crossfade and gapless.** The Hub's Navidrome relay
   didn't send the CORS header Navidrome sends, so the audio decks refused its songs and the plain player (no Web
-  Audio) took over, after loading the first song twice (`hub/src/routes/relay.ts`).
+  Audio) took over, after loading the first song twice (`hub/src/routes/relay.ts`, #294).
 - **Playlists: sync with Plexamp, and Plex smart playlists stay smart.** **Copy all to Wavelength** is now **Sync to
   Wavelength**: playlists Wavelength doesn't have are copied, same-named ones get the songs they're missing (matched
   by track, or by title and artist so a Navidrome copy counts), and a Plex smart playlist becomes a Wavelength smart
   playlist with the same rules, sort and limit instead of a frozen list. Plex rules Wavelength has no field for are
-  listed when it's done. Safe to run again (`src/lib/copyPlaylists.ts`, `src/lib/plexSmart.ts`, `src/sources/plex.ts`).
+  listed when it's done. Safe to run again (`src/lib/copyPlaylists.ts`, `src/lib/plexSmart.ts`, `src/sources/plex.ts`, #293).
 
 ## 0.43.0
 - **Playlists: copy all of a Navidrome or Plex server's playlists to Wavelength, then hide them.** Each server on
