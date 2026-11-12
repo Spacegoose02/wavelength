@@ -805,7 +805,10 @@ and hands out ids.
   own API); genres split on ";" like Navidrome's; "newest" goes by when a file first turned up (`created`).
   Loudness (`replayGain`) comes from the files' `REPLAYGAIN_*` tags; migration 31 adds these columns and reads every
   file once more to fill them. Covers: the album folder's `cover.*`, `folder.*` or `front.*`, else the picture in the
-  file, resized with ffmpeg to the size asked and kept in `<data>/covers`. Navidrome still answers the lists that
+  file (a song's own, then its album's other songs', so a song without a picture still gets the album's), resized
+  with ffmpeg to the size asked and kept in `<data>/covers`. A song or album with no picture anywhere is remembered
+  for 10 minutes, and the same cover asked for by several rows at once is made once: a browser opens only 6
+  connections to the Hub, so slow covers on a long playlist used to hold up the song starting to play. Navidrome still answers the lists that
   need a person's plays or stars (`recent`, `frequent`, `starred`, `highest`), every other call, ids the catalog
   doesn't know yet (a download before the catalog's next look), artist pictures, and callers that ask for XML.
   Answers from the Hub carry `x-wavelength-answered-by: hub`.

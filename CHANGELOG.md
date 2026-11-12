@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+- **Fix: songs from a long playlist could sit on BUF for a long time** with the Hub's Navidrome off (seen on
+  playlists copied with **Copy all to Wavelength**). Opening the playlist asks the Hub for a cover per row, a
+  browser only opens 6 connections to the Hub at once, and the song waited in line behind covers the Hub was still
+  making. The Hub now reads the disk without blocking, makes a cover asked for by several rows once, and remembers
+  songs that have none instead of looking again on every visit (`hub/src/subsonicCatalog.ts`).
+- **Fix: some songs in a playlist had no cover** when their own file had no picture. They get their album's cover
+  now, like Navidrome does, and playlists synced through the Hub ask for the album's cover (one picture per album
+  instead of one per song) (`hub/src/subsonicCatalog.ts`, `src/sources/navidrome.ts`, `src/lib/librarySync.ts`).
+- **Fix: songs through the Hub played without the EQ, visualizer, crossfade and gapless.** The Hub's Navidrome relay
+  didn't send the CORS header Navidrome sends, so the audio decks refused its songs and the plain player (no Web
+  Audio) took over, after loading the first song twice (`hub/src/routes/relay.ts`).
+
 ## 0.43.0
 - **Playlists: copy all of a Navidrome or Plex server's playlists to Wavelength, then hide them.** Each server on
   Playlists has **Copy all to Wavelength** (skips names you already have) and **Hide** (stops listing that server's
