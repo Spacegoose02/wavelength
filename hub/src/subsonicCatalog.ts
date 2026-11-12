@@ -647,15 +647,26 @@ export async function cover(db: Db, musicDir: string, cacheDir: string, id: stri
  * A playlist's songs in the Subsonic song shape (playlists.ts), or null when the catalog doesn't know one of them, so
  * that Navidrome answers instead and nothing goes missing from the list.
  */
-export function playlistEntries(db: Db, ids: string[], starred: Starred, personal: Plays | null = null): Record<string, unknown>[] | null {
+export function playlistEntries(db: Db, ids: string[], starred: Starred, personal: Plays | null = null, partial = false): Record<string, unknown>[] | null {
   const v = view(db);
-  if (!ids.every((id) => v.songs.has(id))) return null;
+  // a song the catalog doesn't know: Navidrome answers the playlist instead, or, without Navidrome (`partial`), the
+  // songs the Hub does know are the playlist (knownPositions() maps their positions back for removing)
+  if (!partial && !ids.every((id) => v.songs.has(id))) return null;
   plays = personal;
   try {
-    return ids.map((id) => song(v.songs.get(id)!, starred));
+    return ids.filter((id) => v.songs.has(id)).map((id) => song(v.songs.get(id)!, starred));
   } finally {
     plays = null;
   }
+}
+
+/**
+ * The positions in a playlist of the songs the catalog knows, in order: what a device saw as song N of a playlist
+ * answered with `partial` playlistEntries() is position knownPositions()[N] of the playlist kept on the Hub.
+ */
+export function knownPositions(db: Db, ids: string[]): number[] {
+  const v = view(db);
+  return ids.flatMap((id, i) => (v.songs.has(id) ? [i] : []));
 }
 
 /** A playlist's length in seconds, from the catalog, without building its songs (for the list of playlists). */

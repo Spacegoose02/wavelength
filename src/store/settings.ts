@@ -189,6 +189,9 @@ interface SettingsState {
   pinnedPlaylists: string[];
   setPlaylistFolder(id: string, folder: string | undefined): void;
   togglePinnedPlaylist(id: string): void;
+  /** Navidrome / Plex servers whose own playlists are hidden (Playlists → "Hide"), e.g. once copied to Wavelength; synced. */
+  hiddenPlaylistSources: string[];
+  setPlaylistSourceHidden(sourceId: string, hidden: boolean): void;
   /** Playlists → Smart playlists (lib/smartPlaylists.ts): the rules, synced. */
   smartPlaylists: SmartPlaylist[];
   saveSmartPlaylist(p: SmartPlaylist): void;
@@ -364,6 +367,9 @@ export const useSettings = create<SettingsState>()(
         }),
       togglePinnedPlaylist: (id) =>
         set((st) => ({ pinnedPlaylists: st.pinnedPlaylists.includes(id) ? st.pinnedPlaylists.filter((x) => x !== id) : [id, ...st.pinnedPlaylists] })),
+      hiddenPlaylistSources: [],
+      setPlaylistSourceHidden: (sourceId, hidden) =>
+        set((st) => ({ hiddenPlaylistSources: hidden ? [...new Set([...st.hiddenPlaylistSources, sourceId])] : st.hiddenPlaylistSources.filter((x) => x !== sourceId) })),
       smartPlaylists: [],
       saveSmartPlaylist: (p) => set((st) => ({ smartPlaylists: st.smartPlaylists.some((x) => x.id === p.id) ? st.smartPlaylists.map((x) => (x.id === p.id ? p : x)) : [...st.smartPlaylists, p] })),
       removeSmartPlaylist: (id) => set((st) => ({ smartPlaylists: st.smartPlaylists.filter((x) => x.id !== id) })),

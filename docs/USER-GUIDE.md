@@ -1346,6 +1346,34 @@ for kids are left out.
 > YouTube goes through the Hub's `POST /api/import/youtube`; Spotify's embed page and Deezer's API go through
 > `/api/fetch` in a browser.
 
+## Move your Navidrome or Plex playlists into Wavelength
+
+Each Navidrome or Plex server on **Playlists** has two buttons under its name:
+
+- **Copy all to Wavelength** makes a Wavelength playlist of every playlist on that server, with the same name and
+  songs. Wavelength playlists sync to every device you sign in on and can mix in any source. A playlist you already
+  have in Wavelength (same name) is skipped, so pressing it twice doesn't make doubles. When it's done it says how
+  many it copied, and how many songs the server couldn't find (see below).
+- **Hide *server* playlists** stops showing that server's own playlists anywhere in Wavelength: Playlists,
+  **+ Playlist**, and the AI DJ. Nothing is deleted on the server, and other apps still see them. **Show them** at
+  the bottom of Playlists brings them back. Hiding syncs to your other devices.
+
+To move over for good: press **Copy all to Wavelength**, check the new playlists look right, then press **Hide**.
+
+**Songs left out.** With the Hub's **Navidrome off** switch on, the Hub keeps the playlists it copied from Navidrome
+and plays them from the music folder. A song whose file the Hub can't find (moved, deleted, or never matched when
+Navidrome was turned off) is left out of the playlist rather than the whole playlist failing to open, and the
+playlist's page says how many. Removing a song still removes the one you picked.
+
+> **Developer notes:** `copyAllPlaylists()` in `src/lib/copyPlaylists.ts` does the copying (skips names already in
+> the library, counts songs missing from `getPlaylist` against the list's `songCount`); the buttons are
+> `ServerSectionActions` in `src/views/Playlists.tsx`. Hidden servers are the synced setting
+> `hiddenPlaylistSources`, and `useServerPlaylists.load()` doesn't ask them. On the Hub, `getPlaylist` with Navidrome
+> off answers `playlistEntries(…, partial)` (only the songs the catalog knows) and `updatePlaylist` maps
+> `songIndexToRemove` back through `knownPositions()` (`hub/src/routes/relay.ts`, `hub/src/subsonicCatalog.ts`).
+> Before, one unknown song made the Hub fall through to Navidrome, which is off, so the playlist wouldn't open
+> ("The Hub doesn't know that (getPlaylist), and Navidrome is off").
+
 ## Cast to a speaker
 
 The speaker button next to **Devices** (player bar and Now Playing) finds Chromecasts, Google and Nest

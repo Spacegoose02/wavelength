@@ -876,7 +876,7 @@ one household's switch, and `{ off: false }` lets Navidrome answer again.
 - **Every device goes through the Hub** (`navidromeOff` in services.ts): `/api/me/services` hands each device a relay
   login whether or not the person has a Navidrome account, and nobody needs one any more (creating one is refused).
 - **The relay answers everything itself** and never calls Navidrome: browsing, search, covers (a playlist's is its
-  first song's, an artist's their latest album's), streaming, hearts, plays, ratings, playlists (new ones get a UUID),
+  first song's, an artist's their latest album's), streaming, hearts, plays, ratings, playlists (new ones get a UUID; one with a song the catalog doesn't know answers with the songs it does, and `songIndexToRemove` counts only those),
   radio stations, play history (Navidrome's native `/api/song` shape, from the Hub's plays), plus `ping`,
   `getLicense`, `getMusicFolders`, `getOpenSubsonicExtensions`, `getScanStatus`, `startScan` (a catalog scan),
   `getUser`, `getNowPlaying` (from scrobbles without submission), `getIndexes`, `getMusicDirectory`, `getAlbumList`,
