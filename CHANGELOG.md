@@ -1,20 +1,20 @@
 # Changelog
 
-## Unreleased
+## 0.44.1
 - **Fix: Sync to Wavelength failed on most playlists** with "Setting the value of 'tonearm.library' exceeded the
   quota". Wavelength's playlists were saved twice in localStorage, which holds about 5 MB. They're in IndexedDB
-  now, with room for hundreds of MB, and playlists saved the old way move over at startup (`src/lib/bigStore.ts`).
+  now, with room for hundreds of MB, and playlists saved the old way move over at startup (`src/lib/bigStore.ts`, #298).
 - **Sync to Wavelength says what happened in one line**, with a **Details** list grouped by problem (one line for
-  the same error on 80 playlists, one per left-out Plex rule) instead of a wall of text.
+  the same error on 80 playlists, one per left-out Plex rule) instead of a wall of text (#298).
 - **More Plex smart playlist rules come over:** release dates (by year), Plex's artist-and-album order and its
   one-version-per-song setting no longer show up as left out, and left-out rules are in words
-  (`src/lib/plexSmart.ts`).
+  (`src/lib/plexSmart.ts`, #298).
 - **Fix: the app still called the Hub "Navidrome" with the Hub's Navidrome off.** The Hub's music login was made as
   a server named "Navidrome", and the app showed that name on Playlists ("Navidrome playlist", "Save to Navidrome",
   "Hide Navidrome playlists"), in Sources and in messages such as "Navidrome rescans in a minute". With Navidrome off
   the Hub now marks the login it hands out (`hubServed`), and the app calls it **Hub** and says "the Hub" in those
   messages. Turn Navidrome back on and the mark goes, so everything says Navidrome again and the two can't be mixed up
-  (`hub/src/services.ts`, `src/lib/serverName.ts`).
+  (`hub/src/services.ts`, `src/lib/serverName.ts`, #297).
 
 ## 0.44.0
 - **Fix: sidebar playlist names turned into rows of dashes** once there were more playlists than fit (for example
