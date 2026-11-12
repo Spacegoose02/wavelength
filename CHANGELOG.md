@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- **Fix: sidebar playlist names turned into rows of dashes** once there were more playlists than fit (for example
+  after **Copy all to Wavelength**). The rows were being squeezed to a few pixels tall instead of the list scrolling
+  (`src/styles.css`).
+
 ## 0.43.0
 - **Playlists: copy all of a Navidrome or Plex server's playlists to Wavelength, then hide them.** Each server on
   Playlists has **Copy all to Wavelength** (skips names you already have) and **Hide** (stops listing that server's
