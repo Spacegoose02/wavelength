@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Fix: Sync to Wavelength failed on most playlists** with "Setting the value of 'tonearm.library' exceeded the
+  quota". Wavelength's playlists were saved twice in localStorage, which holds about 5 MB. They're in IndexedDB
+  now, with room for hundreds of MB, and playlists saved the old way move over at startup (`src/lib/bigStore.ts`).
+- **Sync to Wavelength says what happened in one line**, with a **Details** list grouped by problem (one line for
+  the same error on 80 playlists, one per left-out Plex rule) instead of a wall of text.
+- **More Plex smart playlist rules come over:** release dates (by year), Plex's artist-and-album order and its
+  one-version-per-song setting no longer show up as left out, and left-out rules are in words
+  (`src/lib/plexSmart.ts`).
 - **Fix: the app still called the Hub "Navidrome" with the Hub's Navidrome off.** The Hub's music login was made as
   a server named "Navidrome", and the app showed that name on Playlists ("Navidrome playlist", "Save to Navidrome",
   "Hide Navidrome playlists"), in Sources and in messages such as "Navidrome rescans in a minute". With Navidrome off

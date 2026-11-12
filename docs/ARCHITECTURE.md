@@ -178,7 +178,7 @@ what lives on the servers themselves (server playlists, stars, ABS progress, SUB
 | Store / key | Contents | Persisted as |
 |---|---|---|
 | `store/settings.ts` | Sources (URLs, logins, tokens), saved radio stations and their order, hidden/ordered server stations (`hiddenStations`, `stationOrder`), skin plus `seasonal`/`randomDaily`, deemix + yt-dlp settings, Discover chart picks (`discoverCharts`) and songs marked Not interested (`discoverHidden`), equalizer (`eq`), smart offline (`smartOffline`) and dead zones (`deadZone`), both per device | `tonearm.settings` (versioned; `migrate` handles upgrades) |
-| `store/library.ts` | Mixed-source playlists, local play history | `tonearm.library` |
+| `store/library.ts` | Mixed-source playlists, local play history | `tonearm.library` in IndexedDB (`lib/bigStore.ts`; localStorage's 5 MB is too small), and each profile's copy `tonearm.library.of.<user>` |
 | `store/offline.ts` | Downloaded tracks (path, size), covers, downloaded collections (`album`, `playlist`, smart offline's `auto`, the dead zone cushion's `cushion`) | `tonearm.offline` (files in `<app data>/offline/`) |
 | `store/catalog.ts` | Merged albums/artists/books/podcasts loaded at start | memory |
 | `store/player.ts` | Queue, index, position, volume, shuffle/repeat, live radio title/art | memory (+ `tonearm.volume`) |

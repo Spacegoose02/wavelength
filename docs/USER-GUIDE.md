@@ -1360,13 +1360,26 @@ Each Navidrome or Plex server on **Playlists** has two buttons under its name:
     you add, rate and play instead of freezing today's songs. If Wavelength already has a smart playlist with that
     name it's left alone. If Plex won't send the rules, its songs are synced like a regular playlist instead.
 
-  When it's done it says what it copied, how many songs it added, which smart playlists it made, and how many songs
-  the server couldn't find (see below).
+  When it's done one line says what it copied, how many songs it added, how many smart playlists it made and how
+  many couldn't be synced. **Details** under it lists what needs a look, one line per problem rather than per
+  playlist: playlists that couldn't be synced and why, songs the server couldn't find (see below), Plex rules that
+  were left out and which playlists had them, and old copies you may want to delete.
 - **Hide *server* playlists** stops showing that server's own playlists anywhere in Wavelength: Playlists,
   **+ Playlist**, and the AI DJ. Nothing is deleted on the server, and other apps still see them. **Show them** at
   the bottom of Playlists brings them back. Hiding syncs to your other devices.
 
 To move over for good: press **Sync to Wavelength**, check the new playlists look right, then press **Hide**.
+
+**Room for lots of playlists.** Wavelength's own playlists are saved in the app's IndexedDB, which has room for
+hundreds of MB. They used to be in localStorage, which holds about 5 MB, and a big sync failed with "Setting the
+value of 'tonearm.library' exceeded the quota". Playlists saved the old way move over by themselves the next time
+Wavelength starts.
+
+> **Developer notes:** `src/lib/bigStore.ts` reads IndexedDB (`wavelength` / `kv`) into memory before the stores
+> load (`loadBigStore()` in `main.tsx`), so `store/library.ts` persists through it synchronously as before. It holds
+> `tonearm.library` and each profile's copy (`tonearm.library.of.<user>`, `lib/librarySync.ts`); writes reach
+> IndexedDB within 250 ms (at once when the window is hidden) and only then is the localStorage copy removed.
+> Without IndexedDB it falls back to localStorage and logs a full one instead of throwing.
 
 **Songs left out.** With the Hub's **Navidrome off** switch on, the Hub keeps the playlists it copied from Navidrome
 and plays them from the music folder. A song whose file the Hub can't find (moved, deleted, or never matched when
@@ -1399,12 +1412,16 @@ plays whatever fits today. Open it under **Smart playlists** to see or change th
 | Track rating, plays, last played, date added | Track rating, Track plays, Track last played, Track added |
 | Album last played, date added | Album last played, Date album added |
 | "in the last 30 days" / "not in the last" | The same, in days (weeks, months and years are turned into days) |
+| Release date after / before a day, or in the last N days | Year (released 2025 or later, and so on) |
 | Limit to N, sorted by plays, last played, added, rating, year, or random | The same limit and order; no limit becomes 500 songs |
+| Sorted by artist and album (Plex's usual order) | Shuffled, without a warning |
+| One version of each song (Plex keeps the oldest release) | Left out quietly: a smart playlist finds each song once |
 
 Ratings are half stars in Plex (0 to 10) and whole stars in Wavelength, so "rating is greater than 3½ stars" keeps
 4 and 5 stars. A rule on a fixed date ("added after 1 Jan 2025") becomes "in the last N days" counted from the day
-you synced. Rules Wavelength has no field for (country, skips, where the song came from, an unknown sort) are left
-out, and the message after syncing lists them per playlist, so you can see what changed.
+you synced. Release dates go by year, since that's what Wavelength knows: "released in the last 60 days" keeps
+this year's songs. Rules Wavelength has no field for (country, skips, where the song came from, a sort such as
+"last rated") are left out, and **Details** after syncing names each one and the playlists it was in.
 
 Smart playlists find their songs on Navidrome (or the Hub's catalog with Navidrome off), so a Plex smart playlist
 plays the same songs from there. A Plex smart playlist you copied with the old **Copy all to Wavelength** is a
@@ -1415,7 +1432,10 @@ old copy.
 > /library/sections/N/all?…>`): `push=1`/`pop=1` groups, `or=1` makes a group "any", rows are
 > `<kind>.<field><op><value>` with Plex's operators (`=`, `!=`, `==`, `!==`, `<=`, `>=`, `>>=`, `<<=`), plus `sort`
 > and `limit`. Tag rows hold Plex tag ids; `PlexSource.getSmartRules()` names them from
-> `/library/sections/N/<tag>?type=8|9|10` and `resolvePlexTags()` drops ids Plex no longer has. Tests in
+> `/library/sections/N/<tag>?type=8|9|10` and `resolvePlexTags()` drops ids Plex no longer has. `and=1` (also
+> written `album.and=1`) is the default and is skipped, as are `group`/`having` (Plex's one-version-per-song) and
+> library-order sorts (`artist.titleSort,…`). `plexRuleWords()` / `plexSortWords()` put left-out rules in words, and
+> `copySummary()` returns a headline plus `details` grouped by failure (`failureWords()`) and by left-out rule. Tests in
 > `src/test/plexSmart.test.ts` and `src/test/copyPlaylists.test.ts`.
 
 ## Cast to a speaker

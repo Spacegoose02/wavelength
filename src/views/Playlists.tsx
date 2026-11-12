@@ -95,12 +95,14 @@ function ServerSectionActions({ cfg }: { cfg: SourceConfig }) {
   const hide = useSettings((s) => s.setPlaylistSourceHidden);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string>();
+  const [details, setDetails] = useState<string[]>([]);
   const [done, setDone] = useState(false);
   const copyAll = async () => {
     const src = sourceFor(cfg);
     if (!src.getPlaylistTracks || !list.length) return;
     setBusy(true);
     setDone(false);
+    setDetails([]);
     try {
       const lib = useLibrary.getState();
       const r = await syncPlaylists(
@@ -116,7 +118,9 @@ function ServerSectionActions({ cfg }: { cfg: SourceConfig }) {
           progress: (n, total, name) => setStatus(name ? `Syncing ${n + 1} of ${total}: ${name}…` : undefined),
         },
       );
-      setStatus(copySummary(r));
+      const sum = copySummary(r);
+      setStatus(sum.headline);
+      setDetails(sum.details);
       setDone(!r.failed.length);
     } finally {
       setBusy(false);
@@ -133,6 +137,12 @@ function ServerSectionActions({ cfg }: { cfg: SourceConfig }) {
           useServerPlaylists.getState().load();
         }}>Hide {cfg.name} playlists</button>
       {status && <span className="muted small">{status}</span>}
+      {details.length > 0 && (
+        <details className="muted small sync-details">
+          <summary>Details ({details.length})</summary>
+          <ul>{details.map((d) => <li key={d}>{d}</li>)}</ul>
+        </details>
+      )}
     </div>
   );
 }

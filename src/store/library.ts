@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { bigStorage } from '../lib/bigStore';
 import type { Track } from '../sources/types';
 
 export interface Playlist {
@@ -75,6 +76,7 @@ export const useLibrary = create<LibraryState>()(
       recordPlay: (track) =>
         set((s) => ({ history: [{ track: storable(track), playedAt: Date.now() }, ...s.history].slice(0, 300) })),
     }),
-    { name: 'tonearm.library' },
+    // IndexedDB, not localStorage: hundreds of playlists don't fit in localStorage's 5 MB (lib/bigStore.ts)
+    { name: 'tonearm.library', storage: createJSONStorage(() => bigStorage) },
   ),
 );

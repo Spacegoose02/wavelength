@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { loadBigStore } from './lib/bigStore';
 import { loadSecrets } from './lib/secrets';
 import './styles.css';
 
@@ -7,11 +8,11 @@ import './styles.css';
 const isMini = '__TAURI_INTERNALS__' in window && (window as unknown as { __TAURI_INTERNALS__: { metadata?: { currentWindow?: { label?: string } } } }).__TAURI_INTERNALS__.metadata?.currentWindow?.label === 'mini';
 
 if (isMini) {
-  void import('./components/MiniPlayer').then(({ MiniPlayer }) => ReactDOM.createRoot(document.getElementById('root')!).render(<MiniPlayer />));
+  void loadBigStore().then(() => import('./components/MiniPlayer')).then(({ MiniPlayer }) => ReactDOM.createRoot(document.getElementById('root')!).render(<MiniPlayer />));
 } else {
-  // Logins come out of the OS keychain before the saved settings load (lib/secrets.ts), so everything that
-  // reads them is imported after.
-  loadSecrets().finally(async () => {
+  // Logins come out of the OS keychain (lib/secrets.ts), and playlists out of IndexedDB (lib/bigStore.ts), before
+  // the saved stores load, so everything that reads them is imported after.
+  Promise.all([loadSecrets(), loadBigStore()]).finally(async () => {
     const [{ default: App }, { enableTvNavigation }, { enableNativeMedia }, { ErrorBoundary }, { enableSharedLyrics }, { enableSmartShuffle }, { startMotion }] = await Promise.all([
       import('./App'),
       import('./lib/tvNav'),

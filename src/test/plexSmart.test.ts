@@ -35,7 +35,7 @@ describe('parsePlexSmart', () => {
     expect(r.section).toBe('5');
     expect(r.sort).toBe('plays');
     expect(r.limit).toBe(50);
-    expect(r.dropped).toEqual(['track.skipCount = 3']);
+    expect(r.dropped).toEqual(['Track skips is 3']);
     expect(r.rules).toEqual({
       match: 'all',
       rules: [
@@ -62,6 +62,29 @@ describe('parsePlexSmart', () => {
   });
 });
 
+describe('Plex playlists seen in the wild', () => {
+  const sortLib = `sort=${encodeURIComponent('artist.titleSort,album.titleSort,album.index,album.id,album.originallyAvailableAt')}`;
+  it('"Radio" lists: library order and album.and=1 say nothing to warn about', () => {
+    const r = parsePlexSmart(lib(`type=10&album.genre=4&album.and=1&album.decade=1990&${sortLib}&limit=500`), NOW);
+    expect(r.dropped).toEqual([]);
+    expect(r.sort).toBe('random');
+    expect(r.rules.rules).toEqual([{ field: 'genre', op: 'is', value: 'plex-tag:album.genre:4' }, { field: 'decade', op: 'is', value: '1990' }]);
+  });
+  it('"Fresh ♥": one version per song (group / having) is left out quietly; a sort we lack is said in words', () => {
+    const q = `type=10&track.userRating${encodeURIComponent('>>=')}8&track.group=guid&track.having=${encodeURIComponent('min(album.originallyAvailableAt)')}&sort=${encodeURIComponent('track.lastRatedAt:desc')}`;
+    const r = parsePlexSmart(lib(q), NOW);
+    expect(r.rules.rules).toEqual([{ field: 'rating', op: 'gt', value: '4' }]);
+    expect(r.dropped).toEqual(['Sorted by last rated (newest first)']);
+  });
+  it('"Recently Released": release dates become years', () => {
+    const rel = parsePlexSmart(lib(`type=10&album.originallyAvailableAt${encodeURIComponent('>>=')}-60d`), NOW);
+    expect(rel.rules.rules).toEqual([{ field: 'year', op: 'gt', value: '2025' }]);
+    const fixed = parsePlexSmart(lib(`type=10&album.originallyAvailableAt${encodeURIComponent('>>=')}2025-01-01&album.originallyAvailableAt${encodeURIComponent('<<=')}2026-01-01`), NOW);
+    expect(fixed.rules.rules).toEqual([{ field: 'year', op: 'gt', value: '2024' }, { field: 'year', op: 'lt', value: '2026' }]);
+    expect(fixed.dropped).toEqual([]);
+  });
+});
+
 describe('Plex values', () => {
   it('relative and fixed dates as days', () => {
     expect(plexDays('-30d', NOW)).toBe(30);
@@ -75,7 +98,9 @@ describe('Plex values', () => {
     expect(plexSort('random')).toBe('random');
     expect(plexSort('track.lastViewedAt:desc')).toBe('played');
     expect(plexSort('viewCount')).toBe('leastPlays');
-    expect(plexSort('titleSort')).toBeUndefined();
+    expect(plexSort('track.lastRatedAt:desc')).toBeUndefined();
+    // Plex's default library order: no warning, shuffled here
+    expect(plexSort('artist.titleSort,album.titleSort,album.index,album.id,album.originallyAvailableAt')).toBe('random');
   });
 });
 
@@ -86,7 +111,7 @@ describe('resolvePlexTags', () => {
     const dropped: string[] = [];
     const rules = resolvePlexTags(r.rules, { 'album.genre:12': 'Country' }, dropped);
     expect(rules.rules).toEqual([{ field: 'genre', op: 'is', value: 'Country' }]);
-    expect(dropped).toEqual(['artist.style is tag #7 (no longer in Plex)']);
+    expect(dropped).toEqual(['Artist style (a tag Plex no longer has)']);
   });
 });
 
