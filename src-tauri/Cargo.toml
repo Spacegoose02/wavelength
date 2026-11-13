@@ -31,7 +31,7 @@ tauri-plugin-global-shortcut = "2"
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_NetworkManagement_WNet", "Win32_Foundation"] }
 windows-native-keyring-store = "1"
-wasapi = "0.19"
+wasapi = "0.27"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android-native-keyring-store = "1"
