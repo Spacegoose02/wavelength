@@ -1296,7 +1296,7 @@ export function FrogFace() {
   );
 }
 
-/** The bunny's left ear (upright) and right ear (flopped over at the tip). */
+/** The bunny's left ear (upright); the right ear (`BunnyFace`) folds over halfway up and hangs outward. */
 const BUNNY_EAR = 'M162 120 C 146 80, 144 30, 160 10 C 178 26, 186 76, 186 116 Z';
 const BUNNY_EAR_IN = 'M166 112 C 156 80, 154 42, 162 26 C 172 42, 178 78, 178 110 Z';
 
@@ -1318,8 +1318,8 @@ export function BunnyFace() {
       </g>
       <g data-part="ear-r">
         <g transform="translate(412 0) scale(-1 1)">
-          <path d="M162 120 C 150 96, 146 72, 150 56 C 132 54, 118 66, 112 80 C 130 72, 146 74, 160 82 C 170 96, 180 108, 186 116 Z" fill="url(#bn-fur)" className="ol" />
-          <path d="M166 112 C 158 98, 152 84, 152 70 C 140 70, 130 74, 124 80 C 138 78, 150 84, 160 94 C 168 102, 174 108, 178 110 Z" fill="#ffc4cf" />
+          <path d="M186 116 C 184 90, 178 62, 168 44 C 150 34, 124 46, 112 72 C 110 80, 116 84, 122 80 C 132 70, 144 64, 154 64 C 150 84, 154 104, 162 120 Z" fill="url(#bn-fur)" className="ol" />
+          <path d="M166 112 C 160 96, 160 82, 164 72 C 172 82, 177 96, 178 110 Z" fill="#ffc4cf" />
         </g>
       </g>
       <HeadShape id="bunny" fill="url(#bn-fur)" d="M206 98 C 264 98, 300 132, 300 176 C 300 222, 262 254, 206 254 C 150 254, 112 222, 112 176 C 112 132, 148 98, 206 98 Z">
