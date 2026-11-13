@@ -378,7 +378,8 @@ describe('every act', () => {
         }
       }
     }
-  });
+    // every act × every species × boy and girl: hundreds of full renders, ~5s on a CI runner, past vitest's default
+  }, 30_000);
 });
 
 describe('retired acts', () => {
