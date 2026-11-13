@@ -1,5 +1,7 @@
 import { withoutDontPlay } from './dontPlay';
 import type { HubSonicFeatures, HubSonicHit } from '../sources/hub';
+import type { NavidromeSource } from '../sources/navidrome';
+import { sourceFor } from '../sources/registry';
 import type { Track } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useSettings } from '../store/settings';
@@ -21,10 +23,17 @@ export async function hitsToTracks(hits: HubSonicHit[]): Promise<Track[]> {
   const find = findInLibrary();
   const nd = useSettings.getState().sources.filter((s) => s.kind === 'navidrome' && s.enabled);
   const tracks = await pool(hits, 4, (h) => find({ title: h.title, artist: h.artist }).catch(() => undefined));
-  // fall back on the Navidrome id when the name lookup missed and there's exactly one Navidrome server
-  const out = tracks.map((t, i) => t ?? (nd.length === 1 ? ({ id: hits[i].id, sourceId: nd[0].id, kind: 'track', title: hits[i].title, artist: hits[i].artist, album: hits[i].album, duration: hits[i].duration } as Track) : undefined));
+  // Fall back on the Navidrome id when the name lookup missed and there's exactly one Navidrome server. Built the
+  // way that server builds its own songs, so it gets a stream, a tidied credit ("A;B" → "A feat. B") and a cover
+  // (Navidrome's getCoverArt takes a song id and answers with that song's picture).
+  const server = nd.length === 1 ? (sourceFor(nd[0]) as NavidromeSource) : undefined;
+  const out = tracks.map((t, i) => t ?? (server ? fromHit(server, hits[i]) : undefined));
   return kidSafe(out.filter((t): t is Track => !!t));
 }
+
+/** A Hub hit as a song on this device's (only) Navidrome server. */
+export const fromHit = (server: Pick<NavidromeSource, 'trackFromId'>, h: HubSonicHit): Track =>
+  server.trackFromId(h.id, { title: h.title, artist: h.artist, album: h.album, duration: h.duration });
 
 export async function soundsLike(t: Pick<Track, 'artist' | 'title' | 'id'>): Promise<Track[]> {
   const c = hubClient();
