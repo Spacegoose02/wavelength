@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import { scale } from './scale';
 import type { SpeciesInfo } from './species';
 
 /**
@@ -1176,6 +1177,239 @@ const opossum = roundFigure({
   ),
 });
 
+/** Capybara: a chunky round top on short sturdy legs, dark round paws and no tail to speak of. */
+const capybara = roundFigure({
+  head: [190, 0.88],
+  arm: 22,
+  leg: [28, 24],
+  Bare: softPaw('capybara-paw'),
+});
+
+const CROC_TAIL = 'M214 316 C 252 314, 292 326, 320 344 C 338 354, 356 352, 364 336 C 368 350, 356 370, 330 370 C 292 370, 252 360, 214 350 Z';
+/**
+ * Crocodile: the round top on sturdy legs, broad clawed feet and two-clawed hands, and a long thick tail sweeping
+ * out along the ground to the right, with a row of pointed scutes down it.
+ */
+const crocodile = roundFigure({
+  hand: 'claws',
+  leg: [28, 24],
+  Bare: DinoFoot,
+  tailAt: [226, 330],
+  Tail: () => (
+    <>
+      <defs>
+        <clipPath id="critter-croc-tail">
+          <path d={CROC_TAIL} />
+        </clipPath>
+      </defs>
+      {[[244, 318], [270, 324], [296, 334], [320, 346], [342, 352]].map(([x, y], i) => (
+        <path key={x} d={`M${x - 8 + i} ${y + 2} L ${x} ${y - 12 + i * 2} L ${x + 8 - i} ${y + 2} Z`} className="croc-scute ol-thin" />
+      ))}
+      <path d={CROC_TAIL} className="bare ol" />
+      <g clipPath="url(#critter-croc-tail)">
+        <path d="M214 352 C 252 360, 292 368, 334 364 L 340 380 L 214 380 Z" className="croc-belly" />
+      </g>
+      <path d={CROC_TAIL} fill="url(#critter-vinyl)" />
+    </>
+  ),
+});
+
+const DOLPHIN_BODY = 'M152 234 C 144 264 154 294 170 316 C 182 332 190 348 193 364 L 207 364 C 210 348 218 332 230 316 C 246 294 256 264 248 234 Z';
+const DOLPHIN_FLUKES = 'M200 360 C 186 352 164 352 140 362 C 156 374 180 378 200 372 C 220 378 244 374 260 362 C 236 352 214 352 200 360 Z';
+
+/**
+ * Dolphin: like the shark, one smooth body from the head down to the tail with no legs, but plumper, with a
+ * pale belly, a and broad flukes out flat. Its arms are flippers
+ * (`hand: 'flipper'`); clothes are an open vest.
+ */
+const dolphin: Figure = {
+  head: [204, 0.74],
+  torso: DOLPHIN_BODY,
+  shoulders: [[156, 262], [244, 262]],
+  arm: 18,
+  fore: 16,
+  paw: 9,
+  reach: 60,
+  hand: 'flipper',
+  waist: [294, 34, 30],
+  chin: [244, 38],
+  Under: () => (
+    <>
+      <Pivot from={[268, 292]} to={[200, 362]} part="tail">
+        <Shaded d={DOLPHIN_FLUKES} className="dolphin-skin" />
+      </Pivot>
+      <g data-part="boot" />
+    </>
+  ),
+  Top: () => <Shaded d={DOLPHIN_BODY} className="dolphin-skin" />,
+  Skin: () => (
+    <>
+      <path className="dolphin-belly" d="M174 240 Q 200 262 226 240 Q 226 292 214 326 Q 206 348 200 364 Q 194 348 186 326 Q 174 292 174 240 Z" />
+      <path className="top ol" d="M159 240 C 157 268 162 292 171 306 L 186 296 L 182 254 Z" />
+      <path className="top ol" d="M241 240 C 243 268 238 292 229 306 L 214 296 L 218 254 Z" />
+    </>
+  ),
+};
+
+/** Goat: the round top on slim legs, cloven hooves and a short tuft of a tail that sticks up. */
+const goat = roundFigure({
+  leg: [22, 18],
+  Bare: Hoof,
+  tailAt: [236, 312],
+  Tail: () => <path d="M230 316 C 234 302, 246 294, 256 296 C 254 306, 246 314, 236 320 Z" className="bare ol-thin" />,
+});
+
+/** One of the peacock's long train feathers (pointing straight up from its root at 200,300; the rest are turned copies). */
+const PEACOCK_FEATHER = 'M200 300 C 190 250, 180 170, 184 128 C 186 104, 214 104, 216 128 C 220 170, 210 250, 200 300 Z';
+
+/**
+ * Peacock: the round top on thin grey legs and three-toed feet, wings for arms (`hand: 'wing'`), and a great fan
+ * of train feathers behind it, each with an eye at the tip, over a shorter fan of green ones. The fan is the `fan`
+ * part, which opens wider on the beat and spreads right out on a flourish (rig.ts).
+ */
+const peacock = roundFigure({
+  hand: 'wing',
+  leg: [14, 10],
+  Bare: (p) => <WebbedFoot {...p} className="peacock-foot" s={1.1} />,
+  Back: () => (
+    <g className="peacock-fan" data-part="fan">
+      {Array.from({ length: 11 }, (_, i) => -70 + i * 14).map((r) => (
+        <g key={r} transform={`rotate(${r} 200 300) translate(0 -8)`}>
+          <path d={PEACOCK_FEATHER} className="peacock-feather ol-thin" />
+          <ellipse cx="200" cy="124" rx="13" ry="16" className="peacock-eye-gold" />
+          <ellipse cx="200" cy="126" rx="9" ry="11" className="peacock-eye-teal" />
+          <ellipse cx="200" cy="128" rx="5" ry="6" className="peacock-eye-navy" />
+          <path d="M200 296 V140" stroke="rgb(0 0 0 / 0.18)" strokeWidth="1.6" />
+        </g>
+      ))}
+      {Array.from({ length: 9 }, (_, i) => -64 + i * 16).map((r) => (
+        <g key={r} transform={`rotate(${r} 200 300) translate(0 40)`}>
+          <path d={PEACOCK_FEATHER} className="peacock-feather-short ol-thin" />
+        </g>
+      ))}
+    </g>
+  ),
+});
+
+/** The pangolin's armour seen from the front: rows of big bronze scales behind the top, wider than it, so they show round its sides. */
+const PANGOLIN_ARMOUR = [334, 312, 290, 268, 250].flatMap((y, row) => {
+  const n = [7, 8, 7, 6, 5][row];
+  const half = [50, 60, 60, 54, 40][row];
+  return Array.from({ length: n }, (_, i) => scale(200 - half + (i * 2 * half) / (n - 1), y, 28, 28));
+});
+/** The pangolin's tail: overlapping scales along a curve out to the right, from the tip back to the root, each turned to point down the tail. */
+const PANGOLIN_TAIL = Array.from({ length: 10 }, (_, k) => {
+  const t = 1 - k / 9;
+  const x = (1 - t) ** 2 * 222 + 2 * (1 - t) * t * 296 + t * t * 344;
+  const y = (1 - t) ** 2 * 330 + 2 * (1 - t) * t * 330 + t * t * 362;
+  const dx = 2 * (1 - t) * (296 - 222) + 2 * t * (344 - 296);
+  const dy = 2 * (1 - t) * (330 - 330) + 2 * t * (362 - 330);
+  const turn = (Math.atan2(dy, dx) * 180) / Math.PI - 90;
+  const w = 34 - t * 20;
+  return { d: scale(x, y - w * 0.5, w, w), turn: `rotate(${turn.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})` };
+});
+
+/**
+ * Pangolin: the round top in front of rows of big bronze scales that show round its sides (like the turtle's
+ * shell), short legs, broad clawed feet, two-clawed hands for digging, and a long, thick tail of overlapping
+ * scales lying out to the right.
+ */
+const pangolin = roundFigure({
+  hand: 'claws',
+  leg: [26, 22],
+  Bare: DinoFoot,
+  Back: () => (
+    <g className="pangolin-armour">
+      {PANGOLIN_ARMOUR.map((d, i) => (
+        <path key={i} d={d} className="pangolin-scale ol-thin" />
+      ))}
+    </g>
+  ),
+  tailAt: [226, 330],
+  Tail: () => (
+    <>
+      {PANGOLIN_TAIL.map(({ d, turn }, i) => (
+        <path key={i} d={d} transform={turn} className="pangolin-scale ol-thin" />
+      ))}
+    </>
+  ),
+});
+
+/** The bat's left wing (the right is its mirror): a wide membrane from the shoulder, scalloped between three finger bones. */
+const BAT_WING = 'M170 272 C 140 236, 98 214, 54 216 C 60 232, 58 248, 50 262 C 70 258, 86 266, 90 282 C 104 274, 120 278, 126 292 C 140 286, 156 290, 166 300 Z';
+
+/**
+ * Bat: the round top with big membrane wings spread behind it (`wing-l` / `wing-r`, flapping on the beat, rig.ts;
+ * hidden under the hazmat suit, `.bat-wings`), short legs, little clawed feet and no tail.
+ */
+const bat = roundFigure({
+  leg: [20, 16],
+  Bare: softPaw('bat-foot'),
+  Back: () => (
+    <g className="bat-wings">
+      {[false, true].map((r) => (
+        <g key={String(r)} transform={r ? 'translate(400 0) scale(-1 1)' : undefined}>
+          <g data-part={r ? 'wing-r' : 'wing-l'}>
+            <path d={BAT_WING} className="bat-wing ol" />
+            <path d="M168 274 L 56 218 M164 280 L 90 280 M162 286 L 126 290" stroke="rgb(0 0 0 / 0.3)" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+            <path d="M56 218 l -6 -8" className="bat-thumb" strokeWidth="3" strokeLinecap="round" />
+          </g>
+        </g>
+      ))}
+    </g>
+  ),
+});
+
+/** A polar bear's bare foot: a big furry white paw with a black pad and four toe beans. */
+function PolarPaw({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const paw = (
+    <g>
+      <ellipse cx={x} cy={y} rx={24} ry={11} className="bare ol-thin" />
+      <ellipse cx={x} cy={y + 3} rx={9} ry={4.5} className="polar-pad" />
+      {[-13, -5, 5, 13].map((dx) => (
+        <circle key={dx} cx={x + dx} cy={y - 4} r={2.6} className="polar-pad" />
+      ))}
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{paw}</Pivot> : paw;
+}
+
+/**
+ * Polar bear: bigger than the other bears, a broad top with the shoulders set wide, long sturdy legs, huge furry
+ * paws with black pads (or the act's shoes) and a stubby round tail.
+ */
+const polarBear: Figure = {
+  head: [188, 0.86],
+  torso: 'M172 254 Q 200 246 228 254 Q 254 262 258 290 Q 260 316 252 328 Q 200 340 148 328 Q 140 316 142 290 Q 146 262 172 254 Z',
+  shoulders: [[154, 276], [246, 276]],
+  arm: 26,
+  paw: 14,
+  reach: 66,
+  waist: [316, 54, 30],
+  chin: [252, 50],
+  Under: ({ legs, shoe }) => (
+    <>
+      <Pivot from={[268, 292]} to={[240, 322]} part="tail">
+        <circle cx="248" cy="322" r="11" className="bare ol-thin" />
+      </Pivot>
+      <Shaded d={tube([180, 316], [176, 338], [176, 356], 32, 28)} className={legs} />
+      <Shaded d={tube([220, 316], [224, 338], [224, 356], 32, 28)} className={legs} />
+      {shoe ? (
+        <>
+          <Foot at={[174, 364]} rx={22} ry={10} shoe={shoe} />
+          <Foot at={[226, 364]} rx={22} ry={10} shoe={shoe} right />
+        </>
+      ) : (
+        <>
+          <PolarPaw at={[174, 362]} />
+          <PolarPaw at={[226, 362]} right />
+        </>
+      )}
+    </>
+  ),
+};
+
 /**
  * How far each head sits down into its top from where the figures above place it: the chin tucks over the
  * collar so the head reads as sitting on a neck, not floating over the shoulders. The chin's shadow comes down
@@ -1213,4 +1447,12 @@ export const FIGURES = {
   redPanda: seat(redPanda),
   turkey: seat(turkey),
   opossum: seat(opossum),
+  capybara: seat(capybara),
+  crocodile: seat(crocodile),
+  dolphin: seat(dolphin),
+  goat: seat(goat),
+  peacock: seat(peacock),
+  pangolin: seat(pangolin),
+  bat: seat(bat),
+  polarBear: seat(polarBear),
 } satisfies Record<string, Figure>;

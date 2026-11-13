@@ -316,6 +316,46 @@ describe('the opossum', () => {
   });
 });
 
+describe('the capybara, crocodile, dolphin, goat, peacock, pangolin, bat and polar bear', () => {
+  const EIGHT = ['capybara', 'crocodile', 'dolphin', 'goat', 'peacock', 'pangolin', 'bat', 'polar-bear'] as const;
+  const draw = async (id: string, part: 'Head' | 'Legs') => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const parts = await import('../components/critters/parts');
+    const { SpeciesContext } = await import('../components/critters/bodies');
+    const species = SPECIES.find((s) => s.id === id)!;
+    return renderToStaticMarkup(h(SpeciesContext.Provider, { value: species }, h('svg', null, h(parts[part] as never, { species }))));
+  };
+
+  it('are species with their own faces and figures', async () => {
+    const { SPECIES } = await import('../components/critters/species');
+    const { FIGURES } = await import('../components/critters/bodies');
+    const key = (id: string) => id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()) as keyof typeof FIGURES;
+    for (const id of EIGHT) expect(SPECIES.find((s) => s.id === id)?.figure, id).toBe(FIGURES[key(id)]);
+    // the polar bear is its own bear, not the bears' face and figure recoloured
+    const polar = SPECIES.find((s) => s.id === 'polar-bear')!;
+    const brown = SPECIES.find((s) => s.id === 'bear-brown')!;
+    expect(polar.Face).not.toBe(brown.Face);
+    expect(polar.figure).not.toBe(brown.figure);
+  });
+
+  it('gives the peacock a fan and the bat wings for the rig to move', async () => {
+    expect(await draw('peacock', 'Legs')).toContain('data-part="fan"');
+    const bat = await draw('bat', 'Legs');
+    expect(bat).toContain('data-part="wing-l"');
+    expect(bat).toContain('data-part="wing-r"');
+    expect(await draw('turkey', 'Legs')).not.toContain('data-part="fan"');
+  });
+
+  it('gives the dolphin flippers and no legs, and the crocodile a toothy singing mouth', async () => {
+    const { FIGURES } = await import('../components/critters/bodies');
+    expect(FIGURES.dolphin.hand).toBe('flipper');
+    expect(await draw('dolphin', 'Legs')).toContain('data-part="boot"');
+    expect(await draw('crocodile', 'Head')).toContain('data-part="yawn"');
+  });
+});
+
 describe('every act', () => {
   it('draws for every species, boy and girl, including the Acoustic, Surf rock and Singer acts', async () => {
     // the player behind the rig makes an <audio> when it loads; tests run without a DOM
@@ -327,7 +367,7 @@ describe('every act', () => {
     const { ACTS, Critter, SPECIES } = await import('../components/critters/Critter');
     expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano', 'marimba', 'violin', 'acoustic', 'surf', 'singer']));
     expect(ACTS.map((a) => a.id)).not.toEqual(expect.arrayContaining(['sax']));
-    expect(SPECIES.map((s) => s.id)).toEqual(expect.arrayContaining(['turkey', 'opossum']));
+    expect(SPECIES.map((s) => s.id)).toEqual(expect.arrayContaining(['turkey', 'opossum', 'capybara', 'crocodile', 'dolphin', 'goat', 'peacock', 'pangolin', 'bat', 'polar-bear']));
     for (const act of ACTS) {
       for (const sp of SPECIES) {
         for (const girl of [false, true]) {

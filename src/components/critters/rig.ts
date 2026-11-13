@@ -60,6 +60,7 @@ export interface RigOptions {
  *   behind (the sloth), `hop` springs the head and body up between beats (the frog). A `smoke` part (the dragon)
  *   puffs on a flourish, and a `play-dead` part (the opossum) shows through the middle of one.
  * - The octopus's extra arms (`tentacle-l`, `tentacle-r`) wave with the beat.
+ * - The peacock's `fan` opens wider on each beat and spreads on a flourish; the bat's `wing-l` / `wing-r` flap.
  * - `tail` wags, `spot` (the backlight) breathes with the bass, `[data-glow]` parts (neon and laser
  *   outfits) pulse with the bass.
  *
@@ -235,6 +236,12 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       const reach = a.playing ? (grid ? beatSwing : Math.sin(t * 2.4)) : Math.sin(t * 0.9) * 0.4;
       set('tentacle-l', `rotate(${(reach * 10 - bob * 8).toFixed(2)} 160 300)`);
       set('tentacle-r', `rotate(${(reach * 10 + bob * 8).toFixed(2)} 240 300)`);
+      // the peacock's fan opens wider on each beat and spreads right out on a flourish; the bat's wings flap
+      const fan = idle ? 0.94 : 1 + bob * 0.05 + swell(flourish) * 0.1;
+      set('fan', `translate(200 300) scale(${fan.toFixed(3)}) translate(-200 -300)`);
+      const flap = a.playing ? bob * 12 + (grid ? beatSwing : Math.sin(t * 3)) * 4 : Math.sin(t * 0.9) * 3;
+      set('wing-l', `rotate(${(-flap).toFixed(2)} 166 280)`);
+      set('wing-r', `rotate(${(-flap).toFixed(2)} 166 280)`);
       const tail = grid ? beatSwing * 8 + bob * 3 : Math.sin(t * (idle ? 0.9 : 1.8)) * 7 + bob * 4;
       set('tail', `rotate(${tail.toFixed(2)} 268 292)`);
       const spot = find('spot');
