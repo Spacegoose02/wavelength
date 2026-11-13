@@ -11,14 +11,13 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Condvar, Mutex};
 
 use serde::Serialize;
-use symphonia::core::audio::SampleBuffer;
-use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
+use symphonia::core::codecs::audio::{AudioDecoder, AudioDecoderOptions};
 use symphonia::core::errors::Error as SymError;
-use symphonia::core::formats::{FormatOptions, FormatReader, SeekMode, SeekTo};
+use symphonia::core::formats::probe::Hint;
+use symphonia::core::formats::{FormatOptions, FormatReader, SeekMode, SeekTo, TrackType};
 use symphonia::core::io::{MediaSource, MediaSourceStream};
 use symphonia::core::meta::MetadataOptions;
-use symphonia::core::probe::Hint;
-use symphonia::core::units::Time;
+use symphonia::core::units::{Time, Timestamp};
 use tauri_plugin_http::reqwest;
 
 // ---------------------------------------------------------------- the download, readable while it arrives
@@ -319,11 +318,16 @@ enum Cmd {
 
 struct Song {
     format: Box<dyn FormatReader>,
-    decoder: Box<dyn symphonia::core::codecs::Decoder>,
+    decoder: Box<dyn AudioDecoder>,
     track: u32,
     fmt: Format,
     /// where the device's frame count starts from, seconds
     base: f64,
+}
+
+/// A seek target in seconds (negative or invalid values go to the start)
+fn secs(t: f64) -> Time {
+    Time::try_from_secs_f64(t.max(0.0)).unwrap_or_default()
 }
 
 fn open_song(dl: Download, hint: Option<String>) -> Result<(Song, f64), String> {
@@ -332,27 +336,28 @@ fn open_song(dl: Download, hint: Option<String>) -> Result<(Song, f64), String> 
     if let Some(ext) = hint.as_deref() {
         h.with_extension(ext);
     }
-    let probed = symphonia::default::get_probe()
-        .format(&h, mss, &FormatOptions { enable_gapless: true, ..Default::default() }, &MetadataOptions::default())
+    let format = symphonia::default::get_probe()
+        .probe(&h, mss, FormatOptions::default(), MetadataOptions::default())
         .map_err(|e| format!("Can't read this song for bit-perfect playback ({e})"))?;
-    let format = probed.format;
-    let track = format.tracks().iter().find(|t| t.codec_params.codec != CODEC_TYPE_NULL).ok_or("No audio in this file")?;
-    let p = &track.codec_params;
-    let decoder = symphonia::default::get_codecs().make(p, &DecoderOptions::default()).map_err(|e| format!("Can't decode this song ({e})"))?;
+    let track = format.default_track(TrackType::Audio).ok_or("No audio in this file")?;
+    let p = track.codec_params.as_ref().and_then(|c| c.audio()).ok_or("No audio in this file")?;
+    // gapless (trimming encoder delay and padding) is on by default in the decoder options
+    let decoder = symphonia::default::get_codecs()
+        .make_audio_decoder(p, &AudioDecoderOptions::default())
+        .map_err(|e| format!("Can't decode this song ({e})"))?;
     let rate = p.sample_rate.ok_or("Unknown sample rate")?;
-    let channels = p.channels.map(|c| c.count()).unwrap_or(2);
+    let channels = p.channels.as_ref().map(|c| c.count()).unwrap_or(2);
     // lossy formats have no bit depth: give the device its best
     let bits = match p.bits_per_sample.unwrap_or(32) {
         0..=16 => 16,
         17..=24 => 24,
         _ => 32,
     };
-    let duration = match (p.n_frames, p.time_base) {
-        (Some(n), Some(tb)) => {
-            let t = tb.calc_time(n);
-            t.seconds as f64 + t.frac
+    let duration = match (track.num_frames, track.duration, track.time_base) {
+        (Some(n), _, _) => n as f64 / rate as f64,
+        (None, Some(d), Some(tb)) => {
+            i64::try_from(d.get()).ok().and_then(|d| tb.calc_time(Timestamp::new(d))).map(|t| t.as_secs_f64()).unwrap_or(0.0)
         }
-        (Some(n), None) => n as f64 / rate as f64,
         _ => 0.0,
     };
     let id = track.id;
@@ -384,6 +389,8 @@ impl Player {
         let mut playing = false;
         let mut volume = 1.0f32;
         let mut pending: VecDeque<Cmd> = VecDeque::new();
+        // decoded samples, interleaved; reused from packet to packet
+        let mut samples: Vec<i32> = Vec::new();
         loop {
             // wait for something to do while paused or idle; otherwise just look
             let cmd = if let Some(c) = pending.pop_front() {
@@ -407,7 +414,7 @@ impl Player {
                         match open_song(dl, hint) {
                             Ok((mut s, duration)) => {
                                 if start > 0.5 {
-                                    let _ = s.format.seek(SeekMode::Accurate, SeekTo::Time { time: Time::from(start), track_id: Some(s.track) });
+                                    let _ = s.format.seek(SeekMode::Accurate, SeekTo::Time { time: secs(start), track_id: Some(s.track) });
                                     s.decoder.reset();
                                     s.base = start;
                                 }
@@ -463,8 +470,8 @@ impl Player {
                             }
                             let at = s
                                 .format
-                                .seek(SeekMode::Accurate, SeekTo::Time { time: Time::from(t.max(0.0)), track_id: Some(s.track) })
-                                .map(|r| r.actual_ts as f64 / s.fmt.rate as f64)
+                                .seek(SeekMode::Accurate, SeekTo::Time { time: secs(t), track_id: Some(s.track) })
+                                .map(|r| r.actual_ts.get() as f64 / s.fmt.rate as f64)
                                 .unwrap_or(t);
                             s.decoder.reset();
                             s.base = at;
@@ -491,7 +498,14 @@ impl Player {
                 continue;
             };
             let packet = match s.format.next_packet() {
-                Ok(p) => p,
+                Ok(Some(p)) => p,
+                Ok(None) => {
+                    let _ = o.drain();
+                    playing = false;
+                    song = None;
+                    self.set(|st| st.state = "ended".into());
+                    continue;
+                }
                 Err(SymError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
                     let _ = o.drain();
                     playing = false;
@@ -510,14 +524,14 @@ impl Player {
                     continue;
                 }
             };
-            if packet.track_id() != s.track {
+            if packet.track_id != s.track {
                 continue;
             }
             match s.decoder.decode(&packet) {
                 Ok(buf) => {
-                    let mut sb = SampleBuffer::<i32>::new(buf.capacity() as u64, *buf.spec());
-                    sb.copy_interleaved_ref(buf);
-                    if let Err(e) = o.write(sb.samples(), volume) {
+                    samples.resize(buf.samples_interleaved(), 0);
+                    buf.copy_to_slice_interleaved(&mut samples[..]);
+                    if let Err(e) = o.write(&samples, volume) {
                         playing = false;
                         song = None;
                         out = None;

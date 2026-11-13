@@ -157,6 +157,11 @@ the releases page.
   Hub npm, Cargo, the Hub's Docker base image, GitHub Actions); security fixes arrive straight away. Major
   versions come as separate PRs because they usually need code changes.
 - Before a release, run `cargo audit` in `src-tauri` and `npm audit` in the root and `hub/`.
+- **Tauri plugins come in pairs.** Each plugin has a Rust crate (`tauri-plugin-http`) and an npm package
+  (`@tauri-apps/plugin-http`), and `tauri build` / `tauri android build` refuse to run when their major.minor
+  versions differ. Dependabot bumps them in separate PRs (Cargo and npm), so the Cargo PR fails the Android
+  check on its own. Bump the npm side in the same PR (`npm install @tauri-apps/plugin-http@^X.Y.0`), or merge
+  the two PRs together. `npx tauri info` lists both sides.
 
 ### When a workflow stalls
 
