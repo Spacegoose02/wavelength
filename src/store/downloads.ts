@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { hubRuns } from '../lib/hubServices';
-import type { HubYtJob } from '../sources/hub';
+import type { HubYtJob, HubYtTags } from '../sources/hub';
 import { ytdlp, type YtProgress, type YtResult } from '../sources/ytdlp';
 import { hubClient } from './hub';
 import { useSettings } from './settings';
@@ -16,7 +16,11 @@ export interface YtJob extends YtResult {
 
 interface DownloadsState {
   jobs: YtJob[];
-  start(r: YtResult): Promise<void>;
+  /**
+   * `tags`: what the song is when the caller knows (Discover's yt-dlp backup). The Hub names and tags the file with
+   * them instead of the video's uploader and title; yt-dlp on this computer doesn't use them.
+   */
+  start(r: YtResult, tags?: HubYtTags): Promise<void>;
   clearFinished(): void;
 }
 
@@ -27,11 +31,11 @@ interface DownloadsState {
  */
 export const useDownloads = create<DownloadsState>()((set) => ({
   jobs: [],
-  async start(r) {
+  async start(r, tags) {
     const c = hubClient();
     if (c && hubRuns('ytdlp')) {
       try {
-        const { job } = await c.ytStart({ url: r.url, title: r.title, channel: r.channel });
+        const { job } = await c.ytStart({ url: r.url, title: r.title, channel: r.channel, ...(tags && { tags }) });
         set((s) => ({ jobs: [fromHub(job), ...s.jobs.filter((j) => j.jobId !== job.jobId)] }));
         watchHub();
       } catch (e) {

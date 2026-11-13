@@ -251,7 +251,11 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
 - **yt-dlp on the Hub:** the image ships yt-dlp (fetched fresh on each image build) and ffmpeg. It downloads
   into a folder inside the music folder (`/music`, set in Settings → Downloads; `yt-dlp` by default) as
   Artist / Album / Title, from any device, Android included. No network-share login is needed. Map your
-  music share to `/music` read-write (the Unraid template does).
+  music share to `/music` read-write (the Unraid template does). When the app knows what the song is (`tags` on
+  `POST /api/downloads/ytdlp/jobs`, sent by Discover's and playlist import's yt-dlp backup), the file is saved as
+  Artist / Title / Title and its tags are set with ffmpeg afterwards: artist, title, album (the title) and album
+  artist. The cover link, https only, is saved as `cover.jpg` next to it. Otherwise the uploader and the video
+  title name it.
 - **Own logins:** for Plex and Audiobookshelf an admin can give someone their own token or API key (Settings
   → Sources → Edit → **Own login**), so their listening progress and history are their own. They get that
   instead of the shared one.

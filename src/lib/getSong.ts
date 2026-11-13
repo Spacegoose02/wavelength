@@ -4,6 +4,7 @@ import { useHub } from '../store/hub';
 import { useSettings } from '../store/settings';
 import { deemixClient, hubRuns } from './hubServices';
 import { mustRequest, requestMusic } from './inbox';
+import { norm } from '../sources/registry';
 import { primaryArtist } from './match';
 import { isMobileApp } from './platform';
 
@@ -30,10 +31,19 @@ export const ytdlpAvailable = () => hubRuns('ytdlp') || (!isMobileApp && !!useSe
 
 const deezerLinkFor = async (e: Wanted) => e.deezerLink ?? (await deezerLookup(e)).link;
 
+/**
+ * yt-dlp as the backup: the first YouTube result whose title has the song's title in it (not just the first result,
+ * which can be a reupload of something else), saved and tagged as this song by this artist with the chart's cover,
+ * rather than under the uploader's channel name.
+ */
 export async function viaYtdlp(e: Wanted): Promise<'yt-dlp'> {
-  const [hit] = await ytSearch(`${primaryArtist(e.artist)} - ${e.title} audio`);
+  const artist = primaryArtist(e.artist);
+  const title = e.title.replace(/\(.*?\)|\[.*?\]/g, '').trim();
+  const want = norm(title);
+  const hits = await ytSearch(`${artist} - ${title} audio`);
+  const hit = hits.find((h) => !!want && norm(h.title).includes(want));
   if (!hit) throw new Error('No YouTube match');
-  useDownloads.getState().start(hit);
+  useDownloads.getState().start(hit, { artist, title: e.title, ...(e.cover && { cover: e.cover }) });
   return 'yt-dlp';
 }
 

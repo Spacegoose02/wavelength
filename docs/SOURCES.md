@@ -104,8 +104,13 @@ Hub older than this, it fetches directly as before. On top of that the app keeps
 
 Previews: Deezer 30 s clips (`preview` on Deezer entries, or `deezerLookup()` on demand for others). Lookups
 are paced (one starts every 120 ms, under Deezer's 50 per 5 s), wait out `Quota limit exceeded` and try again, and
-throw when Deezer couldn't be asked, so only a real "not on Deezer" greys a button out. Among hits by the right
-artist the same title wins, then one with a clip. Clip links are signed (`hdnea=exp=<unix>`) and run out, so a
+throw when Deezer couldn't be asked, so only a real "not on Deezer" greys a button out. A lookup is a plain
+"Artist Title" search (Deezer's strict `artist:"…" track:"…"` search found nothing for 40 of 40 chart songs by
+Nov 2026); among hits by the right artist the same title wins, then one with a clip. Another song by the artist
+doesn't count, since deemix would get the wrong song. Deezer's song search lags its catalog by weeks, so a new
+release (most of Discover) often isn't found. When search has no same-titled song with a clip, the lookup asks for the
+artist (most fans among exact-name matches), then their releases, and reads the track lists of releases named
+like the song, then the newest few (`CATALOG_ALBUMS`). Clip links are signed (`hdnea=exp=<unix>`) and run out, so a
 kept one past its time is looked up again: by Discover before playing, and by the player for any `preview` track
 (`freshPreview()` in `src/store/player.ts`).
 

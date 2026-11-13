@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- **Fix: Discover previews greyed out and Get sent songs to yt-dlp instead of deemix.** Deezer's song search
+  doesn't find brand-new releases for a few weeks, even though the song, its clip and its link are already on
+  Deezer (for example Don Toliver's "Party With The Boys"). Discover's charts are mostly new songs, so most
+  lookups found nothing. The ▶ button greyed out and **Get** fell back to yt-dlp although deemix was connected.
+  Lookups now also look through the artist's newest releases on Deezer. They use the plain "Artist Title" search
+  instead of the strict one, which stopped finding anything. Another song by the same artist no longer counts as a
+  match, so deemix can't get the wrong song (`src/sources/charts.ts`).
+- **Fix: yt-dlp backup downloads came in as "OFFSETYRN" or "trav unrlsd" with no cover.** They were named
+  and tagged from the YouTube video. When Discover or playlist import falls back to yt-dlp, the Hub now saves the
+  file as the song (chart artist, title, the title as a single, album artist) and puts the chart's cover next to
+  it. The YouTube result has to have the song's title in it, so the first result is no longer taken blindly
+  (`hub/src/ytdlp.ts`, `src/lib/getSong.ts`).
+
 ## 0.44.1
 - **Fix: Sync to Wavelength failed on most playlists** with "Setting the value of 'tonearm.library' exceeded the
   quota". Wavelength's playlists were saved twice in localStorage, which holds about 5 MB. They're in IndexedDB

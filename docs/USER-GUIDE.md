@@ -190,6 +190,12 @@ background: a progress bar shows how far it got, and it keeps going if you open 
 it after the song in progress. A song that couldn't be sent shows why on its row, with **Retry** and **Use
 yt-dlp**. Songs you already sent stay marked **Queued** or **Requested** when you come back, under any genre.
 
+**Get** sends a song to deemix when Deezer has it. Brand-new songs often aren't in Deezer's search for a few
+weeks even though they're already on Deezer, so Discover also looks through the artist's newest releases. Only a
+song Deezer really doesn't have goes to yt-dlp. A yt-dlp download is the first YouTube result with the song's
+title in it. With a Hub it's saved and tagged as the song: chart artist and title, the title as a single, and
+the chart's cover. It no longer comes in under the uploader's channel name with a video frame for a cover.
+
 ### For you
 
 Signed in to a Hub, each genre has a **For you** tab: the genre's combined chart, only the songs close to what
