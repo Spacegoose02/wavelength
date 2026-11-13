@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.45.0
 - **Multi-disc albums get "Disc 1", "Disc 2" headings**, like Plex. On an album page each disc starts with its
   heading and a line, and track numbers start again at 1 under each one. Albums on one disc look the same as
   before (`src/lib/discs.ts`, `src/components/common.tsx`).
