@@ -4,8 +4,9 @@ import { Accordion } from './Accordion';
 import { Acoustic } from './Acoustic';
 import { Bongo } from './Bongo';
 import { Country } from './Country';
+import { Disco } from './Disco';
 import { DJ } from './DJ';
-import { Drive } from './Drive';
+import { CoastDrive, Drive, NightDrive } from './Drive';
 import { Drums } from './Drums';
 import { GirlContext } from './faces';
 import { Marimba } from './Marimba';
@@ -17,6 +18,7 @@ import { Singer } from './Singer';
 import { SPECIES, type ActProps, type SpeciesInfo } from './species';
 import { Surf } from './Surf';
 import { Synth } from './Synth';
+import { Taiko } from './Taiko';
 import { Theremin } from './Theremin';
 import { Violin } from './Violin';
 
@@ -55,6 +57,10 @@ export const ACTS: ActInfo[] = [
   { id: 'acoustic', label: 'Acoustic', blurb: 'Cardigan and tee, strums an acoustic guitar on the rug in a cosy room under fairy lights', Scene: Acoustic },
   { id: 'surf', label: 'Surf rock', blurb: 'Tank top and shades, twangs a surf guitar barefoot on the beach by the boards', Scene: Surf },
   { id: 'singer', label: 'Singer', blurb: 'Sequined jacket, sings at a vintage mic on stage under the spotlights', Scene: Singer },
+  { id: 'coast', label: 'Coast driver', blurb: 'Bucket hat and shades, cruises the coast road past the palms at sunset, surfboard in the back', Scene: CoastDrive },
+  { id: 'night', label: 'Night driver', blurb: 'Aviators and a leather jacket, drives through the city at night under the street lamps', Scene: NightDrive },
+  { id: 'taiko', label: 'Taiko', blurb: 'Happi coat and headband, beats a big taiko drum under the cherry blossom', Scene: Taiko },
+  { id: 'disco', label: 'Disco', blurb: 'Big collar and tinted glasses, sings and points on a light-up floor under the mirror ball', Scene: Disco },
 ];
 
 /** Unknown ids (e.g. synced from a newer app) fall back to the first entry. */

@@ -12,6 +12,14 @@
   peacock's tail fan opens on the beat and the bat's wings flap; the polar bear has its own face and body rather
   than a white copy of the bears. They play every act, as boys and girls, and dress for every theme
   (`src/components/critters/`).
+- **Critters: four new scenes.** **Coast driver** takes the Driver's open-top car down the coast road at sunset:
+  palms going by, the sea with a sailing boat, a lighthouse flashing on the beat on the far headland, gulls, and a
+  bucket hat, shades and a surfboard on the back seat. **Night driver** drives it through the city at night, under
+  street lamps, past a skyline whose windows light up bar by bar, in aviators and a leather jacket. Both swerve,
+  steer, bounce and wave exactly like the Driver, since all three drives now share one car (`DriveScene` in
+  `src/components/critters/Drive.tsx`). **Taiko** beats a big barrel drum under the cherry blossom, sticks
+  alternating on and off the beat with both arms up for the one (`Taiko.tsx`). **Disco** sings into a hand mic and
+  does the disco point on a light-up floor under a mirror ball (`Disco.tsx`). All four sing along.
 
 ## 0.45.0
 - **Multi-disc albums get "Disc 1", "Disc 2" headings**, like Plex. On an album page each disc starts with its

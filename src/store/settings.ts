@@ -32,7 +32,7 @@ export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'b
 export type CritterLook = 'boy' | 'girl';
 
 /** What the critter plays: components/critters/Critter.tsx (`ACTS`). Any species can play any act. */
-export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion' | 'drive' | 'reactor' | 'bongo' | 'piano' | 'marimba' | 'violin' | 'acoustic' | 'surf' | 'singer';
+export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion' | 'drive' | 'reactor' | 'bongo' | 'piano' | 'marimba' | 'violin' | 'acoustic' | 'surf' | 'singer' | 'coast' | 'night' | 'taiko' | 'disco';
 
 /** Acts that were retired (0.37), and the act that took each one's place, for a pick saved before. */
 export const RETIRED_ACTS: Record<string, Act> = { sax: 'surf', harp: 'acoustic', tuba: 'singer' };

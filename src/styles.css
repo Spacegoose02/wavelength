@@ -2012,7 +2012,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
 /* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
-.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin, .critter-acoustic, .critter-surf, .critter-singer) .shark-fin,
+.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin, .critter-acoustic, .critter-surf, .critter-singer, .critter-taiko, .critter-disco) .shark-fin,
 :root[data-skin-group='nuclear'] .critter .shark-fin,
 :root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
@@ -2940,3 +2940,111 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
 .sync-details summary { cursor: pointer; }
 .sync-details ul { margin: 4px 0 0; padding-left: 18px; }
 .sync-details li { margin: 2px 0; }
+
+/* the Coast and Night drives (Drive.tsx): the Driver's car and colours (they're `critter-drive` too), with
+   their own scenery and clothes. The beach, the sea and the city are fixed; the hat, the board, the tee and
+   the lights take the skin's colours */
+.critter .coast-sun { fill: color-mix(in srgb, var(--viz-high) 40%, #ffc46b); }
+.critter .coast-sea { fill: #1f8fa6; }
+.critter .coast-glint { fill: #fff3c4; }
+.critter .coast-head { fill: #2d5a48; }
+.critter .lighthouse { fill: #f4f1ea; }
+.critter .lighthouse-band { stroke: #d9483b; }
+.critter .lighthouse-top { fill: #d9483b; }
+.critter .beacon { fill: #fff6b8; }
+.critter .boat-hull { fill: #f4f1ea; }
+.critter .boat-sail { fill: #ffffff; opacity: 0.9; }
+.critter .coast-sand { fill: #e8cf94; }
+.critter .coast-sand-dark { stroke: #cdb175; }
+.critter .coast-foam { stroke: rgb(255 255 255 / 0.85); }
+.critter .coast-board { fill: var(--viz-low); }
+.critter .coast-board-stripe { stroke: rgb(255 255 255 / 0.8); }
+.critter .coast-stripe { stroke: var(--viz-mid); }
+.critter .bucket-hat { fill: var(--viz-high); }
+.critter .bucket-brim { fill: color-mix(in srgb, var(--viz-high) 75%, #000); }
+.critter .bucket-band { stroke: rgb(255 255 255 / 0.7); }
+.critter-coast .road { fill: #3a3a40; }
+.critter .night-star { fill: #fffbe8; }
+.critter .night-moon { fill: #f4f0dc; }
+.critter .night-moon-glow { fill: #f4f0dc; opacity: 0.3; }
+.critter .night-crater { fill: #d8d2b8; }
+.critter .city-block { fill: #1d1b29; }
+.critter .city-mast { stroke: #1d1b29; }
+.critter .city-mast-light { fill: #ff4a4a; }
+.critter .city-window { fill: color-mix(in srgb, var(--viz-mid) 30%, #ffd77a); }
+.critter .night-verge { fill: #1b1b22; }
+.critter .lamp-post { fill: #3a3a44; }
+.critter .lamp-post-arm { stroke: #3a3a44; }
+.critter .lamp-head { fill: #2a2a32; }
+.critter .lamp-bulb { fill: #fff3c4; }
+.critter .lamp-glow { fill: #ffd77a; }
+.critter-night .top { fill: #26262d; }
+.critter-night .sleeve { stroke: #26262d; }
+.critter .night-tee { fill: var(--viz-high); }
+.critter .jacket-lapel { fill: #34343c; }
+.critter .jacket-zip { stroke: #c9c9d1; }
+.critter .aviator { fill: rgb(20 20 28 / 0.88); }
+.critter .aviator-rim { stroke: #d6b25a; }
+
+/* the Taiko act (Taiko.tsx): the happi coat, the lanterns and the drum's crest follow the skin; the garden and
+   the drum are fixed */
+.critter-taiko .top { fill: var(--accent); }
+.critter-taiko .sleeve { stroke: var(--accent); }
+.critter-taiko .legs { fill: #1d1d26; }
+.critter .hakama { fill: #23232c; }
+.critter .tabi { fill: #f2f2f5; }
+.critter .happi-band { stroke: #f4f1ea; }
+.critter .happi-hem { stroke: rgb(255 255 255 / 0.5); }
+.critter .headband { fill: #f4f1ea; }
+.critter .headband-stripe { stroke: var(--viz-high); }
+.critter .torii { fill: #c8402f; opacity: 0.8; }
+.critter .garden-ground { fill: #4a4038; }
+.critter .garden-stones { stroke: #5e544a; }
+.critter .lantern-string { stroke: #2a2a30; }
+.critter .lantern { fill: var(--viz-low); }
+.critter .lantern-2 { fill: var(--viz-high); }
+.critter .lantern-cap { fill: #2a2a30; }
+.critter .lantern-glow { fill: color-mix(in srgb, var(--viz-low) 50%, #ffe7a8); opacity: 0.6; }
+.critter .branch { stroke: #4a2e22; }
+.critter .blossom { fill: #f7b6cc; }
+.critter .blossom-2 { fill: #fcd3e0; }
+.critter .blossom-eye { fill: #e0708f; }
+.critter .petal { fill: #f9c4d6; }
+.critter .taiko-stand { stroke: #3a2418; }
+.critter .taiko-shell { fill: #8a4b2a; }
+.critter .taiko-stave { stroke: rgb(0 0 0 / 0.22); }
+.critter .taiko-crest-ring { stroke: var(--viz-high); }
+.critter .taiko-crest { fill: var(--viz-high); }
+.critter .taiko-ring { stroke: #c9a24a; }
+.critter .taiko-rim { fill: #5a3020; }
+.critter .taiko-head { fill: #efe2c4; }
+.critter .taiko-stud { fill: #d8c27a; }
+.critter .bachi { stroke: #c08a52; }
+
+/* the Disco act (Disco.tsx): the shirt, the glasses, the beams and the floor follow the skin */
+.critter-disco .top { fill: var(--viz-high); }
+.critter-disco .sleeve { stroke: var(--viz-high); }
+.critter-disco .legs { fill: #f4f1ea; }
+.critter .disco-skirt { fill: var(--viz-high); }
+.critter .platform { fill: #f4c542; }
+.critter .disco-neck { fill: var(--belly, var(--skin)); }
+.critter .disco-collar { fill: #f4f1ea; }
+.critter .medallion-chain { stroke: #e8c25a; }
+.critter .medallion { fill: #e8c25a; }
+.critter .disco-lens { fill: color-mix(in srgb, var(--viz-low) 40%, #000); opacity: 0.88; }
+.critter .disco-rim { stroke: #e8c25a; }
+.critter-disco .point-finger { stroke: var(--skin); }
+.critter .disco-floor { fill: #141418; }
+.critter .disco-tile { stroke: #141418; stroke-width: 3; }
+.critter .disco-tile-0 { fill: var(--viz-low); }
+.critter .disco-tile-1 { fill: var(--viz-mid); }
+.critter .disco-tile-2 { fill: var(--viz-high); }
+.critter .ray-a { fill: var(--viz-low); }
+.critter .ray-b { fill: var(--viz-high); }
+.critter .ray-c { fill: var(--viz-mid); }
+.critter .ball-chain { stroke: #8a8a94; }
+.critter .ball { fill: #9a9aa6; }
+.critter .facet { fill: #c9c9d3; }
+.critter .facet-lit { fill: #ffffff; }
+.critter .ball-flash { fill: #ffffff; }
+.critter .glint { fill: #ffffff; }

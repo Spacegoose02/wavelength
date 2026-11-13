@@ -87,7 +87,7 @@ genre names cover it).
 
 The critters live in `components/critters/`. A critter on screen is a **species** (raccoon, shark, alien,
 grey alien, black or brown bear, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, red panda, turkey, opossum, capybara, crocodile, dolphin, goat, peacock, pangolin, bat, polar bear) playing an **act** (DJ, Country, Rapper, Rocker, Drummer, Theremin, Synth,
-Accordion, Driver, Reactor, Bongo, Pianist, Marimba, Violinist, Acoustic, Surf rock, Singer), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
+Accordion, Driver, Coast driver, Night driver, Reactor, Bongo, Pianist, Marimba, Violinist, Acoustic, Surf rock, Singer, Taiko, Disco), and any species can play any act. See the [user guide's developer notes](USER-GUIDE.md#critters)
 for how the pieces fit.
 
 Faces, hats and glasses are drawn on one head skeleton: centred on 200,178 (about 160 wide, 130 tall, top near
@@ -165,6 +165,11 @@ those parts so the pivot lands on the figure's own shoulder, tail root or foot.
   5. Add its id to `Act` (`store/settings.ts`) and an entry to `ACTS` (`Critter.tsx`). That's all the
      wiring: **Switch act** and the Settings cards read the list. Add a row to the act table in the
      [user guide](USER-GUIDE.md#critters).
+- **Another drive:** the drives share one car, road and set of moves (`DriveScene` in `Drive.tsx`). A new place
+  is a `DrivePlace`: the backdrop (sky, the far scenery in `data-part="scenery"`, which drifts against the bend,
+  and the ground), one roadside thing drawn for the right-hand side (it's mirrored on the left), the clothes, the
+  plate and an optional `animate` for its own scenery. Give it a `variant` for its colours (`critter-<variant>`
+  alongside `critter-drive`), then an act as above.
 - **An outfit for a skin group:** a `<g className="outfit outfit-mygroup">` in `Head` and/or `BodyOutfits`
   (`parts.tsx`) and a `:root[data-skin-group='mygroup'] .critter .outfit-mygroup` line in the "skin-group
   outfits" rule. The group slug is the first word of the group name, lower-case (`skinGroup()` in
