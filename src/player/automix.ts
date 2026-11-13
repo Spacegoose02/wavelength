@@ -3,8 +3,8 @@ import type { Track } from '../sources/types';
 /**
  * AutoMix (Settings → Playback): how to go from one song to the next, instead of one fixed crossfade.
  *
- * - The next song on the **same album, straight after** this one: no fade at all (gapless), so live albums,
- *   DJ mixes and segues stay as recorded.
+ * - The next song on the **same album, straight after** this one (including disc 1's last song into disc 2's
+ *   first): no fade at all (gapless), so live albums, DJ mixes and segues stay as recorded.
  * - Both songs analysed by the Hub (lib/sonic.ts) with a **clear beat at close tempos** (within 8%, or at half
  *   or double): an 8-beat blend that starts on a beat of this song, with the next song nudged to this song's
  *   tempo for the blend (pitch kept) and eased back afterwards.
@@ -29,8 +29,12 @@ export interface Transition {
   why: 'album' | 'beatmatch' | 'energy' | 'plain';
 }
 
-const sameAlbumNext = (a: Track, b: Track) =>
-  !!a.albumId && a.albumId === b.albumId && a.sourceId === b.sourceId && !!a.trackNumber && !!b.trackNumber && b.trackNumber === a.trackNumber + 1 && (a.discNumber ?? 1) === (b.discNumber ?? 1);
+/** `b` comes straight after `a` on the same album: the next song on the disc, or the first song of the next disc. */
+const sameAlbumNext = (a: Track, b: Track) => {
+  if (!a.albumId || a.albumId !== b.albumId || a.sourceId !== b.sourceId || !a.trackNumber || !b.trackNumber) return false;
+  const discA = a.discNumber ?? 1, discB = b.discNumber ?? 1;
+  return discB === discA ? b.trackNumber === a.trackNumber + 1 : discB === discA + 1 && b.trackNumber === 1;
+};
 
 /** The tempo ratio that lines `b` up with `a` (b × ratio ≈ a), counting half and double time; null if too far. */
 export function tempoRatio(a: number, b: number): number | null {

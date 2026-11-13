@@ -150,8 +150,13 @@ async function deezerMatches(artist: string, album: string, version: string): Pr
   const found = await getJson(`${ART_APIS.deezer}/search/album?limit=3&q=${encodeURIComponent(`artist:${quote(artist)} album:${quote(album)}`)}`, version);
   const out: MatchCandidate[] = [];
   for (const a of (found?.data ?? []).slice(0, 3)) {
-    const full = await getJson(`${ART_APIS.deezer}/album/${a.id}`, version).catch(() => null);
+    const [full, places] = await Promise.all([
+      getJson(`${ART_APIS.deezer}/album/${a.id}`, version).catch(() => null),
+      // the album's own tracklist has no track or disc numbers; /tracks has both
+      getJson(`${ART_APIS.deezer}/album/${a.id}/tracks?limit=500`, version).then((r) => (r?.data ?? []) as any[]).catch(() => [] as any[]),
+    ]);
     if (!full?.tracks?.data?.length) continue;
+    const at = new Map(places.filter((t) => t?.id && t.track_position).map((t) => [t.id, t]));
     out.push({
       source: 'Deezer',
       id: String(a.id),
@@ -160,7 +165,10 @@ async function deezerMatches(artist: string, album: string, version: string): Pr
       year: String(full.release_date ?? '').slice(0, 4) || undefined,
       genre: full.genres?.data?.[0]?.name,
       cover: full.cover_medium,
-      tracks: full.tracks.data.map((t: any, i: number) => ({ title: t.title, artist: t.artist?.name ?? full.artist?.name ?? '', track: t.track_position ?? i + 1, disc: t.disk_number ?? 1 })),
+      tracks: full.tracks.data.map((t: any, i: number) => {
+        const p = at.get(t.id) ?? t;
+        return { title: t.title, artist: t.artist?.name ?? full.artist?.name ?? '', track: p.track_position ?? i + 1, disc: p.disk_number ?? 1 };
+      }),
     });
   }
   return out;

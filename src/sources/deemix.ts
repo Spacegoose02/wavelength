@@ -25,8 +25,10 @@ export interface DeezerResult {
   version?: 'explicit' | 'clean';
   /** Songs: 30-second clip. */
   preview?: string;
-  /** Songs on an album page: position on the album. */
+  /** Songs on an album page: position on the album (on its disc, when the album has more than one). */
   trackNumber?: number;
+  /** Songs on an album page: which disc of the album, from Deezer's `disk_number`. */
+  discNumber?: number;
   /** Albums: "album" | "single" | "ep" | "compile". */
   recordType?: string;
   /** Albums: YYYY-MM-DD. */
@@ -56,6 +58,7 @@ function toTrack(t: any, album?: any): DeezerResult {
     link: t.link,
     preview: t.preview || undefined,
     trackNumber: t.track_position,
+    ...(typeof t.disk_number === 'number' && { discNumber: t.disk_number }),
     explicit: explicitOf(t),
     explicitContent: contentOf(t),
   };
@@ -186,14 +189,38 @@ export interface DeezerAlbumPage {
 
 /** Everything for an album page: its tracklist (with previews) in album order. */
 export async function getDeezerAlbum(id: number): Promise<DeezerAlbumPage> {
-  const a = await getJson(`${DZ}/album/${id}`);
+  const [a, places] = await Promise.all([getJson(`${DZ}/album/${id}`), albumPlaces(id)]);
   if (a?.error) throw new Error(a.error.message ?? 'Deezer has no such album');
   return {
     album: toAlbum(a),
     label: a.label,
-    // the embedded tracklist has no album object or position — fill both in from the album
-    tracks: (a.tracks?.data ?? []).map((t: any, i: number) => ({ ...toTrack(t, a), trackNumber: t.track_position ?? i + 1 })),
+    // the embedded tracklist has no album object or position — fill both in from the album and /tracks
+    tracks: (a.tracks?.data ?? []).map((t: any, i: number) => {
+      const at = places.get(t.id);
+      return { ...toTrack(t, a), trackNumber: at?.track ?? t.track_position ?? i + 1, ...(at?.disc && { discNumber: at.disc }) };
+    }),
   };
+}
+
+/**
+ * Each song's track and disc number on a Deezer album, by song id. The album's own tracklist leaves both out;
+ * `/album/{id}/tracks` has them (`track_position` counts from 1 on each disc). Empty when that can't be fetched,
+ * and the album page numbers the songs in order instead.
+ */
+async function albumPlaces(id: number): Promise<Map<number, { track: number; disc: number }>> {
+  const out = new Map<number, { track: number; disc: number }>();
+  try {
+    for (let index = 0; index < 2000;) {
+      const page = await getJson(`${DZ}/album/${id}/tracks?${qs({ index, limit: 100 })}`);
+      const rows: any[] = page?.data ?? [];
+      for (const t of rows) if (t?.id && t.track_position) out.set(t.id, { track: t.track_position, disc: t.disk_number ?? 1 });
+      index += rows.length;
+      if (!rows.length || !page.next || index >= (page.total ?? 0)) break;
+    }
+  } catch {
+    // keep what came; the album still shows
+  }
+  return out;
 }
 
 export interface DeezerPlaylistPage {

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- **Multi-disc albums get "Disc 1", "Disc 2" headings**, like Plex. On an album page each disc starts with its
+  heading and a line, and track numbers start again at 1 under each one. Albums on one disc look the same as
+  before (`src/lib/discs.ts`, `src/components/common.tsx`).
+- **Deezer album pages in Downloads show discs too.** Deezer's album tracklist has no track or disc numbers, so
+  a 2-CD release was numbered 1–30 straight through. The page now reads them from `/album/{id}/tracks` and
+  heads each disc the same way (`src/sources/deemix.ts`).
+- **Fix: Fix tags from Deezer set every song to disc 1.** It read disc and track numbers from the same tracklist,
+  so a 2-CD album was matched and numbered as one long disc. It reads them from `/album/{id}/tracks` now
+  (`hub/src/tags.ts`).
+- **Fix: AutoMix crossfaded from the end of disc 1 into disc 2.** The first song of the next disc counts as
+  straight after the last one now, so it plays gapless like any other next song on the album
+  (`src/player/automix.ts`).
+
 ## 0.44.2
 - **Dependencies:** wasapi 0.27 (the Windows sound API behind bit-perfect playback). Its device lookup moved to
   `DeviceEnumerator` and `initialize_client` takes a session id now; `src-tauri/src/hifi.rs` follows.

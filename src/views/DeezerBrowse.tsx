@@ -8,12 +8,13 @@
  * (lib/artistReleases.ts). The library artist page's **Browse releases** (views/ArtistReleases.tsx) opens the
  * same pages.
  */
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
 import { deemixClient } from '../lib/hubServices';
 import { refreshDeemix } from '../lib/deemixQueue';
 import { useOwnedRelease } from '../lib/artistReleases';
 import { useVersionPref } from '../lib/versions';
+import { discHeading, hasDiscs } from '../lib/discs';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 import { getDeezerAlbum, getDeezerArtist, getDeezerPlaylist, type DeezerAlbumPage, type DeezerArtistPage, type DeezerPlaylistPage, type DeezerResult } from '../sources/deemix';
@@ -317,6 +318,7 @@ export function DeezerAlbum({ id, ...p }: BrowseProps & { id: number }) {
   // on a clean album, songs Deezer marks not explicit are the clean versions of their songs
   const tracks = withVersions(data.tracks).map((t) => (album.version === 'clean' && !t.version && t.explicit === false ? { ...t, version: 'clean' as const } : t));
   const length = tracks.reduce((n, t) => n + (t.duration ?? 0), 0);
+  const multiDisc = hasDiscs(tracks);
   return (
     <div className="dz-page">
       <div className="dz-head">
@@ -336,7 +338,16 @@ export function DeezerAlbum({ id, ...p }: BrowseProps & { id: number }) {
           {p.status[statusKey(album)]?.s === 'error' && <div className="card-err">{p.status[statusKey(album)].msg}</div>}
         </div>
       </div>
-      {tracks.map((t) => <DzRow key={statusKey(t)} r={t} numbered {...p} />)}
+      {/* "Disc N" over each disc's first song when the album has more than one, like a library album (lib/discs.ts) */}
+      {tracks.map((t, i) => {
+        const disc = multiDisc ? discHeading(t, tracks[i - 1]) : undefined;
+        return (
+          <Fragment key={statusKey(t)}>
+            {disc !== undefined && <h3 className="disc-heading">Disc {disc}</h3>}
+            <DzRow r={t} numbered {...p} />
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
