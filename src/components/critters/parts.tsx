@@ -14,13 +14,17 @@ import type { SpeciesInfo } from './species';
  * species' figure (bodies.tsx), which also gives the top, shoulders, legs and tail.
  */
 
-/** The <svg> with the shared defs and the backlight. `kind` is the act (`critter-<act>` class), `species` who plays it. */
-export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; species: SpeciesInfo; label: string; children: ReactNode }>(function CritterFrame({ kind, species, label, children }, ref) {
+/**
+ * The <svg> with the shared defs and the backlight, for `species`. `kind` gives it the `critter-<kind>` class for the act's colours; `variant` adds a
+ * second, `critter-<variant>`, for an act drawn on another act's rig and colours (the Coast and Night drives
+ * are `kind="drive"`).
+ */
+export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; variant?: string; species: SpeciesInfo; label: string; children: ReactNode }>(function CritterFrame({ kind, variant, species, label, children }, ref) {
   // `look-girl` lets a species colour its girl differently (the white dragon, styles.css)
   const girl = useContext(GirlContext);
   return (
     <SpeciesContext.Provider value={species}>
-    <svg ref={ref} className={`np-scene-canvas critter critter-${kind} species-${species.id}${girl ? ' look-girl' : ''}`} data-move={species.figure.move} viewBox="0 0 400 400" role="img" aria-label={label}>
+    <svg ref={ref} className={`np-scene-canvas critter critter-${kind}${variant ? ` critter-${variant}` : ''} species-${species.id}${girl ? ' look-girl' : ''}`} data-move={species.figure.move} viewBox="0 0 400 400" role="img" aria-label={label}>
       <defs>
         <radialGradient id="critter-spot">
           <stop offset="0" className="spot-stop" />

@@ -257,7 +257,8 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
 /**
  * The artwork slot of Now Playing. Tap (or Enter) to move to the next scene; the choice is remembered.
  * On the critter scene two small buttons in the corner switch to the next critter (raccoon, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla)
- * and to the next act (DJ, country, rapper, rocker, drums, theremin, synth, accordion, driver, reactor, bongo, pianist, marimba, violinist), and a third opens the
+ * and to the next act (DJ, country, rapper, rocker, drums, theremin, synth, accordion, driver, coast driver, night driver, reactor, bongo, pianist,
+ * marimba, violinist, acoustic, surf rock, singer, taiko, disco), and a third opens the
  * mouth tuner (components/MouthTuner.tsx) beside the critter, unless a Hub admin switched the tuner off.
  */
 export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {

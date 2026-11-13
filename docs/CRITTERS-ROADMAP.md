@@ -195,6 +195,12 @@ the asset work and a risk on low-end phones and the iOS WebView.
   its top and the tail. The **bat**'s wings are new `wing-l` / `wing-r` parts that flap on the beat. The
   **polar bear** has its own face (longer head, long muzzle, small wide ears) and figure (a broader top, thick legs
   and big black-padded paws), not the bears' face recoloured.
+- Four more scenes (November 2026): two more drives on the Driver's car and moves, the **Coast driver** (the beach
+  road, palms at the roadside, a lighthouse, a surfboard on the back seat) and the **Night driver** (the city after
+  dark, street lamps, a skyline lit bar by bar), now that `Drive.tsx` is one `DriveScene` with a `DrivePlace` per
+  drive; **Taiko** (`Taiko.tsx`, a big drum under the cherry blossom, sticks alternating on and off the beat, both
+  arms up on the last beat of the bar) and **Disco** (`Disco.tsx`, a hand mic held beside the face so they sing, the
+  disco point, a light-up floor and a mirror ball). All four sing along.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 
