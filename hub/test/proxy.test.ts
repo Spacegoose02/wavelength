@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
+import { readTags } from '../src/tags.ts';
 import { json, seeded } from './helpers.ts';
 import { makeZip, unzip } from './zipHelpers.ts';
 
@@ -231,6 +232,48 @@ exit 0
   await json(app, 'PATCH', `/api/admin/services/${(await json(app, 'GET', '/api/admin/services', { token: tokens.admin })).body.services[0].id}`, { token: tokens.admin, body: { config: { folder: '../../etc' } } });
   assert.equal((await json(app, 'POST', '/api/downloads/ytdlp/jobs', { token: tokens.admin, body: { url: 'https://youtu.be/x' } })).status, 400, 'the folder cannot point outside the music folder');
   assert.equal((await json(app, 'POST', '/api/downloads/ytdlp/jobs', { token: tokens.admin, body: { url: '-o/etc/passwd' } })).status, 400);
+});
+
+test('a yt-dlp download the app knows is named and tagged as the song, not the video', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wl-yt-tags-'));
+  const music = join(dir, 'music');
+  mkdirSync(music);
+  const bin = join(dir, 'yt-dlp');
+  // a stand-in yt-dlp: writes a short mp3 where -o says, tagged like a YouTube upload, and prints its path
+  writeFileSync(bin, `#!/bin/sh
+out=""
+prev=""
+for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done
+file=$(printf '%s' "$out" | sed 's/%(ext)s/mp3/')
+mkdir -p "$(dirname "$file")"
+ffmpeg -v error -nostdin -y -f lavfi -i anullsrc=r=44100:cl=mono -t 1 -metadata artist=OFFSETYRN -metadata title='Offset - Song (Official Video)' "$file"
+echo "[wavelength]  100.0%"
+echo "[wavelength-file] $file"
+exit 0
+`);
+  chmodSync(bin, 0o755);
+  const { app, tokens } = await seeded({}, { musicDir: music, ytdlpBin: bin });
+  await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body: { kind: 'ytdlp', config: { folder: 'yt-dlp', format: 'mp3' } } });
+  const j = await json(app, 'POST', '/api/downloads/ytdlp/jobs', {
+    token: tokens.admin,
+    // an http cover is left alone: the Hub only fetches https pictures for this
+    body: { url: 'https://www.youtube.com/watch?v=abc', title: 'Offset - Song (Official Video)', channel: 'OFFSETYRN', tags: { artist: 'Offset', title: 'Song: Part 2/3', cover: 'http://192.168.1.1/x.jpg' } },
+  });
+  assert.equal(j.status, 200, JSON.stringify(j.body));
+  assert.equal(j.body.job.tags, undefined, 'the tags stay on the Hub');
+  let jobs: { status: string; message?: string }[] = [];
+  for (let i = 0; i < 200 && jobs[0]?.status !== 'done' && jobs[0]?.status !== 'error'; i++) {
+    await new Promise((r) => setTimeout(r, 25));
+    jobs = (await json(app, 'GET', '/api/downloads/ytdlp/jobs', { token: tokens.admin })).body.jobs;
+  }
+  assert.equal(jobs[0].status, 'done', JSON.stringify(jobs[0]));
+  const file = join(music, 'yt-dlp', 'Offset', 'Song Part 2 3', 'Song Part 2 3.mp3');
+  const tags = await readTags(file);
+  assert.equal(tags.artist, 'Offset');
+  assert.equal(tags.title, 'Song: Part 2/3');
+  assert.equal(tags.album, 'Song: Part 2/3');
+  assert.equal(tags.albumArtist, 'Offset');
+  assert.deepEqual(readdirSync(join(music, 'yt-dlp', 'Offset', 'Song Part 2 3')), ['Song Part 2 3.mp3']);
 });
 
 test('yt-dlp says so when the Hub has no music folder', async () => {

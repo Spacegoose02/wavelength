@@ -177,6 +177,14 @@ export interface HubService {
   hubServed?: boolean;
 }
 
+/** What a yt-dlp download is, so the Hub names and tags the file as the song (hub/src/ytdlp.ts YtTags). */
+export interface HubYtTags {
+  artist: string;
+  title: string;
+  album?: string;
+  cover?: string;
+}
+
 /** Tags the tag editor reads and writes (hub/src/tags.ts). */
 export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' | 'disc' | 'year' | 'genre'
   | 'albumSort' | 'artistSort' | 'albumArtistSort' | 'label' | 'releaseType' | 'mood';
@@ -982,7 +990,7 @@ export class HubClient {
   deemixClearFinished = () => this.call('POST', '/api/downloads/deemix/queue/clear');
   ytSearch = (query: string) => this.call<{ results: { id: string; title: string; channel: string; url: string; duration?: number; thumbnail?: string }[] }>('POST', '/api/downloads/ytdlp/search', { query });
   ytJobs = () => this.call<{ jobs: HubYtJob[] }>('GET', '/api/downloads/ytdlp/jobs');
-  ytStart = (r: { url: string; title?: string; channel?: string }) => this.call<{ job: HubYtJob }>('POST', '/api/downloads/ytdlp/jobs', r);
+  ytStart = (r: { url: string; title?: string; channel?: string; tags?: HubYtTags }) => this.call<{ job: HubYtJob }>('POST', '/api/downloads/ytdlp/jobs', r);
   ytClear = () => this.call('DELETE', '/api/downloads/ytdlp/jobs');
 
   // ---- requests and sharing ----

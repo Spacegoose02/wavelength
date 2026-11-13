@@ -180,9 +180,15 @@ export function proxyRoutes(app: FastifyInstance, { db, config, ytdlp, library, 
   app.post('/api/downloads/ytdlp/jobs', async (req) => {
     const { user } = need(req, 'downloads.run');
     const b = (req.body ?? {}) as Record<string, unknown>;
-    const job = ytdlp.start(user, { url: str(b.url, 1000), title: str(b.title, 300), channel: str(b.channel, 200) }, ytSettings());
+    // `tags`: what the song is, when the app knows (Discover's yt-dlp backup), so it isn't named after the video
+    const t = (b.tags ?? null) as Record<string, unknown> | null;
+    const tags = t && typeof t === 'object' && str(t.artist, 200) && str(t.title, 300)
+      ? { artist: str(t.artist, 200), title: str(t.title, 300), album: str(t.album, 300) || undefined, cover: str(t.cover, 2000) || undefined }
+      : undefined;
+    const job = ytdlp.start(user, { url: str(b.url, 1000), title: str(b.title, 300), channel: str(b.channel, 200), tags }, ytSettings());
     audit(db, { actorId: user.id, action: 'download.queued', target: job.url, detail: { via: 'yt-dlp', title: job.title }, ip: clientIp(req) });
-    return { job };
+    const { tags: _, ...shown } = job;
+    return { job: shown };
   });
 
   app.delete('/api/downloads/ytdlp/jobs', async (req) => {

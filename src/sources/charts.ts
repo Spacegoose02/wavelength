@@ -465,20 +465,25 @@ function paced<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * One Deezer search. Deezer answers its rate limit ("Quota limit exceeded", code 4) with a 200 and an `error`
- * object instead of results; that is waited out and tried again, and any other failure throws, so it is never
- * read as "Deezer doesn't have this song".
+ * One Deezer API call, paced (see LOOKUP_GAP_MS). Deezer answers its rate limit ("Quota limit exceeded", code 4)
+ * with a 200 and an `error` object instead of results; that is waited out and tried again, and any other failure
+ * throws, so it is never read as "Deezer doesn't have this song".
  */
-async function deezerSearch(q: string): Promise<any[]> {
+async function deezerGet(path: string): Promise<any> {
   for (let attempt = 0; ; attempt++) {
-    const r = await paced(() => getJson(`https://api.deezer.com/search?${qs({ q, limit: 10 })}`));
-    if (!r?.error) return r?.data ?? [];
+    const r = await paced(() => getJson(`https://api.deezer.com/${path}`));
+    if (!r?.error) return r;
     if (r.error.code === 4 && attempt < 3) {
       await sleep(2_000 * (attempt + 1));
       continue;
     }
     throw new Error(r.error.code === 4 ? 'Deezer is busy, try again in a moment' : `Deezer: ${r.error.message ?? 'error'}`);
   }
+}
+
+/** One Deezer song search (see deezerGet for errors). */
+async function deezerSearch(q: string): Promise<any[]> {
+  return (await deezerGet(`search?${qs({ q, limit: 10 })}`))?.data ?? [];
 }
 
 /**
@@ -491,33 +496,82 @@ export function previewExpired(url: string, now = Date.now()): boolean {
   return !!m && Number(m[1]) * 1000 < now + 60_000;
 }
 
+/** How many of the artist's own releases (newest first) the catalog fallback opens, at most. */
+const CATALOG_ALBUMS = 4;
+
 /**
- * Look a song up on Deezer: link for deemix, 30s preview clip and explicit flag (strict match, then loose).
- * Among the hits by the right artist, the same title wins, and one with a clip wins over one without. Returns `{}`
- * when Deezer doesn't have it; throws when Deezer couldn't be asked (offline, rate limited), so callers can tell
- * the two apart.
+ * Look a song up on Deezer: link for deemix, 30s preview clip and explicit flag.
+ *
+ * 1. Deezer's song search, "Artist Title". Among the hits by the right artist, the same title wins, and one with a
+ *    clip wins over one without. Only the same song counts: another song by the artist would send deemix the
+ *    wrong song.
+ * 2. When that has no song with the same title, the artist's catalog: Deezer's song search lags behind its catalog,
+ *    so a release from the last few weeks (exactly what Discover lists) is often on Deezer, with a clip, but not in
+ *    search yet (checked Nov 2026: "Don Toliver Party With The Boys" found nothing, the single was there). The
+ *    artist's releases named like the song come first, then the newest few, and their track lists are searched.
+ *
+ * The strict `artist:"…" track:"…"` search isn't used: by Nov 2026 it found nothing for 40 of 40 chart songs.
+ * Returns `{}` when Deezer doesn't have it; throws when Deezer couldn't be asked (offline, rate limited), so callers
+ * can tell the two apart.
  */
 export async function deezerLookup(e: { title: string; artist: string }): Promise<{ link?: string; preview?: string; explicit?: boolean }> {
   const artist = primaryArtist(e.artist);
   const title = e.title.replace(/\(.*?\)|\[.*?\]/g, '').trim();
   const wantTitle = norm(title);
-  const sameArtist = (t: any) => norm(t.artist?.name ?? '').includes(norm(artist)) || norm(artist).includes(norm(t.artist?.name ?? ''));
+  const wantArtist = norm(artist);
+  const sameArtist = (t: any) => {
+    const got = norm(t.artist?.name ?? '');
+    return !!got && !!wantArtist && (got.includes(wantArtist) || wantArtist.includes(got));
+  };
   const sameTitle = (t: any) => {
     const got = norm(String(t.title ?? '').replace(/\(.*?\)|\[.*?\]/g, ''));
     return !!got && !!wantTitle && (got === wantTitle || got.startsWith(wantTitle) || wantTitle.startsWith(got));
   };
   const score = (t: any) => (sameTitle(t) ? 2 : 0) + (t.preview ? 1 : 0);
+  const result = (t: any) => ({
+    link: t.link ?? (t.id ? `https://www.deezer.com/track/${t.id}` : undefined),
+    preview: t.preview || undefined,
+    explicit: typeof t.explicit_lyrics === 'boolean' ? t.explicit_lyrics : undefined,
+  });
+
   let best: any;
-  for (const q of [`artist:"${artist}" track:"${title}"`, `${artist} ${title}`]) {
-    for (const t of (await deezerSearch(q)).filter(sameArtist)) {
-      if (!best || score(t) > score(best)) best = t;
-    }
-    // the right song with a clip: no need for the loose search
-    if (best && score(best) === 3) break;
+  for (const t of (await deezerSearch(`${artist} ${title}`)).filter(sameArtist)) {
+    if (!best || score(t) > score(best)) best = t;
   }
-  if (!best) return {};
-  return { link: best.link, preview: best.preview || undefined, explicit: typeof best.explicit_lyrics === 'boolean' ? best.explicit_lyrics : undefined };
+  if (best && sameTitle(best) && best.preview) return result(best);
+
+  // not in search (yet), or only without a clip: look through the artist's own releases
+  const found = await deezerCatalogLookup(artist, wantArtist, wantTitle, sameTitle);
+  if (found && (found.preview || !best || !sameTitle(best))) return result(found);
+  // another song by the artist is not this one: deemix would get the wrong song
+  return best && sameTitle(best) ? result(best) : {};
 }
+
+async function deezerCatalogLookup(artist: string, wantArtist: string, wantTitle: string, sameTitle: (t: any) => boolean): Promise<any | undefined> {
+  if (!wantArtist || !wantTitle) return undefined;
+  const artists = ((await deezerGet(`search/artist?${qs({ q: artist, limit: 10 })}`))?.data ?? [])
+    .filter((a: any) => typeof a?.id === 'number' && norm(a.name) === wantArtist)
+    // Deezer has several artists with some names; the one with the most fans is nearly always the one on the charts
+    .sort((a: any, b: any) => (Number(b.nb_fan) || 0) - (Number(a.nb_fan) || 0));
+  const who = artists[0];
+  if (!who) return undefined;
+  const albums: any[] = (await deezerGet(`artist/${who.id}/albums?${qs({ limit: 50 })}`))?.data ?? [];
+  const newest = [...albums].sort((a, b) => String(b.release_date ?? '').localeCompare(String(a.release_date ?? '')));
+  const named = newest.filter((a) => sameTitle(a));
+  const order = [...named, ...newest.filter((a) => !named.includes(a))].slice(0, Math.max(CATALOG_ALBUMS, named.length));
+  let fallback: any;
+  for (const a of order) {
+    const tracks: any[] = (await deezerGet(`album/${a.id}/tracks?${qs({ limit: 100 })}`))?.data ?? [];
+    const hit = tracks.filter((t) => sameTitle(t)).sort((x, y) => (y.preview ? 1 : 0) - (x.preview ? 1 : 0))[0];
+    if (!hit) continue;
+    // album track lists name the track's own artist; the album's artist is the one asked for
+    const t = { ...hit, artist: hit.artist ?? { name: who.name } };
+    if (t.preview) return t;
+    fallback ??= t;
+  }
+  return fallback;
+}
+
 const cache = new Map<string, { at: number; data: Promise<Chart> }>();
 /** The last copy of each chart that loaded, shown (marked as older) when fetching it again fails. */
 const lastGood = new Map<string, Chart>();

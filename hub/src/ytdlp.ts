@@ -1,8 +1,10 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
+import { downloadImage } from './artwork.ts';
 import { HttpError } from './http.ts';
+import { writeTags } from './tags.ts';
 
 /**
  * yt-dlp on the Hub: search, and download into the music folder the Hub has mounted (/music), laid out
@@ -19,6 +21,20 @@ export interface YtResult {
   thumbnail?: string;
 }
 
+/**
+ * What a download is known to be, when the app knows better than YouTube (Discover's yt-dlp backup knows the chart's
+ * artist, title and cover). Without it the file is named and tagged from the video, so the artist is the uploader's
+ * channel ("OFFSETYRN") and the cover is a video frame.
+ */
+export interface YtTags {
+  artist: string;
+  title: string;
+  /** Defaults to the title: a song on its own is a single. */
+  album?: string;
+  /** A picture link, saved as cover.jpg (or .png/.webp) next to the song. */
+  cover?: string;
+}
+
 export interface YtJob {
   jobId: string;
   userId: number;
@@ -30,6 +46,8 @@ export interface YtJob {
   percent: number;
   message?: string;
   createdAt: number;
+  /** Not sent to the app: what the file is tagged as once it's in (YtTags). */
+  tags?: YtTags;
 }
 
 const FORMATS = ['opus', 'm4a', 'mp3', 'flac'];
@@ -56,6 +74,13 @@ export function run(bin: string, args: string[], onLine?: (l: string) => void): 
     });
   });
 }
+
+/** A tag value as a folder or file name: no path separators or characters Windows shares refuse. */
+export const safeName = (s: string) =>
+  [...s].map((c) => (c.charCodeAt(0) < 32 ? ' ' : c)).join('').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+|\.+$/g, '').slice(0, 120).trim() || 'Unknown';
+/** yt-dlp output templates treat % as the start of a field. */
+const literal = (s: string) => s.replace(/%/g, '%%');
+const FILE_LINE = '[wavelength-file] ';
 
 const lastLine = (s: string) => s.split('\n').map((l) => l.trim()).filter(Boolean).pop() ?? 'yt-dlp failed';
 const isUrl = (s: string) => /^https?:\/\/\S+$/i.test(s);
@@ -103,7 +128,7 @@ export class YtdlpRunner {
     return dir;
   }
 
-  start(user: { id: number; username: string }, r: { url: string; title?: string; channel?: string }, opts: { folder: string; format: string }): YtJob {
+  start(user: { id: number; username: string }, r: { url: string; title?: string; channel?: string; tags?: YtTags }, opts: { folder: string; format: string }): YtJob {
     if (!isUrl(r.url)) throw new HttpError(400, 'Send the http(s) link to download');
     const dir = this.outDir(opts.folder);
     const job: YtJob = {
@@ -116,6 +141,7 @@ export class YtdlpRunner {
       status: 'queued',
       percent: 0,
       createdAt: Date.now(),
+      ...(r.tags?.artist && r.tags.title && { tags: r.tags }),
     };
     this.jobs.unshift(job);
     this.jobs.length = Math.min(this.jobs.length, KEEP_JOBS);
@@ -139,36 +165,72 @@ export class YtdlpRunner {
 
   private async download(job: YtJob, dir: string, format: string) {
     job.status = 'downloading';
+    const t = job.tags;
+    const album = t ? t.album || t.title : '';
+    // known song: Artist / Single / Title, and the final path printed so its tags can be set after
+    const out = t
+      ? join(dir, literal(safeName(t.artist)), literal(safeName(album)), `${literal(safeName(t.title))}.%(ext)s`)
+      : join(dir, '%(artist,creator,uploader)s', '%(album|Singles)s', '%(title)s.%(ext)s');
     const args = [
       '-x', '--audio-format', format, '--audio-quality', '0',
       '--embed-metadata', '--embed-thumbnail', '--convert-thumbnails', 'jpg',
       '--newline', '--no-warnings',
       '--progress-template', 'download:[wavelength] %(progress._percent_str)s',
-      '-o', join(dir, '%(artist,creator,uploader)s', '%(album|Singles)s', '%(title)s.%(ext)s'),
+      // --print makes yt-dlp quiet; --progress keeps the percent lines coming
+      ...(t ? ['--print', `after_move:${FILE_LINE}%(filepath)s`, '--progress'] : []),
+      '-o', out,
       ...(job.url.includes('watch?v=') ? ['--no-playlist'] : []),
       '--', job.url,
     ];
+    let file: string | undefined;
     try {
       const r = await run(this.bin, args, (line) => {
         if (line.startsWith('[wavelength]')) {
           const pct = parseFloat(line.slice(12));
           if (Number.isFinite(pct)) job.percent = pct;
+        } else if (line.startsWith(FILE_LINE)) {
+          file = line.slice(FILE_LINE.length).trim();
+          job.status = 'processing';
+          job.percent = 100;
         } else if (/^\[(ExtractAudio|Metadata|EmbedThumbnail)\]/.test(line)) {
           job.status = 'processing';
           job.percent = 100;
         }
       });
-      if (r.code === 0) Object.assign(job, { status: 'done', percent: 100 });
-      else Object.assign(job, { status: 'error', message: lastLine(r.err) });
+      if (r.code === 0) {
+        if (t && file) await this.retag(job, file, t, album);
+        Object.assign(job, { status: 'done', percent: 100 });
+      } else Object.assign(job, { status: 'error', message: lastLine(r.err) });
     } catch (e) {
       Object.assign(job, { status: 'error', message: (e as Error).message });
     }
     this.onFinished?.(job);
   }
 
+  /**
+   * Tag a finished download as the song it is, not the video: artist, title, album (and album artist, so it groups
+   * with the artist's other music), plus the cover next to it. A failure here keeps the file and says so on the job.
+   */
+  private async retag(job: YtJob, file: string, t: YtTags, album: string) {
+    const root = resolve(this.musicDir);
+    const path = resolve(file);
+    if (!path.startsWith(root + sep) || !existsSync(path)) return;
+    const problems: string[] = [];
+    await writeTags(path, { artist: t.artist, title: t.title, album, albumArtist: t.artist }).catch((e) => problems.push((e as Error).message));
+    const folder = dirname(path);
+    const hasCover = readdirSync(folder).some((f) => /^(cover|folder|front)\.(jpe?g|png|webp)$/i.test(f));
+    // https only: the link comes from the app, and the Hub shouldn't be pointed at addresses on the home network
+    if (t.cover?.startsWith('https://') && !hasCover) {
+      await downloadImage(t.cover)
+        .then(({ bytes, type }) => writeFileSync(join(folder, `cover.${type}`), bytes))
+        .catch((e) => problems.push(`No cover: ${(e as Error).message}`));
+    }
+    if (problems.length) job.message = problems.join(' · ').slice(0, 300);
+  }
+
   /** A person's own jobs, or everyone's for admins. */
   list(userId: number | null): YtJob[] {
-    return this.jobs.filter((j) => userId === null || j.userId === userId);
+    return this.jobs.filter((j) => userId === null || j.userId === userId).map(({ tags: _, ...j }) => j);
   }
 
   clearFinished(userId: number | null) {

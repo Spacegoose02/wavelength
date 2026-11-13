@@ -72,13 +72,39 @@ describe('deezerLookup', () => {
   });
 
   test('the same title wins over another song by the artist', async () => {
-    answers.push({ data: [] }, { data: [hit('Please Please Please', 'Sabrina Carpenter', 'https://clip/other.mp3'), hit('Espresso', 'Sabrina Carpenter', 'https://clip/3.mp3')] });
+    answers.push({ data: [hit('Please Please Please', 'Sabrina Carpenter', 'https://clip/other.mp3'), hit('Espresso', 'Sabrina Carpenter', 'https://clip/3.mp3')] });
     expect((await run(deezerLookup({ title: 'Espresso', artist: 'Sabrina Carpenter' }))).preview).toBe('https://clip/3.mp3');
+    expect(asked).toHaveLength(1);
   });
 
-  test('tries the loose search when the strict one has no clip', async () => {
-    answers.push({ data: [hit('Espresso', 'Sabrina Carpenter')] }, { data: [hit('Espresso', 'Sabrina Carpenter', 'https://clip/4.mp3')] });
-    expect((await run(deezerLookup({ title: 'Espresso', artist: 'Sabrina Carpenter' }))).preview).toBe('https://clip/4.mp3');
+  test('asks with a plain "Artist Title" search, not the strict artist:/track: one', async () => {
+    answers.push({ data: [hit('Espresso', 'Sabrina Carpenter', 'https://clip/1.mp3')] });
+    await run(deezerLookup({ title: 'Espresso (Remix)', artist: 'Sabrina Carpenter feat. Someone' }));
+    expect(asked[0]).toContain('q=Sabrina+Carpenter+Espresso&');
+  });
+
+  test('a new song search does not know yet is found on the artist\'s newest release', async () => {
+    answers.push(
+      { data: [hit('Lose My Mind', 'Don Toliver', 'https://clip/other.mp3')] },
+      { data: [{ id: 9, name: 'Don Toliver', nb_fan: 10 }, { id: 1, name: 'Don Toliver', nb_fan: 5_000_000 }] },
+      { data: [{ id: 50, title: 'Hardstone Psycho', release_date: '2024-06-14' }, { id: 51, title: 'Party With The Boys', release_date: '2026-11-07' }] },
+      { data: [{ id: 4411282281, title: 'Party With The Boys', link: 'https://www.deezer.com/track/4411282281', preview: 'https://clip/new.mp3', explicit_lyrics: true }] },
+    );
+    const r = await run(deezerLookup({ title: 'Party With The Boys', artist: 'Don Toliver' }));
+    expect(r).toEqual({ link: 'https://www.deezer.com/track/4411282281', preview: 'https://clip/new.mp3', explicit: true });
+    // the artist with the most fans, and the release named like the song first
+    expect(asked[2]).toContain('artist/1/albums');
+    expect(asked[3]).toContain('album/51/tracks');
+  });
+
+  test('another song by the artist is not this one (deemix would get the wrong song)', async () => {
+    answers.push({ data: [hit('Please Please Please', 'Sabrina Carpenter', 'https://clip/other.mp3')] }, { data: [] });
+    expect(await run(deezerLookup({ title: 'Espresso', artist: 'Sabrina Carpenter' }))).toEqual({});
+  });
+
+  test('the same song without a clip still gives deemix its link when the catalog has nothing better', async () => {
+    answers.push({ data: [hit('Espresso', 'Sabrina Carpenter')] }, { data: [] });
+    expect(await run(deezerLookup({ title: 'Espresso', artist: 'Sabrina Carpenter' }))).toEqual({ link: 'https://www.deezer.com/track/Espresso', preview: undefined, explicit: false });
   });
 
   test('nothing by the artist is not found, not an error', async () => {
