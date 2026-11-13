@@ -13,6 +13,9 @@
   file as the song (chart artist, title, the title as a single, album artist) and puts the chart's cover next to
   it. The YouTube result has to have the song's title in it, so the first result is no longer taken blindly
   (`hub/src/ytdlp.ts`, `src/lib/getSong.ts`).
+- **Dependencies:** symphonia 0.6 (the decoder behind bit-perfect playback on Windows) and tauri-plugin-http 2.9 /
+  tauri-plugin-notification 2.8.1 on the Rust side, to match their npm packages. `src-tauri/src/hifi.rs` moves to
+  symphonia's new audio-decoder API; gapless trimming stays on (it's now a decoder option, on by default).
 
 ## 0.44.1
 - **Fix: Sync to Wavelength failed on most playlists** with "Setting the value of 'tonearm.library' exceeded the
