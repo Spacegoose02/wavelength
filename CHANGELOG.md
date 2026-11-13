@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.46.1
+- **Fix: Up next showed initials instead of covers, and credits like "BigXthaPlug;Loe Shimmy".** Songs from
+  **Sounds like this**, sonic journeys and dead-zone saving that the name lookup missed were rebuilt from the Hub's
+  bare fields, with no cover and the raw artist tag. They're now built like Navidrome's own songs (cover by song id,
+  `A;B` shown as "A feat. B") (`src/lib/sonic.ts`). Songs already saved in a queue without a cover show their
+  library album's cover (`src/lib/artwork.ts`), and any leftover `A;B` credit is tidied on screen (`ArtistCredit`,
+  #316).
+- **Tests:** the every-act critter render gets its own timeout. With the 0.46 critters it takes about 5 s, right at
+  vitest's default, and failed the web job (`src/test/critters.test.ts`, #316).
+
 ## 0.46.0
 - **New critter: the opossum**, a pale-faced opossum with round black ears, a big pink nose, pink paws and a long
   bare pink tail, as a boy or a girl in every act. It sings with a mouthful of little teeth, and on a new song or
