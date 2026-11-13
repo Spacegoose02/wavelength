@@ -162,6 +162,10 @@ the releases page.
   versions differ. Dependabot bumps them in separate PRs (Cargo and npm), so the Cargo PR fails the Android
   check on its own. Bump the npm side in the same PR (`npm install @tauri-apps/plugin-http@^X.Y.0`), or merge
   the two PRs together. `npx tauri info` lists both sides.
+- **Windows-only crates aren't built by PR checks.** `wasapi` and `windows-sys` sit under
+  `[target.'cfg(windows)']`, and `app.yml` runs on Linux, so a Dependabot PR for them stays green even when it
+  breaks the Windows build. Run **Test builds** on the PR's branch before merging one (it also gives you an exe
+  to try).
 
 ### When a workflow stalls
 

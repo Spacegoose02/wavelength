@@ -166,7 +166,9 @@ mod wasapi_out {
 
     pub fn open(f: Format) -> Result<Exclusive, String> {
         let _ = initialize_mta();
-        let device = get_default_device(&Direction::Render).map_err(|e| format!("No sound device: {e}"))?;
+        let device = DeviceEnumerator::new()
+            .and_then(|e| e.get_default_device(Direction::Render))
+            .map_err(|e| format!("No sound device: {e}"))?;
         // the file's own depth first; 24-bit audio may need a 32-bit container; 16-bit files can go into 24 or 32 too
         let tries: Vec<(usize, usize)> = match f.bits {
             16 => vec![(16, 16), (24, 24), (32, 24), (32, 32)],
@@ -176,7 +178,7 @@ mod wasapi_out {
         let mut chosen = None;
         for (container, valid) in tries {
             let client = device.get_iaudioclient().map_err(|e| e.to_string())?;
-            let want = WaveFormat::new(container, valid, &SampleType::Int, f.rate as usize, f.channels, None);
+            let want = WaveFormat::new(container, valid, SampleType::Int, f.rate as usize, f.channels, None);
             if let Ok(fmt) = client.is_supported_exclusive_with_quirks(&want) {
                 chosen = Some((fmt, container as u32));
                 break;
@@ -188,13 +190,13 @@ mod wasapi_out {
         // a longer period than the minimum: fewer wake-ups, no clicks on a busy PC
         let period = client.calculate_aligned_period_near((min * 4).max(100_000), Some(128), &fmt).map_err(|e| e.to_string())?;
         let mode = StreamMode::EventsExclusive { period_hns: period };
-        if let Err(e) = client.initialize_client(&fmt, &Direction::Render, &mode) {
+        if let Err(e) = client.initialize_client(&fmt, Direction::Render, mode, None) {
             // AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED: try again with the size the device asks for
             let frames = client.get_buffer_size().map_err(|_| e.to_string())?;
             let aligned = calculate_period_100ns(frames as i64, f.rate as i64);
             client = device.get_iaudioclient().map_err(|e| e.to_string())?;
             client
-                .initialize_client(&fmt, &Direction::Render, &StreamMode::EventsExclusive { period_hns: aligned })
+                .initialize_client(&fmt, Direction::Render, StreamMode::EventsExclusive { period_hns: aligned }, None)
                 .map_err(|e| format!("Couldn't take the sound device for exclusive playback ({e}). Another app may have it, or Windows' “Allow applications to take exclusive control” is off"))?;
         }
         let event = client.set_get_eventhandle().map_err(|e| e.to_string())?;
