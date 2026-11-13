@@ -183,6 +183,18 @@ the asset work and a risk on low-end phones and the iOS WebView.
   `.hand` override in styles.css) and paws, and a long bare pink tail with a dark furry base on its round figure.
   On a flourish it plays dead for a moment: its face has a hidden `play-dead` part (fur over the eyes, crossed-out
   eyes and a lolling tongue) that the rig shows through the middle of the flourish, like the dragon's `smoke`.
+- Eight more (November 2026): a capybara, crocodile, dolphin, goat, peacock, pangolin, bat and polar bear, each
+  with a character in mind (any of them can still play any act). The **capybara** is the chill one: sleepy
+  half-lidded eyes up high on a boxy head, a long blunt muzzle and an orange on its head (`.capybara-orange`,
+  under the hazmat hood). The **crocodile** has its eyes up in two bumps like the frog, so its `fit.lift` raises
+  hats clear of them; a toothy grin and the `rows` singing mouth; a long tail with scutes. The **dolphin** is
+  built like the shark (no legs, an open vest on its own skin) with flippers and flat flukes. The **goat** has
+  horns behind the head and ears out flat that stay out under the cowboy hat like the elephant's; the hood hides
+  horns, ears and beard. The **peacock**'s train is a new `fan` part the rig opens wider on each beat and spreads on
+  a flourish. The **pangolin** shares one scale shape (`scale.ts`) between its head hood, the rows of armour behind
+  its top and the tail. The **bat**'s wings are new `wing-l` / `wing-r` parts that flap on the beat. The
+  **polar bear** has its own face (longer head, long muzzle, small wide ears) and figure (a broader top, thick legs
+  and big black-padded paws), not the bears' face recoloured.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

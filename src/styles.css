@@ -1862,6 +1862,56 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .opossum-scales { stroke: rgb(168 74 100 / 0.3); }
 .critter .opossum-tail-base { fill: #3a3540; }
 .critter .opossum-whiskers { stroke: rgb(70 60 70 / 0.55); }
+/* the capybara: warm brown, with dark paws */
+.species-capybara { --skin: #a8754a; --skin-dark: #5a3820; --belly: #c99466; }
+.critter .capybara-paw { fill: #5a3820; }
+:root[data-skin-group='nuclear'] .critter .capybara-orange { display: none; }
+/* the crocodile: green with a cream belly and darker scutes down its tail */
+.species-crocodile { --skin: #5a9e3e; --skin-dark: #2e6a24; --belly: #f2eab8; }
+.critter .croc-scute { fill: #2e6a24; }
+.critter .croc-belly { fill: #e8e0aa; }
+.critter.species-crocodile .hand-claw { stroke: #f2eab8; }
+/* the dolphin: blue-grey with a pale belly, flippers for arms and flat flukes */
+.species-dolphin { --skin: #6a9ac8; --skin-dark: #3a6494; --belly: #e4f0f8; }
+.critter.species-dolphin .sleeve { stroke: var(--skin); }
+.critter .dolphin-skin { fill: #6a9ac8; }
+.critter .dolphin-belly { fill: #e4f0f8; }
+/* the goat: cream, with horns behind and ears out flat at the sides (kept out under the cowboy hat like the
+   elephant's); the hazmat hood hides the horns, ears and beard */
+.species-goat { --skin: #f0e8da; --skin-dark: #8a7656; --belly: #ffffff; }
+.critter.species-goat .under-hat :is([data-part='ear-l'], [data-part='ear-r']) { display: inline; }
+.critter.species-goat [data-part='ear-l'] { transform-origin: 100% 50%; }
+.critter.species-goat [data-part='ear-r'] { transform-origin: 0 50%; }
+:root[data-skin-group='nuclear'] .critter :is(.goat-horns, .goat-ears, .goat-beard) { display: none; }
+/* the peacock: royal blue with teal, wings for arms, grey legs and a fan of train feathers with eyes that opens on
+   the beat (hidden under the hazmat suit) */
+.species-peacock { --skin: #1f5fbf; --skin-dark: #123a80; --belly: #1aa08e; }
+.critter.species-peacock .sleeve { stroke: var(--skin); }
+.critter.species-peacock .hand { fill: #1a8a7c; }
+.critter .peacock-foot { fill: #8a8e98; }
+.critter .peacock-feather { fill: #2c8a4a; }
+.critter .peacock-feather-short { fill: #1aa08e; }
+.critter .peacock-eye-gold { fill: #d8a428; }
+.critter .peacock-eye-teal { fill: #18b0a0; }
+.critter .peacock-eye-navy { fill: #102a6a; }
+:root[data-skin-group='nuclear'] .critter :is(.peacock-fan, .peacock-crest) { display: none; }
+/* the pangolin: pale skin under bronze scales on its head, back and tail */
+.species-pangolin { --skin: #d8b490; --skin-dark: #8a6440; --belly: #f8e2cc; }
+.critter .pangolin-scale { fill: #b8864e; }
+.critter .pangolin-seam { stroke: #6e4a24; fill: none; }
+.critter.species-pangolin .hand-claw { stroke: #3a2614; }
+:root[data-skin-group='nuclear'] .critter .pangolin-armour { display: none; }
+/* the bat: dusky purple with pink-lined ears and wide wings that flap on the beat (hidden under the hazmat suit) */
+.species-bat { --skin: #5e4c70; --skin-dark: #33283f; --belly: #b8a4ba; }
+.critter .bat-wing { fill: #4a3a5a; }
+.critter .bat-thumb { stroke: #33283f; fill: none; }
+.critter .bat-foot { fill: #33283f; }
+.critter.species-bat .lashes { stroke: #e8dcef; }
+:root[data-skin-group='nuclear'] .critter .bat-wings,
+:root[data-skin-group='nuclear'] .critter.species-bat [data-part^='ear'] { display: none; }
+/* the polar bear: white with cool shading and black paw pads */
+.species-polar-bear { --skin: #f2f0ea; --skin-dark: #b8c2d0; --belly: #fffdf6; }
+.critter .polar-pad { fill: #1a1a20; }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }

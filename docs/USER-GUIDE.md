@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, red panda, turkey and opossum), the **equalizer**,
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, red panda, turkey, opossum, capybara, crocodile, dolphin, goat, peacock, pangolin, bat and polar bear), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **Popular**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).
@@ -494,7 +494,7 @@ to the artwork. Wavelength remembers your pick for next time.
 | Starfield | Stars fly toward you, faster on louder bass, with an extra push on each beat |
 | Mirror spectrum | Spectrum bars mirrored top and bottom, bass in the middle and highs at the edges |
 | Pulse rings | A ring ripples out from the cover on every beat |
-| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear, a moose, a turtle, an elephant, a tiger, a lion, a panda, an owl, a T. rex, a monkey, a flamingo, a gorilla, a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny, a red panda, a turkey or an opossum playing along (see below) |
+| Critters | A raccoon (DJ, country, rapper or rocker), a drummer shark, a theremin alien, a grey alien, a black or brown bear, a moose, a turtle, an elephant, a tiger, a lion, a panda, an owl, a T. rex, a monkey, a flamingo, a gorilla, a penguin, a fox, an axolotl, a sloth, an octopus, a dragon, a frog, a bunny, a red panda, a turkey, an opossum, a capybara, a crocodile, a dolphin, a goat, a peacock, a pangolin, a bat or a polar bear playing along (see below) |
 
 Colours come from your skin's visualizer colours, so each skin gives them a different look.
 
@@ -548,6 +548,14 @@ alien are all possible.
 | **Red panda** | A russet red panda with white-tipped ears, a white mask and cheek marks, dark legs and a long ringed tail |
 | **Turkey** | An original maroon-and-orange turkey in a college-mascot spirit: a curl of crest feathers, big bold eyes under heavy brows, an orange hooked beak and a red wattle, wings for arms, orange feet and a big fan of maroon and orange tail feathers behind |
 | **Opossum** | A pale-faced opossum with a grey crown and a stripe down its forehead, round black ears with pale rims, big dark eyes in soft grey rings, a long white snout and a big pink nose. It sings with a mouthful of little teeth, has pink hands and feet and a long bare pink tail with a dark furry base, and on a flourish it plays dead for a moment: crossed-out eyes and its tongue lolling out |
+| **Capybara** | The chill one: a tall boxy brown head with sleepy half-lidded eyes up high, little round ears, a long blunt muzzle with a broad dark nose, and an orange balanced on its head |
+| **Crocodile** | The big-jawed one: a green head with golden slit-pupil eyes up in two bumps, a wide pale snout with nostril knobs and a long toothy grin, two-clawed hands and a long tail with pointed scutes along the ground |
+| **Dolphin** | A blue-grey dolphin with a blowhole, a pale beak and its built-in smile, pink cheeks and a pale belly; like the shark it has no legs, flippers for arms and flat flukes for a tail |
+| **Goat** | The metal screamer: a cream goat with ridged horns curving back, floppy pink-lined ears out at the sides, amber eyes with sideways-bar pupils, a pink nose, a little beard, hooves and a tuft of a tail |
+| **Peacock** | The diva: a royal blue head with a crest of teal-tipped feathers, white face streaks and a small ivory beak, wings for arms, and a great fan of green train feathers with eyes behind it that opens wider on every beat and spreads right out on a flourish |
+| **Pangolin** | The armoured one: a pale pointed face under a hood of big overlapping bronze scales, little round ears, small shiny eyes, digging claws, rows of scales round its sides and a long scaly tail |
+| **Bat** | The goth: a dusky purple bat with huge pink-lined ears, big violet eyes, a snub nose and two tiny fangs, and wide wings behind it that flap on the beat |
+| **Polar bear** | Its own bear, not a white copy: a longer white head with cool blue-grey shading, small ears set wide, a long cream muzzle with a big black nose, and huge paws with black pads |
 
 <img src="screenshots/critter-moose.png" alt="The moose in all eight acts: DJ in headphones, Country in a cowboy hat with its antlers either side of the crown, Rapper, Rocker, Drummer, Theremin, Synth and Accordion in a beanie" width="90%">
 
@@ -602,6 +610,8 @@ alien are all possible.
 <img src="screenshots/critter-singer.png" alt="The fox, raccoon, penguin, flamingo, octopus and turkey in the Singer act, each in a sequined jacket singing at a vintage mic on stage under spotlights, fans holding up phone lights" width="100%">
 <img src="screenshots/critter-turkey.png" alt="The turkey in six acts: DJ, Country, Rocker, Drummer, Surf rock and Singer, its fan of maroon and orange tail feathers behind" width="100%">
 <img src="screenshots/critter-opossum.png" alt="The opossum in six acts: DJ, Country, Rocker, Drummer, Surf rock and Singer, its long bare pink tail curling behind" width="100%">
+<img src="screenshots/critter-eight-new.png" alt="The capybara, crocodile, dolphin, goat, peacock, pangolin, bat and polar bear singing on stage in sequined jackets" width="100%">
+<img src="screenshots/critter-eight-acts.png" alt="The eight new critters as DJ, Country, Rocker, Drummer, Driver and Surf rock" width="100%">
 <img src="screenshots/critter-marimba.png" alt="Every critter in the Marimba act, boys on top and girls below: each in a pith helmet (or a bow) and khaki, mallets over a wooden marimba in a jungle clearing with a waterfall and a parrot" width="100%">
 <img src="screenshots/critter-violin.png" alt="Every critter in the Violinist act, boys on top and girls below: each in a long coat and flat cap (or a bow), playing a violin tucked under the chin on a rainy street at night, under a street lamp by a brick wall with a lit window" width="100%">
 <img src="screenshots/critter-nine-new.png" alt="The penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda, each as the rapper between the speakers" width="100%">

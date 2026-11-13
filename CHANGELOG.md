@@ -8,6 +8,11 @@
 - **Fix: the bunny's floppy ear.** Its right ear was a thin hook with the pink lining poking out past the fur,
   so it looked torn. It now folds over halfway up and hangs outward in one piece, with the lining inside it
   (`src/components/critters/faces.tsx`).
+- **Eight new critters: capybara, crocodile, dolphin, goat, peacock, pangolin, bat and polar bear.** The
+  peacock's tail fan opens on the beat and the bat's wings flap; the polar bear has its own face and body rather
+  than a white copy of the bears. They play every act, as boys and girls, and dress for every theme
+  (`src/components/critters/`).
+
 ## 0.45.0
 - **Multi-disc albums get "Disc 1", "Disc 2" headings**, like Plex. On an album page each disc starts with its
   heading and a line, and track numbers start again at 1 under each one. Albums on one disc look the same as
