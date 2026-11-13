@@ -1444,3 +1444,82 @@ export function TurkeyFace() {
     </Placed>
   );
 }
+
+/** The opossum's left ear (the right is its mirror): a round, thin black ear with a pale rim along the top. */
+function OpossumEar() {
+  return (
+    <g transform="rotate(-16 128 112)">
+      <ellipse cx="128" cy="112" rx="30" ry="32" fill="#f4e8ec" className="ol" />
+      <ellipse cx="129" cy="115" rx="27" ry="29" fill="#26212a" />
+      <ellipse cx="132" cy="120" rx="15" ry="17" fill="#4a3a46" />
+    </g>
+  );
+}
+
+/**
+ * An opossum's face, an original cute take: a pale head with a soft grey crown and a grey stripe down the
+ * forehead, round thin black ears with pale rims (`ear-l` / `ear-r`), big dark shiny eyes in soft grey rings, a
+ * long white snout tapering to a big pink nose, and whiskers. It sings with a mouthful of little teeth (opossums
+ * have fifty). On a flourish it plays dead for a moment (`play-dead`, rig.ts): crossed-out eyes and its tongue
+ * lolling out. The pink-tipped hands and feet and the long bare pink tail are on the figure (`FIGURES.opossum`).
+ */
+export function OpossumFace() {
+  return (
+    <Placed cx={206} cy={176} s={0.84}>
+      <defs>
+        <Shade id="op-fur" hi="#ffffff" mid="#f3eff0" lo="#d6cfd2" />
+        <Shade id="op-grey" hi="#a49ca4" mid="#857c86" lo="#5c545e" />
+      </defs>
+      <g data-part="ear-l">
+        <OpossumEar />
+      </g>
+      <g data-part="ear-r">
+        <g transform="translate(412 0) scale(-1 1)">
+          <OpossumEar />
+        </g>
+      </g>
+      <HeadShape
+        id="opossum"
+        fill="url(#op-fur)"
+        d="M206 96 C 262 96, 298 126, 300 166 Q 314 178 308 194 Q 298 200 292 206 C 276 232, 246 252, 206 262 C 166 252, 136 232, 120 206 Q 114 200 104 194 Q 98 178 112 166 C 114 126, 150 96, 206 96 Z"
+      >
+        {/* a grey crown between the ears, running down the forehead in a stripe to the snout */}
+        <path d="M90 60 H 322 V 136 Q 286 122 254 128 Q 226 134 216 156 Q 210 172 206 182 Q 202 172 196 156 Q 186 134 158 128 Q 126 122 90 136 Z" fill="url(#op-grey)" />
+        <path d="M120 140 Q 160 124 190 140" fill="none" stroke="#5c545e" strokeWidth="2" opacity="0.5" />
+        {/* soft grey rings round the eyes */}
+        <ellipse cx="164" cy="172" rx="26" ry="24" fill="#8a8088" opacity="0.38" />
+        <ellipse cx="248" cy="172" rx="25" ry="24" fill="#8a8088" opacity="0.38" />
+        {/* the snout: a whiter wedge narrowing down to the nose */}
+        <path d="M206 186 C 190 194, 178 210, 180 226 Q 206 246 232 226 C 234 210, 222 194, 206 186 Z" fill="#ffffff" opacity="0.85" />
+        <ellipse cx="172" cy="110" rx="30" ry="9" fill="rgb(255 255 255 / 0.22)" transform="rotate(-14 172 110)" />
+      </HeadShape>
+      <g data-part="eyes">
+        <Eye cx={164} cy={170} r={17} iris="#2a1c26" />
+        <Eye cx={248} cy={170} r={17} iris="#2a1c26" k={0.9} />
+        <Lashes l={[150, 159]} r={[262, 159]} />
+      </g>
+      <Pair l="M146 140 Q 160 133 178 138" mid={206} stroke="#4a424c" width={4.5} />
+      <g data-part="whisker-l" className="whiskers opossum-whiskers">
+        <path d="M184 216 L 132 206 M184 222 L 130 226" />
+      </g>
+      <g data-part="whisker-r" className="whiskers opossum-whiskers">
+        <path d="M228 216 L 280 206 M228 222 L 282 226" />
+      </g>
+      {/* the big pink nose at the tip of the snout */}
+      <path d="M190 208 Q 206 196 222 208 Q 220 222 206 224 Q 192 222 190 208 Z" fill="#f28ca4" className="ol-thin" />
+      <ellipse cx="201" cy="205" rx="5" ry="2" fill="rgb(255 255 255 / 0.7)" />
+      <path d="M200 214 q 2 2 0 4 M212 214 q -2 2 0 4" fill="none" stroke="#a84a64" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M206 224 V230" stroke="#8a5a6a" strokeWidth="2.2" strokeLinecap="round" />
+      <path data-part="smile" d="M192 232 Q 199 239 206 232 Q 213 239 220 232" fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
+      <Mouth id="opossum" x={206} y={231} w={13} h={24} fill="#5a1a24" line={INK} teeth="rows" />
+      {/* playing dead, on a flourish: fur over the eyes, crossed out, and the tongue lolling from the corner */}
+      <g data-part="play-dead" opacity="0">
+        <ellipse cx="164" cy="170" rx="21" ry="20" fill="#e6e0e3" />
+        <ellipse cx="248" cy="170" rx="19" ry="20" fill="#e6e0e3" />
+        <path d="M152 158 L 176 182 M176 158 L 152 182 M237 158 L 259 182 M259 158 L 237 182" stroke={INK} strokeWidth="5" strokeLinecap="round" />
+        <path d="M214 232 C 216 246, 222 256, 230 254 C 236 252, 234 242, 226 232 Z" fill="#f07a92" className="ol-thin" />
+        <path d="M220 236 Q 224 244 228 248" fill="none" stroke="#b84a64" strokeWidth="1.6" strokeLinecap="round" />
+      </g>
+    </Placed>
+  );
+}

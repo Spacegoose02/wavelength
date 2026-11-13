@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **New critter: the opossum**, a pale-faced opossum with round black ears, a big pink nose, pink paws and a long
+  bare pink tail, as a boy or a girl in every act. It sings with a mouthful of little teeth, and on a new song or
+  a solo it plays dead for a moment, crossed-out eyes and tongue out (`src/components/critters/faces.tsx`,
+  `bodies.tsx`, `rig.ts`).
 - **Fix: the bunny's floppy ear.** Its right ear was a thin hook with the pink lining poking out past the fur,
   so it looked torn. It now folds over halfway up and hangs outward in one piece, with the lining inside it
   (`src/components/critters/faces.tsx`).

@@ -300,6 +300,22 @@ describe('the penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red
   });
 });
 
+describe('the opossum', () => {
+  it('is a species with its own figure, and plays dead on a flourish', async () => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { FIGURES } = await import('../components/critters/bodies');
+    const { Head } = await import('../components/critters/parts');
+    const opossum = SPECIES.find((s) => s.id === 'opossum')!;
+    expect(opossum.figure).toBe(FIGURES.opossum);
+    const head = renderToStaticMarkup(h('svg', null, h(Head, { species: opossum })));
+    // hidden until the rig shows it through the middle of a flourish
+    expect(head).toMatch(/data-part="play-dead" opacity="0"/);
+    expect(head).toContain('data-part="ear-l"');
+  });
+});
+
 describe('every act', () => {
   it('draws for every species, boy and girl, including the Acoustic, Surf rock and Singer acts', async () => {
     // the player behind the rig makes an <audio> when it loads; tests run without a DOM
@@ -311,7 +327,7 @@ describe('every act', () => {
     const { ACTS, Critter, SPECIES } = await import('../components/critters/Critter');
     expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'bongo', 'piano', 'marimba', 'violin', 'acoustic', 'surf', 'singer']));
     expect(ACTS.map((a) => a.id)).not.toEqual(expect.arrayContaining(['sax']));
-    expect(SPECIES.map((s) => s.id)).toContain('turkey');
+    expect(SPECIES.map((s) => s.id)).toEqual(expect.arrayContaining(['turkey', 'opossum']));
     for (const act of ACTS) {
       for (const sp of SPECIES) {
         for (const girl of [false, true]) {
