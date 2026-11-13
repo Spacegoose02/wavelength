@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.46.0
 - **New critter: the opossum**, a pale-faced opossum with round black ears, a big pink nose, pink paws and a long
   bare pink tail, as a boy or a girl in every act. It sings with a mouthful of little teeth, and on a new song or
   a solo it plays dead for a moment, crossed-out eyes and tongue out (`src/components/critters/faces.tsx`,
