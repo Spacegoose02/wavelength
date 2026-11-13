@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Dependencies:** wasapi 0.27 (the Windows sound API behind bit-perfect playback). Its device lookup moved to
+  `DeviceEnumerator` and `initialize_client` takes a session id now; `src-tauri/src/hifi.rs` follows.
 - **Fix: Discover previews greyed out and Get sent songs to yt-dlp instead of deemix.** Deezer's song search
   doesn't find brand-new releases for a few weeks, even though the song, its clip and its link are already on
   Deezer (for example Don Toliver's "Party With The Boys"). Discover's charts are mostly new songs, so most
