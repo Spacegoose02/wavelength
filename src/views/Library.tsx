@@ -661,7 +661,7 @@ export function AlbumView({ album, focus }: { album: Album; focus?: { id: string
         </div>
       </header>
       {error && <div className="errors">{error}</div>}
-      {!tracks && !error ? <Spinner /> : tracks && <TrackList tracks={tracks} focus={focus} />}
+      {!tracks && !error ? <Spinner /> : tracks && <TrackList tracks={tracks} focus={focus} discs />}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { shareOfTracks } from '../lib/inbox';
 import { albumOfTrack, artistOfTrack, creditLinks, focusIndex, isLibraryTrack } from '../lib/trackLinks';
 import { useCatalog } from '../store/catalog';
 import { openTrackMenu } from './TrackMenu';
+import { discHeading, hasDiscs } from '../lib/discs';
 import { EditSongButton } from './EditSong';
 import { useUi } from '../store/ui';
 
@@ -139,13 +140,16 @@ interface TrackListProps {
    * row at once. Playing a row still plays from the whole list.
    */
   grow?: boolean;
+  /** An album's songs: head each disc with "Disc N" when the album has more than one (lib/discs.ts). */
+  discs?: boolean;
 }
 
 /** Rows a growing TrackList draws at first, and adds each time its end comes into view. */
 export const GROW_ROWS = 100;
 
-export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, onMove, focus, grow }: TrackListProps) {
+export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, onMove, focus, grow, discs }: TrackListProps) {
   const phone = useIsPhone();
+  const byDisc = !!discs && hasDiscs(tracks);
   const focusIdx = focusIndex(tracks, focus);
   const [rows, setRows] = useState(GROW_ROWS);
   const shown = grow ? Math.max(rows, focusIdx + 1) : tracks.length;
@@ -173,46 +177,56 @@ export function TrackList({ tracks, showAlbum, showCover, meta, sub, onRemove, o
   const hidden = useHidden();
   useRatings((s) => s.ratings);
   useArtworkList();
+  let lastShown: Track | undefined;
   return (
     <div className="tracklist">
-      {(shown < tracks.length ? tracks.slice(0, shown) : tracks).map((t, i) => hidden.track(t) ? null : (
-        <div key={`${i}:${t.sourceId}:${t.id}`} ref={i === focusIdx ? focusRef : undefined}
-          className={`track-row ${current?.id === t.id && current.sourceId === t.sourceId ? 'active' : ''} ${openRow === i ? 'open' : ''} ${i === focusIdx ? 'focus' : ''}`}
-          onDoubleClick={() => playTracks(tracks, i)}
-          onContextMenu={(e) => openTrackMenu(e, t, tracks, i)}
-          // phones: tap the row to play; the ⋯ button reveals the actions
-          onClick={phone ? (e) => !(e.target as HTMLElement).closest('button, .menu') && playTracks(tracks, i) : undefined}>
-          <button className="track-num" onClick={() => playTracks(tracks, i)} title="Play">
-            <span>{showCover ? '' : t.trackNumber ?? i + 1}</span>
-            {showCover && <Cover src={trackArt(t)} alt={t.title} className="tiny" />}
-            <IconPlay className="hover-play" />
-          </button>
-          <div className="track-main">
-            <div className="track-title"><Rating explicit={explicitOfTrack(t)} />{t.title}</div>
-            <div className="track-sub">{sub ? sub(t) : <TrackSub track={t} showAlbum={showAlbum} />}</div>
-            {t.progress && t.progress < 1 ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
-          </div>
-          <SourceDots sourceIds={[t.sourceId]} />
-          <div className="track-actions">
-            {onMove && <button className="chip" disabled={i === 0} onClick={() => onMove(i, i - 1)} title="Move up">▲</button>}
-            {onMove && <button className="chip" disabled={i === tracks.length - 1} onClick={() => onMove(i, i + 1)} title="Move down">▼</button>}
-            <button className="chip" onClick={() => playNext([t])}>Next</button>
-            <button className="chip" onClick={() => enqueue([t])}>+ Queue</button>
-            {t.kind !== 'book' && <AddToPlaylist tracks={[t]} />}
-            {t.kind === 'episode' && <PlayedButton track={t} />}
-            {t.kind === 'episode' && <EpisodeVideoChip track={t} />}
-            <QueueOnSubwave track={t} />
-            {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} version={trackVersion(t)} explicit={explicitOfTrack(t) === 'explicit'} className="chip" />}
-            {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}
-            <EditSongButton track={t} />
-            {onRemove && <button className="chip" onClick={() => onRemove(i)} title="Remove from playlist">✕</button>}
-          </div>
-          <FavButton key={`${t.sourceId}:${t.id}:${t.starred}`} track={t} />
-          {meta && <div className="track-meta">{meta(t, i)}</div>}
-          <button className="icon-btn more-btn" title="More" onClick={(e) => { e.stopPropagation(); setOpenRow(openRow === i ? null : i); }}><IconMore /></button>
-          <div className="track-time">{t.kind === 'radio' ? 'LIVE' : fmtTime(t.duration)}</div>
-        </div>
-      ))}
+      {(shown < tracks.length ? tracks.slice(0, shown) : tracks).map((t, i) => {
+        if (hidden.track(t)) return null;
+        // the disc heading goes over the first song shown from each disc (a hidden song can start one)
+        const disc = byDisc ? discHeading(t, lastShown) : undefined;
+        lastShown = t;
+        return (
+          <Fragment key={`${i}:${t.sourceId}:${t.id}`}>
+            {disc !== undefined && <h3 className="disc-heading">Disc {disc}</h3>}
+            <div ref={i === focusIdx ? focusRef : undefined}
+              className={`track-row ${current?.id === t.id && current.sourceId === t.sourceId ? 'active' : ''} ${openRow === i ? 'open' : ''} ${i === focusIdx ? 'focus' : ''}`}
+              onDoubleClick={() => playTracks(tracks, i)}
+              onContextMenu={(e) => openTrackMenu(e, t, tracks, i)}
+              // phones: tap the row to play; the ⋯ button reveals the actions
+              onClick={phone ? (e) => !(e.target as HTMLElement).closest('button, .menu') && playTracks(tracks, i) : undefined}>
+              <button className="track-num" onClick={() => playTracks(tracks, i)} title="Play">
+                <span>{showCover ? '' : t.trackNumber ?? i + 1}</span>
+                {showCover && <Cover src={trackArt(t)} alt={t.title} className="tiny" />}
+                <IconPlay className="hover-play" />
+              </button>
+              <div className="track-main">
+                <div className="track-title"><Rating explicit={explicitOfTrack(t)} />{t.title}</div>
+                <div className="track-sub">{sub ? sub(t) : <TrackSub track={t} showAlbum={showAlbum} />}</div>
+                {t.progress && t.progress < 1 ? <div className="progress thin"><i style={{ width: `${Math.round(t.progress * 100)}%` }} /></div> : null}
+              </div>
+              <SourceDots sourceIds={[t.sourceId]} />
+              <div className="track-actions">
+                {onMove && <button className="chip" disabled={i === 0} onClick={() => onMove(i, i - 1)} title="Move up">▲</button>}
+                {onMove && <button className="chip" disabled={i === tracks.length - 1} onClick={() => onMove(i, i + 1)} title="Move down">▼</button>}
+                <button className="chip" onClick={() => playNext([t])}>Next</button>
+                <button className="chip" onClick={() => enqueue([t])}>+ Queue</button>
+                {t.kind !== 'book' && <AddToPlaylist tracks={[t]} />}
+                {t.kind === 'episode' && <PlayedButton track={t} />}
+                {t.kind === 'episode' && <EpisodeVideoChip track={t} />}
+                <QueueOnSubwave track={t} />
+                {t.kind === 'track' && <KidFlagButton kind="track" artist={t.artist} title={t.title} version={trackVersion(t)} explicit={explicitOfTrack(t) === 'explicit'} className="chip" />}
+                {t.kind === 'track' && <ShareButton what={() => shareOfTracks('track', t.title, [t], [t.artist, t.album].filter(Boolean).join(' — '))} className="chip" />}
+                <EditSongButton track={t} />
+                {onRemove && <button className="chip" onClick={() => onRemove(i)} title="Remove from playlist">✕</button>}
+              </div>
+              <FavButton key={`${t.sourceId}:${t.id}:${t.starred}`} track={t} />
+              {meta && <div className="track-meta">{meta(t, i)}</div>}
+              <button className="icon-btn more-btn" title="More" onClick={(e) => { e.stopPropagation(); setOpenRow(openRow === i ? null : i); }}><IconMore /></button>
+              <div className="track-time">{t.kind === 'radio' ? 'LIVE' : fmtTime(t.duration)}</div>
+            </div>
+          </Fragment>
+        );
+      })}
       {shown < tracks.length && (
         <div ref={endRef} className="row center muted small" style={{ padding: 12 }}>
           <button className="btn" onClick={() => setRows((n) => n + GROW_ROWS)}>Show more ({tracks.length - shown} left)</button>

@@ -9,6 +9,14 @@ describe('AutoMix', () => {
     expect(planTransition(t({ albumId: 'a', trackNumber: 3 }), t({ albumId: 'a', trackNumber: 4 }), null, null, 6).seconds).toBe(0);
     expect(planTransition(t({ albumId: 'a', trackNumber: 3 }), t({ albumId: 'a', trackNumber: 7 }), null, null, 6).seconds).toBe(6);
   });
+  it('goes on gapless from the end of one disc into the next disc', () => {
+    const plan = (a: object, b: object) => planTransition(t({ albumId: 'a', ...a }), t({ albumId: 'a', ...b }), null, null, 6).seconds;
+    expect(plan({ discNumber: 1, trackNumber: 12 }, { discNumber: 2, trackNumber: 1 })).toBe(0);
+    expect(plan({ trackNumber: 12 }, { discNumber: 2, trackNumber: 1 })).toBe(0);
+    expect(plan({ discNumber: 1, trackNumber: 12 }, { discNumber: 2, trackNumber: 2 })).toBe(6);
+    expect(plan({ discNumber: 1, trackNumber: 12 }, { discNumber: 3, trackNumber: 1 })).toBe(6);
+    expect(plan({ discNumber: 2, trackNumber: 3 }, { discNumber: 1, trackNumber: 4 })).toBe(6);
+  });
   it('beat-matches close tempos, including half time', () => {
     const p = planTransition(t({}), t({ id: 'y' }), s(120), s(124), 6);
     expect(p.why).toBe('beatmatch');

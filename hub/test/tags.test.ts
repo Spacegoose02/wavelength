@@ -57,10 +57,16 @@ test('admins fix an album’s tags from a Deezer or MusicBrainz match, and undo 
     if (url.startsWith('/deezer/search/album')) return [200, { data: [{ id: 302127 }] }];
     if (url === '/deezer/album/302127') {
       return [200, { title: 'Discovery', artist: { name: 'Daft Punk' }, release_date: '2001-03-07', genres: { data: [{ name: 'Electro' }] }, tracks: { data: [
-        { title: 'One More Time', artist: { name: 'Daft Punk' }, track_position: 1, disk_number: 1 },
-        { title: 'Aerodynamic', artist: { name: 'Daft Punk' }, track_position: 2, disk_number: 1 },
-        { title: 'Digital Love', artist: { name: 'Daft Punk' }, track_position: 3, disk_number: 1 },
+        { id: 11, title: 'One More Time', artist: { name: 'Daft Punk' } },
+        { id: 12, title: 'Aerodynamic', artist: { name: 'Daft Punk' } },
+        { id: 13, title: 'Digital Love', artist: { name: 'Daft Punk' } },
       ] } }];
+    }
+    // a stand-in two-disc layout: Deezer's album tracklist has no positions, /tracks has them
+    if (url.startsWith('/deezer/album/302127/tracks')) {
+      return [200, { data: [
+        { id: 11, track_position: 1, disk_number: 1 }, { id: 12, track_position: 2, disk_number: 1 }, { id: 13, track_position: 1, disk_number: 2 },
+      ] }];
     }
     if (url.startsWith('/mb/ws/2/release?')) return [200, { releases: [{ id: 'mb-1' }] }];
     if (url.startsWith('/mb/ws/2/release/mb-1')) {
@@ -83,6 +89,7 @@ test('admins fix an album’s tags from a Deezer or MusicBrainz match, and undo 
 
   const m = await json(app, 'GET', '/api/admin/tags/match?artist=Daft%20Punk&album=Discovery', { token: tokens.admin });
   assert.deepEqual(m.body.candidates.map((c: { source: string; year: string; genre: string }) => [c.source, c.year, c.genre]), [['Deezer', '2001', 'Electro'], ['MusicBrainz', '2001', 'french house']]);
+  assert.deepEqual(m.body.candidates[0].tracks.map((t: { track: number; disc: number }) => [t.disc, t.track]), [[1, 1], [1, 2], [2, 1]], 'track and disc numbers come from /tracks');
 
   const sizeBefore = statSync(join(dir, '02.flac')).size;
   const save = await json(app, 'PUT', '/api/admin/tags', { token: tokens.admin, body: { label: 'Daft Punk – Discovery', changes: [

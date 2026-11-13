@@ -309,6 +309,12 @@ section h2 { font-size: 19px; margin-bottom: 14px; display: flex; align-items: c
 
 /* ============ track lists ============ */
 .tracklist { display: flex; flex-direction: column; }
+/* "Disc N" over each disc of a multi-disc album (lib/discs.ts), with a rule under it like Plex */
+.disc-heading {
+  margin: 22px 0 6px; padding: 0 10px 10px; border-bottom: 1px solid var(--line);
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;
+}
+.disc-heading:first-child { margin-top: 4px; }
 .track-row, .station-row, .source-row, .queue-row {
   display: flex; align-items: center; gap: 14px; padding: 7px 10px; border-radius: var(--radius);
 }

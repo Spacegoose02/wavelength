@@ -63,6 +63,8 @@ lists related artists so you can keep exploring.
 
 - **Get album** downloads the whole album.
 - Or pick songs one by one: each track has ▶ (30-second preview) and **Get**.
+- An album on more than one disc has a **Disc 1**, **Disc 2** heading over each disc, like your own
+  [multi-disc albums](#multi-disc-albums).
 - The artist name under the title goes back to the artist page.
 
 ### 4. Playlist page
@@ -334,6 +336,22 @@ audiobooks, podcasts and Deezer previews have no library page, so they show plai
 Song lists work the same way: in search results, playlists, favorites, history and the other lists that show
 "Artist — Album" under a song, the artist opens the artist's page and the album opens the album scrolled to the
 song. On an album page, the artist under each song is a link too.
+
+## Multi-disc albums
+
+<p align="center">
+  <img src="screenshots/multi-disc-album.png" alt="An album page with a Disc 1 heading over songs 1 to 4 and a Disc 2 heading over the next songs, each with a line under it" width="88%">
+</p>
+
+An album on more than one disc shows a **Disc 1**, **Disc 2** … heading over each disc's songs, with track numbers
+starting again at 1 under each. An album on one disc has no heading. The disc comes from each song's **disc
+number** tag (a song without one counts as disc 1), so:
+
+- **Play** and **Shuffle** work on the whole album, and Play goes through disc 1, then disc 2, and so on.
+- If every song shows under one heading or the order is wrong, the files are missing disc numbers. Admins can
+  fix that with **Edit album → Fix tags**, which looks the album up on Deezer or MusicBrainz and fills in disc and
+  track numbers, or set **Disc** on each song by hand.
+- With [AutoMix](#automix) on, the last song of a disc goes straight into the next disc's first song with no fade.
 
 ## About the artist, song credits and tour dates
 
@@ -1010,7 +1028,7 @@ crossfade. These settings sync between your devices with a Hub.
 **Settings → Playback → AutoMix** blends songs the way a DJ would instead of one fixed crossfade:
 
 - The next song on the **same album**, straight after this one, follows with no fade, so live albums and segues
-  stay as recorded.
+  stay as recorded. That includes the last song of one disc going into the first song of the next.
 - With [sound-alike analysis](#sounds-like-this-and-sonic-journeys) on the Hub, two songs at **close tempos**
   (within 8%, or at half or double time) blend over 8 beats starting on a beat, and the next song is nudged to the
   same tempo for the blend (without changing its pitch), then eased back to its own.
