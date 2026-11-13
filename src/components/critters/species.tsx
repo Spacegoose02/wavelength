@@ -18,6 +18,7 @@ import {
   MonkeyFace,
   MooseFace,
   OctopusFace,
+  OpossumFace,
   OwlFace,
   PandaFace,
   PenguinFace,
@@ -102,4 +103,5 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'bunny', noun: 'bunny', label: 'Bunny', Face: BunnyFace, figure: FIGURES.bunny, fit: { eyeY: 170, eyes: [1.28, 1.2], mask: 10, bow: [178, 112, -10] } },
   { id: 'red-panda', noun: 'red panda', label: 'Red panda', Face: RedPandaFace, figure: FIGURES.redPanda, fit: { eyeY: 170, eyes: [1.3, 1.2], mask: 10, bow: [168, 114, -20] } },
   { id: 'turkey', noun: 'turkey', label: 'Turkey', Face: TurkeyFace, figure: FIGURES.turkey, fit: { eyeY: 168, eyes: [1.36, 1.3], mask: 12, bow: [166, 112, -20] } },
+  { id: 'opossum', noun: 'opossum', label: 'Opossum', Face: OpossumFace, figure: FIGURES.opossum, fit: { eyeY: 170, eyes: [1.28, 1.2], mask: 14, bow: [166, 112, -20] } },
 ];

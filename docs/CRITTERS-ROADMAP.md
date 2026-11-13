@@ -178,6 +178,11 @@ the asset work and a risk on low-end phones and the iOS WebView.
   `tentacle-l` / `tentacle-r` waved by the rig, and two more sticks on the Drummer); the dragon went charcoal black
   with lime eyes and ear fins. A **turkey** joined: an original maroon-and-orange bird in a college-mascot spirit,
   with a tail fan (`Back` on its round figure).
+- An **opossum** joined (November 2026): a pale face under a grey crown, round black ears with pale rims, a long
+  snout with a big pink nose and a mouthful of little teeth when it sings (`teeth="rows"`), pink hands (a
+  `.hand` override in styles.css) and paws, and a long bare pink tail with a dark furry base on its round figure.
+  On a flourish it plays dead for a moment: its face has a hidden `play-dead` part (fur over the eyes, crossed-out
+  eyes and a lolling tongue) that the rig shows through the middle of the flourish, like the dragon's `smoke`.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

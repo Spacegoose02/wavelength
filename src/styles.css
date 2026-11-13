@@ -1853,6 +1853,15 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .turkey-feather-alt { fill: #e8761c; }
 .critter .turkey-tip { fill: #f4e6d8; }
 :root[data-skin-group='nuclear'] .critter .turkey-fan { display: none; }
+/* the opossum: a pale face on a grey crown, dark arms and legs, pink hands and feet, and a long bare pink tail
+   with a dark furry base; it plays dead on a flourish */
+.species-opossum { --skin: #3a3540; --skin-dark: #1c191f; --belly: #f4f0ee; }
+.critter.species-opossum .hand { fill: #f4b4c2; }
+.critter .opossum-paw { fill: #f4b4c2; }
+.critter .opossum-tail { stroke: #f4b4c2; }
+.critter .opossum-scales { stroke: rgb(168 74 100 / 0.3); }
+.critter .opossum-tail-base { fill: #3a3540; }
+.critter .opossum-whiskers { stroke: rgb(70 60 70 / 0.55); }
 /* singing faces (face.ts, rig.ts): the mouth shapes scale open from their top edge, brows, whiskers, ears and
    eye shines move about their own box, so the rig can write plain CSS transforms on them */
 .critter [data-part='yawn'] { transform-box: fill-box; transform-origin: 50% 0; }

@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **New critter: the opossum**, a pale-faced opossum with round black ears, a big pink nose, pink paws and a long
+  bare pink tail, as a boy or a girl in every act. It sings with a mouthful of little teeth, and on a new song or
+  a solo it plays dead for a moment, crossed-out eyes and tongue out (`src/components/critters/faces.tsx`,
+  `bodies.tsx`, `rig.ts`).
 - **Multi-disc albums get "Disc 1", "Disc 2" headings**, like Plex. On an album page each disc starts with its
   heading and a line, and track numbers start again at 1 under each one. Albums on one disc look the same as
   before (`src/lib/discs.ts`, `src/components/common.tsx`).

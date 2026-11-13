@@ -58,7 +58,7 @@ export interface RigOptions {
  *   beanie) as if setting it straight.
  * - Species that move their own way (`Figure.move`, `data-move` on the svg): `late` runs the beat half a beat
  *   behind (the sloth), `hop` springs the head and body up between beats (the frog). A `smoke` part (the dragon)
- *   puffs on a flourish.
+ *   puffs on a flourish, and a `play-dead` part (the opossum) shows through the middle of one.
  * - The octopus's extra arms (`tentacle-l`, `tentacle-r`) wave with the beat.
  * - `tail` wags, `spot` (the backlight) breathes with the bass, `[data-glow]` parts (neon and laser
  *   outfits) pulse with the bass.
@@ -158,6 +158,9 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
         smoke.setAttribute('opacity', p.toFixed(2));
         smoke.setAttribute('transform', `translate(206 ${(188 - p * 12).toFixed(2)}) scale(${(0.5 + p * 0.7).toFixed(2)}) translate(-206 -188)`);
       }
+      // the opossum plays dead through the middle of a flourish
+      const dead = find('play-dead');
+      if (dead) dead.setAttribute('opacity', swell(flourish) > 0.35 ? '1' : '0');
 
       if (a.transient) hitUntil = t + 0.45;
       const hit = t < hitUntil;

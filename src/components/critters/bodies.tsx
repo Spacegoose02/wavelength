@@ -1156,6 +1156,26 @@ const turkey = roundFigure({
   ),
 });
 
+/** The opossum's bare tail beyond its dark furry base: out to the right, up, and hooked round at the tip. */
+const OPOSSUM_TAIL = 'M282 318 C 314 310, 330 288, 324 262 C 318 240, 292 238, 290 256 C 288 270, 304 276, 310 264';
+
+/**
+ * Opossum: the round top on short dark legs, pink paws, and a long bare pink tail (dark and furry at the base,
+ * faintly scaled) reaching out behind and hooking round at the tip.
+ */
+const opossum = roundFigure({
+  Bare: softPaw('opossum-paw'),
+  tailAt: [232, 322],
+  Tail: () => (
+    <>
+      <path d={OPOSSUM_TAIL} fill="none" className="limb-outline" strokeWidth="15" strokeLinecap="round" />
+      <path d={OPOSSUM_TAIL} fill="none" className="opossum-tail" strokeWidth="10" strokeLinecap="round" />
+      <path d={OPOSSUM_TAIL} fill="none" className="opossum-scales" strokeWidth="10" strokeDasharray="1.6 7" />
+      <Shaded d={tube([226, 320], [256, 328], [286, 317], 22, 13)} className="opossum-tail-base" />
+    </>
+  ),
+});
+
 /**
  * How far each head sits down into its top from where the figures above place it: the chin tucks over the
  * collar so the head reads as sitting on a neck, not floating over the shoulders. The chin's shadow comes down
@@ -1192,4 +1212,5 @@ export const FIGURES = {
   bunny: seat(bunny),
   redPanda: seat(redPanda),
   turkey: seat(turkey),
+  opossum: seat(opossum),
 } satisfies Record<string, Figure>;
