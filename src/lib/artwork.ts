@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { HubArtwork, HubArtworkInput } from '../sources/hub';
 import { norm } from '../sources/registry';
 import type { Album, Artist, Track } from '../sources/types';
+import { useCatalog } from '../store/catalog';
 import { hubClient, useHub } from '../store/hub';
 import { cleanTitle, primaryArtist } from './match';
 
@@ -65,15 +66,49 @@ export const hubArtistArt = (name = '') => index().byKey.get(key('artist', name)
 
 export const albumArt = (a: Pick<Album, 'artist' | 'title' | 'coverUrl'>, fallback = a.coverUrl) => hubAlbumArt(a.artist, a.title) ?? fallback;
 export const artistArt = (a: Pick<Artist, 'name' | 'coverUrl'>) => hubArtistArt(a.name) ?? a.coverUrl;
+let libraryFrom: Album[] | undefined;
+let libraryByKey = new Map<string, string>();
+let libraryByTitle = new Map<string, string | null>();
+/** The library's own album covers by artist and title, for songs that came without one. */
+function libraryIndex() {
+  const { albums } = useCatalog.getState();
+  if (albums !== libraryFrom) {
+    libraryFrom = albums;
+    libraryByKey = new Map();
+    libraryByTitle = new Map();
+    for (const a of albums) {
+      if (!a.coverUrl) continue;
+      const k = key('album', a.artist, a.title);
+      if (!libraryByKey.has(k)) libraryByKey.set(k, a.coverUrl);
+      const t = cleanTitle(a.title);
+      libraryByTitle.set(t, libraryByTitle.has(t) && libraryByTitle.get(t) !== a.coverUrl ? null : a.coverUrl);
+    }
+  }
+  return { byKey: libraryByKey, byTitle: libraryByTitle };
+}
+
+/**
+ * The library album's cover for a song that has none of its own: songs found through the Hub (sound-alike radio,
+ * sonic journeys) or saved in a queue before they carried one. Only used when the song has no picture.
+ */
+export function libraryAlbumArt(artist = '', album = ''): string | undefined {
+  if (!album) return undefined;
+  const lib = libraryIndex();
+  return lib.byKey.get(key('album', artist, album)) ?? lib.byTitle.get(cleanTitle(album)) ?? undefined;
+}
+
 /** A song shows its album's picture. Radio, audiobooks and podcasts keep their own. */
 export function trackArt(t?: Pick<Track, 'kind' | 'artist' | 'album' | 'coverUrl'>): string | undefined {
   if (!t) return undefined;
   if (t.kind !== 'track' || !t.album) return t.coverUrl;
-  return hubAlbumArt(t.artist, t.album) ?? index().byTitle.get(cleanTitle(t.album)) ?? t.coverUrl;
+  return hubAlbumArt(t.artist, t.album) ?? index().byTitle.get(cleanTitle(t.album)) ?? t.coverUrl ?? libraryAlbumArt(t.artist, t.album);
 }
 
-/** Hook: re-render when the Hub's pictures change. */
-export const useArtworkList = () => useArtwork((s) => s.items);
+/** Hook: re-render when the Hub's pictures, or the library's albums, change. */
+export const useArtworkList = () => {
+  useCatalog((s) => s.albums);
+  return useArtwork((s) => s.items);
+};
 
 /** Admin: the picture set on exactly this album or artist, if any. */
 export function artworkOn(kind: HubArtwork['kind'], artist: string, album = ''): HubArtwork | undefined {

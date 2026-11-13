@@ -20,6 +20,7 @@ import { openTrackMenu } from './TrackMenu';
 import { discHeading, hasDiscs } from '../lib/discs';
 import { EditSongButton } from './EditSong';
 import { useUi } from '../store/ui';
+import { tidyCredit } from '../lib/songIssues';
 
 export function fmtTime(s?: number) {
   if (!s || !Number.isFinite(s)) return '0:00';
@@ -31,11 +32,12 @@ export function fmtTime(s?: number) {
 }
 
 export function Cover({ src, alt, round, className }: { src?: string; alt: string; round?: boolean; className?: string }) {
-  const [failed, setFailed] = useState(false);
+  // the picture that failed to load: a new picture for the same card gets its own try
+  const [failed, setFailed] = useState<string>();
   const initials = String(alt ?? '').replace(/[^\p{L}\p{N} ]/gu, '').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   return (
     <div className={`cover ${round ? 'round' : ''} ${className ?? ''}`}>
-      {src && !failed ? <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} /> : <span>{initials || '♪'}</span>}
+      {src && failed !== src ? <img src={src} alt={alt} loading="lazy" onError={() => setFailed(src)} /> : <span>{initials || '♪'}</span>}
     </div>
   );
 }
@@ -263,7 +265,7 @@ function TrackSub({ track: t, showAlbum }: { track: Track; showAlbum?: boolean }
  * artist (a featured artist with no album of their own). When no name is a library artist, `fallback` (the
  * song's or album's artist, found another way) links the whole credit. `links` false shows plain text.
  */
-export function ArtistCredit({ credit, fallback, linkClass, links = true, discography, stop }: {
+export function ArtistCredit({ credit: raw, fallback, linkClass, links = true, discography, stop }: {
   credit: string;
   fallback?: Artist;
   linkClass: string;
@@ -273,6 +275,8 @@ export function ArtistCredit({ credit, fallback, linkClass, links = true, discog
   stop?: boolean;
 }) {
   const artists = useCatalog((s) => s.artists);
+  // a raw "A;B" tag (a song saved before its server tidied it, or one from elsewhere) shows as "A feat. B"
+  const credit = raw && /[;；]/.test(raw) ? tidyCredit(raw) : raw;
   if (!links || !credit) return <>{credit}</>;
   const parts = creditLinks(credit, artists);
   const go = (e: MouseEvent, artist: Artist, deezer?: boolean) => {
