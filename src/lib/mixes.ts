@@ -4,6 +4,7 @@ import type { HubMix, HubMixSong } from '../sources/hub';
 import type { Track } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useSettings } from '../store/settings';
+import { deezerLookup } from '../sources/charts';
 import { featureOn } from './features';
 import { kidSafe } from './kids';
 import { findInLibrary, pool } from './match';
@@ -74,6 +75,72 @@ export async function mixTracks(mix: HubMix, max = 50, onProgress?: (n: number) 
   }).slice(0, max);
   if (mix.kind !== 'blend') useMixes.setState((s) => ({ found: { ...s.found, [mix.id]: { day, tracks } } }));
   return kidSafe(tracks);
+}
+
+/** A song of a mix as the mix page shows it: the library's track, or else a 30-second Deezer clip to Get. */
+export interface MixRow {
+  song: HubMixSong;
+  track: Track;
+  /** in this library (a full song), not a clip */
+  owned: boolean;
+  /** the Deezer link to Get or Request a clip's song */
+  link?: string;
+}
+
+const discoverRows = new Map<string, { day: number; rows: MixRow[] }>();
+
+/** A clip of a song the library doesn't have, from the Hub's Deezer data or (older mixes) a Deezer search. */
+async function clipOf(s: HubMixSong): Promise<MixRow | undefined> {
+  const dz = s.deezer ?? (await deezerLookup({ title: s.title, artist: s.artist }).catch(() => ({}) as { link?: string; preview?: string; explicit?: boolean }));
+  if (!dz.preview) return undefined;
+  const track: Track = {
+    id: `preview:${dz.preview}`, sourceId: 'preview', kind: 'track', title: s.title, artist: s.artist,
+    album: `${s.album ?? s.title} (preview)`, coverUrl: s.coverUrl, streamUrl: dz.preview, duration: 30,
+    ...(dz.explicit !== undefined && { explicit: dz.explicit ? 'explicit' as const : 'clean' as const }),
+  };
+  return { song: s, track, owned: false, link: dz.link };
+}
+
+/**
+ * Discover Weekly's songs: by artists this person has never played, so the library rarely has more than one or
+ * two of them, and mixTracks() (which keeps only what the library has) left the mix nearly empty. This keeps the
+ * ones the library has as they are and fills the rest, in the mix's order, with Deezer clips to play and Get.
+ */
+export async function mixRows(mix: HubMix, max = 50, onProgress?: (n: number) => void): Promise<MixRow[]> {
+  const day = useMixes.getState().builtAt;
+  const hit = discoverRows.get(mix.id);
+  if (hit && hit.day === day) return hit.rows.filter((r) => kidSafe([r.track]).length);
+  const find = findInLibrary();
+  let n = 0;
+  const mine = await pool(mix.songs, 4, async (s) => {
+    const t = await findSong(s, find).catch(() => undefined);
+    onProgress?.(++n);
+    return t;
+  });
+  const seen = new Set<string>();
+  const owned = mix.songs.map((_, i) => {
+    const t = mine[i];
+    if (!t || seen.has(`${t.sourceId}:${t.id}`)) return undefined;
+    seen.add(`${t.sourceId}:${t.id}`);
+    return t;
+  });
+  // clips only for as many songs as the mix still needs (a few spare, for songs Deezer has no clip of)
+  const need = Math.max(0, max - owned.filter(Boolean).length);
+  const missing = mix.songs.map((s, i) => ({ s, i })).filter(({ i }) => !owned[i]).slice(0, need + 10);
+  const clips = new Map<number, MixRow>();
+  await pool(missing, 4, async ({ s, i }) => {
+    const r = await clipOf(s);
+    if (r) clips.set(i, r);
+  });
+  const rows: MixRow[] = [];
+  mix.songs.forEach((s, i) => {
+    if (rows.length >= max) return;
+    const t = owned[i];
+    if (t) rows.push({ song: s, track: t, owned: true });
+    else if (clips.has(i)) rows.push(clips.get(i)!);
+  });
+  discoverRows.set(mix.id, { day, rows });
+  return rows.filter((r) => kidSafe([r.track]).length);
 }
 
 /** Up to four different covers for a mix's mosaic. */

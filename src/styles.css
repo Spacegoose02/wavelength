@@ -2607,6 +2607,8 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .mix-row img, .mix-row .cover { width: 44px; height: 44px; border-radius: 6px; }
 .mix-text { min-width: 0; }
 .mix-text .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mix-clips { margin-top: 24px; }
+.mix-clips h2 { margin-bottom: 2px; }
 .error-text { color: #ff9b9b; }
 .selectable { user-select: text; }
 .recovery-codes { font-family: var(--lcd-font, monospace); background: var(--panel-2); padding: 10px 14px; border-radius: var(--radius); columns: 2; max-width: 360px; }
