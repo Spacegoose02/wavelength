@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Cover, Empty, Spinner, TrackList } from '../components/common';
-import { IconPlay, IconShuffle } from '../components/Icons';
-import { loadMixes, mixCovers, mixTracks, useMixes } from '../lib/mixes';
+import { IconDownload, IconPlay, IconShuffle } from '../components/Icons';
+import { deemixClient } from '../lib/hubServices';
+import { mustRequest, requestMusic, useMustRequest } from '../lib/inbox';
+import { loadMixes, mixCovers, mixRows, mixTracks, useMixes, type MixRow } from '../lib/mixes';
 import { useFeature } from '../lib/features';
+import { useSettings } from '../store/settings';
 import type { HubMix } from '../sources/hub';
-import type { Track } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
@@ -31,20 +33,81 @@ export function MixArt({ mix, className }: { mix: HubMix; className?: string }) 
   );
 }
 
-/** One mix: its songs found in this library, to play, shuffle or save. */
+/**
+ * Songs of Discover Weekly the library doesn't have: 30-second Deezer clips, each with Get (deemix) or Request,
+ * like the Weekly Mix in Release Radar.
+ */
+function ClipRows({ rows, onPlay }: { rows: MixRow[]; onPlay: (r: MixRow) => void }) {
+  const [status, setStatus] = useState<Record<string, string>>({});
+  const deemix = useSettings((s) => s.deemix);
+  const ask = useMustRequest();
+  const get = async (r: MixRow) => {
+    const k = r.track.id;
+    if (!r.link) return;
+    setStatus((s) => ({ ...s, [k]: '…' }));
+    try {
+      if (mustRequest()) {
+        await requestMusic({ link: r.link, kind: 'track', title: r.song.title, artist: r.song.artist, cover: r.song.coverUrl });
+        setStatus((s) => ({ ...s, [k]: 'Requested' }));
+      } else {
+        await deemixClient().addToQueue(r.link, deemix.bitrate);
+        setStatus((s) => ({ ...s, [k]: 'Queued' }));
+      }
+    } catch (e) {
+      setStatus((s) => ({ ...s, [k]: errText(e) }));
+    }
+  };
+  return (
+    <ol className="mix-list">
+      {rows.map((r) => {
+        const st = status[r.track.id];
+        return (
+          <li key={r.track.id} className="mix-row">
+            <button className="icon-btn" title="Play preview" onClick={() => onPlay(r)}><IconPlay /></button>
+            <Cover src={r.song.coverUrl} alt={r.song.album ?? r.song.title} />
+            <div className="mix-text">
+              <div className="ellipsis" title={r.song.title}>{r.song.title}</div>
+              <div className="muted small ellipsis">{r.song.artist}{r.song.because && <> · {r.song.because}</>}</div>
+            </div>
+            <button className="btn small" disabled={!r.link || (!deemix.url && !ask) || st === '…' || st === 'Queued' || st === 'Requested'} title={st} onClick={() => get(r)}>
+              <IconDownload /> {st && st.length < 12 ? st : ask ? 'Request' : 'Get'}
+            </button>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * One mix: its songs found in this library, to play, shuffle or save. Discover Weekly is songs new to you, so
+ * the library rarely has many: it also lists the rest as Deezer clips to play and Get (lib/mixes.ts mixRows).
+ */
 function MixPage({ mix }: { mix: HubMix }) {
   const playTracks = usePlayer((s) => s.playTracks);
-  const [tracks, setTracks] = useState<Track[] | null>(null);
+  const [rows, setRows] = useState<MixRow[] | null>(null);
   const [looked, setLooked] = useState(0);
   const [note, setNote] = useState('');
   useEffect(() => {
-    setTracks(null);
+    let alive = true;
+    setRows(null);
     setLooked(0);
-    mixTracks(mix, 50, setLooked).then(setTracks).catch((e) => setNote(errText(e)));
+    setNote('');
+    const got = mix.kind === 'discover'
+      ? mixRows(mix, 50, (n) => alive && setLooked(n))
+      : mixTracks(mix, 50, (n) => alive && setLooked(n)).then((ts) => ts.map((track): MixRow => ({ song: { title: track.title, artist: track.artist ?? '' }, track, owned: true })));
+    got.then((r) => alive && setRows(r)).catch((e) => alive && setNote(errText(e)));
+    return () => {
+      alive = false;
+    };
   }, [mix]);
+  const owned = rows?.filter((r) => r.owned).map((r) => r.track) ?? [];
+  const clips = rows?.filter((r) => !r.owned) ?? [];
+  // what Play plays: the library's songs, then the clips, as the page lists them
+  const tracks = [...owned, ...clips.map((r) => r.track)];
   const save = () => {
-    if (!tracks?.length) return;
-    const id = useLibrary.getState().createPlaylist(`${mix.name} (${new Date().toLocaleDateString()})`, tracks);
+    if (!owned.length) return;
+    const id = useLibrary.getState().createPlaylist(`${mix.name} (${new Date().toLocaleDateString()})`, owned);
     useUi.getState().go({ view: 'playlist', id });
   };
   return (
@@ -56,23 +119,31 @@ function MixPage({ mix }: { mix: HubMix }) {
           <h1>{mix.name}</h1>
           <div className="muted">{mix.description}</div>
           <div className="hero-actions">
-            <button className="btn primary" disabled={!tracks?.length} onClick={() => tracks && playTracks(tracks)}><IconPlay /> Play</button>
-            <button className="btn" disabled={!tracks?.length} onClick={() => {
-              if (!tracks) return;
+            <button className="btn primary" disabled={!tracks.length} onClick={() => playTracks(tracks)}><IconPlay /> Play</button>
+            <button className="btn" disabled={!tracks.length} onClick={() => {
               if (!usePlayer.getState().shuffle) usePlayer.getState().toggleShuffle();
               playTracks(tracks, Math.floor(Math.random() * tracks.length));
             }}><IconShuffle /> Shuffle</button>
-            <button className="btn ghost" disabled={!tracks?.length} onClick={save}>Save as playlist</button>
+            <button className="btn ghost" disabled={!owned.length} title={clips.length ? 'Saves the songs in your library' : undefined} onClick={save}>Save as playlist</button>
           </div>
         </div>
       </header>
       {note && <div className="errors">{note}</div>}
-      {!tracks ? (
+      {!rows ? (
         <p className="muted"><Spinner /> Finding the songs in your library… {looked}/{mix.songs.length}</p>
-      ) : !tracks.length ? (
+      ) : !rows.length ? (
         <Empty title="None of these are in your library yet">Play more music and the mixes get better every day.</Empty>
       ) : (
-        <TrackList tracks={tracks} showAlbum showCover />
+        <>
+          {owned.length > 0 && <TrackList tracks={owned} showAlbum showCover />}
+          {clips.length > 0 && (
+            <section className="mix-clips">
+              <h2>Not in your library yet</h2>
+              <p className="muted small">30-second previews. Get one to add the full song to your library.</p>
+              <ClipRows rows={clips} onPlay={(r) => playTracks(tracks, tracks.indexOf(r.track))} />
+            </section>
+          )}
+        </>
       )}
     </div>
   );

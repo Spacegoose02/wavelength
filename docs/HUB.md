@@ -728,6 +728,8 @@ The Hub makes each person's mixes once a day (`hub/src/mixes.ts`), the first tim
 day, from their plays (the same table Rewind uses) and Deezer's related artists and top songs (cached for a day):
 On Repeat, Daily Mix 1–4, Discover Weekly, Forgotten favorites and Time Capsule. Songs are sent by title and
 artist (plus the track that played, for songs the person played), and each app finds them in its own library.
+Deezer suggestions (Discover Weekly, and the new songs in Daily Mixes) also carry `deezer: { link, preview,
+explicit }`, so the app can show Discover Weekly's songs the library doesn't have as previews to Get or Request.
 Blends mix two to six people who have all said yes (`blend_optin`).
 
 The **daylist** isn't stored: it's made on every `GET /api/mixes?tz=<minutes>` (the device's
