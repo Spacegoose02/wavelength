@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Families list their people.** In Settings → Users → Families each family's card now shows who's in it, with
+  the Manager switch, a drop-down to move someone to another family, and **+ Add someone…**. People without a
+  family get their own **No family** group, and the separate "Who's in which family" list is gone
+  (`src/views/Families.tsx`).
 - **Sign in with tinyauth over OIDC.** The Hub can now be an OpenID Connect client of tinyauth (or any OIDC
   provider): paste the issuer, client ID and secret in Settings → Users → Single sign-on, register the redirect URI
   it shows (`/auth/oidc/callback`) in tinyauth, and every device's **Sign in with tinyauth** goes through

@@ -2088,6 +2088,15 @@ Admins get a **Users** tab:
   playlists and history move over, and its tinyauth name too; the kept profile keeps its own name and role.
 - **Single sign-on**: turn tinyauth on, generate the proxy secret, say who's an admin, and copy the proxy
   config for your proxy, with the whole site behind tinyauth or only the sign-in page.
+- **Families**: each family's card lists the people in it. **+ Add someone…** puts a person in that family (moving
+  them out of their old one), the drop-down on a person's row moves them to another family or takes them out,
+  and **Manager** makes a grown-up its manager. Moving someone to another family takes their manager switch off.
+  People in no family are listed under **No family** at the bottom.
+
+  <p align="center">
+    <img src="screenshots/families.png" alt="Families: each family card lists its people with a Manager switch and a move drop-down, an Add someone picker, and a No family group at the bottom" width="80%">
+  </p>
+
 - **Families → Family sign-ins**: one username and password and/or tinyauth name for a whole family, which asks
   who's listening.
 - **Parents** (on a kid's row): the grown-ups whose approval that kid's requests need, besides the admins. A
