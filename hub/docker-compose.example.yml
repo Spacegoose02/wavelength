@@ -8,6 +8,8 @@ services:
       - "7780:7780"
     environment:
       WAVELENGTH_PUBLIC_URL: https://hub.example.com
+      # Single sign-on (tinyauth): optional here. Leave these out to set it up in the app instead
+      # (Settings → Users → Single sign-on); ones set here win and are locked there.
       WAVELENGTH_SSO: "true"
       WAVELENGTH_PROXY_SECRET: change-me-to-a-long-random-value
       WAVELENGTH_ADMINS: alex

@@ -106,6 +106,46 @@ export interface HubHealth {
   version: string;
   setupNeeded: boolean;
   sso: boolean;
+  /** What the single sign-on button calls it ("tinyauth"), while it's on. */
+  ssoName?: string;
+}
+
+/** A profile that a family sign-in may pick (hub/src/familyLogins.ts). */
+export interface HubPickProfile {
+  id: number;
+  displayName: string;
+  role: HubRole;
+  needsPin: boolean;
+}
+
+/** What a family sign-in answers instead of a session: pick who's listening. */
+export interface HubPickResponse {
+  pick: { familyToken: string; family: { id: number; name: string }; profiles: HubPickProfile[] };
+}
+
+export const isPick = (r: unknown): r is HubPickResponse => !!r && typeof r === 'object' && 'pick' in r;
+
+export interface HubSsoSettings {
+  enabled: boolean;
+  trustedProxies: string[];
+  proxySecret: string;
+  autoCreate: boolean;
+  admins: string[];
+  adminGroup: string;
+  name: string;
+  /** Set by the container's environment, so not changeable here. */
+  locked: string[];
+  problem: string;
+}
+
+/** A sign-in that belongs to a whole family and picks a profile. */
+export interface HubFamilyLogin {
+  id: number;
+  familyId: number;
+  username: string | null;
+  ssoSubject: string | null;
+  hasPassword: boolean;
+  createdAt: number;
 }
 
 export interface HubPairing {
@@ -780,10 +820,13 @@ export class HubError extends Error {
   status: number;
   /** A password sign-in that also needs a two-step code (hub/src/totp.ts). */
   twoFactor: boolean;
-  constructor(status: number, message: string, twoFactor = false) {
+  /** Everything else the Hub sent with the error (`pin`, `notLinked`, …). */
+  data: Record<string, unknown>;
+  constructor(status: number, message: string, twoFactor = false, data: Record<string, unknown> = {}) {
     super(message);
     this.status = status;
     this.twoFactor = twoFactor;
+    this.data = data;
   }
 }
 
@@ -884,7 +927,7 @@ export class HubClient {
     if (this.token) headers.authorization = `Bearer ${this.token}`;
     const res = await http(this.url + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     const data = (await res.json().catch(() => ({}))) as T & { error?: string; twoFactor?: boolean };
-    if (!res.ok && res.status !== 202) throw new HubError(res.status, data.error || `${res.status} ${res.statusText || 'error'}`, !!data.twoFactor);
+    if (!res.ok && res.status !== 202) throw new HubError(res.status, data.error || `${res.status} ${res.statusText || 'error'}`, !!data.twoFactor, data as Record<string, unknown>);
     return { status: res.status, data };
   }
   private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -904,13 +947,28 @@ export class HubClient {
 
   health = () => this.call<HubHealth>('GET', '/api/health');
   setup = (b: { username: string; password: string; displayName?: string; deviceName: string; platform: string }) => this.call<HubSession>('POST', '/auth/setup', b);
-  login = (b: { username: string; password: string; otp?: string; deviceName: string; platform: string }) => this.call<HubSession>('POST', '/auth/login', b);
+  /** A profile's own sign-in gives a session; a family sign-in gives its profile picker (`pick`). */
+  login = (b: { username: string; password: string; otp?: string; deviceName: string; platform: string }) => this.call<HubSession | HubPickResponse>('POST', '/auth/login', b);
+  /** The family's profiles again, with a saved family token (hub/src/familyLogins.ts). */
+  family = (familyToken: string) => this.call<HubPickResponse>('POST', '/auth/family', { familyToken });
+  /** Sign this device in as a profile picked from a family sign-in. HubError with data.pin = the PIN is needed or wrong. */
+  pick = (b: { familyToken: string; userId: number; pin?: string; deviceName: string; platform: string }) => this.call<HubSession>('POST', '/auth/pick', b);
+  /**
+   * The web page, already through tinyauth: a session or the family picker straight from the proxy's identity
+   * headers. `redirect: manual`, so a proxy that sends this to tinyauth's login just fails here instead.
+   */
+  async ssoSession(b: { deviceName: string; platform: string }): Promise<HubSession | HubPickResponse> {
+    const res = await fetch(`${this.url}/auth/sso/session`, { method: 'POST', redirect: 'manual', credentials: 'include', headers: { 'content-type': 'application/json', 'x-wavelength-web': '1' }, body: JSON.stringify(b) });
+    const data = (await res.json().catch(() => ({}))) as (HubSession | HubPickResponse) & { error?: string };
+    if (!res.ok) throw new HubError(res.status || 401, data.error || 'Single sign-on did not answer', false, data as unknown as Record<string, unknown>);
+    return data;
+  }
   logout = () => this.call<{ ok: true }>('POST', '/auth/logout', {});
   startPairing = (b: { deviceName: string; platform: string }) => this.call<HubPairing>('POST', '/auth/device', b);
 
-  /** null while the code hasn't been approved yet. Throws HubError 403 (denied) / 410 (expired). */
-  async pollPairing(deviceCode: string): Promise<HubSession | null> {
-    const r = await this.req<HubSession>('POST', '/auth/device/token', { deviceCode });
+  /** null while the code hasn't been approved yet; a family sign-in approves with its picker. Throws HubError 403 (denied) / 410 (expired). */
+  async pollPairing(deviceCode: string): Promise<HubSession | HubPickResponse | null> {
+    const r = await this.req<HubSession | HubPickResponse>('POST', '/auth/device/token', { deviceCode });
     return r.status === 202 ? null : r.data;
   }
 
@@ -1103,6 +1161,16 @@ export class HubClient {
   updateUser = (id: number, b: Partial<{ displayName: string; role: HubRole; password: string | null; ssoSubject: string | null; autodownload: boolean; disabled: boolean }>) =>
     this.call<{ user: HubAdminUser }>('PATCH', `/api/admin/users/${id}`, b);
   deleteUser = (id: number) => this.call('DELETE', `/api/admin/users/${id}`);
+  /** Fold profile `id` into `into`: its sign-ins, devices and data move there, then it's deleted. */
+  mergeUser = (id: number, into: number) => this.call<{ user: HubUser }>('POST', `/api/admin/users/${id}/merge`, { into });
+  // how people sign in (hub/src/routes/signins.ts)
+  ssoSettings = () => this.call<{ sso: HubSsoSettings; publicUrl: string }>('GET', '/api/admin/sso');
+  saveSsoSettings = (sso: Partial<Omit<HubSsoSettings, 'locked' | 'problem'>>) => this.call<{ sso: HubSsoSettings; publicUrl: string }>('PUT', '/api/admin/sso', { sso });
+  newProxySecret = () => this.call<{ secret: string }>('POST', '/api/admin/sso/secret', {});
+  familyLogins = () => this.call<{ logins: HubFamilyLogin[] }>('GET', '/api/admin/family-logins');
+  createFamilyLogin = (b: { familyId: number; username?: string; password?: string; ssoSubject?: string }) => this.call<{ login: HubFamilyLogin }>('POST', '/api/admin/family-logins', b);
+  updateFamilyLogin = (id: number, b: Partial<{ username: string | null; password: string; ssoSubject: string | null; signOutEverywhere: boolean }>) => this.call<{ login: HubFamilyLogin }>('PATCH', `/api/admin/family-logins/${id}`, b);
+  deleteFamilyLogin = (id: number) => this.call('DELETE', `/api/admin/family-logins/${id}`);
   invites = () => this.call<{ invites: HubInvite[] }>('GET', '/api/admin/invites');
   createInvite = (b: { role: HubRole; displayName?: string; autodownload?: boolean; days?: number; familyId?: number | null }) =>
     this.call<{ id: number; url: string; code: string; expiresAt: number }>('POST', '/api/admin/invites', b);

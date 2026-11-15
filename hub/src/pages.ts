@@ -64,14 +64,14 @@ export function linkPage(o: { code: string; device?: { name: string; platform: s
 }
 
 /** tinyauth knows the person but no Wavelength account is linked to them yet: link one with its password. */
-export function ssoConnectPage(o: { who: string; code: string; error?: string }) {
+export function ssoConnectPage(o: { who: string; code: string; error?: string; web?: boolean }) {
   return page(
     'Link your account',
     `<p>You're signed in to single sign-on as <b>${esc(o.who)}</b>, but that isn't linked to a Wavelength account yet.</p>
      ${o.error ? `<p class="err">${esc(o.error)}</p>` : ''}
      <p>If you already have a Wavelength account, sign in with its Hub password once to link them. After that, single sign-on is enough.</p>
      <form method="post" action="/auth/sso/connect">
-       <input type="hidden" name="code" value="${esc(o.code)}">
+       <input type="hidden" name="code" value="${esc(o.code)}">${o.web ? '<input type="hidden" name="web" value="1">' : ''}
        <label>Wavelength username</label><input name="username" autocomplete="username" required>
        <label>Hub password</label><input name="password" type="password" autocomplete="current-password" required>
        <label>Two-step code <small>(only if you turned it on)</small></label><input name="otp" inputmode="numeric" autocomplete="one-time-code">
@@ -95,11 +95,11 @@ export function ssoLinkConfirmPage(o: { who: string; account: string; link: stri
 }
 
 /** SSO confirmation: the person is already signed in through tinyauth. */
-export function ssoConfirmPage(o: { code: string; device: { name: string; platform: string }; who: string; csrf: string }) {
+export function ssoConfirmPage(o: { code: string; device: { name: string; platform: string }; who: string; csrf: string; family?: boolean }) {
   return page(
     'Sign in a device',
-    `<div class="device">Sign in <b>${esc(o.device.name)}</b> (${esc(o.device.platform)}) as <b>${esc(o.who)}</b>?</div>
-     <p>Only allow this if you started signing in on that device just now.</p>
+    `<div class="device">Sign in <b>${esc(o.device.name)}</b> (${esc(o.device.platform)}) ${o.family ? 'for' : 'as'} <b>${esc(o.who)}</b>?</div>
+     <p>${o.family ? 'The device then shows your family’s profiles to pick from. ' : ''}Only allow this if you started signing in on that device just now.</p>
      <form method="post" action="/auth/sso/link">
        <input type="hidden" name="code" value="${esc(o.code)}"><input type="hidden" name="csrf" value="${esc(o.csrf)}">
        <div class="row"><button class="ghost" name="decision" value="deny">Deny</button><button name="decision" value="approve">Allow</button></div>

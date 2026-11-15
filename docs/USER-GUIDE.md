@@ -2007,6 +2007,17 @@ plays**, signed in or not, with or without the Hub.
 
 <p align="center"><img src="screenshots/hub-account.png" alt="Settings → Account when signed in" width="80%"></p>
 
+### Signing in with tinyauth, or as a family
+
+When your Hub has single sign-on, every device offers **Sign in with tinyauth** next to the password. In the app it
+opens tinyauth in your browser (or shows a QR code on a TV): sign in there and press **Allow**. On the Hub's own web
+page you're usually signed in before you see anything, because tinyauth already knows you.
+
+Your admin can also give the whole family one sign-in (Settings → Users → Families → **Family sign-ins**). Signing
+in with it asks **Who's listening?**: tap your profile, and type your switching PIN if you set one. Leave **Stay
+signed in on this device** on and the device opens straight into your profile next time; turn it off on a shared
+device and it asks again each time. **Use a different sign-in** forgets the family sign-in on that device.
+
 ### Linking single sign-on to your account
 
 If you've been signing in with a Hub password and want to use tinyauth instead, link the two once. Either:
@@ -2073,6 +2084,12 @@ Admins get a **Users** tab:
 - **Role**: Admin, Member or Kid. Changes apply straight away, no re-login.
 - **Autodownload** (members only): lets them download without your approval. Without it, their **Get** buttons say **Request** and you approve in the Inbox. Kids can never have it.
 - **Set password**, **SSO** (link or unlink their tinyauth username), **Turn off** (signs out all their devices), **Delete**.
+- **Merge**: fold a duplicate profile (one tinyauth made, or a second account) into another. Its devices, settings,
+  playlists and history move over, and its tinyauth name too; the kept profile keeps its own name and role.
+- **Single sign-on**: turn tinyauth on, generate the proxy secret, say who's an admin, and copy the proxy
+  config for your proxy, with the whole site behind tinyauth or only the sign-in page.
+- **Families → Family sign-ins**: one username and password and/or tinyauth name for a whole family, which asks
+  who's listening.
 - **Parents** (on a kid's row): the grown-ups whose approval that kid's requests need, besides the admins. A
   parent sees the kid's requests in **Inbox → To approve** and can approve or reject them (Soulseek picks and
   clearing the list stay with admins), and gets the kid's **weekly report** each Monday: songs, minutes, days

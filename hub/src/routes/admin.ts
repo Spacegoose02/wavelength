@@ -11,6 +11,7 @@ import { disableTotp, totpEnabled } from '../totp.ts';
 import { guardiansOf, setGuardians } from '../family.ts';
 import { MIN_PASSWORD } from './auth.ts';
 import { getFeatures, putFeatures } from '../features.ts';
+import { ssoIsFamilyLogin } from '../familyLogins.ts';
 
 /**
  * Admin-only routes. Every handler starts with `need(req, …)`, which answers 401/403 before anything
@@ -74,7 +75,7 @@ export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
     if (!p.passwordHash && !p.ssoSubject) throw new HttpError(400, 'Give the user a password, an SSO username, or both');
     const u = tx(db, () => {
       if (getUserForLogin(db, username)) throw new HttpError(409, 'That username is taken');
-      if (p.ssoSubject && getUserBySso(db, p.ssoSubject)) throw new HttpError(409, 'That SSO username is already linked to someone');
+      if (p.ssoSubject && (getUserBySso(db, p.ssoSubject) || ssoIsFamilyLogin(db, p.ssoSubject))) throw new HttpError(409, 'That SSO username is already linked to someone');
       return createUser(db, { username, ...p, role: p.role! });
     });
     audit(db, { actorId: actor.id, action: 'user.created', target: u.username, detail: { role: u.role, sso: !!u.ssoSubject }, ip: clientIp(req) });
@@ -90,7 +91,7 @@ export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
       keepAnAdmin(target, p);
       if (p.ssoSubject) {
         const other = getUserBySso(db, p.ssoSubject);
-        if (other && other.id !== target.id) throw new HttpError(409, 'That SSO username is already linked to someone');
+        if ((other && other.id !== target.id) || ssoIsFamilyLogin(db, p.ssoSubject)) throw new HttpError(409, 'That SSO username is already linked to someone');
       }
       if (p.passwordHash === null && !(p.ssoSubject ?? target.ssoSubject)) throw new HttpError(400, 'A user without SSO needs a password');
       const out = updateUser(db, target.id, p)!;

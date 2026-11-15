@@ -3,6 +3,7 @@ import { buildApp } from './app.ts';
 import { audit } from './audit.ts';
 import { loadConfig } from './config.ts';
 import { applyPendingRestore, openDb } from './db.ts';
+import { ssoSettings } from './sso.ts';
 import { countUsers } from './users.ts';
 
 const config = loadConfig();
@@ -23,6 +24,8 @@ const app = buildApp(db, config, { logger: true, restart: () => void stop(75) })
 await app.listen({ port: config.port, host: config.host });
 if (kept) app.log.info(`Restored a backup. The database it replaced is kept as ${kept}`);
 if (countUsers(db) === 0) app.log.info(`No accounts yet. Open ${config.publicUrl}/setup to create the first admin.`);
-if (config.sso.enabled) app.log.info(`Single sign-on is on. Only ${config.publicUrl}/auth/sso/ should sit behind tinyauth.`);
+const sso = ssoSettings(db, config);
+if (sso.enabled) app.log.info(`Single sign-on (${sso.name}) is on. See docs/HUB.md for the proxy setup.`);
+else if (sso.problem) app.log.warn(`Single sign-on is set to on but stays off: ${sso.problem}`);
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => void stop(0));

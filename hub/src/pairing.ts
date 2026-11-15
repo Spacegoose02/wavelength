@@ -28,6 +28,7 @@ interface PairingRow {
   platform: string;
   status: Pairing['status'];
   user_id: number | null;
+  family_login_id: number | null;
   expires_at: number;
 }
 
@@ -79,9 +80,18 @@ export function decidePairing(db: Db, id: number, userId: number, approve: boole
   return res.changes === 1;
 }
 
+/** Approved with a family sign-in (familyLogins.ts): the device gets the family's profile picker instead of a session. */
+export function decidePairingForFamily(db: Db, id: number, familyLoginId: number, approve: boolean): boolean {
+  const res = db
+    .prepare("UPDATE pairings SET status = ?, family_login_id = ? WHERE id = ? AND status = 'pending' AND expires_at > ?")
+    .run(approve ? 'approved' : 'denied', familyLoginId, id, Date.now());
+  return res.changes === 1;
+}
+
 export type PollResult =
   | { status: 'pending' | 'denied' | 'expired' }
-  | { status: 'approved'; token: string; device: Device; userId: number };
+  | { status: 'approved'; token: string; device: Device; userId: number }
+  | { status: 'family'; familyLoginId: number };
 
 /** The app's poll. On approval this creates the device once and forgets the pairing. */
 export function pollPairing(db: Db, deviceCode: string): PollResult {
@@ -90,6 +100,7 @@ export function pollPairing(db: Db, deviceCode: string): PollResult {
     if (!r || r.expires_at < Date.now()) return { status: 'expired' };
     if (r.status === 'pending') return { status: 'pending' };
     db.prepare('DELETE FROM pairings WHERE id = ?').run(r.id);
+    if (r.status === 'approved' && r.family_login_id) return { status: 'family', familyLoginId: r.family_login_id };
     if (r.status === 'denied' || r.user_id === null) return { status: 'denied' };
     const { device, token } = createDevice(db, r.user_id, r.device_name, r.platform);
     return { status: 'approved', token, device, userId: r.user_id };

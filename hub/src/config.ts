@@ -13,7 +13,10 @@ export interface Config {
   publicUrl: string;
   /** 32 random bytes. Signs pairing forms and (through a derived key) encrypts stored server logins. */
   secretKey: Buffer;
+  /** Single sign-on as the container's environment sets it. Admins can change the rest in the app (sso.ts `ssoSettings`). */
   sso: SsoConfig;
+  /** The SSO settings that came from environment variables: fixed, the app shows them but can't change them. */
+  ssoEnv?: (keyof SsoConfig)[];
   /** The music library folder (mounted at /music in Docker). yt-dlp saves into it. Empty = not mounted. */
   musicDir: string;
   /** Where Navidrome sees the same music (its paths are mapped onto musicDir for the tag editor). */
@@ -48,6 +51,8 @@ export interface SsoConfig {
   admins: string[];
   /** tinyauth group whose members are admins. */
   adminGroup: string;
+  /** What the sign-in button calls it ("Sign in with tinyauth"). */
+  name?: string;
 }
 
 const list = (v: string | undefined) => (v ?? '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -63,11 +68,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     autoCreate: bool(env.WAVELENGTH_SSO_AUTO_CREATE, false),
     admins: list(env.WAVELENGTH_ADMINS).map((s) => s.toLowerCase()),
     adminGroup: env.WAVELENGTH_ADMIN_GROUP ?? '',
+    name: env.WAVELENGTH_SSO_NAME || 'tinyauth',
   };
-  if (sso.enabled && !sso.trustedProxies.length && !sso.proxySecret) {
-    // Without either, anyone who can reach the Hub could send `Remote-User: admin`.
-    throw new Error('WAVELENGTH_SSO is on but neither WAVELENGTH_TRUSTED_PROXIES nor WAVELENGTH_PROXY_SECRET is set');
-  }
+  const fromEnv: Record<keyof SsoConfig, string> = {
+    enabled: 'WAVELENGTH_SSO',
+    trustedProxies: 'WAVELENGTH_TRUSTED_PROXIES',
+    proxySecret: 'WAVELENGTH_PROXY_SECRET',
+    autoCreate: 'WAVELENGTH_SSO_AUTO_CREATE',
+    admins: 'WAVELENGTH_ADMINS',
+    adminGroup: 'WAVELENGTH_ADMIN_GROUP',
+    name: 'WAVELENGTH_SSO_NAME',
+  };
+  // Empty variables (the Unraid template's blanks) leave the setting to the app.
+  const ssoEnv = (Object.keys(fromEnv) as (keyof SsoConfig)[]).filter((k) => (env[fromEnv[k]] ?? '') !== '');
   return {
     version: (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version,
     port: Number(env.PORT || 7780),
@@ -76,6 +89,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     publicUrl: (env.WAVELENGTH_PUBLIC_URL || `http://localhost:${env.PORT || 7780}`).replace(/\/+$/, ''),
     secretKey: loadSecretKey(env.WAVELENGTH_SECRET_KEY, dataDir),
     sso,
+    ssoEnv,
     musicDir: (env.WAVELENGTH_MUSIC_DIR ?? '').replace(/\/+$/, ''),
     navidromeMusicDir: (env.WAVELENGTH_NAVIDROME_MUSIC_DIR || '/music').replace(/\/+$/, ''),
     ytdlpBin: env.WAVELENGTH_YTDLP || 'yt-dlp',
