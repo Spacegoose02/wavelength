@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.48.0
 - **The Windows title bar matches your theme.** The grey bar at the top of the window now takes the theme's sidebar
   and text colours on Windows 11 (dark or light on Windows 10), and changes with the theme, including previews,
   Seasonal and Random daily. It is still the real Windows bar, so dragging, Snap layouts, double-click to maximise
