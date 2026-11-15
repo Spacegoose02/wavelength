@@ -12,6 +12,7 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | `cargo` error: `failed searching for potential workspace … invalid potential workspace manifest C:\code\Cargo.toml` | A stray (empty) `Cargo.toml` in a parent folder | Delete it. Cargo walks up the tree looking for workspaces. |
 | Rust build: `link.exe not found` / MSVC errors | Visual Studio C++ Build Tools missing | Install the VCTools workload (see DEVELOPMENT.md). |
 | A request works in the app but not in the browser preview | CORS — the browser can't call that server | Expected. Test server features in the app. |
+| "Audiobookshelf: NetworkError when attempting to fetch resource" (or "Failed to fetch") on Home in a browser | The page called Audiobookshelf itself and the browser blocked it: the Hub's address wasn't in Audiobookshelf's **Allowed CORS Origins**, Audiobookshelf is `http://` under an `https://` Hub, or its address only works from the Hub's network | Fixed (unreleased): an Audiobookshelf kept on the Hub goes through the Hub in a browser (`hub/src/routes/absRelay.ts`), and Home only shows a small line when it fails. Update the Hub too. For an Audiobookshelf added only on the device, **Save to Hub**, or add the Hub's address under Allowed CORS Origins |
 
 ## Android build
 

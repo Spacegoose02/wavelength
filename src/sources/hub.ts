@@ -263,6 +263,8 @@ export interface HubService {
   relay?: boolean;
   /** Navidrome is off on the Hub: the Hub is the music server behind this login (docs/HUB.md "Without Navidrome"). */
   hubServed?: boolean;
+  /** Audiobookshelf: this device's key for the Hub's relay at `/api/abs/<id>/…` (covers and audio). Older Hubs don't send it. */
+  relayKey?: string;
 }
 
 /** What a yt-dlp download is, so the Hub names and tags the file as the song (hub/src/ytdlp.ts YtTags). */

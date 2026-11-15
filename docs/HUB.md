@@ -67,10 +67,20 @@ Everything works as in the app except downloading songs for offline play and run
 - Music servers you add under **Settings → Sources** are reached from the browser, so give them addresses
   the browser can reach. When the Hub is on `https://`, they need `https://` addresses too (for example
   through Nginx Proxy Manager), because browsers block `http://` content on a secure page. Navidrome and Plex
-  allow requests from other sites. Audiobookshelf only answers its own pages by default: in Audiobookshelf,
-  open **Settings** and add the Hub's address (for example `https://hub.example.com`, no trailing slash) under
-  **Allowed CORS Origins**. Until then Test connection in a browser shows "NetworkError when attempting to
-  fetch resource" (Firefox) or "Failed to fetch" (Chrome). The desktop and Android apps don't need this.
+  allow requests from other sites.
+- **Audiobookshelf through the Hub.** An Audiobookshelf kept on the Hub (Settings → Sources, **Save to Hub**) is
+  reached through the Hub in a browser: `/api/abs/<server id>/<Audiobookshelf path>` (`hub/src/routes/absRelay.ts`).
+  The Hub makes the call with the person's API key (their own, or the shared one), so the page never talks to
+  Audiobookshelf and its address only has to work from the Hub (a Docker name like `http://audiobookshelf:80` is
+  fine). API calls sign in with the Hub token; covers and audio, which `<img>` and `<audio>` load without headers,
+  carry a per-device key as `?k=` (sent with the server in `GET /api/me/services` as `relayKey`; signing the
+  device out ends it). Only Audiobookshelf's `api/` and `s/` paths are passed on, and Range requests are, so
+  seeking works. The desktop and Android apps call Audiobookshelf directly.
+- An Audiobookshelf added only on this device (not on the Hub) is still called from the browser. Audiobookshelf
+  only answers its own pages by default: in Audiobookshelf, open **Settings** and add the Hub's address (for
+  example `https://hub.example.com`, no trailing slash) under **Allowed CORS Origins**. Until then it fails with
+  "NetworkError when attempting to fetch resource" (Firefox) or "Failed to fetch" (Chrome). Saving it to the Hub
+  avoids this.
 - With single sign-on on, the page signs you in by itself when tinyauth already knows you (proxy sign-in), and
   otherwise offers **Sign in with tinyauth** next to the password. With OIDC, the button goes through tinyauth's
   login and comes back signed in. Put the whole page behind tinyauth or only its sign-in

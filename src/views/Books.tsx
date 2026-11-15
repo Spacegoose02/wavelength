@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCatalog } from '../store/catalog';
+import { KindErrors } from './Library';
 import { useSettings } from '../store/settings';
 import { seekBook, usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
@@ -89,6 +90,7 @@ export function Books() {
         {loading && <Spinner />}
         <input className="filter" placeholder="Filter by title, author, series…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
+      <KindErrors kind="audiobookshelf" />
       {inProgress.length > 0 && show !== 'started' && (
         <section>
           <h2>Continue listening</h2>

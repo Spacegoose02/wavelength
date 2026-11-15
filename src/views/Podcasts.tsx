@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { sourceFor } from '../sources/registry';
 import type { Podcast, Track } from '../sources/types';
 import { useCatalog } from '../store/catalog';
+import { KindErrors } from './Library';
 import { enabledSources, useSettings } from '../store/settings';
 import { usePlayer } from '../store/player';
 import { useUi } from '../store/ui';
@@ -66,7 +67,8 @@ export function Podcasts() {
 }
 
 function Shows() {
-  const { podcasts, loading } = useCatalog();
+  const { podcasts, loading, errors } = useCatalog();
+  const failed = useSettings((s) => s.sources.some((x) => x.kind === 'audiobookshelf' && x.enabled && errors[x.name]));
   const [filter, setFilter] = useState('');
   const [sort, setSort] = useState<PodcastSort>(() => savedChoice(SORT_KEY, PODCAST_SORTS, 'updated'));
   const f = filter.toLowerCase();
@@ -78,7 +80,8 @@ function Shows() {
         {loading && <Spinner />}
         <input className="filter" placeholder="Filter podcasts…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
-      {!loading && !podcasts.length && <Empty title="No podcasts">Your Audiobookshelf has no podcast libraries yet.</Empty>}
+      <KindErrors kind="audiobookshelf" />
+      {!loading && !failed && !podcasts.length && <Empty title="No podcasts">Your Audiobookshelf has no podcast libraries yet.</Empty>}
       {podcasts.length > 1 && (
         <div className="shelf-bar">
           <SortSelect value={sort} options={PODCAST_SORTS} onChange={(v) => { setSort(v); saveChoice(SORT_KEY, v); }} />

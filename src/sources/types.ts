@@ -25,6 +25,11 @@ export interface SourceConfig {
    * "Navidrome" (lib/serverName.ts); turning Navidrome back on clears it, so the two can always be told apart.
    */
   hubServed?: boolean;
+  /**
+   * Audiobookshelf kept on the Hub, and the Hub can pass calls on to it (`/api/abs/<id>/…`). In a browser the app goes
+   * through the Hub with this key rather than to Audiobookshelf itself (sources/audiobookshelf.ts).
+   */
+  hubRelayKey?: string;
 }
 
 export type TrackKind = 'track' | 'radio' | 'book' | 'episode';

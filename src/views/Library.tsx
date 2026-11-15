@@ -7,7 +7,8 @@ import { useUi } from '../store/ui';
 import { usePlayer } from '../store/player';
 import { sourceFor, mergeAlbums } from '../sources/registry';
 import { stationToTrack } from '../sources/radio';
-import type { Album, Artist, Track } from '../sources/types';
+import type { Album, Artist, SourceConfig, Track } from '../sources/types';
+import { browserFetchHint, gatewayHint, isTauri } from '../lib/http';
 import { SOURCE_COLORS } from '../sources/types';
 import { AlbumCard, ArtistCard, ArtistCredit, Cover, Rating, Empty, Grid, SourceDots, Spinner, TrackList, fmtTime } from '../components/common';
 import { IconDownload, IconPlay, IconShuffle } from '../components/Icons';
@@ -57,6 +58,10 @@ export function Home() {
   // stable pick: the same 12 all day (no reshuffling on every render/visit), new set tomorrow
   const [shuffleSeed, setShuffleSeed] = useState(rediscoverSeed);
   const rediscover = useMemo(() => pickDaily(albums, 12, shuffleSeed), [albums.length, shuffleSeed]);
+  // a music server that fails empties Home, so it gets the red box; the rest (Audiobookshelf, SUB/WAVE) only a line
+  const musicNames = new Set(sources.filter(isMusicSource).map((s) => s.name));
+  const musicErrors = Object.fromEntries(Object.entries(errors).filter(([name]) => musicNames.has(name)));
+  const otherErrors = Object.fromEntries(Object.entries(errors).filter(([name]) => !musicNames.has(name)));
 
   if (!sources.length) {
     return (
@@ -73,7 +78,8 @@ export function Home() {
         <h1>Good {greeting()}</h1>
         {loading && <Spinner />}
       </header>
-      <ErrorList errors={errors} />
+      <ErrorList errors={musicErrors} />
+      <QuietNotice errors={otherErrors} />
 
       <JumpBackIn />
       <MadeForYou />
@@ -136,6 +142,37 @@ function pickDaily<T extends { id: string; sourceId: string }>(items: T[], n: nu
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+}
+
+/** A server Home can do without: one quiet line with the reason on hover, and a retry. */
+function QuietNotice({ errors }: { errors: Record<string, string> }) {
+  const load = useCatalog((s) => s.load);
+  const loading = useCatalog((s) => s.loading);
+  const go = useUi((s) => s.go);
+  const names = Object.keys(errors);
+  if (!names.length) return null;
+  return (
+    <p className="quiet-notice" title={Object.entries(errors).map(([n, m]) => `${n}: ${m}`).join('\n')}>
+      {names.join(' and ')} didn’t answer, so some books, podcasts or stations may be missing.{' '}
+      <button className="link small" disabled={loading} onClick={() => load()}>Try again</button>{' · '}
+      <button className="link small" onClick={() => go({ view: 'settings' })}>Check Sources</button>
+    </p>
+  );
+}
+
+/** The catalog's errors for one kind of server, on the pages that show what it serves (Books, Podcasts). */
+export function KindErrors({ kind }: { kind: SourceConfig['kind'] }) {
+  const errors = useCatalog((s) => s.errors);
+  const sources = useSettings((s) => s.sources);
+  const mine = sources.filter((s) => s.kind === kind && s.enabled && errors[s.name]);
+  if (!mine.length) return null;
+  return (
+    <div className="errors">
+      {mine.map((s) => (
+        <div key={s.id}><b>{s.name}:</b> {s.hubRelayKey && !isTauri ? errors[s.name] : browserFetchHint(gatewayHint(errors[s.name]), s.kind, isTauri ? undefined : window.location.origin)}</div>
+      ))}
+    </div>
+  );
 }
 
 export function ErrorList({ errors }: { errors: Record<string, string> }) {

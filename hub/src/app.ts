@@ -47,6 +47,7 @@ import { creditRoutes } from './routes/credits.ts';
 import { flagRoutes } from './routes/flags.ts';
 import { kidRoutes } from './routes/kids.ts';
 import { proxyRoutes } from './routes/proxy.ts';
+import { absRelayRoutes } from './routes/absRelay.ts';
 import { ratingRoutes } from './routes/ratings.ts';
 import { requestRoutes } from './routes/requests.ts';
 import { serverRoutes } from './routes/server.ts';
@@ -282,6 +283,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   inviteRoutes(app, ctx);
   serviceRoutes(app, ctx);
   proxyRoutes(app, ctx);
+  absRelayRoutes(app, ctx);
   requestRoutes(app, ctx);
   shareRoutes(app, ctx);
   flagRoutes(app, ctx);
