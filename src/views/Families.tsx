@@ -38,6 +38,31 @@ export function FamiliesAdmin({ users, onChange }: { users: HubAdminUser[]; onCh
     }
   };
 
+  const members = (familyId: number) => users.filter((u) => u.familyId === familyId);
+  const noFamily = users.filter((u) => !u.familyId || !families.some((f) => f.id === u.familyId));
+  // One person, inside their family's card (or under No family): move them, make them a manager, clear their PIN.
+  const personRow = (u: HubAdminUser) => (
+    <div key={u.id} className="source-row">
+      <div className="hub-avatar">{u.displayName.slice(0, 1).toUpperCase()}</div>
+      <div className="track-main">
+        <div className="track-title">{u.displayName}</div>
+        <div className="track-sub">@{u.username}{u.role === 'kid' ? ' · kid' : ''}{u.hasSwitchPin ? ' · has a switching PIN' : ''}</div>
+      </div>
+      {u.familyId && u.role !== 'kid' && (
+        <label className="check" title="Runs this family, with what you switched on for it">
+          <span className="switch"><input type="checkbox" checked={!!u.familyManager} onChange={(e) => run(() => c.setUserFamily(u.id, u.familyId!, e.target.checked), true)} /><span /></span>
+          <small>Manager</small>
+        </label>
+      )}
+      {/* Moving someone to another family drops them as a manager: the admin picks the new family's managers. */}
+      <select aria-label={`Move ${u.displayName} to`} title="Move to another family" value={u.familyId ?? ''} onChange={(e) => run(() => c.setUserFamily(u.id, e.target.value ? Number(e.target.value) : null, false), true)}>
+        {families.map((f) => <option key={f.id} value={f.id}>{u.familyId === f.id ? f.name : `Move to ${f.name}`}</option>)}
+        <option value="">{u.familyId ? 'Take out of family' : 'No family'}</option>
+      </select>
+      {u.hasSwitchPin && <button className="btn small ghost" onClick={() => confirm(`Take ${u.displayName}'s switching PIN off? They can set a new one.`) && run(() => c.clearSwitchPin(u.id), true)}>Clear PIN</button>}
+    </div>
+  );
+
   return (
     <section id="families">
       <h2>Families</h2>
@@ -65,6 +90,17 @@ export function FamiliesAdmin({ users, onChange }: { users: HubAdminUser[]; onCh
             }}>Grown-up PIN</button>}
             <button className="btn small ghost" onClick={() => confirm(`Delete ${f.name}? Its people stay, without a family, and its keys go.`) && run(() => c.deleteFamily(f.id), true)}>Delete</button>
           </div>
+          <div className="family-members">
+            {members(f.id).length ? members(f.id).map(personRow) : <p className="muted small" style={{ margin: 0 }}>Nobody in this family yet.</p>}
+            {users.some((u) => u.familyId !== f.id) && (
+              <select aria-label={`Add someone to ${f.name}`} className="family-add" value="" onChange={(e) => e.target.value && run(() => c.setUserFamily(Number(e.target.value), f.id, false), true)}>
+                <option value="">+ Add someone…</option>
+                {users.filter((u) => u.familyId !== f.id).map((u) => (
+                  <option key={u.id} value={u.id}>{u.displayName}{u.familyId ? ` (from ${families.find((x) => x.id === u.familyId)?.name ?? 'another family'})` : ''}</option>
+                ))}
+              </select>
+            )}
+          </div>
           <FamilyLogins family={f} />
           <div className="row gap wrap">
             {POWERS.map((p) => (
@@ -84,30 +120,12 @@ export function FamiliesAdmin({ users, onChange }: { users: HubAdminUser[]; onCh
         <button className="btn" disabled={!name.trim()}>Add family</button>
       </form>
 
-      {families.length > 0 && (
-        <>
-          <h3>Who's in which family</h3>
-          {users.map((u) => (
-            <div key={u.id} className="source-row">
-              <div className="hub-avatar">{u.displayName.slice(0, 1).toUpperCase()}</div>
-              <div className="track-main">
-                <div className="track-title">{u.displayName}</div>
-                <div className="track-sub">@{u.username}{u.hasSwitchPin ? ' · has a switching PIN' : ''}</div>
-              </div>
-              <select aria-label="Family" value={u.familyId ?? ''} onChange={(e) => run(() => c.setUserFamily(u.id, e.target.value ? Number(e.target.value) : null, !!u.familyManager), true)}>
-                <option value="">No family</option>
-                {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
-              {u.familyId && u.role !== 'kid' && (
-                <label className="check" title="Runs this family, with what you switched on for it">
-                  <span className="switch"><input type="checkbox" checked={!!u.familyManager} onChange={(e) => run(() => c.setUserFamily(u.id, u.familyId!, e.target.checked), true)} /><span /></span>
-                  <small>Manager</small>
-                </label>
-              )}
-              {u.hasSwitchPin && <button className="btn small ghost" onClick={() => confirm(`Take ${u.displayName}'s switching PIN off? They can set a new one.`) && run(() => c.clearSwitchPin(u.id), true)}>Clear PIN</button>}
-            </div>
-          ))}
-        </>
+      {families.length > 0 && noFamily.length > 0 && (
+        <div className="editor">
+          <h3 style={{ margin: 0 }}>No family <span className="muted small">· {noFamily.length} {noFamily.length === 1 ? 'person' : 'people'}</span></h3>
+          <p className="muted small" style={{ margin: 0 }}>Pick a family for each of them, or add them from a family above.</p>
+          <div className="family-members">{noFamily.map(personRow)}</div>
+        </div>
       )}
 
       <SharedKeys families={families} />

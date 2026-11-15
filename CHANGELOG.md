@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **Families list their people.** In Settings → Users → Families each family's card now shows who's in it, with
+  the Manager switch, a drop-down to move someone to another family, and **+ Add someone…**. People without a
+  family get their own **No family** group, and the separate "Who's in which family" list is gone
+  (`src/views/Families.tsx`).
+
 ## 0.49.0
 - **Single sign-on is set up in the app.** Settings → Users → Single sign-on turns tinyauth on, generates the
   proxy secret, sets who's an admin, and shows the proxy config to copy, filled in, for either layout: the whole

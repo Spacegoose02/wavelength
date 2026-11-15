@@ -757,7 +757,9 @@ Users → Families); everyone else's calls to them get `403`, and the app never 
 `src/components/WhosListening.tsx`.
 
 - **Families and people.** The admin makes families and puts each person in one (or none). A family can have a
-  **most people** limit.
+  **most people** limit. Each family's card lists its people, with **+ Add someone…**, a drop-down on each row to
+  move them to another family (or out of any), and their **Manager** switch; people in no family are under
+  **No family**. Moving someone to another family takes their manager switch off (`PUT /api/admin/users/:id/family`).
 - **Managers.** The admin ticks **Manager** on a grown-up in a family. A manager gets **Settings → My family**, and
   can only do what the admin switched on for that family:
 

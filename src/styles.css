@@ -2805,6 +2805,10 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .jam-row .hub-qr { margin: 6px 0; }
 .ha-token { display: block; word-break: break-all; padding: 8px; margin: 4px 0 8px; border-radius: 8px; background: color-mix(in srgb, var(--text) 8%, transparent); user-select: all; }
 .hub-config { max-height: 340px; overflow: auto; padding: 10px; margin: 8px 0; border-radius: 8px; font: 12px/1.45 ui-monospace, monospace; white-space: pre; background: color-mix(in srgb, var(--text) 8%, transparent); user-select: all; }
+.family-members { display: flex; flex-direction: column; }
+.family-members > .source-row { background: color-mix(in srgb, var(--text) 5%, transparent); box-shadow: none; }
+.family-members .source-row select { max-width: 160px; }
+.family-add { align-self: flex-start; }
 .family-logins { margin: 8px 0; }
 .family-logins > summary { cursor: pointer; color: var(--muted); }
 .family-picker .row.wrap .btn { min-width: 120px; }
