@@ -69,7 +69,7 @@ export function Theremin({ species, still }: ActProps) {
       if (a.beat) s.pulse = (s.pulse + 1) % lights.length;
       lights.forEach((el, i) => (el.style.opacity = a.playing ? ((i + s.pulse) % 3 === 0 ? '1' : '0.3') : '0.2'));
       svg.querySelectorAll<SVGElement>('[data-star]').forEach((el, i) => {
-        el.style.opacity = (0.35 + 0.3 * Math.sin(t * (1.3 + (i % 4) * 0.4) + i) + (a.playing ? a.treble * 0.5 : 0)).toFixed(2);
+        el.style.opacity = (0.35 + 0.3 * Math.sin(t * (1.3 + (i % 4) * 0.4) + i) + (a.playing ? a.treble * 0.5 : 0) + (a.playing && (beatClock(f).index + i) % 4 === 0 ? bob * 0.6 : 0)).toFixed(2);
       });
     },
     { still, nod: 10 },

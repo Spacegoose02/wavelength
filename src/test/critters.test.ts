@@ -449,3 +449,17 @@ describe('retired acts', () => {
     expect(findAct('rocker').id).toBe('rocker');
   });
 });
+
+describe('scene effects (fx.tsx)', () => {
+  it('fires onBeat once per beat while playing, and the same answer twice in a frame', async () => {
+    const { newFx, onBeat } = await import('../components/critters/fx');
+    const fx = newFx();
+    const frame = (t: number, playing = true) => ({ t, a: { playing }, tempo: { locked: false, phase: 0, index: 0, bpm: 120, on: false } }) as never;
+    expect(onBeat(frame(0.1), fx)).toBe(false); // first frame only sets the count
+    expect(onBeat(frame(0.4), fx)).toBe(false);
+    expect(onBeat(frame(0.55), fx)).toBe(true); // 120 BPM: a new beat every half second
+    expect(onBeat(frame(0.55), fx)).toBe(true);
+    expect(onBeat(frame(0.6), fx)).toBe(false);
+    expect(onBeat(frame(1.05, false), fx)).toBe(false); // paused
+  });
+});

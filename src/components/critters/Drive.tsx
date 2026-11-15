@@ -118,8 +118,9 @@ function DriveScene({ species, still, place }: ActProps & { place: DrivePlace })
       s.down += ((idle ? 1 : 0) - s.down) * 0.06;
       const moving = 1 - s.down;
 
-      // down the road: faster when the band is loud, stopped when paused
-      const speed = (a.live ? 0.35 + a.bass * 0.5 + a.mid * 0.3 : 0.55) * moving;
+      // down the road: faster for a faster song (once the tempo locks on) and when the band is loud; stopped when paused
+      const pace = f.tempo.locked ? Math.min(1.6, Math.max(0.6, f.tempo.bpm / 110)) : 1;
+      const speed = (a.live ? 0.3 + a.bass * 0.45 + a.mid * 0.25 : 0.55) * pace * moving;
       s.go = (s.go + speed * Math.min(0.1, t - s.last)) % 1;
       s.last = t;
       // the road bends slowly one way, then the other

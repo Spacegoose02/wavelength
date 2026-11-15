@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { beatClock } from './arm';
 import { swell, windUp } from './flourish';
 import { playGuitar, newGuitarHands } from './guitar';
 import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
@@ -10,6 +11,9 @@ import { useCritterRig } from './rig';
  * a five-string banjo rolled in time, and a boot that taps the beat. Flourish: spins the banjo a full turn
  * on its pot and tips the hat. Paused, he tips his hat now and then.
  */
+/** Fireflies over the yard: x, y, how far each drifts. */
+const FIREFLIES: [number, number, number][] = [[30, 120, 10], [80, 70, 14], [120, 150, 8], [290, 90, 12], [330, 150, 10], [372, 60, 14], [250, 40, 8]];
+
 export function Country({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
   const hands = useRef(newGuitarHands());
@@ -27,6 +31,17 @@ export function Country({ species, still }: ActProps) {
         f.$('adjust').setAttribute('transform', `translate(0 ${(-10 * up).toFixed(2)}) rotate(${(-8 * up).toFixed(2)} 200 110)`);
       }
       f.$('boot').setAttribute('transform', `rotate(${(f.a.live ? -f.bob * 16 : f.idle ? 0 : -Math.max(0, Math.sin(f.t * 6)) * 12).toFixed(2)} 236 362)`);
+      // fireflies drift and blink, a few at a time on each beat; the lantern flickers brighter with the bass
+      const { t, a, bob } = f;
+      const beatNo = beatClock(f).index;
+      root.current!.querySelectorAll<SVGElement>('[data-firefly]').forEach((el, i) => {
+        const [x, y, r] = FIREFLIES[i];
+        el.setAttribute('cx', (x + Math.sin(t * 0.7 + i * 1.9) * r).toFixed(1));
+        el.setAttribute('cy', (y + Math.cos(t * 0.5 + i) * r * 0.6).toFixed(1));
+        const lit = a.playing ? ((beatNo + i) % 3 === 0 ? 0.25 + bob * 0.75 : 0.12) : 0.25 + 0.25 * Math.sin(t * 1.5 + i * 2);
+        el.style.opacity = lit.toFixed(2);
+      });
+      f.$('lantern-glow').style.opacity = (0.45 + (a.playing ? a.bass * 0.45 : 0) + (Math.random() - 0.5) * 0.12).toFixed(2);
     },
     { still },
   );
@@ -52,6 +67,12 @@ export function Country({ species, still }: ActProps) {
         <path key={y} d={`M0 ${y} H400`} className="porch-line" strokeWidth="2" />
       ))}
 
+      {/* a lantern hanging off the last post, flickering with the bass; fireflies blinking on the beat */}
+      <path className="lantern-hook" d="M366 196 V 180 H 382 V 188" fill="none" strokeWidth="2.5" />
+      <circle data-part="lantern-glow" className="porch-lantern-glow" cx="382" cy="204" r="18" filter="url(#critter-blur)" />
+      <rect className="porch-lantern ol-thin" x="374" y="190" width="16" height="22" rx="3" />
+      <rect className="porch-lantern-flame" x="379" y="196" width="6" height="10" rx="3" />
+      {FIREFLIES.map(([x, y], i) => <circle key={i} data-firefly="" className="firefly" cx={x} cy={y} r="2.6" filter="url(#critter-glow)" />)}
       {[34, 104, 296, 366].map((x) => <Shadow key={x} cx={x + 4} cy={324} rx={12} ry={3} />)}
       <Shadow cx={200} cy={366} rx={66} />
 

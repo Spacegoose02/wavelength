@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { tube } from './bodies';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Burst, burst, newFx, onBeat } from './fx';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 import { swell } from './flourish';
@@ -31,7 +32,8 @@ const BUBBLES: [number, number, number, number][] = [
  */
 export function Drums({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
-  const state = useRef({ rise: 0, tom: 0, tomHit: 0, crashHit: 0, beat: -1 });
+  const fx = useRef(newFx());
+  const state = useRef({ rise: 0, tom: 0, tomHit: 0, crashHit: 0, beat: -1, fish: -99 });
 
   useCritterRig(
     root,
@@ -109,6 +111,16 @@ export function Drums({ species, still }: ActProps) {
       svg.querySelectorAll<SVGElement>('[data-weed]').forEach((w, i) => {
         w.setAttribute('transform', `rotate(${(Math.sin(t * 1.1 + i * 1.7) * (6 + a.bass * 6)).toFixed(2)})`);
       });
+      // a burst of bubbles off the kick on each beat; a fish darts across on a big bass hit (at most every 6 s)
+      const beat = onBeat(f, fx.current);
+      burst(f, root.current!, fx.current, 'kick-bubbles', { at: [200, 330], spread: 28, vx: [-30, 30], vy: [-110, -60], g: -30, life: 1.6, grow: 0.5 }, beat ? 2 : 0);
+      if (beat && f.a.bass > 0.7 && f.t - state.current.fish > 6) state.current.fish = f.t;
+      const swim = f.t - state.current.fish;
+      const fishEl = f.$('fish');
+      if (swim < 1.6) {
+        fishEl.style.opacity = '1';
+        fishEl.setAttribute('transform', `translate(${(-40 + swim * 300).toFixed(1)} ${(110 + Math.sin(swim * 9) * 6).toFixed(1)})`);
+      } else fishEl.style.opacity = '0';
     },
     { still, nod: 12 },
   );
@@ -138,6 +150,11 @@ export function Drums({ species, still }: ActProps) {
       <Head species={species} />
 
       {/* the kit: hi-hat, snare, kick with a tom on it, floor tom, crash */}
+      {/* a fish that darts across on a big bass hit */}
+      <g data-part="fish" style={{ opacity: 0 }}>
+        <path className="dart-fish ol-thin" d="M0 0 Q 14 -12 30 0 Q 14 12 0 0 Z M0 0 L -12 -9 L -9 0 L -12 9 Z" />
+        <circle cx="22" cy="-2" r="2" fill="#1b1b1f" />
+      </g>
       <Shadow cx={200} cy={392} rx={74} ry={7} />
       {[[44, 378, 22], [104, 368, 22], [300, 372, 38], [344, 378, 22]].map(([cx, cy, rx]) => <Shadow key={cx} cx={cx} cy={cy} rx={rx} ry={4} />)}
       <path className="stand" d="M44 276 V366 M44 366 L 30 378 M44 366 L 58 378 M104 334 V352 L 88 368 M104 352 L 120 368 M344 236 V366 L 330 378 M344 366 L 358 378 M276 350 V372 M324 350 V372" fill="none" strokeWidth="3" strokeLinecap="round" />
@@ -190,6 +207,7 @@ export function Drums({ species, still }: ActProps) {
       <Arm part="arm-r" d="M262 268 Q 282 278 294 264" hand={[296, 262]}>
         {([x, y]) => <path className="stick" d={`M${x} ${y} L ${CRASH_AT[0]} ${CRASH_AT[1]}`} strokeWidth="4" strokeLinecap="round" />}
       </Arm>
+      <Burst name="kick-bubbles" n={10} className="kick-bubble"><circle r="5.5" strokeWidth="1.6" /></Burst>
     </CritterFrame>
   );
 }

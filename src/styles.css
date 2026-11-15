@@ -3161,3 +3161,25 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
 .critter .santa-hat { fill: #d62a32; }
 .critter .santa-trim { fill: #fbf7f2; }
 .critter .guitar-holly { fill: #2a7a4a; }
+
+/* beat-synced scene effects (fx.tsx and the acts): fireflies, smoke, strobe, bubbles, ripples, haze, splashes, spray */
+.critter .firefly { fill: #f4ff8a; }
+.critter .lantern-hook { stroke: #2a2420; }
+.critter .porch-lantern { fill: #2a2420; }
+.critter .porch-lantern-flame { fill: #ffd27a; }
+.critter .porch-lantern-glow { fill: #ffc45a; opacity: 0.6; }
+.critter .stage-smoke { fill: rgb(220 220 235 / 0.3); }
+.critter .strobe { fill: #ffffff; }
+.critter .kick-bubble { fill: rgb(255 255 255 / 0.12); stroke: rgb(255 255 255 / 0.7); }
+.critter .dart-fish { fill: var(--viz-high); }
+.critter .beam-ripple { stroke: color-mix(in srgb, var(--viz-mid) 60%, #fff); }
+.critter .lounge-haze { stroke: rgb(255 240 220 / 0.6); opacity: 0.12; }
+.critter .glass-stem, .critter .glass-bowl { stroke: rgb(230 240 255 / 0.8); }
+.critter .glass-bowl { fill: rgb(230 240 255 / 0.18); stroke-width: 1.5; }
+.critter .drink { fill: color-mix(in srgb, var(--viz-low) 45%, #e8f4ff); opacity: 0.85; }
+.critter .olive { fill: #7a9a2a; }
+.critter .splash { fill: rgb(200 220 255 / 0.85); }
+.critter .spray { fill: rgb(255 255 255 / 0.9); }
+@media (prefers-reduced-motion: reduce) {
+  .critter .fx-flash { display: none; }
+}

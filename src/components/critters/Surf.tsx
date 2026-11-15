@@ -3,6 +3,7 @@ import { beatClock } from './arm';
 import { swell, windUp } from './flourish';
 import { newGuitarHands, playGuitar } from './guitar';
 import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Burst, burst, newFx, onBeat } from './fx';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -23,6 +24,7 @@ const GULLS: [number, number][] = [[64, 96], [96, 76], [300, 62]];
  */
 export function Surf({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
+  const fx = useRef(newFx());
   const hands = useRef(newGuitarHands());
   const drift = useRef(0);
 
@@ -53,6 +55,8 @@ export function Surf({ species, still }: ActProps) {
         g.setAttribute('transform', `translate(${f1(x + Math.sin(t * 0.4 + i * 2) * 14)} ${f1(y + Math.sin(t * 1.3 + i) * 4 - bob * 2)}) scale(1 ${(0.6 + Math.abs(Math.sin(t * 5 + i)) * 0.6).toFixed(2)})`);
       });
       $('palm').setAttribute('transform', `rotate(${f1(Math.sin(t * 0.9) * 2 + (a.playing ? a.bass * 2 : 0))} 372 380)`);
+      // spray off the shore as a wave crests at the top of each bar
+      burst(f, svg, fx.current, 'spray', { at: [200, 306], spread: 190, vx: [-20, 20], vy: [-70, -35], g: 200, life: 0.7 }, onBeat(f, fx.current) && index % 4 === 0 ? 6 : 0);
     },
     { still, nod: 12 },
   );
@@ -73,6 +77,7 @@ export function Surf({ species, still }: ActProps) {
         </g>
       ))}
       <path className="sand" d="M0 310 Q 100 302 200 308 T 400 306 V400 H0 Z" />
+      <Burst name="spray" n={10} className="spray"><circle r="2.6" /></Burst>
       <path data-part="foam" className="foam" d="M0 308 Q 50 300 100 306 T 200 306 T 300 304 T 400 306" fill="none" strokeWidth="5" strokeLinecap="round" />
       <path className="sand-dark" d="M24 362 q 16 -5 32 0 M318 392 q 20 -6 40 0 M140 392 q 14 -4 28 0" fill="none" strokeWidth="2.5" strokeLinecap="round" />
       <path className="seashell ol-thin" d="M286 382 q 8 -12 16 0 Z" />

@@ -221,6 +221,13 @@ the asset work and a risk on low-end phones and the iOS WebView.
   bobbing on the beat, bats across the moon, lightning on the flourish; the hands play like the Synth's) and
   **Christmas** (`Christmas.tsx`, a candy-cane guitar in the snow: tree lights twinkling a new pattern each beat, a
   star glowing with the bass, a chasing string of lights, falling snow and a snowman bobbing his hat).
+- **Beat-synced effects in the existing scenes** (November 2026, a first slice of phase 5): `fx.tsx` gives each act a
+  small pool of particles thrown on a beat or a hit (`Burst` / `burst`: smoke, bubbles, petals, splashes, spray) and a
+  one-shot flash (`Flash` / `flash`, one flash per hit, never a flicker, hidden under `prefers-reduced-motion`).
+  `onBeat` fires on the tempo grid once it's locked, else on a steady 120 BPM. Country fireflies and lantern, Rocker
+  smoke and strobe, Drummer kick bubbles and a darting fish, Synth beam ripples, Synth/Theremin stars on the beat,
+  drives that speed up with the song's tempo, the Pianist's martini and haze, Violinist splashes and lamp buzz,
+  Taiko petal bursts, Bongo/Surf spray and brighter torch flares. No new filters; each adds a handful of shapes.
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

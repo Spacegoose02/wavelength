@@ -10,6 +10,14 @@
   room flushes green with the bass (the Reactor scene stays). **Spooky** plays a haunted pipe organ in a graveyard
   with ghosts, bats and jack-o'-lanterns. **Christmas** plays a candy-cane guitar in the snow by a twinkling tree
   and a snowman (`src/components/critters/`).
+- **Critters: beat-synced effects in the existing scenes.** Fireflies blink on the beat and a lantern flickers on
+  the Country porch; smoke jets puff from the amps at the top of each bar and a soft strobe flashes on big hits
+  (Rocker; hidden with reduced motion); bubbles burst off the kick drum and a fish darts by on a big bass hit
+  (Drummer); ripples run down the tractor beam and the stars flash in time (Synth, Theremin); the road speeds up
+  for faster songs (all three drives); a martini ripples with the bass and haze drifts through the lounge
+  (Pianist); raindrops splash up on the beat and the lamp buzzes on sharp hits (Violinist); petals jump off the
+  taiko on every strike; spray flies off the shore at the top of each bar and the tiki torches flare (Bongo, Surf
+  rock). They share small particle pools in `src/components/critters/fx.tsx` and add no new filters.
 
 ## 0.46.1
 - **Fix: Up next showed initials instead of covers, and credits like "BigXthaPlug;Loe Shimmy".** Songs from
