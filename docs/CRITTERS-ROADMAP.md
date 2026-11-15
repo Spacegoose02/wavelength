@@ -210,7 +210,7 @@ the asset work and a risk on low-end phones and the iOS WebView.
   pointed snout under a hood of big scales. It's now a round chibi head under a neat cap of small scales that dips
   to a point between big warm brown eyes, with a short soft muzzle and button nose. Every scale, on the head, armour
   and tail, is shaded by one gradient the face defines (`pgl-scale`, used by `.pangolin-scale`). The **penguin** got
-  small touches: darker brows, rosy cheeks, a beak with nostrils and a shine, and a slightly bluer black.
+  small touches: darker brows, a beak with nostrils and a shine, and a slightly bluer black.
 - **Four more scenes** (November 2026), all beat-synced, with no new blur filters beyond what other scenes use:
   **Volcano** (`Volcano.tsx`, a flame guitar under an erupting volcano: lava bombs thrown on each beat and falling
   under gravity, lava running down the flanks with a dash offset that speeds up with the bass, glowing cracks and

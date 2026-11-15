@@ -980,9 +980,7 @@ export function PenguinFace() {
         <ellipse cx="172" cy="106" rx="34" ry="10" fill="rgb(255 255 255 / 0.24)" transform="rotate(-16 172 106)" />
         <circle cx="140" cy="128" r="5" fill="rgb(255 255 255 / 0.18)" />
       </HeadShape>
-      {/* rosy cheeks and freckles */}
-      <ellipse cx="146" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.45" />
-      <ellipse cx="266" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.45" />
+      {/* freckles */}
       <g fill="#e05a5a" opacity="0.75">
         <circle cx="140" cy="210" r="2.4" /><circle cx="148" cy="216" r="2.4" /><circle cx="136" cy="218" r="2" />
         <circle cx="272" cy="210" r="2.4" /><circle cx="264" cy="216" r="2.4" /><circle cx="276" cy="218" r="2" />
