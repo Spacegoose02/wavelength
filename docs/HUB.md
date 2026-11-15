@@ -14,7 +14,7 @@ comes next: [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md).
 - [Install on Unraid](#install-on-unraid)
 - [Other Docker hosts](#other-docker-hosts)
 - [First admin](#first-admin)
-- [Nginx Proxy Manager and tinyauth](#nginx-proxy-manager-and-tinyauth)
+- [Single sign-on (tinyauth)](#single-sign-on-tinyauth)
 - [Settings (environment variables)](#settings-environment-variables)
 - [How signing in works](#how-signing-in-works)
 - [Roles and permissions](#roles-and-permissions)
@@ -37,8 +37,9 @@ comes next: [USERS-AND-ADMIN.md](USERS-AND-ADMIN.md).
    - **Appdata**: `/mnt/user/appdata/wavelength-hub` (the database and the secret key live here).
    - **Public URL**: the address people open in a browser, e.g. `https://hub.example.com`, the host
      you'll create in Nginx Proxy Manager.
-   - **Single sign-on**: `true` if you use tinyauth (next sections), plus a long random **Proxy secret**
-     (`openssl rand -hex 32`) and your tinyauth username under **SSO admins**.
+   - **Single sign-on** can stay empty: you can turn it on in the app later
+     ([Single sign-on](#single-sign-on-tinyauth)). Filling it in here (`true`, a **Proxy secret** from
+     `openssl rand -hex 32` and your tinyauth username under **SSO admins**) works too, and locks those settings.
    - **Music share** can stay as is; the Hub doesn't use it until Phase 3 (downloads, tag editing).
    - **PUID/PGID** default to Unraid's `99`/`100` (nobody:users); the container fixes appdata ownership on start.
 4. Apply. The log says `No accounts yet. Open …/setup` on a fresh Hub.
@@ -70,7 +71,9 @@ Everything works as in the app except downloading songs for offline play and run
   open **Settings** and add the Hub's address (for example `https://hub.example.com`, no trailing slash) under
   **Allowed CORS Origins**. Until then Test connection in a browser shows "NetworkError when attempting to
   fetch resource" (Firefox) or "Failed to fetch" (Chrome). The desktop and Android apps don't need this.
-- The page itself isn't behind tinyauth (only `/auth/sso/` is), the same as the app's API calls.
+- With single sign-on on, the page signs you in by itself when tinyauth already knows you, and otherwise
+  offers **Sign in with tinyauth** next to the password. Put the whole page behind tinyauth or only its sign-in
+  page, as you like ([Single sign-on](#single-sign-on-tinyauth)).
 
 ## First admin
 
@@ -79,32 +82,60 @@ Pick one:
 - **Hub password:** open `https://hub.example.com/setup` and create the admin. This only works while the
   Hub has no accounts.
 - **tinyauth:** put your tinyauth username in `WAVELENGTH_ADMINS` (or your admin group in
-  `WAVELENGTH_ADMIN_GROUP`), then open `https://hub.example.com/auth/sso/link` once. tinyauth signs you
-  in and the Hub creates your admin account.
+  `WAVELENGTH_ADMIN_GROUP`) with `WAVELENGTH_SSO=true` and a `WAVELENGTH_PROXY_SECRET`, set up the proxy, then
+  open `https://hub.example.com/auth/sso/link` once. tinyauth signs you in and the Hub creates your admin
+  account. (On a Hub that already has an admin, do this in the app instead.)
 
 Both can be used together; local passwords stay useful for kids without a tinyauth account and as a way
 in if the proxy is down.
 
-## Nginx Proxy Manager and tinyauth
+## Single sign-on (tinyauth)
 
-Only **one path** of the Hub goes behind tinyauth: `/auth/sso/`. Everything else (the app's API calls,
-which carry their own device token, and the password pages) must *not*, or the app would get a login
-page instead of JSON.
+Wavelength signs people in two ways, and every device offers both: **Sign in with tinyauth** (single sign-on
+through the proxy in front of the Hub) or a **username and password**. You set single sign-on up in two places:
+the Hub (in the app), and your proxy.
 
-In Nginx Proxy Manager:
+### 1. In the app: Settings → Hub admin → Users → Single sign-on
 
-1. **Hosts → Proxy Hosts → Add**: domain `hub.example.com`, forward to your Unraid IP, port `7780`,
-   scheme `http`. On **SSL**, request a certificate and turn on Force SSL.
-2. **Advanced** tab → Custom Nginx Configuration. Start from the tinyauth block you already use for your
-   other apps and wrap it in a `location /auth/sso/` block, adding the four identity headers and the proxy
-   secret. With tinyauth's standard nginx setup it looks like this (replace the tinyauth address, your
-   auth domain, the Unraid IP and the secret):
+- **Single sign-on**: on.
+- **Proxy secret**: press **Generate**, then **Save**. The proxy sends it as `X-Wavelength-Proxy-Secret` with
+  tinyauth's identity headers. The Hub's port is also reachable on your LAN, and without the secret anyone there
+  could talk to port 7780 directly and claim `Remote-User: admin`. Single sign-on stays off until there's a secret
+  (or trusted proxy addresses).
+- **Always admins**: your tinyauth username (comma separated for more). **Admin group**: a tinyauth group whose
+  members are admins (optional).
+- **Trusted proxy addresses** (optional): Nginx Proxy Manager's IP as the Hub sees it, an extra lock.
+- **Make a profile for anyone tinyauth knows** (optional): off, you add people first (below) and strangers are
+  turned away.
+- **Button name**: what the sign-in button says, "tinyauth" unless you change it.
+
+The same settings can come from the container's environment instead ([Settings](#settings-environment-variables)).
+One set there wins and shows as locked in the app; an empty one leaves it to the app.
+
+**Proxy setup** under the settings shows the proxy config below, with your secret and Hub address filled in, ready
+to copy.
+
+### 2. In your proxy: pick a layout
+
+In Nginx Proxy Manager: **Hosts → Proxy Hosts → Add**, domain `hub.example.com`, forward to your Unraid IP,
+port `7780`, scheme `http`. On **SSL**, request a certificate and turn on Force SSL. Then **Advanced** → Custom
+Nginx Configuration, with one of these. Replace the Hub's address (`192.168.1.10:7780`), tinyauth's
+(`192.168.1.10:3000`), your auth domain and the secret.
+
+Either way some paths must **not** go through tinyauth: the apps call `/api/`, `/auth/` and `/nd/` with their own
+device token, and can't follow tinyauth's login page (they would get HTML instead of JSON). Share links (`/s/`),
+Listen together guests (`/jam/`), invite links (`/invite/`) and the password pages (`/link`, `/setup`) are for
+people who may have no tinyauth account. That is why the Hub differs from browser-only apps you put wholly behind
+tinyauth.
+
+**Whole site behind tinyauth** (like your other apps): the Wavelength page opens only through tinyauth and signs
+you in by itself. Everything the apps and guests use skips it.
 
 ```nginx
-location /auth/sso/ {
+# the Wavelength page and everything not listed below: tinyauth first
+location / {
     auth_request /tinyauth;
     error_page 401 = @tinyauth_login;
-
     # who tinyauth signed in, passed to the Hub (these replace anything the browser sent)
     auth_request_set $tinyauth_user   $upstream_http_remote_user;
     auth_request_set $tinyauth_name   $upstream_http_remote_name;
@@ -114,17 +145,44 @@ location /auth/sso/ {
     proxy_set_header Remote-Name   $tinyauth_name;
     proxy_set_header Remote-Email  $tinyauth_email;
     proxy_set_header Remote-Groups $tinyauth_groups;
-    # must match WAVELENGTH_PROXY_SECRET
     proxy_set_header X-Wavelength-Proxy-Secret "paste-the-proxy-secret-here";
-
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_pass http://192.168.1.10:7780;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass http://192.168.1.10:7780;   # the Hub
+}
+
+# the apps, share links, invites and password pages sign in their own way: no tinyauth
+location ~ ^/(api|auth|nd|s|jam|invite)/|^/(link|setup)$ {
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass http://192.168.1.10:7780;   # the Hub
+}
+
+# ...except the single sign-on pages, which are tinyauth's
+location ^~ /auth/sso/ {
+    # the same lines as in "location /" above
+    auth_request /tinyauth;
+    error_page 401 = @tinyauth_login;
+    auth_request_set $tinyauth_user   $upstream_http_remote_user;
+    auth_request_set $tinyauth_name   $upstream_http_remote_name;
+    auth_request_set $tinyauth_email  $upstream_http_remote_email;
+    auth_request_set $tinyauth_groups $upstream_http_remote_groups;
+    proxy_set_header Remote-User   $tinyauth_user;
+    proxy_set_header Remote-Name   $tinyauth_name;
+    proxy_set_header Remote-Email  $tinyauth_email;
+    proxy_set_header Remote-Groups $tinyauth_groups;
+    proxy_set_header X-Wavelength-Proxy-Secret "paste-the-proxy-secret-here";
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass http://192.168.1.10:7780;   # the Hub
 }
 
 location = /tinyauth {
     internal;
-    proxy_pass http://192.168.1.10:3000/api/auth/nginx;   # your tinyauth container
+    proxy_pass http://192.168.1.10:3000/api/auth/nginx;   # tinyauth
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Forwarded-Host $http_host;
     proxy_set_header X-Forwarded-Uri $request_uri;
@@ -135,18 +193,35 @@ location @tinyauth_login {
 }
 ```
 
-If your existing tinyauth blocks differ (another tinyauth version, other paths), keep yours and only
-add the `location /auth/sso/` wrapper, the `auth_request_set`/`proxy_set_header Remote-*` lines and the
-proxy secret header.
+Nginx Proxy Manager leaves out its own `location /` when the Advanced config has one, so this replaces it.
 
-**Check it:** open `https://hub.example.com/auth/sso/link?code=TEST-CODE`. You should be sent to the
-tinyauth login, then see "That code is wrong or has expired" or "There's no Wavelength account for … yet"
-(both good: the Hub knew who you were). "Single sign-on
-did not identify you" means the headers or the secret aren't arriving.
+**Only the sign-in page behind tinyauth**: the Wavelength page opens without tinyauth and shows both sign-ins;
+**Sign in with tinyauth** goes through tinyauth's login and comes back signed in. Use the `location ^~ /auth/sso/`,
+`location = /tinyauth` and `location @tinyauth_login` blocks above, without the other two (NPM's own `location /`
+does the rest).
 
-Why the secret: the Hub's port is also reachable on your LAN. Without the secret, anyone on the LAN could
-talk to port 7780 directly and claim `Remote-User: admin`. `WAVELENGTH_TRUSTED_PROXIES` (NPM's IP as the
-Hub sees it) is an extra lock you can add.
+If your existing tinyauth blocks differ (another tinyauth version, other paths), keep yours and only add the
+`auth_request_set`/`proxy_set_header Remote-*` lines and the proxy secret header to the Wavelength locations.
+Other proxies (Caddy `forward_auth`, Traefik `forwardAuth`) work the same way: forward auth on `/auth/sso/` (and,
+for the whole site, on everything except the paths above), copy `Remote-User`, `Remote-Name`, `Remote-Email` and
+`Remote-Groups` from tinyauth's answer, and add `X-Wavelength-Proxy-Secret`.
+
+**Check it:** open `https://hub.example.com/auth/sso/link?code=TEST-CODE`. You should be sent to the tinyauth
+login, then see "That code is wrong or has expired" or "There's no Wavelength account for … yet" (both good: the
+Hub knew who you were). "Single sign-on did not identify you" means the headers or the secret aren't arriving.
+
+### Who signs in as whom
+
+A tinyauth name (or a username and password) belongs either to **one profile** or to **a whole family**:
+
+- **One profile**: Settings → Users → People → **SSO** sets someone's tinyauth name; **Set password** their Hub
+  password. Signing in with either goes straight into that profile. People can also link tinyauth to their own
+  password profile (below).
+- **A family** ([Family sign-ins](#family-sign-ins)): one sign-in for the household that asks "Who's listening?".
+
+If tinyauth already made a second profile for someone (with **Make a profile for anyone tinyauth knows** on),
+**Merge** it into their real one under People. A named admin whose tinyauth name matches an existing admin
+profile's username signs into that profile instead of getting a new one.
 
 ## Settings (environment variables)
 
@@ -165,15 +240,28 @@ Hub sees it) is an extra lock you can add.
 | `WAVELENGTH_LASTFM_SECRET` | — | That API account's shared secret. |
 | `WAVELENGTH_DOCKER_URL` | — | A Docker socket proxy, e.g. `http://docker-socket-proxy:2375`. Turns on Docker control (below). Never the Docker socket itself. |
 | `WAVELENGTH_DOCKER_CONTAINERS` | — | Comma-separated container names admins may see, start, stop and restart, e.g. `navidrome,slskd`. Others stay invisible. |
-| `WAVELENGTH_SSO` | `false` | Accept tinyauth identity headers on `/auth/sso/`. |
+| `WAVELENGTH_SSO` | `false` | Accept tinyauth identity headers on `/auth/sso/`. This and the SSO settings below can be set in the app instead (Settings → Users → Single sign-on); one set here wins and is locked there. |
 | `WAVELENGTH_PROXY_SECRET` | — | Value the proxy sends as `X-Wavelength-Proxy-Secret`. |
-| `WAVELENGTH_TRUSTED_PROXIES` | — | Comma-separated IPs allowed to send identity headers. SSO refuses to start unless this or the secret is set. |
+| `WAVELENGTH_TRUSTED_PROXIES` | — | Comma-separated IPs allowed to send identity headers. Single sign-on stays off (with a warning in the log and the app) unless this or the secret is set. |
 | `WAVELENGTH_ADMINS` | — | tinyauth usernames that are always admins. |
 | `WAVELENGTH_ADMIN_GROUP` | — | tinyauth group whose members are admins. |
 | `WAVELENGTH_SSO_AUTO_CREATE` | `false` | Create a member account for any tinyauth user on first sign-in. Off: an admin adds people first (with their SSO username). |
+| `WAVELENGTH_SSO_NAME` | `tinyauth` | What the sign-in button calls single sign-on ("Sign in with tinyauth"). |
 | `PUID` / `PGID` | `1000` (Unraid template: `99`/`100`) | User the Hub runs as. |
 
 ## How signing in works
+
+Every device shows the same choices: **Sign in with tinyauth** (while single sign-on is on), **Sign in with a
+code**, **Sign in with a password** and **I have an invite**. A family sign-in, whichever way, ends at the profile
+picker ([Family sign-ins](#family-sign-ins)).
+
+**Sign in with tinyauth**: in the apps, this pairs the device (below) with a link that goes straight to
+`/auth/sso/link`, so tinyauth signs you in in the browser and you only press Allow; a TV shows it as a QR code. On
+the Hub's own web page it calls `POST /auth/sso/session` (JSON, with an `X-Wavelength-Web: 1` header that another
+site can't send, so another site can't sign you in): when tinyauth is in front of the page, that answers with a
+session straight away, and the page does it by itself on opening. When tinyauth only guards `/auth/sso/`, the button
+goes to `/auth/sso/web`, which goes through tinyauth's login and back to the page signed in. Signing out stops the
+automatic sign-in for that browser tab.
 
 **Device pairing** (TVs, phones, anything): the app asks the Hub for a code and shows it with a QR code.
 You open `https://hub.example.com/link` on any phone or computer, type the code (the QR fills it in), and
@@ -712,6 +800,37 @@ families: the Hub refuses it, the picker only shows your own family, a profile f
 signed in on the device can't be switched to (`sameFamily` in `src/store/hub.ts`), and **Add someone to this device**
 refuses a person from another family. Wrong PINs are rate limited and audited; the admin can **Clear PIN** for someone who forgot theirs.
 
+### Family sign-ins
+
+A **family sign-in** (`hub/src/familyLogins.ts`) belongs to a whole family instead of one profile: a username and
+password, a tinyauth name, or both. Settings → Users → Families → *the family* → **Family sign-ins**. Signing in
+with one, on any device and any way (password, **Sign in with tinyauth**, a pairing code, or the web page through
+tinyauth), shows **Who's listening?** with the family's profiles, Netflix-style:
+
+- a profile with a switching PIN asks for it; one without opens straight away (kids usually);
+- **admin profiles only show once they have a switching PIN**, so a shared family password never opens an admin
+  profile by itself;
+- **Stay signed in on this device** (on by default): the device opens straight into that profile until someone
+  signs out. Off: next time the app opens it asks who's listening again (its session for that profile is signed out).
+  Signing out of a profile goes back to the picker; **Use a different sign-in** forgets the family sign-in.
+
+The device keeps a signed **family token** (`wlf_…`, in the keychain), not a password. **Set password**, a new
+tinyauth name or **Sign out devices** on the family sign-in ends every family token handed out before; profiles
+already picked stay signed in (sign them out under Signed-in devices). Usernames and tinyauth names are unique
+across profiles and family sign-ins, so every sign-in means one thing. A profile's own sign-in (People → **SSO** or
+**Set password**) still goes straight into that profile.
+
+### Merging profiles
+
+Settings → Users → People → **Merge** folds one profile into another, for a duplicate tinyauth made or someone who
+ended up with two (`POST /api/admin/users/:id/merge`, `mergeUsers` in `hub/src/users.ts`). Everything the merged
+profile had moves to the kept one: devices (they stay signed in, as the kept profile), synced settings, playlists,
+history, ratings, requests, shares, follows and the rest; every table that points at a user is followed, read from
+the schema. Where both have something that can exist only once (a setting, a rating of the same song), the kept
+profile's wins. Its tinyauth name moves over, and its password and switching PIN too when the kept profile has
+none. The kept profile keeps its username, name and role. Merging the last admin into a non-admin, or the profile
+you're signed in as, is refused. It can't be undone, so make a backup first if in doubt.
+
 ## Feature switches
 
 **Settings → Features** (admins) turns each newer feature on or off for the whole household, and separately for
@@ -988,9 +1107,13 @@ with a 4xx status.
 |---|---|---|
 | `GET /api/health` | anyone | `{ ok, version, setupNeeded, sso }` |
 | `POST /auth/setup` | anyone, empty Hub only | `{ username, password, displayName?, deviceName?, platform? }` → session |
-| `POST /auth/login` | anyone | `{ username, password, deviceName?, platform? }` → session |
+| `POST /auth/login` | anyone | `{ username, password, deviceName?, platform? }` → session, or `{ pick: { familyToken, family, profiles } }` for a family sign-in |
+| `POST /auth/family` | a family token | `{ familyToken }` → `{ pick }` again (the picker on a device that didn't stay signed in) |
+| `POST /auth/pick` | a family token | `{ familyToken, userId, pin?, deviceName?, platform? }` → session for that profile; `401 { pin: true }` when its PIN is needed or wrong |
+| `POST /auth/sso/session` | tinyauth, `X-Wavelength-Web: 1` | the web page's own sign-in: session or `{ pick }`; `403 { notLinked }` when tinyauth's name isn't linked |
+| `GET /auth/sso/web` | tinyauth | through tinyauth's login, then back to `/?sso=1` |
 | `POST /auth/device` | anyone | `{ deviceName?, platform? }` → `{ deviceCode, userCode, verificationUrl, verificationUrlComplete, expiresIn, interval }` |
-| `POST /auth/device/token` | the pairing device | `{ deviceCode }` → `202 {status:'pending'}`, `403 denied`, `410 expired`, or `200` session |
+| `POST /auth/device/token` | the pairing device | `{ deviceCode }` → `202 {status:'pending'}`, `403 denied`, `410 expired`, or `200` session (`{ pick }` when approved with a family sign-in) |
 | `POST /auth/logout` | signed in | signs this device out |
 | `GET /api/me` | signed in | `{ user, device, permissions, twoFactor, kids, features, shared }` (`kids`: the kids this person is a parent of; `features`: `{ homeMixes: true, … }`, which feature switches are on for this person; `shared`: `{ discordAppId }` from their family or the whole Hub). `user` has `familyId`, `familyManager`, `hasSwitchPin` |
 | `GET /api/me/family` | signed in | `{ name, people: [{ id, displayName, role, hasSwitchPin }] }`: your family, for Who's listening? (no family settings) |
@@ -1019,6 +1142,11 @@ with a 4xx status.
 | `GET /api/sonic/search?q=` | signed in, `sonic` on | analysed songs whose title and artist contain the words |
 | `POST /api/sonic/lookup` | signed in, `sonic` on | `{ songs: [{ id? , artist?, title? }] }` (500 at most) → `{ features: [… or null] }` with `beatStrength`, `beatPhase`, `offset`, `loudness` too |
 | `GET /api/admin/sonic`, `POST /api/admin/sonic/rescan` | `server.view` | progress `{ on, blocked, total, analysed, failed, running, current, lastListAt, lastError }` / list the library again now |
+| `GET/PUT /api/admin/sso` | `users.manage` | single sign-on settings `{ sso: { enabled, proxySecret, trustedProxies, admins, adminGroup, autoCreate, name } }`; ones the environment sets are listed in `locked` and refused (409); audited without the secret |
+| `POST /api/admin/sso/secret` | `users.manage` | `{ secret }`: a fresh random proxy secret (not saved) |
+| `GET/POST /api/admin/family-logins` | `users.manage` | list / `{ familyId, username?, password?, ssoSubject? }` add a family sign-in |
+| `PATCH/DELETE /api/admin/family-logins/:id` | `users.manage` | change `{ username, password, ssoSubject, signOutEverywhere }` (a new password or tinyauth name ends its family tokens) / delete |
+| `POST /api/admin/users/:id/merge` | `users.manage` | `{ into }`: move everything of this profile into `into`, then delete it |
 | `GET /api/admin/features` | `users.manage` | `{ features: { homeMixes: { on, kids }, … } }` (see "Feature switches") |
 | `PUT /api/admin/features` | `users.manage` | `{ features: { blend: { on: false }, musicVideos: { kids: true } } }`: only what's sent changes; audited |
 | `GET /api/me/2fa` | signed in | `{ enabled, recoveryLeft }` |

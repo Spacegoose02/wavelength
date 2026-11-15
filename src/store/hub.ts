@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { secretStorage } from '../lib/secrets';
 import { isAndroid, isIOS, isLinux, isMac } from '../lib/platform';
 import { isTauri, setHubFetch } from '../lib/http';
+import { stopWebSso } from '../lib/webHub';
 import { HubClient, HubError, type HubDevice, type HubPermission, type HubService, type HubSession, type HubUser } from '../sources/hub';
 
 /**
@@ -43,7 +44,18 @@ interface HubState {
    * (components/KidLock.tsx KidSignedOutScreen) until someone signs in again, instead of opening unfiltered.
    */
   kidSignedOut?: string;
+  /**
+   * This device signed in with a family sign-in (hub/src/familyLogins.ts): its token brings the family's profile
+   * picker back. The token lives in the keychain.
+   */
+  family?: { token: string; id: number; name: string };
+  /** The active profile was picked with "Stay signed in" off: next time the app opens it shows the picker again. */
+  noStay?: boolean;
   setUrl(url: string): void;
+  /** Remember the family sign-in this device used (null forgets it: the picker no longer comes back). */
+  setFamily(f: { token: string; id: number; name: string } | null): void;
+  /** Signed in by picking a profile; `stay` = keep it signed in next time the app opens. */
+  picked(s: HubSession, stay: boolean): void;
   signedIn(s: HubSession): void;
   /** Sign in one more person on this device, and switch to them. */
   addProfile(s: HubSession): void;
@@ -92,7 +104,12 @@ export const useHub = create<HubState>()(
       kids: [],
       profiles: [],
       setUrl: (url) => set({ url }),
-      signedIn: (s) => set({ token: s.token, user: s.user, permissions: s.permissions, device: s.device, kids: [], features: undefined, shared: undefined, lastSeen: Date.now(), offline: false, kidSignedOut: undefined }),
+      setFamily: (f) => set({ family: f ?? undefined }),
+      picked: (s, stay) => {
+        useHub.getState().signedIn(s);
+        set({ noStay: !stay });
+      },
+      signedIn: (s) => set({ token: s.token, user: s.user, permissions: s.permissions, device: s.device, kids: [], features: undefined, shared: undefined, lastSeen: Date.now(), offline: false, kidSignedOut: undefined, noStay: undefined }),
       addProfile: (n) =>
         set((st) => {
           const cur = asProfile(st, st.pin);
@@ -141,6 +158,7 @@ export const useHub = create<HubState>()(
         }
       },
       signOut: async () => {
+        stopWebSso();
         const c = hubClient();
         // tell the Hub when we can; sign out locally either way
         await c?.logout().catch(() => undefined);
@@ -157,25 +175,27 @@ export const useHub = create<HubState>()(
     {
       name: 'tonearm.hub',
       partialize: (st) => {
-        const { url, token, user, permissions, device, lastSeen, services, kids, profiles, features, shared } = st;
-        return { url, token, user, permissions, device, lastSeen, services, kids, profiles, features, shared, pin: st.pin, kidSignedOut: st.kidSignedOut };
+        const { url, token, user, permissions, device, lastSeen, services, kids, profiles, features, shared, family, noStay } = st;
+        return { url, token, user, permissions, device, lastSeen, services, kids, profiles, features, shared, pin: st.pin, kidSignedOut: st.kidSignedOut, family, noStay };
       },
       // the device token, and the server logins the Hub hands out, live in the OS keychain (lib/secrets.ts)
       storage: createJSONStorage(() =>
         secretStorage<Partial<HubState>>({
-          strip: ({ token, services, profiles, ...rest }) => {
+          strip: ({ token, services, profiles, family, ...rest }) => {
             const secrets: Record<string, string> = token ? { 'hub.token': token } : {};
+            if (family) secrets['hub.family'] = family.token;
             services?.forEach((x) => {
               if (Object.keys(x.secrets ?? {}).length) secrets[`hub.service.${x.id}`] = JSON.stringify(x.secrets);
             });
             profiles?.forEach((p) => {
               secrets[`hub.profile.${p.user.id}`] = p.token;
             });
-            return { state: { ...rest, services: services?.map((x) => ({ ...x, secrets: {} })), profiles: profiles?.map((p) => ({ ...p, token: '' })) }, secrets };
+            return { state: { ...rest, ...(family && { family: { ...family, token: '' } }), services: services?.map((x) => ({ ...x, secrets: {} })), profiles: profiles?.map((p) => ({ ...p, token: '' })) }, secrets };
           },
           fill: (state, get) => ({
             ...state,
             token: get('hub.token') ?? state.token,
+            family: state.family && (get('hub.family') ?? state.family.token) ? { ...state.family, token: get('hub.family') ?? state.family.token } : undefined,
             profiles: state.profiles?.map((p) => ({ ...p, token: get(`hub.profile.${p.user.id}`) ?? p.token })).filter((p) => !!p.token),
             services: state.services?.map((x) => {
               const v = get(`hub.service.${x.id}`);
@@ -185,6 +205,12 @@ export const useHub = create<HubState>()(
           owns: (k) => k.startsWith('hub.'),
         }),
       ),
+      // a profile picked without "Stay signed in": the app opens on the family's picker again
+      onRehydrateStorage: () => (st) => {
+        if (!st?.noStay || !st.family || !st.token) return;
+        void new HubClient(st.url, st.token).logout().catch(() => undefined);
+        useHub.setState({ token: undefined, user: undefined, permissions: [], device: undefined, services: [], kids: [], features: undefined, shared: undefined, noStay: undefined, pin: undefined });
+      },
     },
   ),
 );

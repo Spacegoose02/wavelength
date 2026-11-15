@@ -40,3 +40,28 @@ export async function detectWebHub() {
     /* not a Hub (the dev server, a plain web host) */
   }
 }
+
+/**
+ * The web page signs in from tinyauth by itself (views/HubSettings.tsx SignedOut), unless the person signed out
+ * or chose another sign-in in this tab. `?sso=1` (the Hub's /auth/sso/web sends people back with it) always tries.
+ */
+const NO_AUTO_KEY = 'tonearm.webNoAutoSso';
+
+export function wantsWebSso() {
+  try {
+    if (new URLSearchParams(location.search).get('sso') === '1') return true;
+    return sessionStorage.getItem(NO_AUTO_KEY) !== '1';
+  } catch {
+    return true;
+  }
+}
+
+export function stopWebSso() {
+  if (isTauri) return;
+  try {
+    sessionStorage.setItem(NO_AUTO_KEY, '1');
+    if (new URLSearchParams(location.search).has('sso')) history.replaceState(null, '', location.pathname + location.hash);
+  } catch {
+    /* storage blocked: it may sign in again on reload */
+  }
+}

@@ -749,6 +749,21 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   -- Genres people set for a Hub radio station (radioStations.ts), comma separated; '' goes by the station's name.
   ALTER TABLE radio_stations ADD COLUMN genre TEXT NOT NULL DEFAULT '';
   `,
+  `
+  -- Family sign-ins (familyLogins.ts): a username and password and/or a tinyauth identity that belongs to a whole
+  -- family instead of one profile. Signing in with one shows the family's profiles to pick from. Usernames and
+  -- tinyauth names are unique across users and family sign-ins (checked in code).
+  CREATE TABLE family_logins (
+    id            INTEGER PRIMARY KEY,
+    family_id     INTEGER NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+    username      TEXT UNIQUE,                   -- lower case; null = tinyauth only
+    password_hash TEXT,
+    sso_subject   TEXT UNIQUE,                   -- tinyauth Remote-User, lower case
+    epoch         INTEGER NOT NULL DEFAULT 0,    -- bumped to sign every device using it out of the picker
+    created_at    INTEGER NOT NULL
+  );
+  ALTER TABLE pairings ADD COLUMN family_login_id INTEGER;  -- family_logins(id): approved with a family sign-in
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

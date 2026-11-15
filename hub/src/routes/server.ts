@@ -11,6 +11,7 @@ import { SCHEMA_VERSION } from '../db.ts';
 import { clientIp, HttpError, need, str } from '../http.ts';
 import { getScanSettings, navidrome, saveScanSettings } from '../library.ts';
 import { run } from '../ytdlp.ts';
+import { ssoSettings } from '../sso.ts';
 
 const STARTED = Date.now();
 const DAY = 24 * 3600_000;
@@ -75,7 +76,7 @@ export function serverRoutes(app: FastifyInstance, { db, config, library, restar
       node: process.version,
       startedAt: STARTED,
       publicUrl: config.publicUrl,
-      sso: config.sso.enabled,
+      sso: ssoSettings(db, config).enabled,
       web: !!config.webDir && existsSync(join(config.webDir, 'index.html')),
       data: { dir: config.dataDir, dbBytes: size(dbFile) + size(`${dbFile}-wal`), disk: disk(config.dataDir) },
       music: config.musicDir ? { dir: config.musicDir, exists: existsSync(config.musicDir), writable: musicWritable, disk: disk(config.musicDir) } : null,

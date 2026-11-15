@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+- **Single sign-on is set up in the app.** Settings → Users → Single sign-on turns tinyauth on, generates the
+  proxy secret, sets who's an admin, and shows the proxy config to copy, filled in, for either layout: the whole
+  site behind tinyauth like your other apps (the apps, share links, invites and password pages skip it), or only
+  the sign-in page. Environment variables still work and lock their field (`hub/src/sso.ts`,
+  `src/views/SsoAdmin.tsx`). Without a proxy secret or trusted proxy single sign-on now stays off with a warning,
+  instead of the Hub refusing to start.
+- **Sign in with tinyauth, or a password, on every device.** The apps get a **Sign in with tinyauth** button that
+  opens tinyauth in the browser (a QR code on a TV) and only asks you to press Allow. The Hub's web page signs in by
+  itself when tinyauth is in front of it (`POST /auth/sso/session`), and goes through tinyauth's login when it
+  isn't (`/auth/sso/web`).
+- **Family sign-ins and "Who's listening?".** An admin can give a family one sign-in (a username and password, a
+  tinyauth name, or both). Signing in with it shows the family's profiles to pick from, with each profile's
+  switching PIN when it has one; admin profiles only show once they have a PIN. **Stay signed in on this device**
+  keeps the picked profile; off, the device asks again next time (`hub/src/familyLogins.ts`,
+  `src/components/FamilyPicker.tsx`).
+- **Merge profiles.** Settings → Users → People → **Merge** folds a duplicate profile into another: devices,
+  settings, playlists, history and its tinyauth name move over (`mergeUsers` in `hub/src/users.ts`). A named SSO
+  admin whose tinyauth name matches an existing admin profile now signs into it instead of getting a second one.
+
 ## 0.48.0
 - **The Windows title bar matches your theme.** The grey bar at the top of the window now takes the theme's sidebar
   and text colours on Windows 11 (dark or light on Windows 10), and changes with the theme, including previews,

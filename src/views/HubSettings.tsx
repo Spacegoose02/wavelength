@@ -10,10 +10,13 @@ import { notifyAllowed, notifySupported } from '../lib/notify';
 import { isAndroid } from '../lib/platform';
 import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { FamiliesAdmin, ServiceFamilies } from './Families';
+import { SsoAdmin } from './SsoAdmin';
 import { SwitchPinSetting } from '../components/WhosListening';
-import { HubClient, HubError, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubAppLogin, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
+import { HubClient, HubError, isPick, type HubPickResponse, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubAppLogin, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
 import { hubClient, sameFamily, thisDevice, useHub } from '../store/hub';
 import { useFeature } from '../lib/features';
+import { useWebHub, wantsWebSso } from '../lib/webHub';
+import { FamilyPicker } from '../components/FamilyPicker';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 
@@ -23,11 +26,17 @@ const ROLE_LABELS: Record<HubRole, string> = { admin: 'Admin', member: 'Member',
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
 const when = (t?: number | null) => (t ? new Date(t).toLocaleString() : 'never');
 
-/** Shows a pairing code and waits for it to be approved in a browser. */
-function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; take?: (s: HubSession) => void }) {
+/**
+ * Shows a pairing code and waits for it to be approved in a browser. With `sso`, the link goes straight to the
+ * single sign-on page (tinyauth signs you in there), so nobody types the code. A family sign-in approves with
+ * its profile picker (`onPick`).
+ */
+function Pairing({ client, onDone, take, sso, onPick }: { client: HubClient; onDone(): void; take?: (s: HubSession) => void; sso?: string; onPick(p: HubPickResponse['pick']): void }) {
   const signedIn = useHub((s) => s.signedIn);
   const takeRef = useRef(take);
   takeRef.current = take;
+  const pickRef = useRef(onPick);
+  pickRef.current = onPick;
   const [p, setP] = useState<HubPairing>();
   const [err, setErr] = useState('');
   const alive = useRef(true);
@@ -44,7 +53,8 @@ function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; 
           try {
             const s = await client.pollPairing(pairing.deviceCode);
             if (!alive.current) return;
-            if (s) {
+            if (s && isPick(s)) pickRef.current(s.pick);
+            else if (s) {
               (takeRef.current ?? signedIn)(s);
               onDone();
             } else timer = setTimeout(poll, pairing.interval * 1000);
@@ -67,6 +77,19 @@ function Pairing({ client, onDone, take }: { client: HubClient; onDone(): void; 
 
   if (err) return <div className="errors">{err}</div>;
   if (!p) return <p className="muted">Getting a code…</p>;
+  if (sso) {
+    const link = `${client.url}/auth/sso/link?code=${encodeURIComponent(p.userCode)}`;
+    return (
+      <div className="hub-pair">
+        <Qr text={link} />
+        <div>
+          <p>Open the {sso} sign-in in your browser, sign in there and allow this device. Or scan the code with your phone.</p>
+          <a className="btn primary" href={link} target="_blank" rel="noreferrer">Open {sso} sign-in</a>
+          <p className="muted small">The code on the page is <b>{p.userCode}</b>. It works for {Math.round(p.expiresIn / 60)} minutes.</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="hub-pair">
       <Qr text={p.verificationUrlComplete} />
@@ -96,7 +119,15 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
   } : first;
   const [draft, setDraft] = useState(url);
   const [health, setHealth] = useState<HubHealth>();
-  const [mode, setMode] = useState<'code' | 'password' | 'invite' | null>(null);
+  const [mode, setMode] = useState<'code' | 'sso' | 'password' | 'invite' | null>(null);
+  /** A family sign-in answered: pick a profile (components/FamilyPicker.tsx). */
+  const [pick, setPick] = useState<HubPickResponse['pick']>();
+  const family = useHub((s) => s.family);
+  const webOrigin = useWebHub((s) => s.origin);
+  const onPick = (p: HubPickResponse['pick']) => {
+    if (adding) setErr('That’s a family sign-in. To add someone to this device, use their own sign-in.');
+    else setPick(p);
+  };
   const [form, setForm] = useState({ username: '', password: '', displayName: '' });
   const [invite, setInvite] = useState('');
   /** The Hub asked for a two-step code after the password. */
@@ -130,15 +161,44 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
     if (url) connect();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** In a browser on the Hub's own page: single sign-on straight from the proxy, or through tinyauth's login. */
+  const onHubPage = !isTauri && !!webOrigin && webOrigin === url;
+  const webSso = async (quiet: boolean) => {
+    try {
+      const r = await client.ssoSession(thisDevice());
+      if (isPick(r)) onPick(r.pick);
+      else signedIn(r);
+    } catch (e) {
+      if (e instanceof HubError && e.data.notLinked) setErr(e.message);
+      // not through tinyauth yet: a visit to /auth/sso/web goes by its login and comes back signed in
+      else if (!quiet) location.assign(`${url}/auth/sso/web`);
+    }
+  };
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (!onHubPage || !health?.sso || adding || autoTried.current || !wantsWebSso()) return;
+    autoTried.current = true;
+    void webSso(true);
+  }, [health, onHubPage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!adding && (pick || (family && url && !health?.setupNeeded))) {
+    return (
+      <section>
+        <h2>Wavelength Hub</h2>
+        <FamilyPicker client={client} pick={pick} onCancel={() => setPick(undefined)} />
+      </section>
+    );
+  }
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setErr('');
     try {
-      signedIn(
-        health?.setupNeeded ? await client.setup({ ...form, ...thisDevice() })
+      const r = health?.setupNeeded ? await client.setup({ ...form, ...thisDevice() })
         : mode === 'invite' ? await client.acceptInvite({ ...form, code: invite.trim(), ...thisDevice() })
-        : await client.login({ ...form, ...(otp.trim() && { otp: otp.trim() }), ...thisDevice() }),
-      );
+        : await client.login({ ...form, ...(otp.trim() && { otp: otp.trim() }), ...thisDevice() });
+      if (isPick(r)) onPick(r.pick);
+      else signedIn(r);
     } catch (e) {
       if (e instanceof HubError && e.twoFactor) setNeedOtp(true);
       setErr(errText(e));
@@ -177,11 +237,15 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
       {health && !health.setupNeeded && (
         <div className="editor">
           <div className="row gap wrap">
-            <button className={`btn ${mode === 'code' ? 'primary' : ''}`} onClick={() => setMode('code')}>Sign in with a code{health.sso ? ' (single sign-on)' : ''}</button>
+            {health.sso && (
+              <button className={`btn ${mode === 'sso' ? 'primary' : ''}`} onClick={() => (onHubPage ? void webSso(false) : setMode('sso'))}>Sign in with {health.ssoName || 'single sign-on'}</button>
+            )}
+            <button className={`btn ${mode === 'code' ? 'primary' : ''}`} onClick={() => setMode('code')}>Sign in with a code</button>
             <button className={`btn ${mode === 'password' ? 'primary' : ''}`} onClick={() => setMode('password')}>Sign in with a password</button>
             <button className={`btn ${mode === 'invite' ? 'primary' : ''}`} onClick={() => setMode('invite')}>I have an invite</button>
           </div>
-          {mode === 'code' && <Pairing client={client} onDone={() => setMode(null)} take={adding ? signedIn : undefined} />}
+          {mode === 'code' && <Pairing client={client} onDone={() => setMode(null)} take={adding ? signedIn : undefined} onPick={onPick} />}
+          {mode === 'sso' && <Pairing client={client} onDone={() => setMode(null)} take={adding ? signedIn : undefined} onPick={onPick} sso={health.ssoName || 'single sign-on'} />}
           {mode === 'password' && (
             <form onSubmit={submit}>
               <div className="editor-grid">
@@ -894,6 +958,21 @@ export function UsersTab() {
                 </div>
               </details>
             )}
+            {u.id !== me?.id && users.length > 1 && (
+              <details className="hub-guardians">
+                <summary className="btn small" title="Fold this profile into another: a duplicate made by single sign-on, or someone with two accounts">Merge</summary>
+                <div className="hub-guardians-list">
+                  <small className="muted">Move {u.displayName}'s sign-ins, devices, playlists and history into:</small>
+                  {users.filter((o) => o.id !== u.id).map((o) => (
+                    <button key={o.id} type="button" className="btn small ghost" onClick={() => {
+                      if (confirm(`Merge ${u.displayName} (@${u.username}) into ${o.displayName} (@${o.username})?\n\nEverything ${u.displayName} has moves to ${o.displayName}, then @${u.username} is deleted. ${o.displayName} keeps their own name, role and password; ${u.displayName}'s single sign-on (and password, if ${o.displayName} has none) carries over. This can't be undone.`)) {
+                        run(() => c.mergeUser(u.id, o.id));
+                      }
+                    }}>{o.displayName} <span className="muted">@{o.username}</span></button>
+                  ))}
+                </div>
+              </details>
+            )}
             <button className="btn small ghost" onClick={() => run(() => c.updateUser(u.id, { disabled: !u.disabled }))}>{u.disabled ? 'Turn on' : 'Turn off'}</button>
             {u.id !== me?.id && <button className="btn small ghost" onClick={() => confirm(`Delete ${u.displayName}? Their synced settings go too.`) && run(() => c.deleteUser(u.id))}>Delete</button>}
           </div>
@@ -921,6 +1000,8 @@ export function UsersTab() {
           <div className="row gap"><button className="btn primary">Add</button></div>
         </form>
       </section>
+
+      <SsoAdmin />
 
       <FamiliesAdmin users={users} onChange={load} />
 

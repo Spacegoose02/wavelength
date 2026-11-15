@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { HubAdminUser, HubFamily, HubFamilyMember, HubSharedKey, HubSharedKeyName } from '../sources/hub';
+import type { HubAdminUser, HubFamily, HubFamilyLogin, HubFamilyMember, HubSharedKey, HubSharedKeyName } from '../sources/hub';
 import { hubClient, useHub } from '../store/hub';
 import { KidRulesSection } from './HubSettings';
 
@@ -65,6 +65,7 @@ export function FamiliesAdmin({ users, onChange }: { users: HubAdminUser[]; onCh
             }}>Grown-up PIN</button>}
             <button className="btn small ghost" onClick={() => confirm(`Delete ${f.name}? Its people stay, without a family, and its keys go.`) && run(() => c.deleteFamily(f.id), true)}>Delete</button>
           </div>
+          <FamilyLogins family={f} />
           <div className="row gap wrap">
             {POWERS.map((p) => (
               <label key={p.key} className="check" title={p.hint}>
@@ -111,6 +112,72 @@ export function FamiliesAdmin({ users, onChange }: { users: HubAdminUser[]; onCh
 
       <SharedKeys families={families} />
     </section>
+  );
+}
+
+/**
+ * Family sign-ins (hub/src/familyLogins.ts): a username and password and/or a tinyauth name for the whole family.
+ * Signing in with one asks "Who's listening?" and the person picks their profile (with its PIN, if it has one).
+ */
+function FamilyLogins({ family }: { family: HubFamily }) {
+  const c = hubClient();
+  const [logins, setLogins] = useState<HubFamilyLogin[]>([]);
+  const [draft, setDraft] = useState({ username: '', password: '', ssoSubject: '' });
+  const [err, setErr] = useState('');
+  const load = () => c?.familyLogins().then((r) => setLogins(r.logins.filter((l) => l.familyId === family.id)), (e) => setErr(errText(e)));
+  useEffect(() => {
+    load();
+  }, [family.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!c) return null;
+  const run = async (f: () => Promise<unknown>) => {
+    try {
+      await f();
+      setErr('');
+      await load();
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+  return (
+    <details className="family-logins">
+      <summary className="small">Family sign-ins{logins.length ? ` (${logins.length})` : ''}</summary>
+      <p className="muted small">
+        One sign-in for the whole family. After signing in with it, Wavelength asks who's listening and the person picks their profile.
+        Profiles with a switching PIN ask for it; admin profiles can only be picked once they have one. A profile's own sign-in
+        (its password or tinyauth name, under People) still goes straight into that profile.
+      </p>
+      {logins.map((l) => (
+        <div key={l.id} className="source-row">
+          <div className="track-main">
+            <div className="track-title">{l.username ? `@${l.username}` : 'Single sign-on only'}</div>
+            <div className="track-sub">{l.ssoSubject ? `SSO ${l.ssoSubject}` : 'no single sign-on'}{l.username ? (l.hasPassword ? ' · password set' : ' · no password') : ''}</div>
+          </div>
+          {l.username && <button className="btn small" onClick={() => {
+            const password = prompt('New password for this family sign-in (at least 10 characters). Devices using it go back to signing in:');
+            if (password) run(() => c.updateFamilyLogin(l.id, { password }));
+          }}>Set password</button>}
+          <button className="btn small" onClick={() => {
+            const sso = prompt('tinyauth username for this family sign-in (empty for none):', l.ssoSubject ?? '');
+            if (sso !== null) run(() => c.updateFamilyLogin(l.id, { ssoSubject: sso.trim() || null }));
+          }}>SSO</button>
+          <button className="btn small ghost" title="Devices that haven't stayed signed in to a profile have to sign in again" onClick={() => run(() => c.updateFamilyLogin(l.id, { signOutEverywhere: true }))}>Sign out devices</button>
+          <button className="btn small ghost" onClick={() => confirm('Delete this family sign-in? Profiles already picked on devices stay signed in.') && run(() => c.deleteFamilyLogin(l.id))}>Delete</button>
+        </div>
+      ))}
+      <form className="editor-grid" onSubmit={(e) => {
+        e.preventDefault();
+        run(async () => {
+          await c.createFamilyLogin({ familyId: family.id, ...(draft.username.trim() && { username: draft.username.trim(), password: draft.password }), ...(draft.ssoSubject.trim() && { ssoSubject: draft.ssoSubject.trim() }) });
+          setDraft({ username: '', password: '', ssoSubject: '' });
+        });
+      }}>
+        <label>Username<input value={draft.username} onChange={(e) => setDraft({ ...draft, username: e.target.value })} placeholder="e.g. smiths" autoComplete="off" /></label>
+        <label>Password (at least 10 characters)<input type="password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} autoComplete="new-password" required={!!draft.username.trim()} minLength={10} /></label>
+        <label>tinyauth username (optional)<input value={draft.ssoSubject} onChange={(e) => setDraft({ ...draft, ssoSubject: e.target.value })} autoComplete="off" /></label>
+        <div className="row gap"><button className="btn small" disabled={!draft.username.trim() && !draft.ssoSubject.trim()}>Add family sign-in</button></div>
+      </form>
+      {err && <div className="errors">{err}</div>}
+    </details>
   );
 }
 
