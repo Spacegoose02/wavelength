@@ -76,7 +76,7 @@ export function serverRoutes(app: FastifyInstance, { db, config, library, restar
       node: process.version,
       startedAt: STARTED,
       publicUrl: config.publicUrl,
-      sso: ssoSettings(db, config).enabled,
+      sso: ssoSettings(db, config).active,
       web: !!config.webDir && existsSync(join(config.webDir, 'index.html')),
       data: { dir: config.dataDir, dbBytes: size(dbFile) + size(`${dbFile}-wal`), disk: disk(config.dataDir) },
       music: config.musicDir ? { dir: config.musicDir, exists: existsSync(config.musicDir), writable: musicWritable, disk: disk(config.musicDir) } : null,
