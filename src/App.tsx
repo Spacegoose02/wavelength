@@ -9,6 +9,7 @@ import { startDjVoice } from './lib/djVoice';
 import { startDjStation } from './lib/djStation';
 import { startSingMode } from './lib/singMode';
 import { startDesktop } from './lib/desktop';
+import { paintTitleBar } from './lib/titleBar';
 import { startHouseActivity } from './lib/houseActivity';
 import { HouseActivity } from './components/HouseActivity';
 import { startDiscord } from './lib/discord';
@@ -248,6 +249,8 @@ export default function App() {
     document.documentElement.dataset.skin = shown;
     // the critters dress for the skin's group (hazmat suits on Nuclear, visors on Lasers, …): styles.css
     document.documentElement.dataset.skinGroup = skinGroup(shown);
+    // the window's title bar follows the theme (desktop app)
+    paintTitleBar();
   }, [shown]);
 
   useEffect(() => {

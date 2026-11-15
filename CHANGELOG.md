@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **The Windows title bar matches your theme.** The grey bar at the top of the window now takes the theme's sidebar
+  and text colours on Windows 11 (dark or light on Windows 10), and changes with the theme, including previews,
+  Seasonal and Random daily. It is still the real Windows bar, so dragging, Snap layouts, double-click to maximise
+  and the window buttons work as before (`src-tauri/src/titlebar.rs`, `src/lib/titleBar.ts`).
+
 ## 0.47.1
 - **Critters run lighter.** Every soft glow (the reactor and meltdown halos, the volcano crater, moons, lamps,
   lanterns, campfires, candles, the hover glow) and the contact and chin shadows are now radial gradients instead
