@@ -196,6 +196,7 @@ export function Playlists() {
         {server.loading && <Spinner />}
         <button className="btn small" onClick={() => server.load()}><IconRefresh /> Sync</button>
         <button className="btn small" onClick={() => go({ view: 'import' })}>Import</button>
+        <button className="btn small" onClick={() => go({ view: 'spotify' })}>Move from Spotify</button>
         <form className="inline-form push" onSubmit={(e) => {
           e.preventDefault();
           const id = createPlaylist(name || 'New playlist');

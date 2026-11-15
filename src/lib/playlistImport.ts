@@ -48,7 +48,20 @@ export function parseCsv(text: string): ImportedSong[] {
   if (!lines.length) return [];
   const sep = [',', ';', '\t'].sort((a, b) => lines[0].split(b).length - lines[0].split(a).length)[0];
   const head = csvFields(lines[0], sep).map((h) => h.toLowerCase());
-  const col = (...names: string[]) => head.findIndex((h) => names.some((n) => h === n || h.startsWith(n)));
+  // the first name that a column has, exactly, else one it starts with; never an id column (Exportify puts
+  // "Track URI" before "Track Name" and "Artist URI(s)" before "Artist Name(s)")
+  const col = (...names: string[]) => {
+    const ok = (h: string) => !/\b(uri|uris|id|ids|url)\b|uri\(s\)/.test(h);
+    for (const n of names) {
+      const i = head.findIndex((h) => h === n && ok(h));
+      if (i >= 0) return i;
+    }
+    for (const n of names) {
+      const i = head.findIndex((h) => h.startsWith(n) && ok(h));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
   let t = col('track name', 'title', 'song', 'name', 'track');
   let a = col('artist name', 'artist', 'artists', 'performer');
   const al = col('album name', 'album');

@@ -71,6 +71,7 @@ const SubWave = page(() => import('./views/SubWave'), 'SubWave');
 const LibraryCare = page(() => import('./views/LibraryCare'), 'LibraryCare');
 const Discover = page(() => import('./views/Discover'), 'Discover');
 const ImportPlaylist = page(() => import('./views/ImportPlaylist'), 'ImportPlaylist');
+const SpotifyImport = page(() => import('./views/SpotifyImport'), 'SpotifyImport');
 const TagEditor = page(() => import('./views/TagEditor'), 'TagEditor');
 const ArtistTagEditor = page(() => import('./views/ArtistTagEditor'), 'ArtistTagEditor');
 const Downloads = page(() => import('./views/Downloads'), 'Downloads');
@@ -150,7 +151,8 @@ function View({ route }: { route: Route }) {
     case 'serverPlaylist': return <ServerPlaylistView key={`${route.playlist.sourceId}:${route.playlist.id}`} playlist={route.playlist} />;
     case 'subwave': return <SubWave key={route.sourceId ?? ''} sourceId={route.sourceId} />;
     case 'discover': return <Discover key={route.genre ?? ''} initialGenre={route.genre} />;
-    case 'import': return <ImportPlaylist />;
+    case 'import': return <ImportPlaylist key={route.link} link={route.link} />;
+    case 'spotify': return <SpotifyImport />;
     case 'tags': return <TagEditor key={route.album.id} album={route.album} />;
     case 'artistTags': return <ArtistTagEditor key={route.artist.name} artist={route.artist} />;
     case 'favorites': return <Favorites />;

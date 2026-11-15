@@ -163,3 +163,23 @@ test('playlists move from localStorage to IndexedDB and are still there after a 
   await expect(page.locator('.side-item', { hasText: 'Moved over' })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('tonearm.library'))).toBeNull();
 });
+
+test('Move from Spotify reads a Spotify data file and lists what isn’t in the library', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/');
+  await page.locator('.side-head button', { hasText: 'Playlists' }).click();
+  await page.getByRole('button', { name: 'Move from Spotify' }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('h1', { hasText: 'Move from Spotify' })).toBeVisible();
+  const playlists = { playlists: [{ name: 'Road trip', items: [{ track: { trackName: 'Midnight City', artistName: 'M83', albumName: 'Hurry Up' } }] }] };
+  const library = { tracks: [{ track: 'Hello', artist: 'Adele', album: '25' }], artists: [{ name: 'Adele' }] };
+  await page.locator('input[type=file]').setInputFiles([
+    { name: 'Playlist1.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(playlists)) },
+    { name: 'YourLibrary.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(library)) },
+  ]);
+  await expect(page.getByText('1 playlist, 1 liked song and 1 followed artist')).toBeVisible();
+  await page.getByRole('button', { name: 'Bring it over' }).click();
+  await expect(page.getByText('Not in your library (2)')).toBeVisible();
+  expect(errors).toEqual([]);
+});

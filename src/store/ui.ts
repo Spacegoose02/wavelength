@@ -28,7 +28,8 @@ export type Route =
   | { view: 'serverPlaylist'; playlist: ServerPlaylist }
   | { view: 'subwave'; sourceId?: string }
   | { view: 'discover'; genre?: 'new' }
-  | { view: 'import' }
+  | { view: 'import'; link?: string }
+  | { view: 'spotify' }
   | { view: 'tags'; album: Album }
   | { view: 'artistTags'; artist: Artist }
   | { view: 'favorites' }
