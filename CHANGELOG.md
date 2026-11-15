@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.50.1
 - **Audiobookshelf works in a browser without CORS setup.** In a browser, an Audiobookshelf kept on the Hub is now
   reached through the Hub (`/api/abs/<id>/…`, `hub/src/routes/absRelay.ts`), which calls it with the saved API
   key. Before, the page called Audiobookshelf itself, and the browser blocked it unless the Hub's address was in
