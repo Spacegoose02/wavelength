@@ -59,7 +59,7 @@ export function familyRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
   app.patch<{ Params: { id: string } }>('/api/admin/families/:id', async (req) => {
     const { user } = need(req, 'users.manage');
     const f = updateFamily(db, Number(req.params.id), req.body);
-    audit(db, { actorId: user.id, action: 'family.updated', target: f.name, detail: { canRegister: f.canRegister, ownKeys: f.ownKeys, kidControls: f.kidControls, maxPeople: f.maxPeople }, ip: clientIp(req) });
+    audit(db, { actorId: user.id, action: 'family.updated', target: f.name, detail: { canRegister: f.canRegister, ownKeys: f.ownKeys, kidControls: f.kidControls, approveRequests: f.approveRequests, downloads: f.downloads, maxPeople: f.maxPeople }, ip: clientIp(req) });
     return { family: withCounts(f) };
   });
 

@@ -13,6 +13,12 @@
   family sign-ins, the profile picker, PINs, Stay signed in and admin linking work as with proxy sign-in, which
   still works, alone or next to OIDC. The client secret is kept encrypted and never shown again. Also
   `WAVELENGTH_OIDC_*` environment variables (`hub/src/oidc.ts`, `hub/src/sso.ts`, `src/views/SsoAdmin.tsx`).
+- **Decide how each family gets music.** A family's **Getting music** setting is each person's own Autodownload
+  switch (as before), **Download straight away** for every grown-up in it, **Request only** for everyone, or
+  **Off**. Admins aren't held by it (`permissionsFor` in `hub/src/roles.ts`, migration 41).
+- **Managers can approve their family's requests.** A new family power, **Approve requests**, gives that family's
+  managers an Inbox **To approve** tab with their family's requests, and notifies them of new ones
+  (`hub/src/routes/requests.ts`).
 
 ## 0.49.0
 - **Single sign-on is set up in the app.** Settings → Users → Single sign-on turns tinyauth on, generates the

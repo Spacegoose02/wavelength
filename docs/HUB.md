@@ -827,6 +827,10 @@ Hub keeps it next to the album art (`/data/artwork`) and serves it from the same
 | **member** | `requests.create`; plus `downloads.run` while the admin has their **Autodownload** switch on. |
 | **kid** | `requests.create`. Kids can never be given Autodownload. |
 
+A family's **Getting music** rule ([Families](#families)) can change that for the members and kids in it: everyone
+downloads straight away (members only), everyone requests, or nobody gets music (no `requests.create` either).
+Admins keep theirs whatever their family's rule (`permissionsFor` in `hub/src/roles.ts`).
+
 The Hub checks the permission on **every** request (`need(req, …)` in `hub/src/http.ts`); the app uses
 the list from `GET /api/me` only to decide what to show. A role change applies on the user's next request,
 no re-login. The Hub refuses to demote, disable or delete the last admin.
@@ -843,6 +847,10 @@ Users → Families); everyone else's calls to them get `403`, and the app never 
   **most people** limit. Each family's card lists its people, with **+ Add someone…**, a drop-down on each row to
   move them to another family (or out of any), and their **Manager** switch; people in no family are under
   **No family**. Moving someone to another family takes their manager switch off (`PUT /api/admin/users/:id/family`).
+- **Getting music** (per family, `downloads`): **Each person's own setting** (`person`, the default: Autodownload
+  or requesting, as without families), **Download straight away** (`auto`: every grown-up member downloads without
+  asking; kids still request), **Request only** (`request`: everyone requests, even with Autodownload) or **Off**
+  (`off`: nobody in the family requests or downloads). Admins aren't held by their family's rule. Migration 41.
 - **Managers.** The admin ticks **Manager** on a grown-up in a family. A manager gets **Settings → My family**, and
   can only do what the admin switched on for that family:
 
@@ -851,6 +859,7 @@ Users → Families); everyone else's calls to them get `403`, and the app never 
   | **Can register people** | Add members and kids to their family, make invite links into it (`POST /api/admin/invites` makes them for their family only), rename, change between member and kid, set passwords, turn off. Never admins or other managers. |
   | **Kid controls** | Each kid's **Parents** (grown-ups in the family, who approve the kid's requests and get their weekly report), bedtimes and daily limits for their family's kids (`/api/admin/kids`, only those kids), and a **grown-up PIN for their family** that their kids' devices ask for instead of the Hub's. |
   | **Own keys** | Set the family's own shared keys (below). |
+  | **Approve requests** | Approve, turn down or mark "already have" music requests from people in their family (not admins'), in **Inbox → To approve**, and get notified of new ones. Picking Soulseek files and clearing the list stay with admins. `GET /api/me` says `approvesFamily: true`. |
 
   The Hub admin is above every family: they see everyone, every family's kids and keys, and every Hub setting.
 - **Shared keys** (Settings → Users → Families → Shared keys). Keys the Hub keeps so nobody types them into a
@@ -1204,7 +1213,7 @@ with a 4xx status.
 | `GET /api/me/family` | signed in | `{ name, people: [{ id, displayName, role, hasSwitchPin }] }`: your family, for Who's listening? (no family settings) |
 | `PUT /api/me/switch-pin` | signed in | `{ pin }` (4–8 digits) or `{ pin: null }`: the PIN your family switches to you with |
 | `POST /api/me/switch` | signed in | `{ userId, pin?, deviceName?, platform? }` → session for someone in your family; `403` wrong PIN, `409` they have no PIN (a grown-up may switch to a kid without one), `404` not in your family |
-| `GET`/`POST /api/admin/families`, `PATCH`/`DELETE …/:id` | `users.manage` | families `{ id, name, canRegister, ownKeys, kidControls, maxPeople, people }`; deleting one keeps its people (without a family) and drops its keys |
+| `GET`/`POST /api/admin/families`, `PATCH`/`DELETE …/:id` | `users.manage` | families `{ id, name, canRegister, ownKeys, kidControls, approveRequests, downloads, maxPeople, people }` (`downloads`: `person`, `auto`, `request` or `off`); deleting one keeps its people (without a family) and drops its keys |
 | `PUT /api/admin/users/:id/family` | `users.manage` | `{ familyId \| null, manager? }` |
 | `DELETE /api/admin/users/:id/switch-pin` | `users.manage` | takes a forgotten switching PIN off |
 | `GET /api/admin/keys?familyId=`, `PUT /api/admin/keys` | `users.manage` | shared keys of the whole Hub (`familyId` 0) or a family: `[{ name, label, secret, hubWide, set, hint }]`, plus `env`; `PUT { familyId, values: { name: value \| '' } }` |
@@ -1296,7 +1305,7 @@ with a 4xx status.
 | `GET /api/requests` | signed in | your requests, newest first; approved ones carry `downloadedAt` and `readyAt` (scanned into the library) |
 | `GET /api/requests/counts` | signed in | `{ unseen, pending }`: your decided requests you haven't looked at, and (with `requests.approve`) how many wait |
 | `POST /api/requests/seen`, `DELETE /api/requests/:id` | signed in | mark yours as seen / cancel one still waiting |
-| `GET /api/admin/requests?status=` | `requests.approve` | everyone's requests, waiting ones first |
+| `GET /api/admin/requests?status=` | `requests.approve` (or a parent / a family manager with **Approve requests**: only those people's) | everyone's requests, waiting ones first |
 | `POST /api/admin/requests/:id/approve` | `requests.approve` | `{ bitrate? }`: the Hub downloads it (Deezer links with deemix, anything else with yt-dlp), or `{ slskd: { username, files: [{ filename, size }] } }` downloads a Soulseek folder for it; `failed` with the reason if that didn't work, and approving again retries |
 | `POST /api/slskd/test` | `downloads.run` | `{ message }`: whether slskd is signed in to Soulseek |
 | `POST /api/slskd/searches` | `downloads.run` | `{ query }` → `{ id }` |

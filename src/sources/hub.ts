@@ -42,9 +42,16 @@ export interface HubFamily {
   ownKeys: boolean;
   /** Its managers set bedtimes, limits and a grown-up PIN for its kids. */
   kidControls: boolean;
+  /** Its managers approve music requests from people in it. */
+  approveRequests?: boolean;
+  /** What its people may get (hub/src/roles.ts `FamilyDownloads`); older Hubs don't say. */
+  downloads?: HubFamilyDownloads;
   maxPeople: number | null;
   people: number;
 }
+
+/** person: each person's own Autodownload switch · auto: grown-ups download straight away · request: everyone requests · off: nothing. */
+export type HubFamilyDownloads = 'person' | 'auto' | 'request' | 'off';
 
 export type HubSharedKeyName = 'anthropic' | 'openai' | 'ollama' | 'tours' | 'lastfmKey' | 'lastfmSecret' | 'fanart' | 'discordAppId';
 /** A shared key's state: whether it's set and its last characters, never the value of a secret. */
@@ -997,7 +1004,7 @@ export class HubClient {
     return r.status === 202 ? null : r.data;
   }
 
-  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; features?: Record<string, boolean>; shared?: { discordAppId?: string | null } }>('GET', '/api/me');
+  me = () => this.call<{ user: HubUser; device: HubDevice; permissions: HubPermission[]; twoFactor?: boolean; kids?: { id: number; displayName: string }[]; approvesFamily?: boolean; features?: Record<string, boolean>; shared?: { discordAppId?: string | null } }>('GET', '/api/me');
   /** With the device's time zone, so the Hub can add the daylist for this time of day. */
   mixes = (fresh = false) => this.call<{ mixes: HubMix[]; builtAt: number }>('GET', `/api/mixes?tz=${new Date().getTimezoneOffset()}${fresh ? '&fresh=1' : ''}`);
   blendPeople = () => this.call<{ optedIn: boolean; people: { id: number; displayName: string; optedIn: boolean }[] }>('GET', '/api/blend/people');

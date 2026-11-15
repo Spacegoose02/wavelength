@@ -26,9 +26,26 @@ const BY_ROLE: Record<Role, readonly Permission[]> = {
 
 export const isRole = (v: unknown): v is Role => typeof v === 'string' && (ROLES as readonly string[]).includes(v);
 
-/** A member with the admin-set Autodownload switch may download without approval. Kids never can. */
-export function permissionsFor(user: { role: Role; autodownload: boolean }): Permission[] {
+/**
+ * What a family may get (families.ts, set by the Hub admin per family):
+ * - `person`: each person's own settings (Autodownload or requesting), as without families
+ * - `auto`: every grown-up member downloads straight away, Autodownload or not
+ * - `request`: everyone requests, even with Autodownload
+ * - `off`: nobody in it requests or downloads
+ * Kids never download without approval, and admins aren't held by their family's rule.
+ */
+export const FAMILY_DOWNLOADS = ['person', 'auto', 'request', 'off'] as const;
+export type FamilyDownloads = (typeof FAMILY_DOWNLOADS)[number];
+export const isFamilyDownloads = (v: unknown): v is FamilyDownloads => typeof v === 'string' && (FAMILY_DOWNLOADS as readonly string[]).includes(v);
+
+/**
+ * A member with the admin-set Autodownload switch may download without approval. Kids never can.
+ * Their family's download rule (`familyDownloads`) can widen or narrow that.
+ */
+export function permissionsFor(user: { role: Role; autodownload: boolean; familyDownloads?: FamilyDownloads }): Permission[] {
   const perms = new Set<Permission>(BY_ROLE[user.role]);
-  if (user.autodownload && user.role === 'member') perms.add('downloads.run');
+  const rule = user.role === 'admin' ? 'person' : (user.familyDownloads ?? 'person');
+  if (rule === 'off') perms.delete('requests.create');
+  else if (user.role === 'member' && (rule === 'auto' || (rule === 'person' && user.autodownload))) perms.add('downloads.run');
   return [...perms];
 }

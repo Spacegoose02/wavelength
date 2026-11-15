@@ -153,3 +153,56 @@ test('a Hub server can be kept to some families', async () => {
   await json(app, 'PUT', `/api/admin/services/${s.id}/families`, { token: tokens.admin, body: { ids: [] } });
   assert.deepEqual(await names(tokens.member), ['Smith Plex']);
 });
+
+test('a family’s Downloads rule: own switches, everyone downloads, everyone requests, or nothing', async () => {
+  const { app, tokens, ids, mine, samToken, smiths } = await twoFamilies();
+  const perms = async (token: string) => (await json(app, 'GET', '/api/me', { token })).body.permissions as string[];
+  const set = (id: number, downloads: string) => json(app, 'PATCH', `/api/admin/families/${id}`, { token: tokens.admin, body: { downloads } });
+  assert.equal(mine.downloads, 'person', 'a family follows each person’s own switch at first');
+  assert.ok(!(await perms(tokens.member)).includes('downloads.run'));
+
+  assert.equal((await set(mine.id, 'auto')).body.family.downloads, 'auto');
+  assert.ok((await perms(tokens.member)).includes('downloads.run'), 'auto: grown-ups download straight away');
+  assert.ok(!(await perms(tokens.kid)).includes('downloads.run'), 'kids still ask');
+
+  await json(app, 'PATCH', `/api/admin/users/${ids.member}`, { token: tokens.admin, body: { autodownload: true } });
+  await set(mine.id, 'request');
+  assert.deepEqual(await perms(tokens.member), ['requests.create'], 'request: Autodownload doesn’t skip the queue');
+
+  await set(mine.id, 'off');
+  assert.deepEqual(await perms(tokens.member), [], 'off: no requests or downloads');
+  assert.equal((await json(app, 'POST', '/api/requests', { token: tokens.member, body: { link: 'https://www.deezer.com/track/1', title: 'Song' } })).status, 403);
+  assert.ok((await perms(tokens.admin)).includes('downloads.run'), 'the admin isn’t held by their family’s rule');
+  assert.ok((await perms(samToken)).includes('requests.create'), 'other families keep theirs');
+
+  assert.equal((await set(smiths.id, 'sometimes')).status, 400);
+  await json(app, 'PUT', `/api/admin/users/${ids.member}/family`, { token: tokens.admin, body: { familyId: null } });
+  assert.ok((await perms(tokens.member)).includes('downloads.run'), 'out of the family: their own Autodownload again');
+});
+
+test('managers approve their own family’s requests when the admin lets them', async () => {
+  const { app, tokens, samToken, smiths } = await twoFamilies();
+  const sue = (await json(app, 'POST', '/api/family/users', { token: samToken, body: { username: 'sue', role: 'member', password: 'sue-password-123' } })).body.user;
+  const sueToken = (await json(app, 'POST', '/auth/login', { body: { username: 'sue', password: 'sue-password-123' } })).body.token as string;
+  const ask = async (token: string, n: number) => (await json(app, 'POST', '/api/requests', { token, body: { link: `https://www.deezer.com/track/${n}`, title: `Song ${n}` } })).body.request.id as number;
+  const sues = await ask(sueToken, 1);
+  const others = await ask(tokens.member, 2);
+
+  assert.equal((await json(app, 'GET', '/api/admin/requests', { token: samToken })).status, 403, 'not without Approve requests');
+  assert.equal((await json(app, 'GET', '/api/me', { token: samToken })).body.approvesFamily, false);
+
+  await json(app, 'PATCH', `/api/admin/families/${smiths.id}`, { token: tokens.admin, body: { approveRequests: true } });
+  assert.equal((await json(app, 'GET', '/api/me', { token: samToken })).body.approvesFamily, true);
+  const queue = (await json(app, 'GET', '/api/admin/requests', { token: samToken })).body.requests;
+  assert.deepEqual(queue.map((r: { id: number }) => r.id), [sues], 'only their family’s');
+  assert.equal((await json(app, 'GET', '/api/requests/counts', { token: samToken })).body.pending, 1);
+  assert.equal((await json(app, 'POST', `/api/admin/requests/${others}/reject`, { token: samToken, body: {} })).status, 404);
+  const no = await json(app, 'POST', `/api/admin/requests/${sues}/reject`, { token: samToken, body: { reason: 'Already on the car playlist' } });
+  assert.equal(no.body.request.status, 'rejected');
+  assert.equal(no.body.request.decidedBy, 'sam');
+
+  await ask(sueToken, 3);
+  const notes = (await json(app, 'GET', '/api/notifications?after=0', { token: samToken })).body;
+  assert.ok(JSON.stringify(notes).includes('New request from sue'), 'the manager hears about new requests');
+  assert.ok(sue.id);
+});

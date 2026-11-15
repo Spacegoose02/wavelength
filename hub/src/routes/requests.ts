@@ -7,7 +7,8 @@ import { deemixJobIds, type DownloadProgress } from '../library.ts';
 import { approvers, notify, notifyRequester } from '../notify.ts';
 import { permissionsFor } from '../roles.ts';
 import { getUser } from '../users.ts';
-import { guardiansOf, isGuardian, kidsOf } from '../family.ts';
+import { guardiansOf, kidsOf } from '../family.ts';
+import { requestManagersOf, requestsManagedBy } from '../families.ts';
 import { releaseNotForKids } from '../kidSafe.ts';
 import { hubSlskd } from '../slskd.ts';
 import { hubDeemix, hubYtSettings, isDeezerLink } from './proxy.ts';
@@ -18,6 +19,9 @@ import { readFiles } from './slskd.ts';
  * playlist or artist; an admin (`requests.approve`) approves it, which makes the Hub download it with
  * deemix (Deezer links) or yt-dlp (anything else), rejects it with a reason, or marks it as already in the
  * library. People with Autodownload skip the queue: their requests are approved straight away.
+ * Besides admins, a kid's parents approve that kid's requests, and a family's managers their family's when the
+ * admin switched **Approve requests** on for it (families.ts). Their family's Downloads rule can make
+ * everyone in it request, download straight away, or neither (roles.ts `permissionsFor`).
  */
 
 export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'have' | 'failed';
@@ -79,6 +83,9 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     return progress ? { ...out, progress } : out;
   };
 
+  /** Everyone who may decide this person's requests: admins, their parents and their family's managers. */
+  const deciders = (userId: number) => [...new Set([...approvers(db, userId), ...guardiansOf(db, userId), ...requestManagersOf(db, userId)])];
+
   /**
    * Release Radar's "Get new releases automatically" (radar.ts): the release becomes this person's request, which
    * downloads straight away with Autodownload and otherwise waits in the admins' queue like any other.
@@ -97,7 +104,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     const r = getRequest(db, Number(lastInsertRowid))!;
     audit(db, { actorId: userId, action: 'request.created', target: `${r.artist} – ${r.title}`, detail: { link: r.link, kind, auto: true } });
     if (permissions.includes('downloads.run')) await approve(r, user, '');
-    else notify(db, approvers(db, userId), 'request.new', `New request from ${user.displayName}`, `${r.title} by ${r.artist} (Release Radar)`);
+    else notify(db, deciders(userId), 'request.new', `New request from ${user.displayName}`, `${r.title} by ${r.artist} (Release Radar)`);
   };
 
   /**
@@ -162,7 +169,7 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     audit(db, { actorId: user.id, action: 'request.created', target: `${r.artist} – ${r.title}`, detail: { link, kind }, ip });
     // Autodownload (and admins): no queue
     if (permissions.includes('downloads.run')) r = await approve(r, user, ip);
-    else notify(db, [...approvers(db, user.id), ...guardiansOf(db, user.id)], 'request.new', `New request from ${user.displayName}`, r.artist ? `${r.title} by ${r.artist}` : r.title);
+    else notify(db, deciders(user.id), 'request.new', `New request from ${user.displayName}`, r.artist ? `${r.title} by ${r.artist}` : r.title);
     return r;
   }
 
@@ -191,7 +198,10 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     return {
       unseen: n('SELECT COUNT(*) AS n FROM requests WHERE user_id = ? AND seen = 0', user.id),
       pending: permissions.includes('requests.approve') ? n("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'")
-        : n("SELECT COUNT(*) AS n FROM requests r JOIN guardians g ON g.kid_id = r.user_id AND g.guardian_id = ? WHERE r.status = 'pending'", user.id),
+        : (() => {
+          const ids = mayDecide(user);
+          return ids.length ? n(`SELECT COUNT(*) AS n FROM requests WHERE status = 'pending' AND user_id IN (${ids.join(',')})`) : 0;
+        })(),
     };
   });
 
@@ -211,13 +221,16 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     return { ok: true };
   });
 
-  // ---- the admin queue (and parents, for their own kids' requests) ----
+  // ---- the admin queue (and parents and family managers, for the requests they look after) ----
 
-  /** Admins see every request; a parent (family.ts) only their kids'. Anyone else: 403. */
+  /** Whose requests a non-admin may decide: a parent's kids, and a manager's family when it may approve requests. */
+  const mayDecide = (user: Auth['user']) => [...new Set([...kidsOf(db, user.id), ...requestsManagedBy(db, user)])].map(Number);
+
+  /** Admins see every request; a parent (family.ts) their kids', a family manager their family's. Anyone else: 403. */
   const queue = (req: Parameters<typeof signedIn>[0]): { auth: Auth; kids: number[] | null } => {
     const auth = signedIn(req);
     if (auth.permissions.includes('requests.approve')) return { auth, kids: null };
-    const kids = kidsOf(db, auth.user.id);
+    const kids = mayDecide(auth.user);
     if (!kids.length) throw new HttpError(403, 'You do not have permission to do that');
     return { auth, kids };
   };
@@ -232,11 +245,11 @@ export function requestRoutes(app: FastifyInstance, { db, config, ytdlp, library
     return { requests: rows.map(withProgress) };
   });
 
-  /** The request, if the caller may decide it: admins any, parents their kids'. */
+  /** The request, if the caller may decide it: admins any, parents their kids', managers their family's. */
   const decide = (req: Parameters<typeof signedIn>[0], id: number): { user: Auth['user']; r: MusicRequest; parent: boolean } => {
     const { auth, kids } = queue(req);
     const r = getRequest(db, id);
-    if (!r || (kids && !isGuardian(db, auth.user.id, r.userId))) throw new HttpError(404, 'No such request');
+    if (!r || (kids && !kids.includes(r.userId))) throw new HttpError(404, 'No such request');
     return { user: auth.user, r, parent: !!kids };
   };
 

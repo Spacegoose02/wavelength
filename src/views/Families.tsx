@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { HubAdminUser, HubFamily, HubFamilyLogin, HubFamilyMember, HubSharedKey, HubSharedKeyName } from '../sources/hub';
+import type { HubAdminUser, HubFamily, HubFamilyDownloads, HubFamilyLogin, HubFamilyMember, HubSharedKey, HubSharedKeyName } from '../sources/hub';
 import { hubClient, useHub } from '../store/hub';
 import { KidRulesSection } from './HubSettings';
 
@@ -10,10 +10,18 @@ import { KidRulesSection } from './HubSettings';
  */
 
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
-const POWERS: { key: 'canRegister' | 'ownKeys' | 'kidControls'; label: string; hint: string }[] = [
+const POWERS: { key: 'canRegister' | 'ownKeys' | 'kidControls' | 'approveRequests'; label: string; hint: string }[] = [
   { key: 'canRegister', label: 'Can register people', hint: 'Its managers add members and kids, and make invite links, into this family' },
   { key: 'ownKeys', label: 'Own keys', hint: 'Its managers set the family’s own shared keys, which win over the Hub’s' },
   { key: 'kidControls', label: 'Kid controls', hint: 'Its managers set bedtimes, daily limits and a grown-up PIN for its kids' },
+  { key: 'approveRequests', label: 'Approve requests', hint: 'Its managers approve or turn down music requests from people in this family (you still can too)' },
+];
+/** What a family's people may get (hub/src/roles.ts `FamilyDownloads`). Admins and kids keep their own rules. */
+const DOWNLOADS: { value: HubFamilyDownloads; label: string; hint: string }[] = [
+  { value: 'person', label: 'Each person’s own setting', hint: 'Grown-ups with Autodownload get music straight away; everyone else requests' },
+  { value: 'auto', label: 'Download straight away', hint: 'Every grown-up in this family gets music without asking; kids still request' },
+  { value: 'request', label: 'Request only', hint: 'Everyone in this family requests and waits for approval, even with Autodownload' },
+  { value: 'off', label: 'Off', hint: 'Nobody in this family can request or download music' },
 ];
 
 /** Settings → Users → Families: make families, put people in them, pick managers, and decide what each may do. */
@@ -102,10 +110,17 @@ export function FamiliesAdmin({ users, onChange }: { users: HubAdminUser[]; onCh
             )}
           </div>
           <FamilyLogins family={f} />
+          <label className="row gap family-downloads" title={DOWNLOADS.find((d) => d.value === (f.downloads ?? 'person'))?.hint}>
+            <small>Getting music</small>
+            <select value={f.downloads ?? 'person'} onChange={(e) => run(() => c.updateFamily(f.id, { downloads: e.target.value as HubFamilyDownloads }), true)}>
+              {DOWNLOADS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+            </select>
+            <small className="muted">{DOWNLOADS.find((d) => d.value === (f.downloads ?? 'person'))?.hint}</small>
+          </label>
           <div className="row gap wrap">
             {POWERS.map((p) => (
               <label key={p.key} className="check" title={p.hint}>
-                <span className="switch"><input type="checkbox" checked={f[p.key]} onChange={(e) => run(() => c.updateFamily(f.id, { [p.key]: e.target.checked }))} /><span /></span>
+                <span className="switch"><input type="checkbox" checked={!!f[p.key]} onChange={(e) => run(() => c.updateFamily(f.id, { [p.key]: e.target.checked }))} /><span /></span>
                 <small>{p.label}</small>
               </label>
             ))}
@@ -297,6 +312,7 @@ export function FamilyTab() {
           f.canRegister && 'You can add people',
           f.kidControls && 'look after its kids',
           f.ownKeys && 'set its own keys',
+          f.approveRequests && 'approve its music requests (in the Inbox)',
         ].filter(Boolean).join(', ') || 'Your Hub admin hasn’t switched anything on for it yet'}.</p>
         {err && <div className="errors">{err}</div>}
         {data.people.map((p) => (
