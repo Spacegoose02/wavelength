@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- **Families list their people.** In Settings → Users → Families each family's card now shows who's in it, with
+  the Manager switch, a drop-down to move someone to another family, and **+ Add someone…**. People without a
+  family get their own **No family** group, and the separate "Who's in which family" list is gone
+  (`src/views/Families.tsx`).
+- **Sign in with tinyauth over OIDC.** The Hub can now be an OpenID Connect client of tinyauth (or any OIDC
+  provider): paste the issuer, client ID and secret in Settings → Users → Single sign-on, register the redirect URI
+  it shows (`/auth/oidc/callback`) in tinyauth, and every device's **Sign in with tinyauth** goes through
+  tinyauth's login in the browser, with no proxy config. Authorization code flow with PKCE, state and nonce, the ID
+  token's signature checked against tinyauth's keys. People are matched by their tinyauth username, so profiles,
+  family sign-ins, the profile picker, PINs, Stay signed in and admin linking work as with proxy sign-in, which
+  still works, alone or next to OIDC. The client secret is kept encrypted and never shown again. Also
+  `WAVELENGTH_OIDC_*` environment variables (`hub/src/oidc.ts`, `hub/src/sso.ts`, `src/views/SsoAdmin.tsx`).
 - **Move from Spotify.** Playlists → **Move from Spotify** brings over your Spotify playlists, liked songs and
   followed artists in one go: playlists become Wavelength playlists, liked songs go to Favorites (and/or a *Liked
   Songs* playlist), followed artists are followed on Release Radar, and what isn't in your library can be got or

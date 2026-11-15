@@ -6,7 +6,7 @@ import { hashPassword } from '../crypto.ts';
 import { tx } from '../db.ts';
 import { createFamilyLogin, deleteFamilyLogin, getFamilyLogin, listFamilyLogins, updateFamilyLogin } from '../familyLogins.ts';
 import { clientIp, HttpError, need, str } from '../http.ts';
-import { putSsoSettings, ssoSettings } from '../sso.ts';
+import { putSsoSettings, ssoSettings, ssoSettingsForAdmin } from '../sso.ts';
 import { countActiveAdmins, getUser, mergeUsers, USERNAME_RE } from '../users.ts';
 import { MIN_PASSWORD } from './auth.ts';
 
@@ -16,10 +16,10 @@ import { MIN_PASSWORD } from './auth.ts';
  * - `/api/admin/family-logins`: sign-ins that belong to a whole family and pick a profile (familyLogins.ts).
  * - `/api/admin/users/:id/merge`: fold a duplicate profile into another (users.ts mergeUsers).
  */
-export function signInRoutes(app: FastifyInstance, { db, config }: Ctx) {
+export function signInRoutes(app: FastifyInstance, { db, config, oidc }: Ctx) {
   app.get('/api/admin/sso', async (req) => {
     need(req, 'users.manage');
-    return { sso: ssoSettings(db, config), publicUrl: config.publicUrl };
+    return { sso: ssoSettingsForAdmin(ssoSettings(db, config), config.publicUrl), publicUrl: config.publicUrl };
   });
 
   app.put('/api/admin/sso', async (req) => {
@@ -27,9 +27,32 @@ export function signInRoutes(app: FastifyInstance, { db, config }: Ctx) {
     const patch = (req.body as { sso?: unknown } | null)?.sso;
     const sso = putSsoSettings(db, config, patch);
     // never log the secret itself
-    const changed = Object.keys(patch as object).map((k) => (k === 'proxySecret' ? 'proxySecret (changed)' : k));
+    const changed = Object.keys(patch as object).map((k) => (k === 'proxySecret' || k === 'oidcClientSecret' ? `${k} (changed)` : k));
     audit(db, { actorId: user.id, action: 'sso.changed', target: changed.join(', ').slice(0, 200), ip: clientIp(req) });
-    return { sso, publicUrl: config.publicUrl };
+    return { sso: ssoSettingsForAdmin(sso, config.publicUrl), publicUrl: config.publicUrl };
+  });
+
+  /**
+   * Check the OIDC provider: its discovery document, as the Hub sees it. `{ issuer? }` checks that address
+   * instead of the saved one, before saving.
+   */
+  app.post('/api/admin/sso/oidc/check', async (req) => {
+    need(req, 'users.manage');
+    const given = str(req.body, 'issuer', 300).trim().replace(/\/+$/, '');
+    const issuer = given || ssoSettings(db, config).oidcIssuer;
+    if (!issuer) throw new HttpError(400, 'Enter the issuer URL first');
+    if (!/^https?:\/\/[^/?#\s]+(\/[^?#\s]*)?$/.test(issuer)) throw new HttpError(400, 'The issuer is a URL, like https://auth.example.com');
+    const d = await oidc.discover(issuer, true);
+    return {
+      ok: true,
+      issuer: d.issuer,
+      authorizationEndpoint: d.authorization_endpoint,
+      tokenEndpoint: d.token_endpoint,
+      userinfoEndpoint: d.userinfo_endpoint ?? null,
+      pkce: d.code_challenge_methods_supported?.includes('S256') ?? null,
+      scopes: (d as { scopes_supported?: string[] }).scopes_supported ?? null,
+      redirectUri: `${config.publicUrl}/auth/oidc/callback`,
+    };
   });
 
   /** A fresh proxy secret to paste into the proxy and save here. Not saved until PUT. */

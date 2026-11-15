@@ -71,8 +71,9 @@ Everything works as in the app except downloading songs for offline play and run
   open **Settings** and add the Hub's address (for example `https://hub.example.com`, no trailing slash) under
   **Allowed CORS Origins**. Until then Test connection in a browser shows "NetworkError when attempting to
   fetch resource" (Firefox) or "Failed to fetch" (Chrome). The desktop and Android apps don't need this.
-- With single sign-on on, the page signs you in by itself when tinyauth already knows you, and otherwise
-  offers **Sign in with tinyauth** next to the password. Put the whole page behind tinyauth or only its sign-in
+- With single sign-on on, the page signs you in by itself when tinyauth already knows you (proxy sign-in), and
+  otherwise offers **Sign in with tinyauth** next to the password. With OIDC, the button goes through tinyauth's
+  login and comes back signed in. Put the whole page behind tinyauth or only its sign-in
   page, as you like ([Single sign-on](#single-sign-on-tinyauth)).
 
 ## First admin
@@ -82,7 +83,8 @@ Pick one:
 - **Hub password:** open `https://hub.example.com/setup` and create the admin. This only works while the
   Hub has no accounts.
 - **tinyauth:** put your tinyauth username in `WAVELENGTH_ADMINS` (or your admin group in
-  `WAVELENGTH_ADMIN_GROUP`) with `WAVELENGTH_SSO=true` and a `WAVELENGTH_PROXY_SECRET`, set up the proxy, then
+  `WAVELENGTH_ADMIN_GROUP`) with either OIDC (`WAVELENGTH_OIDC=true` and the `WAVELENGTH_OIDC_*` settings below) or
+  proxy sign-in (`WAVELENGTH_SSO=true`, a `WAVELENGTH_PROXY_SECRET` and the proxy setup), then
   open `https://hub.example.com/auth/sso/link` once. tinyauth signs you in and the Hub creates your admin
   account. (On a Hub that already has an admin, do this in the app instead.)
 
@@ -91,13 +93,85 @@ in if the proxy is down.
 
 ## Single sign-on (tinyauth)
 
-Wavelength signs people in two ways, and every device offers both: **Sign in with tinyauth** (single sign-on
-through the proxy in front of the Hub) or a **username and password**. You set single sign-on up in two places:
-the Hub (in the app), and your proxy.
+Wavelength signs people in two ways, and every device offers both: **Sign in with tinyauth** (single sign-on) or a
+**username and password**. The Hub can reach tinyauth in two ways. Use either, or both:
 
-### 1. In the app: Settings → Hub admin → Users → Single sign-on
+- **OIDC** (OpenID Connect): the Hub is a client of tinyauth's OIDC server, with a client ID and secret. Nothing to
+  change in your proxy. The simplest. See [Sign in with OIDC](#sign-in-with-oidc).
+- **Proxy sign-in** (forward-auth): Nginx Proxy Manager asks tinyauth who you are and passes it to the Hub in
+  headers. Needs the proxy config below. Its upside: with the whole site behind tinyauth, the web page signs in
+  without a click.
 
-- **Single sign-on**: on.
+Either way the rest is the same: who's an admin, **Make a profile for anyone tinyauth knows**, linking a tinyauth
+name to a profile or a family ([Who signs in as whom](#who-signs-in-as-whom)), the "Who's listening?" picker,
+switching PINs and **Stay signed in on this device**. Both match people by their **tinyauth username**, so someone
+linked through proxy sign-in signs in with OIDC as the same person, and the other way round.
+
+### Sign in with OIDC
+
+You need tinyauth with its OIDC server turned on (tinyauth v4 or later; see tinyauth's own
+[OIDC guide](https://tinyauth.app/docs/guides/oidc/)), and the Hub on a public `https://` address
+(`WAVELENGTH_PUBLIC_URL`).
+
+**1. Make a client in tinyauth.** Run tinyauth's `oidc create` command with a client name, for example
+`docker run -i -t --rm ghcr.io/tinyauthapp/tinyauth:v5 oidc create wavelength`. It prints a client ID and a client
+secret. Keep the secret somewhere safe: anyone with it can pose as the Hub to tinyauth. Then give the client the
+Hub's redirect URI in tinyauth's settings (the client name in upper case in the variable names):
+
+```
+TINYAUTH_OIDC_CLIENTS_WAVELENGTH_CLIENTID=your-client-id
+TINYAUTH_OIDC_CLIENTS_WAVELENGTH_CLIENTSECRET=your-client-secret
+TINYAUTH_OIDC_CLIENTS_WAVELENGTH_TRUSTEDREDIRECTURIS=https://hub.example.com/auth/oidc/callback
+TINYAUTH_OIDC_CLIENTS_WAVELENGTH_NAME=Wavelength
+```
+
+The redirect URI is always your `WAVELENGTH_PUBLIC_URL` followed by `/auth/oidc/callback`. The app shows it, ready
+to copy. Restart tinyauth.
+
+**2. In the app: Settings → Hub admin → Users → Single sign-on → Sign in with OIDC.**
+
+- **Issuer URL**: tinyauth's address, e.g. `https://auth.example.com`. **Check the issuer** reads its
+  `/.well-known/openid-configuration` from the Hub, so you know the Hub can reach it.
+- **Client ID** and **Client secret**: from step 1. The secret is kept encrypted with the Hub's secret key and is
+  never shown again, not in the app, the API or the audit log. To change it, type a new one; **Remove saved
+  secret** clears it (and turns OIDC off).
+- **Scopes** (default `openid profile email groups`) and **Username claim** (default `preferred_username`): leave
+  them, unless you use another OIDC provider.
+- **OIDC sign-in**: on, then **Save**. The Hub won't save it on until the issuer, client ID and secret are all set.
+- **Who signs in** (button name, always-admins, admin group, making profiles) is shared with proxy sign-in.
+
+Or set it in the container instead: `WAVELENGTH_OIDC=true`, `WAVELENGTH_OIDC_ISSUER`,
+`WAVELENGTH_OIDC_CLIENT_ID` and `WAVELENGTH_OIDC_CLIENT_SECRET` (or `WAVELENGTH_OIDC_CLIENT_SECRET_FILE` for a
+Docker secret). See [Settings](#settings-environment-variables). Ones set there are locked in the app.
+
+**Check it:** open `https://hub.example.com/auth/sso/link?code=TEST-CODE`. You should be sent to tinyauth's login,
+then back to "That code is wrong or has expired" or "There's no Wavelength account for … yet" (both good: the Hub
+knew who you were).
+
+**How it works.** The Hub uses the authorization code flow with PKCE (S256), `state` tied to the browser with a
+cookie, and a `nonce`. It sends the client secret only to tinyauth's token endpoint, checks the ID token's
+signature against tinyauth's published keys, and checks its issuer, audience, expiry and nonce. It reads groups
+from the userinfo endpoint when the ID token leaves them out. The person is matched by `preferred_username`, not
+`sub`, because tinyauth's `sub` changes if the client ID does. The result is kept for 15 minutes in a signed,
+HttpOnly cookie (`wl_sso`, only for `/auth/`), which the single sign-on pages read just as they read the proxy's
+headers:
+
+- **Apps** (desktop, Android, TV): **Sign in with tinyauth** pairs the device with a code, and opens
+  `/auth/sso/link?code=…` in your system browser (a TV shows it as a QR code for your phone). That page sends the
+  browser through tinyauth's login and back, and you press **Allow**. The app never sees your tinyauth password or
+  any token from tinyauth; it gets its own device token, as with every other sign-in.
+- **The web page**: **Sign in with tinyauth** goes to `/auth/sso/web`, through tinyauth's login, and back to the
+  page signed in. The `wl_sso` cookie is used up then, so signing out doesn't sign you straight back in.
+- **Linking tinyauth to a password profile** (Settings → Account → Link single sign-on) opens
+  `/auth/sso/connect`, which also goes through tinyauth's login first.
+
+If tinyauth uses a self-signed certificate, give the Hub its CA with `NODE_EXTRA_CA_CERTS=/path/to/ca.pem` (mount
+the file into the container). "Couldn't reach the sign-in provider" means the Hub can't reach the issuer
+address; "invalid_client" a wrong client ID or secret; "invalid_grant" usually a redirect URI that doesn't match.
+
+### Proxy sign-in, 1. In the app: Settings → Hub admin → Users → Single sign-on
+
+- **Sign in through the proxy's headers**: on.
 - **Proxy secret**: press **Generate**, then **Save**. The proxy sends it as `X-Wavelength-Proxy-Secret` with
   tinyauth's identity headers. The Hub's port is also reachable on your LAN, and without the secret anyone there
   could talk to port 7780 directly and claim `Remote-User: admin`. Single sign-on stays off until there's a secret
@@ -115,7 +189,7 @@ One set there wins and shows as locked in the app; an empty one leaves it to the
 **Proxy setup** under the settings shows the proxy config below, with your secret and Hub address filled in, ready
 to copy.
 
-### 2. In your proxy: pick a layout
+### Proxy sign-in, 2. In your proxy: pick a layout
 
 In Nginx Proxy Manager: **Hosts → Proxy Hosts → Add**, domain `hub.example.com`, forward to your Unraid IP,
 port `7780`, scheme `http`. On **SSL**, request a certificate and turn on Force SSL. Then **Advanced** → Custom
@@ -247,6 +321,13 @@ profile's username signs into that profile instead of getting a new one.
 | `WAVELENGTH_ADMIN_GROUP` | — | tinyauth group whose members are admins. |
 | `WAVELENGTH_SSO_AUTO_CREATE` | `false` | Create a member account for any tinyauth user on first sign-in. Off: an admin adds people first (with their SSO username). |
 | `WAVELENGTH_SSO_NAME` | `tinyauth` | What the sign-in button calls single sign-on ("Sign in with tinyauth"). |
+| `WAVELENGTH_OIDC` | `false` | Sign in with OpenID Connect ([Sign in with OIDC](#sign-in-with-oidc)). Needs the issuer, client ID and secret below. Works next to `WAVELENGTH_SSO`. Like the SSO settings, these can be set in the app instead. |
+| `WAVELENGTH_OIDC_ISSUER` | — | The provider's issuer URL, e.g. `https://auth.example.com` (tinyauth's address). |
+| `WAVELENGTH_OIDC_CLIENT_ID` | — | The client ID tinyauth's `oidc create` printed. |
+| `WAVELENGTH_OIDC_CLIENT_SECRET` | — | That client's secret. Never shown in the app. |
+| `WAVELENGTH_OIDC_CLIENT_SECRET_FILE` | — | Or a file holding the secret (a Docker secret). |
+| `WAVELENGTH_OIDC_SCOPES` | `openid profile email groups` | Scopes to ask for. Must include `openid`. |
+| `WAVELENGTH_OIDC_USERNAME_CLAIM` | `preferred_username` | The claim that names the person, matched against tinyauth names on profiles and family sign-ins. |
 | `PUID` / `PGID` | `1000` (Unraid template: `99`/`100`) | User the Hub runs as. |
 
 ## How signing in works
@@ -256,7 +337,9 @@ code**, **Sign in with a password** and **I have an invite**. A family sign-in, 
 picker ([Family sign-ins](#family-sign-ins)).
 
 **Sign in with tinyauth**: in the apps, this pairs the device (below) with a link that goes straight to
-`/auth/sso/link`, so tinyauth signs you in in the browser and you only press Allow; a TV shows it as a QR code. On
+`/auth/sso/link`, so tinyauth signs you in in the browser and you only press Allow; a TV shows it as a QR code.
+With OIDC on, `/auth/sso/link`, `/auth/sso/web` and `/auth/sso/connect` send a browser that tinyauth hasn't
+identified yet to `/auth/oidc/start` first, and come back after `/auth/oidc/callback`. On
 the Hub's own web page it calls `POST /auth/sso/session` (JSON, with an `X-Wavelength-Web: 1` header that another
 site can't send, so another site can't sign you in): when tinyauth is in front of the page, that answers with a
 session straight away, and the page does it by itself on opening. When tinyauth only guards `/auth/sso/`, the button
@@ -757,7 +840,9 @@ Users → Families); everyone else's calls to them get `403`, and the app never 
 `src/components/WhosListening.tsx`.
 
 - **Families and people.** The admin makes families and puts each person in one (or none). A family can have a
-  **most people** limit.
+  **most people** limit. Each family's card lists its people, with **+ Add someone…**, a drop-down on each row to
+  move them to another family (or out of any), and their **Manager** switch; people in no family are under
+  **No family**. Moving someone to another family takes their manager switch off (`PUT /api/admin/users/:id/family`).
 - **Managers.** The admin ticks **Manager** on a grown-up in a family. A manager gets **Settings → My family**, and
   can only do what the admin switched on for that family:
 

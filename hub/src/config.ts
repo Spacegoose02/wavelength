@@ -53,6 +53,20 @@ export interface SsoConfig {
   adminGroup: string;
   /** What the sign-in button calls it ("Sign in with tinyauth"). */
   name?: string;
+  /**
+   * OpenID Connect sign-in (oidc.ts, docs/HUB.md "Sign in with OIDC"): the Hub is a client of tinyauth (or any
+   * OIDC provider). Works next to, or instead of, the proxy headers above.
+   */
+  oidc?: boolean;
+  /** The provider's issuer URL, e.g. https://auth.example.com. Discovery is `<issuer>/.well-known/openid-configuration`. */
+  oidcIssuer?: string;
+  oidcClientId?: string;
+  /** Never sent to the app; saved sealed (crypto.ts seal) when an admin sets it in the app. */
+  oidcClientSecret?: string;
+  /** Space-separated. Default `openid profile email groups`. */
+  oidcScopes?: string;
+  /** The claim that names the person, matched like `Remote-User`. Default `preferred_username`. */
+  oidcUsernameClaim?: string;
 }
 
 const list = (v: string | undefined) => (v ?? '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -69,6 +83,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     admins: list(env.WAVELENGTH_ADMINS).map((s) => s.toLowerCase()),
     adminGroup: env.WAVELENGTH_ADMIN_GROUP ?? '',
     name: env.WAVELENGTH_SSO_NAME || 'tinyauth',
+    oidc: bool(env.WAVELENGTH_OIDC, false),
+    oidcIssuer: (env.WAVELENGTH_OIDC_ISSUER ?? '').trim().replace(/\/+$/, ''),
+    oidcClientId: (env.WAVELENGTH_OIDC_CLIENT_ID ?? '').trim(),
+    oidcClientSecret: secretFrom(env.WAVELENGTH_OIDC_CLIENT_SECRET, env.WAVELENGTH_OIDC_CLIENT_SECRET_FILE),
+    oidcScopes: (env.WAVELENGTH_OIDC_SCOPES ?? '').trim(),
+    oidcUsernameClaim: (env.WAVELENGTH_OIDC_USERNAME_CLAIM ?? '').trim(),
   };
   const fromEnv: Record<keyof SsoConfig, string> = {
     enabled: 'WAVELENGTH_SSO',
@@ -78,9 +98,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     admins: 'WAVELENGTH_ADMINS',
     adminGroup: 'WAVELENGTH_ADMIN_GROUP',
     name: 'WAVELENGTH_SSO_NAME',
+    oidc: 'WAVELENGTH_OIDC',
+    oidcIssuer: 'WAVELENGTH_OIDC_ISSUER',
+    oidcClientId: 'WAVELENGTH_OIDC_CLIENT_ID',
+    oidcClientSecret: 'WAVELENGTH_OIDC_CLIENT_SECRET',
+    oidcScopes: 'WAVELENGTH_OIDC_SCOPES',
+    oidcUsernameClaim: 'WAVELENGTH_OIDC_USERNAME_CLAIM',
   };
   // Empty variables (the Unraid template's blanks) leave the setting to the app.
-  const ssoEnv = (Object.keys(fromEnv) as (keyof SsoConfig)[]).filter((k) => (env[fromEnv[k]] ?? '') !== '');
+  const ssoEnv = (Object.keys(fromEnv) as (keyof SsoConfig)[]).filter((k) => (env[fromEnv[k]] ?? '') !== '' || (k === 'oidcClientSecret' && !!sso.oidcClientSecret));
   return {
     version: (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version,
     port: Number(env.PORT || 7780),
@@ -101,6 +127,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dockerContainers: list(env.WAVELENGTH_DOCKER_CONTAINERS).map((s) => s.replace(/^\//, '')),
     webDir: (env.WAVELENGTH_WEB_DIR ?? fileURLToPath(new URL('../web', import.meta.url))).replace(/\/+$/, ''),
   };
+}
+
+/** A secret from its variable, or from a file (Docker secrets), trimmed. */
+function secretFrom(value: string | undefined, file: string | undefined): string {
+  if (value) return value.trim();
+  if (file) return readFileSync(file, 'utf8').trim();
+  return '';
 }
 
 /** From the environment (base64 or hex, 32 bytes), else a key generated once into the data folder. */

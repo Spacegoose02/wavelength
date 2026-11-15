@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { DUMMY_HASH, hashPassword, hmac, newToken, normalizeUserCode, safeEqual, sha256, verifyPassword } from '../crypto.ts';
@@ -11,7 +11,8 @@ import { decidePairing, decidePairingForFamily, pendingPairing, pollPairing, POL
 import { getFamily } from '../families.ts';
 import { checkFamilyPassword, getFamilyLogin, checkFamilyToken, familyLoginBySso, pickable, pickPayload, ssoIsFamilyLogin, usernameIsFamilyLogin, type FamilyLogin } from '../familyLogins.ts';
 import { permissionsFor } from '../roles.ts';
-import { isSsoAdmin, ssoIdentity, ssoSettings, type SsoIdentity } from '../sso.ts';
+import { cookie, IDENTITY_COOKIE, IDENTITY_TTL_S, identityCookieValue, readCookie, safeNext, STATE_COOKIE } from '../oidc.ts';
+import { isSsoAdmin, requestIdentity, ssoSettings, type SsoIdentity } from '../sso.ts';
 import { countUsers, createUser, getUser, getUserBySso, getUserForLogin, updateUser, USERNAME_RE, type User } from '../users.ts';
 
 export const MIN_PASSWORD = 10;
@@ -24,8 +25,15 @@ export const session = (token: string, user: User, device: { id: number; name: s
   device,
 });
 
-export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
+export function authRoutes(app: FastifyInstance, { db, config, limits, oidc }: Ctx) {
   const sso = () => ssoSettings(db, config);
+  /** Who single sign-on says this is: the proxy's headers, or the cookie an OIDC sign-in left (oidc.ts). */
+  const identity = (req: FastifyRequest) => requestIdentity(req, sso(), config.secretKey);
+  const secure = config.publicUrl.startsWith('https:');
+  const redirectUri = `${config.publicUrl}/auth/oidc/callback`;
+  /** A single sign-on page opened without an identity, with OIDC on: sign in with the provider first, then come back. */
+  const viaOidc = (req: FastifyRequest, reply: FastifyReply) =>
+    sso().oidc && !identity(req) ? reply.redirect(`/auth/oidc/start?next=${encodeURIComponent(req.url)}`) : null;
   const familyName = (l: FamilyLogin) => {
     const f = getFamily(db, l.familyId);
     return f ? `the ${f.name} family` : 'your family';
@@ -88,7 +96,7 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
 
   app.get('/api/health', async () => {
     const s = sso();
-    return { ok: true, name: 'wavelength-hub', version: config.version, setupNeeded: countUsers(db) === 0, sso: s.enabled, ...(s.enabled && { ssoName: s.name }) };
+    return { ok: true, name: 'wavelength-hub', version: config.version, setupNeeded: countUsers(db) === 0, sso: s.active, ...(s.active && { ssoName: s.name, ssoOidc: s.oidc }) };
   });
 
   /** A family sign-in's username and password (familyLogins.ts), checked like a profile's. */
@@ -236,12 +244,12 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
     if (countUsers(db) === 0) return reply.redirect('/setup');
     const code = normalizeUserCode(str(req.query, 'code', 20));
     const p = code ? pendingPairing(db, code) : undefined;
-    return html(reply, linkPage({ code, device: p && { name: p.deviceName, platform: p.platform }, sso: sso().enabled, error: code && !p ? 'That code is wrong or has expired' : '' }));
+    return html(reply, linkPage({ code, device: p && { name: p.deviceName, platform: p.platform }, sso: sso().active, error: code && !p ? 'That code is wrong or has expired' : '' }));
   });
 
   app.post('/link', async (req, reply) => {
     const code = normalizeUserCode(str(req.body, 'code', 20));
-    const show = (error: string, status: number) => html(reply, linkPage({ code, sso: sso().enabled, error }), status);
+    const show = (error: string, status: number) => html(reply, linkPage({ code, sso: sso().active, error }), status);
     let u: User;
     const username = str(req.body, 'username', 64);
     try {
@@ -267,8 +275,11 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
   const csrfFor = (pairingId: number, userId: number) => hmac(config.secretKey, `sso-link:${pairingId}:${userId}`);
 
   function ssoIdentityOr401(req: FastifyRequest): SsoIdentity {
-    const id = ssoIdentity(req, sso());
-    if (!id) throw new HttpError(401, sso().enabled ? 'Single sign-on did not identify you. Check the proxy setup in docs/HUB.md.' : 'Single sign-on is not turned on for this Hub.');
+    const id = identity(req);
+    if (!id) {
+      const s = sso();
+      throw new HttpError(401, s.oidc ? 'Your single sign-on has timed out. Open the sign-in link again.' : s.enabled ? 'Single sign-on did not identify you. Check the proxy setup in docs/HUB.md.' : 'Single sign-on is not turned on for this Hub.');
+    }
     return id;
   }
 
@@ -305,6 +316,8 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
   }
 
   app.get('/auth/sso/link', async (req, reply) => {
+    const away = viaOidc(req, reply);
+    if (away) return away;
     const code = normalizeUserCode(str(req.query, 'code', 20));
     try {
       const who = ssoWho(req);
@@ -350,10 +363,10 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
    * The app in a browser, already through tinyauth: a session (or the family's profile picker) straight from the
    * identity headers. JSON only, with a header a cross-site form can't send, so another site can't sign you in.
    */
-  app.post('/auth/sso/session', async (req) => {
+  app.post('/auth/sso/session', async (req, reply) => {
     if (req.headers['x-wavelength-web'] !== '1') throw new HttpError(400, 'Send X-Wavelength-Web: 1');
-    const id = ssoIdentity(req, sso());
-    if (!id) throw new HttpError(401, sso().enabled ? 'Single sign-on did not identify you' : 'Single sign-on is not turned on for this Hub', { sso: false });
+    const id = identity(req);
+    if (!id) throw new HttpError(401, sso().active ? 'Single sign-on did not identify you' : 'Single sign-on is not turned on for this Hub', { sso: false, ...(sso().oidc && { oidc: true }) });
     let who: ReturnType<typeof ssoWho>;
     try {
       who = ssoWho(req);
@@ -362,6 +375,8 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
       throw e;
     }
     const d = deviceInfo(req.body);
+    // an OIDC sign-in is used up here, so signing out of the page doesn't sign straight back in
+    if (readCookie(req.headers.cookie, IDENTITY_COOKIE)) reply.header('set-cookie', cookie(IDENTITY_COOKIE, '', { path: '/auth/', maxAge: 0, secure }));
     if (who.family) {
       audit(db, { action: 'auth.family_login', target: who.family.ssoSubject ?? '', detail: { method: 'sso', platform: d.platform }, ip: clientIp(req) });
       return pickPayload(db, config.secretKey, who.family);
@@ -376,6 +391,8 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
    * app, which signs in with POST /auth/sso/session. For proxies that only guard /auth/sso/.
    */
   app.get('/auth/sso/web', async (req, reply) => {
+    const away = viaOidc(req, reply);
+    if (away) return away;
     try {
       ssoWho(req);
       return reply.redirect('/?sso=1');
@@ -386,12 +403,49 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
     }
   });
 
+  // ---- OpenID Connect (oidc.ts): the browser signs in with the provider, then carries on where it was ----
+
+  /** `?next=` a single sign-on page (or the app) to come back to. */
+  app.get('/auth/oidc/start', async (req, reply) => {
+    const s = sso();
+    if (!s.oidc) return html(reply, message('Sign-in problem', s.oidcProblem || 'OIDC sign-in is not turned on for this Hub.', true), 404);
+    limits.pairing.hit(clientIp(req));
+    try {
+      const { url, state } = await oidc.begin(s, redirectUri, safeNext(str(req.query, 'next', 500)));
+      reply.header('set-cookie', cookie(STATE_COOKIE, state, { path: '/auth/oidc/', maxAge: 600, secure }));
+      return reply.redirect(url);
+    } catch (e) {
+      if (e instanceof HttpError) return html(reply, message('Sign-in problem', e.message, true), e.statusCode);
+      throw e;
+    }
+  });
+
+  /** The provider sends the browser back here (the redirect URI to register with it). */
+  app.get('/auth/oidc/callback', async (req, reply) => {
+    const s = sso();
+    if (!s.oidc) return html(reply, message('Sign-in problem', 'OIDC sign-in is not turned on for this Hub.', true), 404);
+    const clearState = cookie(STATE_COOKIE, '', { path: '/auth/oidc/', maxAge: 0, secure });
+    try {
+      const { identity: id, next } = await oidc.finish(s, redirectUri, (req.query ?? {}) as Record<string, unknown>, readCookie(req.headers.cookie, STATE_COOKIE));
+      audit(db, { action: 'auth.oidc', target: id.username, detail: { issuer: s.oidcIssuer }, ip: clientIp(req) });
+      reply.header('set-cookie', [clearState, cookie(IDENTITY_COOKIE, identityCookieValue(config.secretKey, id), { path: '/auth/', maxAge: IDENTITY_TTL_S, secure })]);
+      return reply.redirect(next);
+    } catch (e) {
+      reply.header('set-cookie', clearState);
+      if (e instanceof HttpError) {
+        audit(db, { action: 'auth.oidc_failed', target: e.message.slice(0, 120), ip: clientIp(req) });
+        return html(reply, message('Sign-in problem', e.message, true), e.statusCode);
+      }
+      throw e;
+    }
+  });
+
   // ---- linking single sign-on to an existing (password) account ----
 
   /** From the app's Account screen: a one-time link to open in a browser where tinyauth signs you in. */
   app.post('/api/me/sso-link', async (req) => {
     const { user } = signedIn(req);
-    if (!sso().enabled) throw new HttpError(409, 'Single sign-on is not turned on for this Hub');
+    if (!sso().active) throw new HttpError(409, 'Single sign-on is not turned on for this Hub');
     db.prepare('DELETE FROM sso_links WHERE expires_at < ? OR user_id = ?').run(Date.now(), user.id);
     const link = newToken('wll_');
     db.prepare('INSERT INTO sso_links (code_hash, user_id, expires_at) VALUES (?, ?, ?)').run(sha256(link), user.id, Date.now() + SSO_LINK_TTL_MS);
@@ -413,6 +467,8 @@ export function authRoutes(app: FastifyInstance, { db, config, limits }: Ctx) {
   const linkCsrf = (link: string, subject: string) => hmac(config.secretKey, `sso-connect:${sha256(link)}:${subject}`);
 
   app.get('/auth/sso/connect', async (req, reply) => {
+    const away = viaOidc(req, reply);
+    if (away) return away;
     try {
       const id = ssoIdentityOr401(req);
       const link = str(req.query, 'link', 100);
