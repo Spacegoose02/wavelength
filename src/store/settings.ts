@@ -26,13 +26,13 @@ export type NpScene = 'art' | 'radial' | 'scope' | 'stars' | 'mirror' | 'rings' 
 /** Who plays in the critter scene (`npScene: 'raccoon'`, named before there were other critters): components/critters/species.tsx. */
 export type Species = 'raccoon' | 'shark' | 'alien' | 'grey' | 'bear-black' | 'bear-brown' | 'moose' | 'turtle' | 'elephant' | 'tiger' | 'lion' | 'panda' | 'owl' | 'trex' | 'monkey' | 'flamingo' | 'gorilla'
   | 'penguin' | 'fox' | 'axolotl' | 'sloth' | 'octopus' | 'dragon' | 'frog' | 'bunny' | 'red-panda' | 'turkey' | 'opossum'
-  | 'capybara' | 'crocodile' | 'dolphin' | 'goat' | 'peacock' | 'pangolin' | 'bat' | 'polar-bear';
+  | 'capybara' | 'crocodile' | 'dolphin' | 'goat' | 'peacock' | 'pangolin' | 'bat' | 'polar-bear' | 'squirrel';
 
 /** Boy or girl critters (Settings → Playback → Critters). */
 export type CritterLook = 'boy' | 'girl';
 
 /** What the critter plays: components/critters/Critter.tsx (`ACTS`). Any species can play any act. */
-export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion' | 'drive' | 'reactor' | 'bongo' | 'piano' | 'marimba' | 'violin' | 'acoustic' | 'surf' | 'singer' | 'coast' | 'night' | 'taiko' | 'disco';
+export type Act = 'dj' | 'country' | 'rapper' | 'rocker' | 'drums' | 'theremin' | 'synth' | 'accordion' | 'drive' | 'reactor' | 'bongo' | 'piano' | 'marimba' | 'violin' | 'acoustic' | 'surf' | 'singer' | 'coast' | 'night' | 'taiko' | 'disco' | 'volcano' | 'meltdown' | 'spooky' | 'christmas';
 
 /** Acts that were retired (0.37), and the act that took each one's place, for a pick saved before. */
 export const RETIRED_ACTS: Record<string, Act> = { sax: 'surf', harp: 'acoustic', tuba: 'singer' };

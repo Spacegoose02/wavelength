@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { beatClock, bend, lift } from './arm';
 import { swell } from './flourish';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Burst, burst, newFx, onBeat } from './fx';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -46,6 +47,7 @@ function Flower({ x, y, r, className }: { x: number; y: number; r: number; class
  */
 export function Bongo({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
+  const fx = useRef(newFx());
   const state = useRef({ beat: -1, half: -1, hitL: 0, hitR: 0, sea: 0 });
 
   useCritterRig(
@@ -97,7 +99,7 @@ export function Bongo({ species, still }: ActProps) {
       });
       ['torch-l', 'torch-r'].forEach((name, i) => {
         const x = i ? 304 : 96;
-        const k = 1 + Math.sin(t * 13 + i * 3) * 0.06 + Math.sin(t * 7.3 + i) * 0.05 + (a.playing ? bob * 0.12 : 0);
+        const k = 1 + Math.sin(t * 13 + i * 3) * 0.06 + Math.sin(t * 7.3 + i) * 0.05 + (a.playing ? bob * 0.3 : 0);
         $(name).setAttribute('transform', `translate(${x} 232) scale(${(1 + Math.sin(t * 9 + i) * 0.05).toFixed(3)} ${k.toFixed(3)}) translate(${-x} -232)`);
       });
       svg.querySelectorAll<SVGElement>('[data-cloud]').forEach((c, i) => {
@@ -110,6 +112,8 @@ export function Bongo({ species, still }: ActProps) {
       const pinch = a.playing ? bob * 18 : 0;
       $('claw-l').setAttribute('transform', `rotate(${f1(-pinch)} 330 368)`);
       $('claw-r').setAttribute('transform', `rotate(${f1(pinch)} 358 368)`);
+      // spray off the shore as a wave crests at the top of each bar
+      burst(f, svg, fx.current, 'spray', { at: [200, 300], spread: 190, vx: [-20, 20], vy: [-70, -35], g: 200, life: 0.7 }, onBeat(f, fx.current) && beatClock(f).index % 4 === 0 ? 6 : 0);
     },
     { still, nod: 12 },
   );
@@ -138,6 +142,7 @@ export function Bongo({ species, still }: ActProps) {
         <path key={y} data-wave="" className="wave-line" d={`M-40 ${y} ${Array.from({ length: 10 }, () => `q 12 -6 24 0 q 12 6 24 0`).join(' ')}`} fill="none" strokeWidth={2 + i * 0.5} strokeLinecap="round" />
       ))}
       <path className="sand" d="M0 304 Q 100 296 200 302 T 400 300 V400 H0 Z" />
+      <Burst name="spray" n={10} className="spray"><circle r="2.6" /></Burst>
       <path data-part="foam" className="foam" d="M0 302 Q 50 294 100 300 T 200 300 T 300 298 T 400 300" fill="none" strokeWidth="5" strokeLinecap="round" />
       <path className="sand-dark" d="M24 362 q 16 -5 32 0 M318 392 q 20 -6 40 0 M140 388 q 14 -4 28 0" fill="none" strokeWidth="2.5" strokeLinecap="round" />
       <path className="starfish" d="M44 382 l 4 -9 l 4 9 l 9 1 l -7 6 l 3 9 l -9 -5 l -9 5 l 3 -9 l -7 -6 Z" />

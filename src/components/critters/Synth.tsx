@@ -22,7 +22,7 @@ const KEYS = Array.from({ length: 14 }, (_, i) => 118 + i * 11.7);
  */
 export function Synth({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
-  const state = useRef({ pulse: 0, glide: 0, chord: 0, chordTo: 0, beat: 0 });
+  const state = useRef({ pulse: 0, glide: 0, chord: 0, chordTo: 0, beat: 0, ripple: 0 });
 
   useCritterRig(
     root,
@@ -68,6 +68,19 @@ export function Synth({ species, still }: ActProps) {
       svg.querySelectorAll<SVGElement>('[data-star]').forEach((el, i) => {
         el.style.opacity = (0.35 + 0.3 * Math.sin(t * (1.2 + (i % 3) * 0.5) + i) + (a.playing ? a.treble * 0.4 : 0)).toFixed(2);
       });
+      // ripples run down the beam, faster with the highs; the stars flash a few at a time on the beat
+      s.ripple += (a.playing ? 0.25 + a.treble * 0.9 : 0.06) / 60;
+      svg.querySelectorAll<SVGElement>('[data-ripple]').forEach((el, i) => {
+        const p = (s.ripple + i / 3) % 1;
+        // the beam widens from 56 at the saucer (y 52) to 260 at the ground (y 350)
+        el.setAttribute('cy', (56 + p * 290).toFixed(1));
+        el.setAttribute('rx', (30 + p * 100).toFixed(1));
+        el.setAttribute('ry', (4 + p * 10).toFixed(1));
+        el.style.opacity = ((a.playing ? 0.55 : 0.2) * Math.sin(Math.PI * p)).toFixed(2);
+      });
+      if (a.playing) svg.querySelectorAll<SVGElement>('[data-star]').forEach((el, i) => {
+        if ((beatClock(f).index + i) % 4 === 0) el.style.opacity = Math.min(1, Number(el.style.opacity) + bob * 0.6).toFixed(2);
+      });
     },
     { still, nod: 10 },
   );
@@ -77,6 +90,8 @@ export function Synth({ species, still }: ActProps) {
       {/* night sky, the saucer and its beam, a wheat field with a crop circle */}
       {STARS.map(([cx, cy, r]) => <circle key={`${cx},${cy}`} data-star="" cx={cx} cy={cy} r={r} fill="#fff" />)}
       <path data-part="beam" className="beam" d="M172 52 L 228 52 L 330 350 L 70 350 Z" />
+      {/* ripples running down the beam */}
+      {[0, 1, 2].map((i) => <ellipse key={i} data-ripple="" className="beam-ripple" cx="200" cy="100" rx="40" ry="6" fill="none" strokeWidth="2" style={{ opacity: 0 }} />)}
       <g data-part="saucer">
         <ellipse cx="200" cy="34" rx="20" ry="14" fill="rgb(180 230 255 / 0.55)" stroke="rgb(255 255 255 / 0.5)" strokeWidth="1.5" />
         <ellipse className="ufo" cx="200" cy="44" rx="58" ry="13" />

@@ -1,6 +1,23 @@
 # Changelog
 
 ## Unreleased
+- **New critter: the squirrel**, chestnut with chubby cream cheeks, tufted ears, buck teeth and a big bushy tail,
+  as a boy or a girl in every act (`src/components/critters/faces.tsx`, `bodies.tsx`).
+- **The pangolin, redrawn cuter:** a round head under a neat cap of small shaded scales, big brown eyes and a short
+  soft muzzle, in place of the long pointed face. **The penguin** gets darker brows and a nicer beak.
+- **Critters: four new scenes.** **Volcano** shreds a flame guitar as the volcano behind throws lava bombs on the
+  beat. **Meltdown** sings in front of a cracked reactor core that pulses rings of radiation on every beat while the
+  room flushes green with the bass (the Reactor scene stays). **Spooky** plays a haunted pipe organ in a graveyard
+  with ghosts, bats and jack-o'-lanterns. **Christmas** plays a candy-cane guitar in the snow by a twinkling tree
+  and a snowman (`src/components/critters/`).
+- **Critters: beat-synced effects in the existing scenes.** Fireflies blink on the beat and a lantern flickers on
+  the Country porch; smoke jets puff from the amps at the top of each bar and a soft strobe flashes on big hits
+  (Rocker; hidden with reduced motion); bubbles burst off the kick drum and a fish darts by on a big bass hit
+  (Drummer); ripples run down the tractor beam and the stars flash in time (Synth, Theremin); the road speeds up
+  for faster songs (all three drives); a martini ripples with the bass and haze drifts through the lounge
+  (Pianist); raindrops splash up on the beat and the lamp buzzes on sharp hits (Violinist); petals jump off the
+  taiko on every strike; spray flies off the shore at the top of each bar and the tiki torches flare (Bongo, Surf
+  rock). They share small particle pools in `src/components/critters/fx.tsx` and add no new filters.
 - **Fix: Discover Weekly showed only one song.** Its songs are by artists you've never played, so the library
   rarely has more than one or two, and the mix page dropped everything the library didn't have. It now lists the
   songs you have first, then fills the mix (up to 50) with 30-second Deezer previews under **Not in your library

@@ -1794,7 +1794,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .species-gorilla { --skin: #3e393b; --skin-dark: #1c191a; --belly: #7e6f68; }
 .critter .gorilla-sole { fill: #6e605a; }
 /* the penguin: black, with flippers for arms (bare) and orange feet */
-.species-penguin { --skin: #262a38; --skin-dark: #10121a; --belly: #f4f7fa; }
+.species-penguin { --skin: #2a3046; --skin-dark: #121522; --belly: #f4f7fa; }
 .critter.species-penguin .sleeve { stroke: var(--skin); }
 .critter .flipper-under { stroke: #c8ced8; }
 .critter .penguin-foot { fill: #f5a024; }
@@ -1897,10 +1897,14 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 :root[data-skin-group='nuclear'] .critter :is(.peacock-fan, .peacock-crest) { display: none; }
 /* the pangolin: pale skin under bronze scales on its head, back and tail */
 .species-pangolin { --skin: #d8b490; --skin-dark: #8a6440; --belly: #f8e2cc; }
-.critter .pangolin-scale { fill: #b8864e; }
+.critter .pangolin-scale { fill: url(#pgl-scale); }
 .critter .pangolin-seam { stroke: #6e4a24; fill: none; }
 .critter.species-pangolin .hand-claw { stroke: #3a2614; }
 :root[data-skin-group='nuclear'] .critter .pangolin-armour { display: none; }
+/* the squirrel: chestnut, with a cream face and belly, dark little paws and a big bushy tail with a paler core */
+.species-squirrel { --skin: #a8622f; --skin-dark: #5e3216; --belly: #fbefdc; }
+.critter .squirrel-paw { fill: #5e3216; }
+.critter .squirrel-tail-in { stroke: #d6965a; opacity: 0.7; }
 /* the bat: dusky purple with pink-lined ears and wide wings that flap on the beat (hidden under the hazmat suit) */
 .species-bat { --skin: #5e4c70; --skin-dark: #33283f; --belly: #b8a4ba; }
 .critter .bat-wing { fill: #4a3a5a; }
@@ -2012,7 +2016,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .shark-belly { fill: #eef3f6; }
 .critter .shark-gill { stroke: #4a6780; }
 /* the dorsal fin would poke out beside a hat or through a hood: hide it under one */
-.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin, .critter-acoustic, .critter-surf, .critter-singer, .critter-taiko, .critter-disco) .shark-fin,
+.critter:is(.critter-country, .critter-rapper, .critter-accordion, .critter-drive, .critter-reactor, .critter-bongo, .critter-piano, .critter-marimba, .critter-violin, .critter-acoustic, .critter-surf, .critter-singer, .critter-taiko, .critter-disco, .critter-volcano, .critter-meltdown, .critter-christmas) .shark-fin,
 :root[data-skin-group='nuclear'] .critter .shark-fin,
 :root:is([data-skin='halloween'], [data-skin='thanksgiving'], [data-skin='christmas'], [data-skin='july4']) .critter .shark-fin { display: none; }
 .critter-drums .sleeve { stroke: var(--skin); }
@@ -3050,3 +3054,134 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
 .critter .facet-lit { fill: #ffffff; }
 .critter .ball-flash { fill: #ffffff; }
 .critter .glint { fill: #ffffff; }
+
+/* the Volcano act (Volcano.tsx): the tank top's flames, the bandana and the guitar follow the skin; the lava stays lava */
+.critter .volcano { fill: #3a2626; }
+.critter .volcano-far { fill: #2a1e22; opacity: 0.6; }
+.critter .smoke-puff { fill: #6a5e60; }
+.critter .ash { fill: rgb(40 30 32 / 0.6); }
+.critter .crater-glow { fill: #ff7a1a; }
+.critter .crater-flash { fill: #ffd27a; }
+.critter .lava-flow { stroke: #e2401a; }
+.critter .lava-run { stroke: #ffc24a; }
+.critter .lava-crack { stroke: #ff8a2a; }
+.critter .bomb { fill: #ffcf4a; }
+.critter .bomb-trail { fill: rgb(255 110 30 / 0.45); }
+.critter .ember { fill: #ffb347; }
+.critter .boulder { fill: #2a1e20; }
+.critter-volcano .top { fill: #1d1d22; }
+.critter-volcano .sleeve { stroke: var(--skin); }
+.critter-volcano .legs { fill: #2a2a32; }
+.critter .tank-flame { fill: var(--viz-low); }
+.critter .tank-flame-in { fill: var(--viz-high); }
+.critter .bandana { fill: var(--accent); }
+.critter .axe-flame { fill: var(--viz-high); opacity: 0.85; }
+
+/* the Meltdown act (Meltdown.tsx): the coveralls' stripes and the mic follow the skin; the radiation stays green */
+.critter .meltdown-wash { fill: #6dff4a; }
+.critter .meltdown-halo { fill: #7dff5a; opacity: 0.5; }
+.critter .radiation-ring { stroke: #9dff6a; }
+.critter .vessel { fill: #4d5754; }
+.critter .vessel-rim { stroke: #2d3532; }
+.critter .core-flash { fill: #f2ffe0; }
+.critter .meltdown-cracks { stroke: #c8ff8a; }
+.critter .goo-drip { fill: #8dff62; }
+.critter .goo-bubble { fill: #d8ffb8; }
+.critter .alarm { fill: #ff3a2a; }
+.critter .alarm-beam { fill: #ff5a4a; }
+.critter .gauge { fill: #9aa4a0; }
+.critter .gauge-dial { fill: #f2ead8; }
+.critter-meltdown .top { fill: #f2a81a; }
+.critter-meltdown .sleeve { stroke: #f2a81a; }
+.critter-meltdown .legs { fill: #f2a81a; }
+.critter .coverall-zip { stroke: rgb(0 0 0 / 0.3); }
+.critter .coverall-stripe { stroke: var(--viz-high); }
+.critter .coverall-stripe-2 { stroke: #e8eaee; }
+.critter .goggle-strap { stroke: #26262c; }
+.critter .goggle-rim { fill: #3a3a42; }
+.critter .goggle-lens { fill: color-mix(in srgb, var(--viz-mid) 55%, #0a1a10); }
+.critter .meltdown-mic { fill: var(--accent); }
+
+/* the Spooky act (Spooky.tsx): the cape's lining, the pipes' light and the keys follow the skin */
+.critter .moon { fill: #f4ecc8; }
+.critter .moon-glow { fill: #f4ecc8; opacity: 0.35; }
+.critter .moon-crater { fill: rgb(0 0 0 / 0.08); }
+.critter .lightning { fill: #eef2ff; }
+.critter .spooky-bat { fill: #15121c; }
+.critter .pipe { fill: #8a7a5a; }
+.critter .pipe-lit { fill: var(--viz-high); }
+.critter .pipe-mouth { fill: #1b1b1f; }
+.critter .ghost { fill: rgb(240 244 255 / 0.92); }
+.critter .grave-ground { fill: #262430; }
+.critter .dead-tree { stroke: #1a1620; }
+.critter .tombstone { fill: #7a7a86; }
+.critter .rip { font: bold 10px sans-serif; fill: rgb(0 0 0 / 0.4); }
+.critter .pumpkin { fill: #f07a1a; }
+.critter .pumpkin-stem { stroke: #4a6a2a; }
+.critter .jack-face { fill: #ffe27a; }
+.critter .jack-glow { fill: color-mix(in srgb, var(--viz-low) 40%, #ffb02a); opacity: 0.6; }
+.critter .mist { fill: rgb(200 206 230 / 0.28); }
+.critter .cape { fill: #16141c; }
+.critter .cape-lining { fill: var(--accent); }
+.critter .cape-collar { fill: #16141c; }
+.critter .cravat { fill: #b0182a; }
+.critter-spooky .top { fill: #2a2632; }
+.critter-spooky .sleeve { stroke: #16141c; }
+.critter-spooky .legs { fill: #16141c; }
+.critter .organ { fill: #4a2a1e; }
+.critter .organ-trim { stroke: #c9a24a; }
+.critter .organ-lit { fill: var(--viz-high); }
+.critter .stop-knob { fill: #ece6d4; }
+
+/* the Christmas act (Christmas.tsx): the jumper, the hat's trim and some of the lights follow the skin */
+.critter .light-wire { stroke: #1e3a22; }
+.critter .xmas-0 { fill: #ff4a4a; }
+.critter .xmas-1 { fill: #ffd84a; }
+.critter .xmas-2 { fill: var(--viz-high); }
+.critter .snow-ground { fill: #eef3fa; }
+.critter .snow-shade { stroke: rgb(120 150 190 / 0.25); }
+.critter .tree { fill: #1f6a3a; }
+.critter .tree-trunk { fill: #5a3a24; }
+.critter .tinsel { stroke: #e8c25a; opacity: 0.8; }
+.critter .xmas-star { fill: #ffd84a; }
+.critter .star-glow { fill: #ffe27a; }
+.critter .present-a { fill: #d62a32; }
+.critter .present-b { fill: var(--accent); }
+.critter .present-c { fill: #2a7a4a; }
+.critter .ribbon { stroke: #f2d26a; }
+.critter .snowball { fill: #fbfdff; }
+.critter .snow-scarf { fill: var(--viz-low); }
+.critter .snowman-band { fill: #d62a32; }
+.critter .flake { fill: #ffffff; opacity: 0.9; }
+.critter-christmas .top { fill: var(--accent); }
+.critter-christmas .sleeve { stroke: var(--accent); }
+.critter-christmas .legs { fill: #2a2a36; }
+.critter .xmas-skirt { fill: var(--accent); }
+.critter .jumper-band { stroke: #fbf7f2; }
+.critter .jumper-flake { stroke: #fbf7f2; }
+.critter .jumper-cuff { stroke: rgb(255 255 255 / 0.5); }
+.critter .santa-hat { fill: #d62a32; }
+.critter .santa-trim { fill: #fbf7f2; }
+.critter .guitar-holly { fill: #2a7a4a; }
+
+/* beat-synced scene effects (fx.tsx and the acts): fireflies, smoke, strobe, bubbles, ripples, haze, splashes, spray */
+.critter .firefly { fill: #f4ff8a; }
+.critter .lantern-hook { stroke: #2a2420; }
+.critter .porch-lantern { fill: #2a2420; }
+.critter .porch-lantern-flame { fill: #ffd27a; }
+.critter .porch-lantern-glow { fill: #ffc45a; opacity: 0.6; }
+.critter .stage-smoke { fill: rgb(220 220 235 / 0.3); }
+.critter .strobe { fill: #ffffff; }
+.critter .kick-bubble { fill: rgb(255 255 255 / 0.12); stroke: rgb(255 255 255 / 0.7); }
+.critter .dart-fish { fill: var(--viz-high); }
+.critter .beam-ripple { stroke: color-mix(in srgb, var(--viz-mid) 60%, #fff); }
+.critter .lounge-haze { stroke: rgb(255 240 220 / 0.6); opacity: 0.12; }
+.critter .glass-stem, .critter .glass-bowl { stroke: rgb(230 240 255 / 0.8); }
+.critter .glass-bowl { fill: rgb(230 240 255 / 0.18); stroke-width: 1.5; }
+.critter .drink { fill: color-mix(in srgb, var(--viz-low) 45%, #e8f4ff); opacity: 0.85; }
+.critter .olive { fill: #7a9a2a; }
+.critter .splash { fill: rgb(200 220 255 / 0.85); }
+.critter .spray { fill: rgb(255 255 255 / 0.9); }
+@media (prefers-reduced-motion: reduce) {
+  .critter .fx-flash { display: none; }
+}

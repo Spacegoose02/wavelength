@@ -1,7 +1,9 @@
 import { useRef } from 'react';
+import { beatClock } from './arm';
 import { playGuitar, newGuitarHands } from './guitar';
 import { swell, windUp } from './flourish';
 import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Burst, burst, Flash, flash, newFx, onBeat } from './fx';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -12,6 +14,7 @@ import { useCritterRig } from './rig';
  */
 export function Rocker({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
+  const fx = useRef(newFx());
   const hands = useRef(newGuitarHands());
 
   useCritterRig(
@@ -27,6 +30,12 @@ export function Rocker({ species, still }: ActProps) {
         const [band, step] = led.dataset.level!.split(':').map(Number);
         led.style.opacity = levels[band] * 5 > step ? '1' : '0.15';
       });
+      // smoke jets at the top of each bar (and on a flourish), a strobe flash on big high hits
+      const svg = root.current!;
+      const jet = (onBeat(f, fx.current) && beatClock(f).index % 4 === 0) || (f.flourish > 0 && f.flourish < 0.05) ? 3 : 0;
+      burst(f, svg, fx.current, 'smoke-l', { at: [52, 336], spread: 14, vx: [0, 18], vy: [-60, -30], g: 10, life: 2.2, grow: 1.8 }, jet);
+      burst(f, svg, fx.current, 'smoke-r', { at: [348, 336], spread: 14, vx: [-18, 0], vy: [-60, -30], g: 10, life: 2.2, grow: 1.8 }, jet);
+      flash(svg, fx.current, 'strobe', f.a.playing && f.hit && f.a.treble > 0.5, 0.22);
     },
     { still, nod: 18 },
   );
@@ -51,6 +60,9 @@ export function Rocker({ species, still }: ActProps) {
         )),
       )}
 
+      {/* smoke jets off the stage at the amps' feet */}
+      <Burst name="smoke-l" n={6} className="stage-smoke"><circle r="16" /></Burst>
+      <Burst name="smoke-r" n={6} className="stage-smoke"><circle r="16" /></Burst>
       {[52, 348].map((cx) => <Shadow key={cx} cx={cx} cy={346} rx={46} ry={5} />)}
       <Shadow cx={200} cy={366} rx={66} />
 
@@ -91,6 +103,7 @@ export function Rocker({ species, still }: ActProps) {
 
       {/* the strumming arm goes over the guitar body; only the fretting arm is behind the neck */}
       <Arm part="arm-l" d="M138 268 Q 146 302 178 314" hand={[180, 314]} />
+      <Flash name="strobe" className="strobe" />
       <ArmHand part="arm-r" d="M262 268 Q 258 312 296 266" hand={[296, 266]} />
     </CritterFrame>
   );

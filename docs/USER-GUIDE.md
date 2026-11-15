@@ -1,7 +1,7 @@
 # User guide
 
 How to use newer features: browsing Deezer by artist, album and playlist in **Downloads**, choosing which
-charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, red panda, turkey, opossum, capybara, crocodile, dolphin, goat, peacock, pangolin, bat and polar bear), the **equalizer**,
+charts **Discover** shows (both 0.6.0), the **Now Playing visualizers** (including the raccoons, shark, aliens, bears, moose, turtle, elephant, tiger, lion, panda, owl, T. rex, monkey, flamingo, gorilla, penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny, red panda, turkey, opossum, capybara, crocodile, dolphin, goat, peacock, pangolin, bat, polar bear and squirrel), the **equalizer**,
 **skins and the Themes tab** (holiday themes, Seasonal and Random daily), **editing your radio stations**, **song titles on radio** and
 **searching your playlists**, **Popular**, **Appears On** and **Browse releases** on artist pages, **profiles with a Wavelength Hub** (signing in, settings sync, managing people), the **AI DJ** and **in-app updates**. For how they're built, see the
 developer notes at the end of each section and [SOURCES.md](SOURCES.md).

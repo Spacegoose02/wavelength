@@ -34,6 +34,7 @@ import {
   RedPandaFace,
   SharkFace,
   SlothFace,
+  SquirrelFace,
   TigerFace,
   TrexFace,
   TurkeyFace,
@@ -117,7 +118,8 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'dolphin', noun: 'dolphin', label: 'Dolphin', Face: DolphinFace, figure: FIGURES.dolphin, fit: { eyeY: 168, eyes: [1.3, 1.22], mask: 14, bow: [166, 112, -20] } },
   { id: 'goat', noun: 'goat', label: 'Goat', Face: GoatFace, figure: FIGURES.goat, fit: { eyeY: 168, eyes: [1.3, 1.2], mask: 12, bow: [166, 114, -20] } },
   { id: 'peacock', noun: 'peacock', label: 'Peacock', Face: PeacockFace, figure: FIGURES.peacock, fit: { eyeY: 172, eyes: [1.3, 1.2], mask: 12, bow: [166, 114, -20] } },
-  { id: 'pangolin', noun: 'pangolin', label: 'Pangolin', Face: PangolinFace, figure: FIGURES.pangolin, fit: { eyeY: 182, eyes: [1.2, 1.1], mask: 18, bow: [166, 114, -20] } },
+  { id: 'pangolin', noun: 'pangolin', label: 'Pangolin', Face: PangolinFace, figure: FIGURES.pangolin, fit: { eyeY: 183, eyes: [1.3, 1.2], mask: 10, bow: [166, 112, -20] } },
   { id: 'bat', noun: 'bat', label: 'Bat', Face: BatFace, figure: FIGURES.bat, fit: { eyeY: 180, eyes: [1.36, 1.24], mask: 14, bow: [168, 116, -20] } },
   { id: 'polar-bear', noun: 'polar bear', label: 'Polar bear', Face: PolarBearFace, figure: FIGURES.polarBear, fit: { eyeY: 158, eyes: [1.2, 1.1], mask: 18, bow: [168, 114, -20] } },
+  { id: 'squirrel', noun: 'squirrel', label: 'Squirrel', Face: SquirrelFace, figure: FIGURES.squirrel, fit: { eyeY: 175, eyes: [1.3, 1.2], mask: 10, bow: [166, 112, -20] } },
 ];

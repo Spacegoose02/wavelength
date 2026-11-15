@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { beatClock, bend } from './arm';
 import { swell, windUp } from './flourish';
 import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Burst, burst, newFx, onBeat } from './fx';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -31,6 +32,7 @@ const f1 = (n: number) => n.toFixed(1);
  */
 export function Violin({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
+  const fx = useRef(newFx());
   const state = useRef({ stroke: 0, rain: 0, beat: -1, ripple: 0, rippleAt: 0, finger: 0 });
 
   useCritterRig(
@@ -86,7 +88,7 @@ export function Violin({ species, still }: ActProps) {
         r.style.opacity = (i === s.rippleAt ? s.ripple : 0).toFixed(2);
       });
       $('lamp-light').style.opacity = (0.55 + (a.playing ? a.bass * 0.3 + bob * 0.1 : 0)).toFixed(2);
-      $('lamp-glow').style.opacity = (0.7 + (a.playing ? bob * 0.3 : 0) - (Math.sin(t * 31) > 0.985 ? 0.4 : 0)).toFixed(2);
+      $('lamp-glow').style.opacity = (0.7 + (a.playing ? bob * 0.3 : 0) - (Math.sin(t * 31) > 0.985 || (hit && Math.random() < 0.35) ? 0.4 : 0)).toFixed(2);
       $('window').style.opacity = (0.75 + (a.playing ? a.mid * 0.25 : 0)).toFixed(2);
       // the cat in the window nods along
       $('cat').setAttribute('transform', `rotate(${f1(a.playing ? Math.sin(Math.PI * (index + phase)) * 8 : Math.sin(t * 0.5) * 2)} 300 150)`);
@@ -94,6 +96,8 @@ export function Violin({ species, still }: ActProps) {
       svg.querySelectorAll<SVGElement>('[data-glint]').forEach((g, i) => {
         g.style.opacity = (Math.max(0, Math.sin(t * 1.3 + i * 2.1)) ** 8).toFixed(2);
       });
+      // raindrops splash up off the pavement on the beat, more with the bass
+      burst(f, svg, fx.current, 'splash', { at: [200, 372], spread: 190, vx: [-25, 25], vy: [-90, -50], g: 420, life: 0.45 }, onBeat(f, fx.current) ? 3 + Math.round(a.bass * 3) : 0);
     },
     { still, nod: 8 },
   );
@@ -219,6 +223,7 @@ export function Violin({ species, still }: ActProps) {
       {RAIN.map(([, , , len], i) => (
         <path key={i} data-drop="" className="raindrop" d={`M0 0 l -3 ${len}`} strokeWidth="1.6" strokeLinecap="round" />
       ))}
+      <Burst name="splash" n={12} className="splash"><circle r="1.8" /></Burst>
     </CritterFrame>
   );
 }

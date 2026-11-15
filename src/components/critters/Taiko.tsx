@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { beatClock, bend, lift } from './arm';
 import { swell, windUp } from './flourish';
 import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Burst, burst, newFx, onBeat } from './fx';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -37,6 +38,7 @@ const f1 = (n: number) => n.toFixed(1);
  */
 export function Taiko({ species, still }: ActProps) {
   const root = useRef<SVGSVGElement>(null);
+  const fx = useRef(newFx());
   const state = useRef({ fall: 0, dip: 0, beat: -1, half: -1 });
 
   useCritterRig(
@@ -84,6 +86,9 @@ export function Taiko({ species, still }: ActProps) {
       $('branch').setAttribute('transform', `rotate(${f1(Math.sin(t * 0.7) * 1.2 + (a.playing ? bob * 0.8 : 0))} 420 0)`);
       // the headband's tails fly out with the swing of the head
       $('band-tails').setAttribute('transform', `rotate(${f1(Math.sin(t * 6) * 6 + (a.playing ? bob * 10 : 0) - windUp(flourish) * 12)} 258 132)`);
+      // petals jump off the drum on every strike, a big burst on the one
+      const strike = onBeat(f, fx.current) ? (beatClock(f).index % 4 === 0 ? 4 : 2) : 0;
+      burst(f, svg, fx.current, 'petal-burst', { at: [200, 322], spread: 50, vx: [-90, 90], vy: [-140, -70], g: 180, life: 1.3, spin: [-240, 240] }, strike);
     },
     { still, nod: 12 },
   );
@@ -201,6 +206,7 @@ export function Taiko({ species, still }: ActProps) {
       {PETALS.map(([x, , , r], i) => (
         <path key={i} data-petal="" className="petal" transform={`translate(${x} 40)`} d={`M0 ${-r} Q ${r} 0 0 ${r} Q ${-r} 0 0 ${-r} Z`} />
       ))}
+      <Burst name="petal-burst" n={12} className="petal"><ellipse rx="5.5" ry="3.2" /></Burst>
     </CritterFrame>
   );
 }

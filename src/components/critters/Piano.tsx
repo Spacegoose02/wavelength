@@ -84,6 +84,12 @@ export function Piano({ species, still }: ActProps) {
       svg.querySelectorAll<SVGElement>('[data-foot]').forEach((el, i) => {
         el.style.opacity = a.playing ? (i === s.chase || i === (s.chase + 3) % FOOT.length ? '1' : '0.35') : '0.3';
       });
+      // the drink ripples with the bass, the haze drifts and thickens with the mids
+      f.$('drink').setAttribute('transform', `rotate(${(a.playing ? Math.sin(t * 22) * a.bass * 6 + bob * 3 : 0).toFixed(2)} 0 -20)`);
+      svg.querySelectorAll<SVGElement>('[data-haze]').forEach((el, i) => {
+        el.setAttribute('transform', `translate(${(Math.sin(t * 0.15 + i * 2) * 40).toFixed(1)} ${(Math.sin(t * 0.3 + i) * 4).toFixed(1)})`);
+        el.style.opacity = (0.12 + (a.playing ? a.mid * 0.12 : 0)).toFixed(2);
+      });
     },
     { still, nod: 10 },
   );
@@ -122,6 +128,8 @@ export function Piano({ species, still }: ActProps) {
       </g>
       <path className="lid-prop" d="M330 300 L 352 214" strokeWidth="3" strokeLinecap="round" />
 
+      {/* haze drifting through the lounge */}
+      {[0, 1].map((i) => <path key={i} data-haze="" className="lounge-haze" d={`M-60 ${120 + i * 70} Q 40 ${100 + i * 70} 140 ${120 + i * 70} T 340 ${120 + i * 70} T 520 ${120 + i * 70}`} fill="none" strokeWidth={22 - i * 6} strokeLinecap="round" />)}
       <Shadow cx={200} cy={362} rx={62} />
       <Legs species={species} shoe="boot-black" />
 
@@ -170,6 +178,13 @@ export function Piano({ species, still }: ActProps) {
       {/* hands on the keys */}
       <Arm part="arm-l" d="M138 268 Q 124 300 156 304" hand={[158, 304]} />
       <Arm part="arm-r" d="M262 268 Q 276 300 244 304" hand={[242, 304]} />
+      {/* a martini on the case, its drink rippling with the bass */}
+      <g transform="translate(318 300) scale(1.2)">
+        <path className="glass-stem" d="M0 0 V -14 M-7 0 H7" strokeWidth="2" strokeLinecap="round" />
+        <path className="glass-bowl" d="M-12 -30 L 0 -14 L 12 -30 Z" />
+        <g data-part="drink"><path className="drink" d="M-9 -26 L 0 -15 L 9 -26 Z" /></g>
+        <circle cx="4" cy="-22" r="2.2" className="olive" />
+      </g>
     </CritterFrame>
   );
 }
