@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { HubSsoSettings } from '../sources/hub';
+import type { HubOidcCheck, HubSsoSettings } from '../sources/hub';
 import { hubClient } from '../store/hub';
 
 /**
- * Settings → Users → Single sign-on (hub/src/sso.ts, docs/HUB.md "Single sign-on"): turn tinyauth on, set the
- * proxy secret and who's an admin, and copy the proxy config, filled in. Settings the container's environment
- * sets are shown but locked.
+ * Settings → Users → Single sign-on (hub/src/sso.ts, docs/HUB.md "Single sign-on"): sign in with tinyauth over
+ * OpenID Connect (hub/src/oidc.ts: issuer, client ID and secret, and the redirect URI to register), and/or through
+ * the proxy's headers (proxy secret, the proxy config filled in). Who's an admin applies to both. Settings the
+ * container's environment sets are shown but locked. A saved client secret is never shown again.
  */
 
 const errText = (e: unknown) => String((e as Error)?.message ?? e);
@@ -17,10 +18,29 @@ const ENV: Record<string, string> = {
   adminGroup: 'WAVELENGTH_ADMIN_GROUP',
   autoCreate: 'WAVELENGTH_SSO_AUTO_CREATE',
   name: 'WAVELENGTH_SSO_NAME',
+  oidc: 'WAVELENGTH_OIDC',
+  oidcIssuer: 'WAVELENGTH_OIDC_ISSUER',
+  oidcClientId: 'WAVELENGTH_OIDC_CLIENT_ID',
+  oidcClientSecret: 'WAVELENGTH_OIDC_CLIENT_SECRET',
+  oidcScopes: 'WAVELENGTH_OIDC_SCOPES',
+  oidcUsernameClaim: 'WAVELENGTH_OIDC_USERNAME_CLAIM',
 };
 
-type Draft = { enabled: boolean; name: string; proxySecret: string; trustedProxies: string; admins: string; adminGroup: string; autoCreate: boolean };
+type Draft = {
+  enabled: boolean; name: string; proxySecret: string; trustedProxies: string; admins: string; adminGroup: string; autoCreate: boolean;
+  oidc: boolean; oidcIssuer: string; oidcClientId: string; oidcScopes: string; oidcUsernameClaim: string;
+  /** A new client secret to save; blank keeps the saved one. */
+  oidcClientSecret: string;
+  clearSecret: boolean;
+};
 const toDraft = (s: HubSsoSettings): Draft => ({
+  oidc: !!s.oidc || !!s.oidcProblem,
+  oidcIssuer: s.oidcIssuer ?? '',
+  oidcClientId: s.oidcClientId ?? '',
+  oidcScopes: s.oidcScopes ?? '',
+  oidcUsernameClaim: s.oidcUsernameClaim ?? '',
+  oidcClientSecret: '',
+  clearSecret: false,
   enabled: s.enabled || !!s.problem,
   name: s.name,
   proxySecret: s.proxySecret,
@@ -39,6 +59,7 @@ export function SsoAdmin() {
   const [msg, setMsg] = useState('');
   const [showSecret, setShowSecret] = useState(false);
   const [layout, setLayout] = useState<'site' | 'path'>('site');
+  const [check, setCheck] = useState<HubOidcCheck>();
 
   const take = (r: { sso: HubSsoSettings; publicUrl: string }) => {
     setS(r.sso);
@@ -63,6 +84,15 @@ export function SsoAdmin() {
       admins: draft.admins,
       adminGroup: draft.adminGroup,
       autoCreate: draft.autoCreate,
+      ...(s.oidcScopes !== undefined && {
+        oidc: draft.oidc,
+        oidcIssuer: draft.oidcIssuer,
+        oidcClientId: draft.oidcClientId,
+        oidcScopes: draft.oidcScopes,
+        oidcUsernameClaim: draft.oidcUsernameClaim,
+        // only sent when changed: the saved secret stays on the Hub
+        ...(draft.oidcClientSecret.trim() ? { oidcClientSecret: draft.oidcClientSecret.trim() } : draft.clearSecret ? { oidcClientSecret: null } : {}),
+      }),
     };
     const patch = Object.fromEntries(Object.entries(all).filter(([k]) => !locked(k)));
     try {
@@ -82,27 +112,95 @@ export function SsoAdmin() {
       setErr(errText(e));
     }
   };
+  const checkIssuer = async () => {
+    setErr('');
+    setCheck(undefined);
+    try {
+      setCheck(await c.checkOidc(draft.oidcIssuer.trim() || undefined));
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+  const redirectUri = s.oidcRedirectUri ?? `${publicUrl}/auth/oidc/callback`;
+  const hasOidc = s.oidcScopes !== undefined; // an older Hub has no OIDC
   const config = proxyConfig(layout, publicUrl, draft.proxySecret);
 
   return (
     <section id="sso">
       <h2>Single sign-on</h2>
       <p className="muted small">
-        Let people sign in through tinyauth (or another proxy login that sends <code>Remote-User</code>), next to Hub passwords. Every
-        device then offers both: <b>Sign in with {draft.name || 'tinyauth'}</b> or a username and password. In a browser, the Hub's own page
-        signs in by itself when tinyauth already knows you. Link a tinyauth name to a person under People (SSO), or to a whole family
+        Let people sign in with tinyauth next to Hub passwords. Every device then offers both: <b>Sign in with {draft.name || 'tinyauth'}</b> or
+        a username and password. There are two ways to connect tinyauth: <b>OIDC</b> (tinyauth's client ID and secret, the simplest) or the
+        proxy's headers (forward-auth). Either works, or both. Link a tinyauth name to a person under People (SSO), or to a whole family
         under Families → Family sign-ins.
       </p>
       <p className="small">
-        Now: <b>{s.enabled ? 'on' : 'off'}</b>{s.problem ? <span className="errors"> · {s.problem}</span> : null}
+        Now: OIDC <b>{s.oidc ? 'on' : 'off'}</b>{s.oidcProblem ? <span className="errors"> ({s.oidcProblem})</span> : null} · proxy sign-in <b>{s.enabled ? 'on' : 'off'}</b>
+        {s.problem ? <span className="errors"> ({s.problem})</span> : null}
       </p>
       <div className="editor">
-        <label className="check">
-          <span className="switch"><input type="checkbox" disabled={locked('enabled')} checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} /><span /></span>
-          Single sign-on{lockNote('enabled')}
-        </label>
+        <h3>Who signs in</h3>
         <div className="editor-grid">
           <label>Button name{lockNote('name')}<input disabled={locked('name')} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="tinyauth" maxLength={60} /></label>
+          <label>Always admins (tinyauth names){lockNote('admins')}<input disabled={locked('admins')} value={draft.admins} onChange={(e) => setDraft({ ...draft, admins: e.target.value })} placeholder="alex, sam" /></label>
+          <label>Admin group (optional){lockNote('adminGroup')}<input disabled={locked('adminGroup')} value={draft.adminGroup} onChange={(e) => setDraft({ ...draft, adminGroup: e.target.value })} placeholder="wavelength-admins" /></label>
+        </div>
+        <label className="check">
+          <span className="switch"><input type="checkbox" disabled={locked('autoCreate')} checked={draft.autoCreate} onChange={(e) => setDraft({ ...draft, autoCreate: e.target.checked })} /><span /></span>
+          Make a profile for anyone tinyauth knows, the first time they sign in{lockNote('autoCreate')}
+        </label>
+        <p className="muted small">Off: you add people first (People → SSO, or a family sign-in), and strangers are turned away. Made a duplicate by accident? Merge it under People.</p>
+      </div>
+
+      {hasOidc && (
+        <div className="editor">
+          <h3>Sign in with OIDC</h3>
+          <p className="muted small">
+            Create a client in tinyauth (<code>tinyauth oidc create wavelength</code>), register the redirect URI below as its trusted
+            redirect URI, then paste its client ID and secret here. Apps on other devices sign in with a code and finish in a browser.
+          </p>
+          <label className="check">
+            <span className="switch"><input type="checkbox" disabled={locked('oidc')} checked={draft.oidc} onChange={(e) => setDraft({ ...draft, oidc: e.target.checked })} /><span /></span>
+            OIDC sign-in{lockNote('oidc')}
+          </label>
+          <div className="editor-grid">
+            <label className="span2">Redirect URI (register this in tinyauth)
+              <div className="row gap"><input readOnly value={redirectUri} onFocus={(e) => e.target.select()} style={{ flex: 1 }} />
+                <button type="button" className="btn small" onClick={() => void navigator.clipboard?.writeText(redirectUri).then(() => setMsg('Redirect URI copied.'), () => undefined)}>Copy</button></div>
+            </label>
+            <label className="span2">Issuer URL (your tinyauth address){lockNote('oidcIssuer')}
+              <input disabled={locked('oidcIssuer')} value={draft.oidcIssuer} onChange={(e) => setDraft({ ...draft, oidcIssuer: e.target.value })} placeholder="https://auth.example.com" inputMode="url" />
+            </label>
+            <label>Client ID{lockNote('oidcClientId')}<input disabled={locked('oidcClientId')} value={draft.oidcClientId} onChange={(e) => setDraft({ ...draft, oidcClientId: e.target.value })} autoComplete="off" /></label>
+            <label>Client secret{lockNote('oidcClientSecret')}
+              <input type="password" disabled={locked('oidcClientSecret')} value={draft.oidcClientSecret} onChange={(e) => setDraft({ ...draft, oidcClientSecret: e.target.value, clearSecret: false })} autoComplete="new-password"
+                placeholder={s.oidcClientSecretSet ? (draft.clearSecret ? 'Will be removed when you save' : 'Saved. Type a new one to replace it') : 'Paste the client secret'} />
+            </label>
+            {s.oidcClientSecretSet && !locked('oidcClientSecret') && (
+              <div className="row gap span2">
+                <button type="button" className="btn small ghost" onClick={() => setDraft({ ...draft, oidcClientSecret: '', clearSecret: true, oidc: false })}>Remove saved secret</button>
+                <small className="muted">The Hub keeps it encrypted and never shows it again.</small>
+              </div>
+            )}
+            <label>Scopes{lockNote('oidcScopes')}<input disabled={locked('oidcScopes')} value={draft.oidcScopes} onChange={(e) => setDraft({ ...draft, oidcScopes: e.target.value })} placeholder="openid profile email groups" /></label>
+            <label>Username claim{lockNote('oidcUsernameClaim')}<input disabled={locked('oidcUsernameClaim')} value={draft.oidcUsernameClaim} onChange={(e) => setDraft({ ...draft, oidcUsernameClaim: e.target.value })} placeholder="preferred_username" /></label>
+          </div>
+          <div className="row gap wrap">
+            <button type="button" className="btn small" onClick={() => void checkIssuer()}>Check the issuer</button>
+            {check && <span className="ok">✓ Found {check.issuer}{check.pkce === false ? ' (no PKCE advertised)' : ''}</span>}
+          </div>
+          <div className="row gap"><button type="button" className="btn primary" onClick={() => void save()}>Save</button>{msg && <span className="ok">{msg}</span>}</div>
+          {err && <div className="errors">{err}</div>}
+        </div>
+      )}
+
+      <div className="editor">
+        <h3>Proxy sign-in (forward-auth)</h3>
+        <label className="check">
+          <span className="switch"><input type="checkbox" disabled={locked('enabled')} checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} /><span /></span>
+          Sign in through the proxy's headers{lockNote('enabled')}
+        </label>
+        <div className="editor-grid">
           <label>Proxy secret{lockNote('proxySecret')}
             <input type={showSecret ? 'text' : 'password'} disabled={locked('proxySecret')} value={draft.proxySecret} onChange={(e) => setDraft({ ...draft, proxySecret: e.target.value })} autoComplete="off" placeholder="Generate one" />
           </label>
@@ -112,14 +210,7 @@ export function SsoAdmin() {
             <small className="muted">The proxy sends it as <code>X-Wavelength-Proxy-Secret</code>. Without it, anyone who can reach the Hub's port could claim to be anyone.</small>
           </div>
           <label>Trusted proxy addresses (optional){lockNote('trustedProxies')}<input disabled={locked('trustedProxies')} value={draft.trustedProxies} onChange={(e) => setDraft({ ...draft, trustedProxies: e.target.value })} placeholder="172.17.0.1" /></label>
-          <label>Always admins (tinyauth names){lockNote('admins')}<input disabled={locked('admins')} value={draft.admins} onChange={(e) => setDraft({ ...draft, admins: e.target.value })} placeholder="alex, sam" /></label>
-          <label>Admin group (optional){lockNote('adminGroup')}<input disabled={locked('adminGroup')} value={draft.adminGroup} onChange={(e) => setDraft({ ...draft, adminGroup: e.target.value })} placeholder="wavelength-admins" /></label>
         </div>
-        <label className="check">
-          <span className="switch"><input type="checkbox" disabled={locked('autoCreate')} checked={draft.autoCreate} onChange={(e) => setDraft({ ...draft, autoCreate: e.target.checked })} /><span /></span>
-          Make a profile for anyone tinyauth knows, the first time they sign in{lockNote('autoCreate')}
-        </label>
-        <p className="muted small">Off: you add people first (People → SSO, or a family sign-in), and strangers are turned away. Made a duplicate by accident? Merge it under People.</p>
         <div className="row gap"><button type="button" className="btn primary" onClick={() => void save()}>Save</button>{msg && <span className="ok">{msg}</span>}</div>
         {err && <div className="errors">{err}</div>}
       </div>

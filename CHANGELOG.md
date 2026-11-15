@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+- **Sign in with tinyauth over OIDC.** The Hub can now be an OpenID Connect client of tinyauth (or any OIDC
+  provider): paste the issuer, client ID and secret in Settings → Users → Single sign-on, register the redirect URI
+  it shows (`/auth/oidc/callback`) in tinyauth, and every device's **Sign in with tinyauth** goes through
+  tinyauth's login in the browser, with no proxy config. Authorization code flow with PKCE, state and nonce, the ID
+  token's signature checked against tinyauth's keys. People are matched by their tinyauth username, so profiles,
+  family sign-ins, the profile picker, PINs, Stay signed in and admin linking work as with proxy sign-in, which
+  still works, alone or next to OIDC. The client secret is kept encrypted and never shown again. Also
+  `WAVELENGTH_OIDC_*` environment variables (`hub/src/oidc.ts`, `hub/src/sso.ts`, `src/views/SsoAdmin.tsx`).
+
 ## 0.49.0
 - **Single sign-on is set up in the app.** Settings → Users → Single sign-on turns tinyauth on, generates the
   proxy secret, sets who's an admin, and shows the proxy config to copy, filled in, for either layout: the whole

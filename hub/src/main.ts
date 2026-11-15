@@ -25,7 +25,9 @@ await app.listen({ port: config.port, host: config.host });
 if (kept) app.log.info(`Restored a backup. The database it replaced is kept as ${kept}`);
 if (countUsers(db) === 0) app.log.info(`No accounts yet. Open ${config.publicUrl}/setup to create the first admin.`);
 const sso = ssoSettings(db, config);
-if (sso.enabled) app.log.info(`Single sign-on (${sso.name}) is on. See docs/HUB.md for the proxy setup.`);
+if (sso.enabled) app.log.info(`Single sign-on (${sso.name}) through the proxy is on. See docs/HUB.md for the proxy setup.`);
 else if (sso.problem) app.log.warn(`Single sign-on is set to on but stays off: ${sso.problem}`);
+if (sso.oidc) app.log.info(`OIDC sign-in (${sso.name}) is on with ${sso.oidcIssuer}. Redirect URI: ${config.publicUrl}/auth/oidc/callback`);
+else if (sso.oidcProblem) app.log.warn(`OIDC sign-in is set to on but stays off: ${sso.oidcProblem}`);
 
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => void stop(0));
