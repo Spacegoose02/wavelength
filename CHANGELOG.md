@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.47.0
 - **New critter: the squirrel**, chestnut with chubby cream cheeks, tufted ears, buck teeth and a big bushy tail,
   as a boy or a girl in every act (`src/components/critters/faces.tsx`, `bodies.tsx`).
 - **The pangolin, redrawn cuter:** a round head under a neat cap of small shaded scales, big brown eyes and a short
