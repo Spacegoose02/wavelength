@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.47.1
 - **Critters run lighter.** Every soft glow (the reactor and meltdown halos, the volcano crater, moons, lamps,
   lanterns, campfires, candles, the hover glow) and the contact and chin shadows are now radial gradients instead
   of blur filters, which the browser re-ran every frame. Average CPU across the 25 scenes drops from about 95% to
