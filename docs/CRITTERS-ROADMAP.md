@@ -201,6 +201,26 @@ the asset work and a risk on low-end phones and the iOS WebView.
   drive; **Taiko** (`Taiko.tsx`, a big drum under the cherry blossom, sticks alternating on and off the beat, both
   arms up on the last beat of the bar) and **Disco** (`Disco.tsx`, a hand mic held beside the face so they sing, the
   disco point, a light-up floor and a mirror ball). All four sing along.
+- **A squirrel** joined (November 2026), kept clear of famous cartoon squirrels (no sabre-tooth, diving helmet or
+  flying cap): a round chestnut head with chubby cream cheeks, tall tufted ears (`ear-l` / `ear-r`, hidden under the
+  cowboy hat), pale rings round big dark eyes, whiskers and two buck teeth drawn inside the closed `smile`, so they
+  hide while it sings. Its figure (`FIGURES.squirrel`) is the round top with dark paws and a big bushy tail curling up
+  behind with a paler core.
+- **The pangolin was redrawn** (November 2026, from feedback that it looked odd): the first face tapered to a long
+  pointed snout under a hood of big scales. It's now a round chibi head under a neat cap of small scales that dips
+  to a point between big warm brown eyes, with a short soft muzzle and button nose. Every scale, on the head, armour
+  and tail, is shaded by one gradient the face defines (`pgl-scale`, used by `.pangolin-scale`). The **penguin** got
+  small touches: darker brows, rosy cheeks, a beak with nostrils and a shine, and a slightly bluer black.
+- **Four more scenes** (November 2026), all beat-synced, with no new blur filters beyond what other scenes use:
+  **Volcano** (`Volcano.tsx`, a flame guitar under an erupting volcano: lava bombs thrown on each beat and falling
+  under gravity, lava running down the flanks with a dash offset that speeds up with the bass, glowing cracks and
+  embers; the flourish is an eruption), **Meltdown** (`Meltdown.tsx`, singing into a hand mic in front of a cracked
+  reactor core: a ring of radiation pulses out on every beat from a pool of four, the room flushes green with the
+  bass, red alarms spin and goo drips into bubbling puddles; the Reactor scene stays as it is), **Spooky**
+  (`Spooky.tsx`, a haunted pipe organ in a graveyard: pipes lit by the spectrum, flickering jack-o'-lanterns, ghosts
+  bobbing on the beat, bats across the moon, lightning on the flourish; the hands play like the Synth's) and
+  **Christmas** (`Christmas.tsx`, a candy-cane guitar in the snow: tree lights twinkling a new pattern each beat, a
+  star glowing with the bass, a chasing string of lights, falling snow and a snowman bobbing his hat).
 - A sasquatch was drawn and then put on hold. Its face and figure are in git history (commit
   f284a5b, `SasquatchFace` and `FIGURES.sasquatch`) if it comes back.
 

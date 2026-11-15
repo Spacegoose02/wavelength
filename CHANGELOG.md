@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+- **New critter: the squirrel**, chestnut with chubby cream cheeks, tufted ears, buck teeth and a big bushy tail,
+  as a boy or a girl in every act (`src/components/critters/faces.tsx`, `bodies.tsx`).
+- **The pangolin, redrawn cuter:** a round head under a neat cap of small shaded scales, big brown eyes and a short
+  soft muzzle, in place of the long pointed face. **The penguin** gets darker brows, rosy cheeks and a nicer beak.
+- **Critters: four new scenes.** **Volcano** shreds a flame guitar as the volcano behind throws lava bombs on the
+  beat. **Meltdown** sings in front of a cracked reactor core that pulses rings of radiation on every beat while the
+  room flushes green with the bass (the Reactor scene stays). **Spooky** plays a haunted pipe organ in a graveyard
+  with ghosts, bats and jack-o'-lanterns. **Christmas** plays a candy-cane guitar in the snow by a twinkling tree
+  and a snowman (`src/components/critters/`).
+
 ## 0.46.1
 - **Fix: Up next showed initials instead of covers, and credits like "BigXthaPlug;Loe Shimmy".** Songs from
   **Sounds like this**, sonic journeys and dead-zone saving that the name lookup missed were rebuilt from the Hub's

@@ -3,6 +3,7 @@ import { RETIRED_ACTS, useSettings, type Act, type Species } from '../../store/s
 import { Accordion } from './Accordion';
 import { Acoustic } from './Acoustic';
 import { Bongo } from './Bongo';
+import { Christmas } from './Christmas';
 import { Country } from './Country';
 import { Disco } from './Disco';
 import { DJ } from './DJ';
@@ -10,17 +11,20 @@ import { CoastDrive, Drive, NightDrive } from './Drive';
 import { Drums } from './Drums';
 import { GirlContext } from './faces';
 import { Marimba } from './Marimba';
+import { Meltdown } from './Meltdown';
 import { Piano } from './Piano';
 import { Rapper } from './Rapper';
 import { Reactor } from './Reactor';
 import { Rocker } from './Rocker';
 import { Singer } from './Singer';
+import { Spooky } from './Spooky';
 import { SPECIES, type ActProps, type SpeciesInfo } from './species';
 import { Surf } from './Surf';
 import { Synth } from './Synth';
 import { Taiko } from './Taiko';
 import { Theremin } from './Theremin';
 import { Violin } from './Violin';
+import { Volcano } from './Volcano';
 
 export { SPECIES, type SpeciesInfo };
 
@@ -61,6 +65,10 @@ export const ACTS: ActInfo[] = [
   { id: 'night', label: 'Night driver', blurb: 'Aviators and a leather jacket, drives through the city at night under the street lamps', Scene: NightDrive },
   { id: 'taiko', label: 'Taiko', blurb: 'Happi coat and headband, beats a big taiko drum under the cherry blossom', Scene: Taiko },
   { id: 'disco', label: 'Disco', blurb: 'Big collar and tinted glasses, sings and points on a light-up floor under the mirror ball', Scene: Disco },
+  { id: 'volcano', label: 'Volcano', blurb: 'Bandana and a flame tank top, shreds a flame guitar at the foot of an erupting volcano', Scene: Volcano },
+  { id: 'meltdown', label: 'Meltdown', blurb: 'Hi-vis coveralls and goggles, sings as the cracked reactor core pulses radiation on the beat', Scene: Meltdown },
+  { id: 'spooky', label: 'Spooky', blurb: 'Vampire cape, plays a haunted pipe organ in a graveyard under the full moon', Scene: Spooky },
+  { id: 'christmas', label: 'Christmas', blurb: 'Christmas jumper and Santa hat, plays a candy-cane guitar in the snow by the tree', Scene: Christmas },
 ];
 
 /** Unknown ids (e.g. synced from a newer app) fall back to the first entry. */

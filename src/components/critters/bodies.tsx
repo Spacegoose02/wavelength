@@ -1335,6 +1335,26 @@ const pangolin = roundFigure({
   ),
 });
 
+/** The squirrel's tail: big and bushy, rising up behind the back on the right and curling over at the top. */
+const SQUIRREL_TAIL = 'M232 324 C 286 334, 326 300, 324 250 C 322 214, 300 192, 302 166 C 304 140, 330 130, 344 146 C 362 128, 344 100, 314 100 C 276 102, 258 134, 264 172 C 268 204, 290 226, 284 260 C 278 290, 258 302, 234 302 Z';
+/** Its paler core, the fur parting down the middle. */
+const SQUIRREL_TAIL_IN = 'M246 314 C 284 316, 306 290, 304 254 C 302 222, 284 198, 286 170 C 288 146, 304 126, 322 120';
+
+/** Squirrel: the round top on short legs with dark little paws, and a big bushy tail curling up behind. */
+const squirrel = roundFigure({
+  leg: [24, 20],
+  Bare: softPaw('squirrel-paw'),
+  tailAt: [232, 318],
+  Tail: () => (
+    <>
+      <path d={SQUIRREL_TAIL} className="bare ol" />
+      <path d={SQUIRREL_TAIL_IN} fill="none" className="squirrel-tail-in" strokeWidth="14" strokeLinecap="round" />
+      <path d="M300 112 q 8 -6 16 -2 M330 112 q 8 2 10 10 M322 232 q 8 4 10 12 M268 290 q 6 8 4 16" fill="none" stroke="rgb(0 0 0 / 0.22)" strokeWidth="2.4" strokeLinecap="round" />
+      <path d={SQUIRREL_TAIL} fill="url(#critter-vinyl)" />
+    </>
+  ),
+});
+
 /** The bat's left wing (the right is its mirror): a wide membrane from the shoulder, scalloped between three finger bones. */
 const BAT_WING = 'M170 272 C 140 236, 98 214, 54 216 C 60 232, 58 248, 50 262 C 70 258, 86 266, 90 282 C 104 274, 120 278, 126 292 C 140 286, 156 290, 166 300 Z';
 
@@ -1455,4 +1475,5 @@ export const FIGURES = {
   pangolin: seat(pangolin),
   bat: seat(bat),
   polarBear: seat(polarBear),
+  squirrel: seat(squirrel),
 } satisfies Record<string, Figure>;

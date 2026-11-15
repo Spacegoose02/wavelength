@@ -977,9 +977,12 @@ export function PenguinFace() {
       <HeadShape id="penguin" fill="url(#pg-black)" d="M206 92 C 266 92, 302 130, 302 176 C 302 224, 262 258, 206 258 C 150 258, 110 224, 110 176 C 110 130, 146 92, 206 92 Z">
         {/* the white face: two tall ovals round the eyes, a black peak between them, joining over the cheeks */}
         <path d="M206 176 C 200 146, 192 118, 168 116 C 140 116, 124 144, 126 178 C 128 218, 160 248, 206 248 C 252 248, 284 218, 286 178 C 288 144, 272 116, 244 116 C 220 118, 212 146, 206 176 Z" fill="url(#pg-white)" />
-        <ellipse cx="174" cy="108" rx="30" ry="9" fill="rgb(255 255 255 / 0.2)" transform="rotate(-14 174 108)" />
+        <ellipse cx="172" cy="106" rx="34" ry="10" fill="rgb(255 255 255 / 0.24)" transform="rotate(-16 172 106)" />
+        <circle cx="140" cy="128" r="5" fill="rgb(255 255 255 / 0.18)" />
       </HeadShape>
-      {/* freckles */}
+      {/* rosy cheeks and freckles */}
+      <ellipse cx="146" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.45" />
+      <ellipse cx="266" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.45" />
       <g fill="#e05a5a" opacity="0.75">
         <circle cx="140" cy="210" r="2.4" /><circle cx="148" cy="216" r="2.4" /><circle cx="136" cy="218" r="2" />
         <circle cx="272" cy="210" r="2.4" /><circle cx="264" cy="216" r="2.4" /><circle cx="276" cy="218" r="2" />
@@ -989,12 +992,13 @@ export function PenguinFace() {
         <Eye cx={244} cy={172} r={21} iris="#2f6a96" k={0.9} />
         <Lashes l={[150, 159]} r={[260, 159]} />
       </g>
-      <Pair l="M148 140 Q 160 132 178 138" mid={206} stroke="#7a8296" width={4} />
+      <Pair l="M150 142 Q 162 134 180 140" mid={206} stroke="#3c4256" width={4.4} />
       <path data-part="smile" d="M192 228 Q 206 236 220 228" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
       <Mouth id="penguin" x={206} y={220} w={13} h={24} fill="#5a1a24" line={INK} teeth="none" />
-      <path d="M184 204 Q 206 194 228 204 Q 220 218 206 226 Q 192 218 184 204 Z" fill="url(#pg-beak)" className="ol-thin" />
-      <path d="M190 206 Q 206 212 222 206" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="1.6" />
-      <ellipse cx="198" cy="202" rx="6" ry="1.8" fill="rgb(255 255 255 / 0.7)" />
+      <path d="M182 204 Q 206 192 230 204 Q 224 216 206 226 Q 188 216 182 204 Z" fill="url(#pg-beak)" className="ol-thin" />
+      <path d="M188 208 Q 206 214 224 208" fill="none" stroke="rgb(120 50 0 / 0.35)" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="200" cy="203" r="1.4" fill="rgb(120 50 0 / 0.5)" /><circle cx="212" cy="203" r="1.4" fill="rgb(120 50 0 / 0.5)" />
+      <ellipse cx="196" cy="200" rx="7" ry="2" fill="rgb(255 255 255 / 0.75)" transform="rotate(-8 196 200)" />
     </Placed>
   );
 }
@@ -1793,55 +1797,68 @@ export function PeacockFace() {
   );
 }
 
-/** The pangolin's head scales: staggered rows of plates from the crown down, the lower rows drawn first so each row overlaps the one below. */
-const PANGOLIN_HEAD_SCALES = [178, 158, 138, 118, 98, 80].flatMap((y, row) =>
-  Array.from({ length: 8 }, (_, i) => scale(110 + i * 28 + (row % 2) * 14, y, 30, 26)),
+/** The pangolin's scale cap: staggered rows of small plates over the crown, the lower rows drawn first so each row overlaps the one below. */
+const PANGOLIN_HEAD_SCALES = [166, 150, 134, 118, 102, 86, 72].flatMap((y, row) =>
+  Array.from({ length: 10 }, (_, i) => scale(98 + i * 24 + (row % 2) * 12, y, 26, 22)),
 );
+/** The lower edge of the scale cap: down over the cheeks at the sides, up over the eyes, with a little point between them. */
+const PANGOLIN_CAP_EDGE = 'M100 200 C 108 170, 122 142, 150 134 C 170 128, 190 132, 206 148 C 222 132, 242 128, 262 134 C 290 142, 304 170, 312 200';
 
 /**
- * A pangolin's face, the armoured one: a head tapering down to a long pointed snout, under a hood of big
- * overlapping bronze scales that covers the crown and comes down the cheeks, leaving a pale face that dips to a
- * point between the eyes; little round ears at the sides (`ear-l` / `ear-r`), small shiny dark eyes set close,
- * and a little dark nose at the tip of the snout with the mouth just under it. Its armour carries on down the
- * figure's back and tail.
+ * A pangolin's face, the armoured one, drawn cute (redrawn November 2026; the first one tapered to a long pointed
+ * snout and read as odd): a big round chibi head under a neat cap of small bronze scales that comes down over the
+ * cheeks and dips to a point between the eyes, a pale face, big warm brown eyes, rosy cheeks and a short soft
+ * muzzle with a button nose and the mouth under it. Little round ears at the sides (`ear-l` / `ear-r`). Each scale,
+ * here and on the figure's armour and tail, is shaded by `pgl-scale` (lighter at its top). Its armour carries on
+ * down the figure's back and tail.
  */
 export function PangolinFace() {
   return (
-    <Placed cx={206} cy={180} s={0.84}>
+    <Placed cx={206} cy={178} s={0.84}>
       <defs>
-        <Shade id="pg-skin" hi="#f4dcc8" mid="#dcbca2" lo="#a8826a" />
-        <clipPath id="pg-cap">
-          <path d="M96 76 H 316 V 214 C 296 200, 280 176, 264 162 C 244 148, 222 152, 206 170 C 190 152, 168 148, 148 162 C 132 176, 116 200, 96 214 Z" />
+        <Shade id="pgl-skin" hi="#fbeadb" mid="#ecd0b6" lo="#b88e70" />
+        <Shade id="pgl-muzzle" hi="#fffaf4" lo="#efd8c2" />
+        <linearGradient id="pgl-scale" x1="0" y1="0" x2="0.3" y2="1">
+          <stop offset="0" stopColor="#e2b276" />
+          <stop offset="0.55" stopColor="#bb8648" />
+          <stop offset="1" stopColor="#8a5a28" />
+        </linearGradient>
+        <clipPath id="pgl-cap">
+          <path d={`${PANGOLIN_CAP_EDGE} V 40 H 100 Z`} />
         </clipPath>
       </defs>
       <g data-part="ear-l">
-        <circle cx="122" cy="176" r="13" fill="url(#pg-skin)" className="ol" />
-        <circle cx="124" cy="177" r="5.5" fill="#a07258" />
+        <circle cx="116" cy="188" r="14" fill="url(#pgl-skin)" className="ol" />
+        <circle cx="118" cy="189" r="6.5" fill="#c7967a" />
       </g>
       <g data-part="ear-r">
-        <circle cx="290" cy="176" r="13" fill="url(#pg-skin)" className="ol" />
-        <circle cx="288" cy="177" r="5.5" fill="#a07258" />
+        <circle cx="296" cy="188" r="14" fill="url(#pgl-skin)" className="ol" />
+        <circle cx="294" cy="189" r="6.5" fill="#c7967a" />
       </g>
-      <HeadShape id="pangolin" fill="url(#pg-skin)" d="M206 94 C 264 94, 296 126, 294 164 C 292 196, 264 218, 238 236 C 224 246, 218 262, 206 268 C 194 262, 188 246, 174 236 C 148 218, 120 196, 118 164 C 116 126, 148 94, 206 94 Z">
-        <g clipPath="url(#pg-cap)">
+      <HeadShape id="pangolin" fill="url(#pgl-skin)" d="M206 90 C 268 90, 304 128, 304 176 C 304 224, 264 258, 206 258 C 148 258, 108 224, 108 176 C 108 128, 144 90, 206 90 Z">
+        <g clipPath="url(#pgl-cap)">
           {PANGOLIN_HEAD_SCALES.map((d, i) => (
-            <path key={i} d={d} className="pangolin-scale" stroke="#5a3a18" strokeWidth="2.2" strokeLinejoin="round" />
+            <path key={i} d={d} fill="url(#pgl-scale)" stroke="#5a3a18" strokeWidth="2" strokeLinejoin="round" />
           ))}
         </g>
-        <ellipse cx="176" cy="112" rx="30" ry="9" fill="rgb(255 255 255 / 0.25)" transform="rotate(-14 176 112)" />
+        <path d={PANGOLIN_CAP_EDGE} fill="none" stroke="#5a3a18" strokeWidth="3.4" strokeLinecap="round" />
+        <ellipse cx="172" cy="106" rx="32" ry="9" fill="rgb(255 255 255 / 0.28)" transform="rotate(-14 172 106)" />
       </HeadShape>
-      <ellipse cx="160" cy="206" rx="10" ry="6" fill="#ff8f9c" opacity="0.45" />
-      <ellipse cx="252" cy="206" rx="10" ry="6" fill="#ff8f9c" opacity="0.45" />
+      <ellipse cx="150" cy="214" rx="13" ry="8" fill="#ff8f9c" opacity="0.5" />
+      <ellipse cx="262" cy="214" rx="13" ry="8" fill="#ff8f9c" opacity="0.5" />
       <g data-part="eyes">
-        <Eye cx={176} cy={184} r={12} iris="#2a1a12" />
-        <Eye cx={238} cy={184} r={12} iris="#2a1a12" k={0.9} />
-        <Lashes l={[165, 175]} r={[248, 175]} s={0.85} />
+        <Eye cx={170} cy={184} r={19} iris="#7a4a22" />
+        <Eye cx={244} cy={184} r={19} iris="#7a4a22" k={0.9} />
+        <Lashes l={[154, 171]} r={[259, 171]} />
       </g>
-      <Pair l="M164 164 Q 174 159 186 162" mid={206} stroke="#6e4a24" width={3.6} />
-      <path d="M198 240 Q 206 234 214 240 Q 213 247 206 249 Q 199 247 198 240 Z" fill="#3a2420" className="ol-thin" />
-      <ellipse cx="203" cy="239" rx="3" ry="1.3" fill="rgb(255 255 255 / 0.6)" />
-      <path data-part="smile" d="M198 254 Q 202 258 206 254 Q 210 258 214 254" fill="none" stroke={INK} strokeWidth="2.2" strokeLinecap="round" />
-      <Mouth id="pangolin" x={206} y={254} w={9} h={14} fill="#5a1a24" line={INK} teeth="none" />
+      <Pair l="M154 158 Q 166 152 182 157" mid={207} stroke="#6e4a24" width={3.8} />
+      {/* the muzzle: a short soft snout with a button nose */}
+      <ellipse cx="207" cy="222" rx="30" ry="21" fill="url(#pgl-muzzle)" className="ol-thin" />
+      <path d="M196 208 Q 207 202 218 208 Q 216 217 207 220 Q 198 217 196 208 Z" fill="#4a2a24" className="ol-thin" />
+      <ellipse cx="203" cy="207" rx="3.6" ry="1.5" fill="rgb(255 255 255 / 0.65)" />
+      <path d="M207 220 V226" stroke="#6a4434" strokeWidth="2.2" strokeLinecap="round" />
+      <path data-part="smile" d="M195 228 Q 201 234 207 228 Q 213 234 219 228" fill="none" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
+      <Mouth id="pangolin" x={207} y={228} w={11} h={18} fill="#5a1a24" line={INK} teeth="none" />
     </Placed>
   );
 }
@@ -1932,6 +1949,75 @@ export function PolarBearFace() {
       <path d="M206 218 V230" stroke="#141418" strokeWidth="2.6" strokeLinecap="round" />
       <path data-part="smile" d="M190 232 Q 198 240 206 232 Q 214 240 222 232" fill="none" stroke="#141418" strokeWidth="2.8" strokeLinecap="round" />
       <Mouth id="polar-bear" x={206} y={232} w={14} h={24} fill="#3a1a2a" line="#141418" />
+    </Placed>
+  );
+}
+
+/** The squirrel's left ear (the right is its mirror): tall and rounded, with a tuft at the tip. */
+const SQUIRREL_EAR = 'M136 146 C 122 116, 122 86, 138 68 C 158 74, 176 102, 180 132 Z';
+const SQUIRREL_TUFT = 'M138 70 C 128 58, 128 44, 134 34 C 138 46, 146 54, 156 58 C 150 62, 144 66, 138 70 Z';
+const SQUIRREL_EAR_IN = 'M144 136 C 134 114, 134 94, 142 82 C 156 90, 168 108, 170 128 Z';
+
+/**
+ * A squirrel, drawn cute and kept clear of famous cartoon squirrels (no acorn-obsessed sabre-tooth, no diving
+ * helmet, no flying cap and goggles): a round chestnut head with chubby cream cheeks (as if stuffed with nuts), tall
+ * tufted ears (`ear-l` / `ear-r`, so the rig flicks them and the cowboy hat hides them), pale rings round big dark
+ * eyes, a little pink nose, whiskers, and two buck teeth under the smile. Its big bushy tail curls up behind it
+ * (`FIGURES.squirrel`).
+ */
+export function SquirrelFace() {
+  const ear = (
+    <>
+      <path d={SQUIRREL_TUFT} fill="#7a4220" className="ol-thin" />
+      <path d={SQUIRREL_EAR} fill="url(#sq-fur)" className="ol" />
+      <path d={SQUIRREL_EAR_IN} fill="#f0b8a8" />
+    </>
+  );
+  return (
+    <Placed cx={206} cy={178} s={0.84}>
+      <defs>
+        <Shade id="sq-fur" hi="#d89a62" mid="#b06a36" lo="#6e3a18" />
+        <Shade id="sq-cream" hi="#fffaf0" lo="#f0dcc0" />
+      </defs>
+      <g data-part="ear-l">{ear}</g>
+      <g data-part="ear-r">
+        <g transform="translate(412 0) scale(-1 1)">{ear}</g>
+      </g>
+      <HeadShape
+        id="squirrel"
+        fill="url(#sq-fur)"
+        d="M206 96 C 262 96, 298 128, 300 170 C 316 186, 314 214, 294 226 C 278 250, 246 260, 206 260 C 166 260, 134 250, 118 226 C 98 214, 96 186, 112 170 C 114 128, 150 96, 206 96 Z"
+      >
+        {/* chubby cream cheeks and muzzle, a pale stripe down the nose, and rings round the eyes */}
+        <path d="M98 196 C 116 182, 150 186, 172 198 Q 206 188 240 198 C 262 186, 296 182, 314 196 C 314 212, 308 222, 294 226 C 278 250, 246 260, 206 260 C 166 260, 134 250, 118 226 C 104 222, 98 212, 98 196 Z" fill="url(#sq-cream)" />
+        <path d="M206 140 C 198 160, 194 178, 194 196 L 218 196 C 218 178, 214 160, 206 140 Z" fill="url(#sq-cream)" opacity="0.8" />
+        <ellipse cx="166" cy="174" rx="27" ry="25" fill="url(#sq-cream)" />
+        <ellipse cx="246" cy="174" rx="25" ry="25" fill="url(#sq-cream)" />
+        <ellipse cx="174" cy="114" rx="34" ry="11" fill="rgb(255 255 255 / 0.22)" transform="rotate(-14 174 114)" />
+      </HeadShape>
+      <ellipse cx="138" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.5" />
+      <ellipse cx="274" cy="214" rx="14" ry="8" fill="#ff8f9c" opacity="0.5" />
+      <g data-part="eyes">
+        <Eye cx={166} cy={174} r={19} iris="#3a2010" />
+        <Eye cx={246} cy={174} r={19} iris="#3a2010" k={0.9} />
+        <Lashes l={[150, 162]} r={[261, 162]} />
+      </g>
+      <Pair l="M148 140 Q 162 132 180 138" mid={206} stroke="#5a2e12" width={4.5} />
+      <g data-part="whisker-l" className="whiskers">
+        <path d="M178 214 L 132 206 M178 220 L 130 224" />
+      </g>
+      <g data-part="whisker-r" className="whiskers">
+        <path d="M234 214 L 280 206 M234 220 L 282 224" />
+      </g>
+      <path d="M197 200 Q 206 194 215 200 Q 213 208 206 210 Q 199 208 197 200 Z" fill="#c8606a" className="ol-thin" />
+      <ellipse cx="202" cy="199" rx="3.4" ry="1.4" fill="rgb(255 255 255 / 0.7)" />
+      <path d="M206 210 V216" stroke="#7a4a3a" strokeWidth="2.2" strokeLinecap="round" />
+      <g data-part="smile">
+        <path d="M200 219 h 12 v 9 q 0 3 -3 3 h -6 q -3 0 -3 -3 Z" fill="#fffdf6" className="ol-thin" />
+        <path d="M206 219 V230" stroke="rgb(0 0 0 / 0.3)" strokeWidth="1.2" />
+        <path d="M190 216 Q 198 224 206 218 Q 214 224 222 216" fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
+      </g>
+      <Mouth id="squirrel" x={206} y={218} w={13} h={24} fill="#5a1a24" line={INK} />
     </Placed>
   );
 }

@@ -356,6 +356,61 @@ describe('the capybara, crocodile, dolphin, goat, peacock, pangolin, bat and pol
   });
 });
 
+describe('the squirrel, and the redrawn pangolin', () => {
+  const head = async (id: string) => {
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { SPECIES } = await import('../components/critters/species');
+    const { Head } = await import('../components/critters/parts');
+    return renderToStaticMarkup(h('svg', null, h(Head, { species: SPECIES.find((s) => s.id === id)! })));
+  };
+
+  it('is a species with its own figure, tufted ears for the rig and buck teeth in the closed smile', async () => {
+    const { SPECIES } = await import('../components/critters/species');
+    const { FIGURES } = await import('../components/critters/bodies');
+    expect(SPECIES.find((s) => s.id === 'squirrel')?.figure).toBe(FIGURES.squirrel);
+    const svg = await head('squirrel');
+    for (const part of ['ear-l', 'ear-r', 'eyes', 'smile', 'yawn', 'whisker-l', 'whisker-r']) expect(svg, part).toContain(`data-part="${part}"`);
+  });
+
+  it('shades every pangolin scale from one gradient its face defines', async () => {
+    const svg = await head('pangolin');
+    expect(svg).toContain('id="pgl-scale"');
+    expect(svg).toContain('data-part="ear-l"');
+  });
+});
+
+describe('the Volcano, Meltdown, Spooky and Christmas scenes', () => {
+  it('are acts, alongside the Reactor', async () => {
+    vi.stubGlobal('Audio', function Audio() {
+      return new Proxy({}, { get: () => () => {} });
+    });
+    const { ACTS } = await import('../components/critters/Critter');
+    expect(ACTS.map((a) => a.id)).toEqual(expect.arrayContaining(['reactor', 'volcano', 'meltdown', 'spooky', 'christmas']));
+  });
+
+  it('draw the parts their rigs move', async () => {
+    vi.stubGlobal('Audio', function Audio() {
+      return new Proxy({}, { get: () => () => {} });
+    });
+    const { createElement: h } = await import('react');
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { Critter } = await import('../components/critters/Critter');
+    const draw = (act: 'volcano' | 'meltdown' | 'spooky' | 'christmas') => renderToStaticMarkup(h(Critter, { species: 'squirrel', act, still: true }));
+    const volcano = draw('volcano');
+    for (const part of ['guitar', 'strings', 'crater-glow', 'crater-flash', 'cracks', 'ash']) expect(volcano, part).toContain(`data-part="${part}"`);
+    expect(volcano.match(/data-bomb=""/g)).toHaveLength(7);
+    const meltdown = draw('meltdown');
+    for (const part of ['core', 'halo', 'wash', 'cracks', 'core-flash', 'alarm-beam-l', 'alarm-beam-r', 'gauge-needle']) expect(meltdown, part).toContain(`data-part="${part}"`);
+    expect(meltdown.match(/data-ring=""/g)).toHaveLength(4);
+    const spooky = draw('spooky');
+    for (const part of ['lightning', 'mist']) expect(spooky, part).toContain(`data-part="${part}"`);
+    expect(spooky.match(/data-pipe=""/g)).toHaveLength(10);
+    const christmas = draw('christmas');
+    for (const part of ['guitar', 'strings', 'star', 'star-glow', 'snowman-hat']) expect(christmas, part).toContain(`data-part="${part}"`);
+  });
+});
+
 describe('every act', () => {
   it('draws for every species, boy and girl, including the Acoustic, Surf rock and Singer acts', async () => {
     // the player behind the rig makes an <audio> when it loads; tests run without a DOM
