@@ -13,6 +13,11 @@ services:
       WAVELENGTH_SSO: "true"
       WAVELENGTH_PROXY_SECRET: change-me-to-a-long-random-value
       WAVELENGTH_ADMINS: alex
+      # Or sign in with tinyauth over OIDC (docs/HUB.md "Sign in with OIDC"), alone or next to the above:
+      # WAVELENGTH_OIDC: "true"
+      # WAVELENGTH_OIDC_ISSUER: https://auth.example.com
+      # WAVELENGTH_OIDC_CLIENT_ID: your-client-id
+      # WAVELENGTH_OIDC_CLIENT_SECRET: your-client-secret
       PUID: "1000"
       PGID: "1000"
     volumes:

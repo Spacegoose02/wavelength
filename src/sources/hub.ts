@@ -108,6 +108,8 @@ export interface HubHealth {
   sso: boolean;
   /** What the single sign-on button calls it ("tinyauth"), while it's on. */
   ssoName?: string;
+  /** Single sign-on goes through OpenID Connect (the browser visits the provider), not only proxy headers. */
+  ssoOidc?: boolean;
 }
 
 /** A profile that a family sign-in may pick (hub/src/familyLogins.ts). */
@@ -133,9 +135,32 @@ export interface HubSsoSettings {
   admins: string[];
   adminGroup: string;
   name: string;
+  /** OpenID Connect sign-in (hub/src/oidc.ts). Older Hubs don't send these. */
+  oidc?: boolean;
+  oidcIssuer?: string;
+  oidcClientId?: string;
+  /** The client secret itself is never sent back; this says whether one is saved. */
+  oidcClientSecretSet?: boolean;
+  oidcScopes?: string;
+  oidcUsernameClaim?: string;
+  /** What to register with the provider as the redirect URI. */
+  oidcRedirectUri?: string;
+  oidcProblem?: string;
   /** Set by the container's environment, so not changeable here. */
   locked: string[];
   problem: string;
+}
+
+/** What POST /api/admin/sso/oidc/check found at the issuer. */
+export interface HubOidcCheck {
+  ok: boolean;
+  issuer: string;
+  authorizationEndpoint: string;
+  tokenEndpoint: string;
+  userinfoEndpoint: string | null;
+  pkce: boolean | null;
+  scopes: string[] | null;
+  redirectUri: string;
 }
 
 /** A sign-in that belongs to a whole family and picks a profile. */
@@ -1165,7 +1190,9 @@ export class HubClient {
   mergeUser = (id: number, into: number) => this.call<{ user: HubUser }>('POST', `/api/admin/users/${id}/merge`, { into });
   // how people sign in (hub/src/routes/signins.ts)
   ssoSettings = () => this.call<{ sso: HubSsoSettings; publicUrl: string }>('GET', '/api/admin/sso');
-  saveSsoSettings = (sso: Partial<Omit<HubSsoSettings, 'locked' | 'problem'>>) => this.call<{ sso: HubSsoSettings; publicUrl: string }>('PUT', '/api/admin/sso', { sso });
+  saveSsoSettings = (sso: Partial<Omit<HubSsoSettings, 'locked' | 'problem' | 'oidcProblem' | 'oidcClientSecretSet' | 'oidcRedirectUri'> & { oidcClientSecret: string | null }>) =>
+    this.call<{ sso: HubSsoSettings; publicUrl: string }>('PUT', '/api/admin/sso', { sso });
+  checkOidc = (issuer?: string) => this.call<HubOidcCheck>('POST', '/api/admin/sso/oidc/check', issuer ? { issuer } : {});
   newProxySecret = () => this.call<{ secret: string }>('POST', '/api/admin/sso/secret', {});
   familyLogins = () => this.call<{ logins: HubFamilyLogin[] }>('GET', '/api/admin/family-logins');
   createFamilyLogin = (b: { familyId: number; username?: string; password?: string; ssoSubject?: string }) => this.call<{ login: HubFamilyLogin }>('POST', '/api/admin/family-logins', b);

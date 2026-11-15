@@ -80,6 +80,7 @@ import { Station } from './dj/station.ts';
 import { ollamaProvider } from './dj/ollama.ts';
 import { anthropicProvider, type ProviderFactory } from './dj/provider.ts';
 import { djRoutes } from './routes/dj.ts';
+import { Oidc } from './oidc.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -135,9 +136,11 @@ export interface Ctx {
   tours: Tours;
   /** Music videos (videos.ts). */
   videos: Videos;
+  /** Sign in with OpenID Connect, e.g. tinyauth (oidc.ts). */
+  oidc: Oidc;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch; plexFetch?: Fetch } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch; plexFetch?: Fetch; oidcFetch?: Fetch } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -158,6 +161,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     tours: new Tours(db, config.secretKey, opts.tourFetch),
     videos: undefined as unknown as Videos,
     plexImport: new PlexImport(db, config.secretKey, opts.plexFetch),
+    oidc: new Oidc(opts.oidcFetch),
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.mixes = new Mixes(db, ctx.mixLookups);
   ctx.mixes.mood = (song) => {
