@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { beatClock, bend, lift } from './arm';
 import { swell, windUp } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import { Burst, burst, newFx, onBeat } from './fx';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
@@ -109,7 +109,7 @@ export function Taiko({ species, still }: ActProps) {
       {LANTERNS.map(([x, y], i) => (
         <g key={x} data-lantern="">
           <path className="lantern-string" d={`M${x} ${y - 24} V${y - 16}`} strokeWidth="1.5" />
-          <ellipse data-glow="" className="lantern-glow" cx={x} cy={y} rx="20" ry="22" filter="url(#critter-blur)" />
+          <Glow id="glow-taiko-lantern" color="color-mix(in srgb, var(--viz-low) 50%, #ffe7a8)" data-glow="" className="lantern-glow" cx={x} cy={y} rx={20} ry={22} />
           <rect className="lantern-cap" x={x - 7} y={y - 18} width="14" height="5" rx="1.5" />
           <ellipse className={`lantern ol-thin${i % 2 ? ' lantern-2' : ''}`} cx={x} cy={y} rx="13" ry="15" />
           <path d={`M${x - 12} ${y - 5} H${x + 12} M${x - 13} ${y} H${x + 13} M${x - 12} ${y + 5} H${x + 12}`} stroke="rgb(0 0 0 / 0.18)" strokeWidth="1.2" />

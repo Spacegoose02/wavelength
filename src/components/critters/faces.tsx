@@ -1951,22 +1951,20 @@ export function PolarBearFace() {
   );
 }
 
-/** The squirrel's left ear (the right is its mirror): tall and rounded, with a tuft at the tip. */
+/** The squirrel's left ear (the right is its mirror): tall and rounded. */
 const SQUIRREL_EAR = 'M136 146 C 122 116, 122 86, 138 68 C 158 74, 176 102, 180 132 Z';
-const SQUIRREL_TUFT = 'M138 70 C 128 58, 128 44, 134 34 C 138 46, 146 54, 156 58 C 150 62, 144 66, 138 70 Z';
 const SQUIRREL_EAR_IN = 'M144 136 C 134 114, 134 94, 142 82 C 156 90, 168 108, 170 128 Z';
 
 /**
  * A squirrel, drawn cute and kept clear of famous cartoon squirrels (no acorn-obsessed sabre-tooth, no diving
  * helmet, no flying cap and goggles): a round chestnut head with chubby cream cheeks (as if stuffed with nuts), tall
- * tufted ears (`ear-l` / `ear-r`, so the rig flicks them and the cowboy hat hides them), pale rings round big dark
+ * rounded ears (`ear-l` / `ear-r`, so the rig flicks them and the cowboy hat hides them), pale rings round big dark
  * eyes, a little pink nose, whiskers, and two buck teeth under the smile. Its big bushy tail curls up behind it
  * (`FIGURES.squirrel`).
  */
 export function SquirrelFace() {
   const ear = (
     <>
-      <path d={SQUIRREL_TUFT} fill="#7a4220" className="ol-thin" />
       <path d={SQUIRREL_EAR} fill="url(#sq-fur)" className="ol" />
       <path d={SQUIRREL_EAR_IN} fill="#f0b8a8" />
     </>

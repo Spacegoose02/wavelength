@@ -1,7 +1,7 @@
 import { useRef, type ReactNode } from 'react';
 import { armJoint, beatClock, bend } from './arm';
 import { swell, windUp } from './flourish';
-import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Glow, Head, Legs } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig, type RigFrame } from './rig';
 
@@ -219,7 +219,7 @@ function DriveScene({ species, still, place }: ActProps & { place: DrivePlace })
         </g>
       ))}
 
-      <ellipse data-part="car-shadow" className="contact-shadow" cx="200" cy="392" rx="150" ry="9" filter="url(#critter-soft)" />
+      <ellipse data-part="car-shadow" className="contact-shadow" cx="200" cy="392" rx="155" ry="12" fill="url(#critter-shadow-fill)" />
       <g data-part="car">
         {/* tyres, under the body */}
         {[92, 308].map((cx) => (
@@ -278,7 +278,7 @@ function DriveScene({ species, still, place }: ActProps & { place: DrivePlace })
           {/* headlights: chrome rims, lenses, and a glow that pulses on the beat */}
           {[104, 296].map((cx) => (
             <g key={cx}>
-              <circle data-glow="" className="headlight-glow" cx={cx} cy="326" r="26" filter="url(#critter-blur)" />
+              <Glow id="glow-headlight" color="var(--viz-low)" data-glow="" className="headlight-glow" cx={cx} cy={326} r={26} />
               <circle className="chrome ol-thin" cx={cx} cy="326" r="19" />
               <circle className="headlight" cx={cx} cy="326" r="14" />
               <circle cx={cx - 5} cy="321" r="4" fill="#fff" opacity="0.8" />
@@ -399,7 +399,7 @@ const COAST: DrivePlace = {
         <path className="coast-head" d={`M-60 ${HORIZON - 20} Q -10 ${HORIZON - 46} 30 ${HORIZON - 44} Q 70 ${HORIZON - 42} 96 ${HORIZON - 26} Q 112 ${HORIZON - 20} 130 ${HORIZON - 20} Z`} />
         <path className="lighthouse ol-thin" d={`M${LIGHTHOUSE[0] - 6} ${HORIZON - 42} L ${LIGHTHOUSE[0] - 4} ${LIGHTHOUSE[1]} H${LIGHTHOUSE[0] + 4} L ${LIGHTHOUSE[0] + 6} ${HORIZON - 42} Z`} />
         <path className="lighthouse-band" d={`M${LIGHTHOUSE[0] - 5.4} ${HORIZON - 50} H${LIGHTHOUSE[0] + 5.4} M${LIGHTHOUSE[0] - 4.6} ${HORIZON - 44 - 0} H${LIGHTHOUSE[0] + 4.6}`} strokeWidth="2.4" fill="none" />
-        <circle data-part="beacon" className="beacon" cx={LIGHTHOUSE[0]} cy={LIGHTHOUSE[1] - 3} r="9" filter="url(#critter-blur)" />
+        <Glow id="glow-lighthouse" color="#ff9f1a" data-part="beacon" className="beacon" cx={LIGHTHOUSE[0]} cy={LIGHTHOUSE[1] - 3} r={9} />
         <rect className="lighthouse-top" x={LIGHTHOUSE[0] - 4} y={LIGHTHOUSE[1] - 6} width="8" height="6" rx="1" />
         <rect className="coast-sea" x="-60" y={HORIZON - 20} width="520" height="22" />
         {GLINTS.map(([x, y, w], i) => <rect key={i} data-glint="" className="coast-glint" x={x} y={y} width={w} height="1.6" rx="0.8" />)}
@@ -495,7 +495,7 @@ const NIGHT: DrivePlace = {
       <rect className="drive-sky" x="0" y="0" width="400" height={HORIZON + 2} />
       {STARS.map(([x, y, r], i) => <circle key={i} data-star="" className="night-star" cx={x} cy={y} r={r} />)}
       {/* the moon, with a glow round it */}
-      <circle className="night-moon-glow" cx="320" cy="62" r="34" filter="url(#critter-blur)" />
+      <Glow id="glow-night-moon" color="#f4f0dc" className="night-moon-glow" cx={320} cy={62} r={34} />
       <circle className="night-moon" cx="320" cy="62" r="24" />
       <circle className="night-crater" cx="312" cy="56" r="5" />
       <circle className="night-crater" cx="328" cy="72" r="3.5" />
@@ -515,7 +515,7 @@ const NIGHT: DrivePlace = {
     <>
       <rect className="lamp-post" x="-3" y="-96" width="6" height="96" rx="2" />
       <path className="lamp-post-arm" d="M0 -92 Q 0 -104 -14 -104 H-28" fill="none" strokeWidth="5" strokeLinecap="round" />
-      <circle data-glow="" className="lamp-glow" cx="-30" cy="-98" r="14" filter="url(#critter-blur)" />
+      <Glow id="glow-street-lamp" color="#ffd77a" data-glow="" className="street-lamp-glow" cx={-30} cy={-98} r={14} />
       <path className="lamp-head" d="M-40 -100 H-20 L -24 -106 H-36 Z" />
       <ellipse className="lamp-bulb" cx="-30" cy="-99" rx="7" ry="2.5" />
     </>

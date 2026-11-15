@@ -38,9 +38,6 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; variant?: 
           </feMerge>
         </filter>
         {/* soft edges for contact shadows */}
-        <filter id="critter-soft" x="-20%" y="-100%" width="140%" height="300%">
-          <feGaussianBlur stdDeviation="3" />
-        </filter>
         <clipPath id="critter-torso">
           <path d={species.figure.torso} />
         </clipPath>
@@ -50,9 +47,18 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; variant?: 
           <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
           <stop offset="1" stopColor="#000" stopOpacity="0.3" />
         </radialGradient>
-        <filter id="critter-blur" x="-30%" y="-60%" width="160%" height="220%">
-          <feGaussianBlur stdDeviation="4" />
-        </filter>
+        {/* soft edges without a blur filter, which would be re-run every frame the scene repaints: a contact
+            shadow's and the chin shadow's fills (glows are `Glow`s, glow.tsx) */}
+        <radialGradient id="critter-shadow-fill">
+          <stop offset="0" stopColor="#000" stopOpacity="0.38" />
+          <stop offset="0.62" stopColor="#000" stopOpacity="0.34" />
+          <stop offset="1" stopColor="#000" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="critter-chin-fill">
+          <stop offset="0" stopColor="rgb(10 5 5)" stopOpacity="0.35" />
+          <stop offset="0.55" stopColor="rgb(10 5 5)" stopOpacity="0.3" />
+          <stop offset="1" stopColor="rgb(10 5 5)" stopOpacity="0" />
+        </radialGradient>
       </defs>
       <ellipse data-part="spot" cx="200" cy="200" rx="190" ry="170" fill="url(#critter-spot)" />
       {children}
@@ -66,7 +72,8 @@ export const CritterFrame = forwardRef<SVGSVGElement, { kind: string; variant?: 
  * floor instead of floating over it. Draw it before what stands on it.
  */
 export function Shadow({ cx, cy, rx, ry = 6 }: { cx: number; cy: number; rx: number; ry?: number }) {
-  return <ellipse className="contact-shadow" cx={cx} cy={cy} rx={rx} ry={ry} filter="url(#critter-soft)" />;
+  // a gradient, not a blur filter: drawn a little bigger so its soft edge reaches as far as the blur's did
+  return <ellipse className="contact-shadow" cx={cx} cy={cy} rx={rx + 5} ry={ry + 3} fill="url(#critter-shadow-fill)" />;
 }
 
 /**
@@ -82,7 +89,7 @@ export function Body({ species, children }: { species: SpeciesInfo; children: Re
       <g clipPath="url(#critter-torso)">
         {Skin && <Skin />}
         {children}
-        <ellipse className="chin-shadow" cx="200" cy={chin[0]} rx={chin[1]} ry="16" filter="url(#critter-blur)" />
+        <ellipse className="chin-shadow" cx="200" cy={chin[0]} rx={chin[1] + 6} ry="21" fill="url(#critter-chin-fill)" />
         <path d={torso} fill="url(#critter-vinyl)" />
       </g>
       <path d={torso} fill="none" className="ol" />
@@ -527,3 +534,5 @@ function useArm(part: string, d: string, hand: [number, number]) {
     fore: `M${fx(ex)} ${fx(ey)} Q ${fx((qx + hx) / 2)} ${fx((qy + hy) / 2)} ${fx(hx)} ${fx(hy)}`,
   };
 }
+
+export { Glow } from './glow';

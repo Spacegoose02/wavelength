@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { beatClock } from './arm';
 import { swell, windUp } from './flourish';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -69,7 +69,7 @@ export function Country({ species, still }: ActProps) {
 
       {/* a lantern hanging off the last post, flickering with the bass; fireflies blinking on the beat */}
       <path className="lantern-hook" d="M366 196 V 180 H 382 V 188" fill="none" strokeWidth="2.5" />
-      <circle data-part="lantern-glow" className="porch-lantern-glow" cx="382" cy="204" r="18" filter="url(#critter-blur)" />
+      <Glow id="glow-porch-lantern" color="#ffc45a" data-part="lantern-glow" className="porch-lantern-glow" cx={382} cy={204} r={18} />
       <rect className="porch-lantern ol-thin" x="374" y="190" width="16" height="22" rx="3" />
       <rect className="porch-lantern-flame" x="379" y="196" width="6" height="10" rx="3" />
       {FIREFLIES.map(([x, y], i) => <circle key={i} data-firefly="" className="firefly" cx={x} cy={y} r="2.6" filter="url(#critter-glow)" />)}

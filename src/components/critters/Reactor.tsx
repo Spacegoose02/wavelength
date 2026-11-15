@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { beatClock, bend, lift } from './arm';
 import { swell, windUp } from './flourish';
-import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt, trefoil } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt, trefoil } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -132,7 +132,7 @@ export function Reactor({ species, still }: ActProps) {
       {/* the hall: concrete panels, the core in its steel housing, beacons, warning signs, a Geiger counter */}
       <rect className="bunker-wall" x="0" y="0" width="400" height="344" />
       <path className="bunker-seam" d="M82 0 V344 M318 0 V344 M0 96 H82 M318 96 H400 M0 196 H82 M318 196 H400" fill="none" strokeWidth="2" />
-      <circle data-part="halo" className="core-halo" cx={CORE[0]} cy={CORE[1]} r="132" filter="url(#critter-blur)" />
+      <Glow id="glow-reactor-halo" color="#7dff5a" data-part="halo" className="core-halo" cx={CORE[0]} cy={CORE[1]} r={132} />
       <circle className="core-housing ol" cx={CORE[0]} cy={CORE[1]} r="118" />
       {Array.from({ length: 16 }, (_, i) => {
         const ang = (i / 16) * Math.PI * 2;

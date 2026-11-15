@@ -279,6 +279,8 @@ describe('the penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red
     const legs = renderToStaticMarkup(h(SpeciesContext.Provider, { value: sp('octopus') }, h('svg', null, h(Legs, { species: sp('octopus') }))));
     expect(legs).toContain('data-part="tentacle-l"');
     expect(legs).toContain('data-part="tentacle-r"');
+    // eight limbs in all: four tentacles on the floor and the two reaching out (each with a curled tip), and its two arms
+    expect(legs.match(/class="tentacle-tip"/g)).toHaveLength(6);
   });
 
   it('makes the girl dragon white and the boy charcoal', async () => {
@@ -365,7 +367,7 @@ describe('the squirrel, and the redrawn pangolin', () => {
     return renderToStaticMarkup(h('svg', null, h(Head, { species: SPECIES.find((s) => s.id === id)! })));
   };
 
-  it('is a species with its own figure, tufted ears for the rig and buck teeth in the closed smile', async () => {
+  it('is a species with its own figure, ears for the rig and buck teeth in the closed smile', async () => {
     const { SPECIES } = await import('../components/critters/species');
     const { FIGURES } = await import('../components/critters/bodies');
     expect(SPECIES.find((s) => s.id === 'squirrel')?.figure).toBe(FIGURES.squirrel);
@@ -377,6 +379,18 @@ describe('the squirrel, and the redrawn pangolin', () => {
     const svg = await head('pangolin');
     expect(svg).toContain('id="pgl-scale"');
     expect(svg).toContain('data-part="ear-l"');
+  });
+});
+
+describe('glows', () => {
+  it('are gradients, never blur filters or masks, which would be re-run every frame the scene repaints', async () => {
+    const files = import.meta.glob<string>('../components/critters/*.tsx', { query: '?raw', import: 'default', eager: true });
+    expect(Object.keys(files).length).toBeGreaterThan(20);
+    for (const [f, src] of Object.entries(files)) {
+      expect(src, f).not.toContain('critter-blur');
+      expect(src, f).not.toContain('critter-feather');
+      expect(src, f).not.toContain('critter-soft');
+    }
   });
 });
 

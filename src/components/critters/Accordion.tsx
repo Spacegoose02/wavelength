@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { bend } from './arm';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -62,7 +62,7 @@ export function Accordion({ species, still }: ActProps) {
       {/* the tail goes behind the campfire, not through it */}
       <Shadow cx={332} cy={368} rx={42} ry={5} />
       <path className="log" d="M300 360 L 364 346 L 368 356 L 304 370 Z M300 346 L 364 360 L 360 370 L 296 356 Z" />
-      <circle data-glow="" className="fire-glow" cx="332" cy="340" r="34" />
+      <Glow id="glow-campfire" color="#ff9a3a" data-glow="" className="fire-glow" cx={332} cy={340} r={34} soft={16} />
       <g data-part="flame">
         <path className="flame-a" d="M332 352 C 312 340 316 318 326 300 C 328 316 336 314 334 296 C 352 312 352 340 332 352 Z" />
         <path className="flame-b" d="M332 352 C 322 344 324 330 330 320 C 332 330 338 330 338 322 C 346 334 342 348 332 352 Z" />

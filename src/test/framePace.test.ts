@@ -8,6 +8,12 @@ describe('createPacer', () => {
     expect(drawn).toEqual([true, true, true, true, true]);
   });
 
+  it('caps a 120 Hz screen at 60 frames a second while playing', () => {
+    const pace = createPacer();
+    const drawn = Array.from({ length: 13 }, (_, i) => pace(i * (1000 / 120), true) > 0).filter(Boolean).length;
+    expect(drawn).toBe(7); // every other frame
+  });
+
   it('draws every third 60 Hz frame while paused', () => {
     const pace = createPacer(20);
     const drawn = Array.from({ length: 13 }, (_, i) => pace(i * (1000 / 60), false) > 0).filter(Boolean).length;

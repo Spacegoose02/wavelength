@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { beatClock } from './arm';
 import { swell } from './flourish';
 import { newGuitarHands, playGuitar } from './guitar';
-import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -69,7 +69,7 @@ export function Acoustic({ species, still }: ActProps) {
       <ellipse className="rug-ring" cx="200" cy="372" rx="128" ry="16" fill="none" strokeWidth="3" strokeDasharray="8 6" />
 
       {/* a floor lamp on the left */}
-      <circle data-part="lamp-glow" className="lamp-glow" cx="52" cy="150" r="56" />
+      <Glow id="glow-room-lamp" color="#ffd98a" data-part="lamp-glow" className="room-lamp-glow" cx={52} cy={150} r={56} soft={28} />
       <Shadow cx={52} cy={352} rx={22} ry={4} />
       <path className="lamp-pole" d="M52 166 V346 M36 350 H68" fill="none" strokeWidth="5" strokeLinecap="round" />
       <path className="lamp-shade ol" d="M28 166 L 38 124 H66 L 76 166 Z" />

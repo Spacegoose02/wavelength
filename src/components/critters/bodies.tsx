@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import { Glow } from './glow';
 import { scale } from './scale';
 import type { SpeciesInfo } from './species';
 
@@ -226,7 +227,7 @@ const alien = (headY: number, neck: [top: number, bottom: number, width: number]
   chin: [252, 40],
   Under: ({ legs, shoe }) => (
     <>
-      <ellipse cx="200" cy="376" rx="56" ry="9" className="hover-glow" filter="url(#critter-soft)" />
+      <Glow id="glow-hover" color="#8af6ff" className="hover-glow" cx={200} cy={376} rx={56} ry={9} soft={6} />
       <path d={tube([192, 318], [188, 336], [182, 350], 11, 8)} className={`${legs} ol`} />
       <path d={tube([208, 318], [214, 336], [220, 350], 11, 8)} className={`${legs} ol`} />
       <Foot at={[180, 354]} rx={10} ry={6} shoe={shoe} />
@@ -1031,9 +1032,9 @@ function OctoArms() {
 }
 
 /**
- * Octopus: a round top on six tentacles fanning out along the floor and curling at the tips, no legs or shoes. Its
+ * Octopus: a round top on four tentacles fanning out along the floor and curling at the tips, no legs or shoes. Its
  * arms are two more tentacles, tapering to a soft tip, and two more reach out from behind its sides (`OctoArms`),
- * so it plays with four.
+ * so it plays with four and has eight in all.
  */
 const octopus: Figure = {
   head: [182, 0.86],
@@ -1049,7 +1050,7 @@ const octopus: Figure = {
     <>
       <OctoArms />
       <g data-part="tail">
-        {([[128, 362, -1], [152, 370, -1], [178, 374, -1], [222, 374, 1], [248, 370, 1], [272, 362, 1]] as const).map(([x, y, c]) => (
+        {([[136, 362, -1], [172, 374, -1], [228, 374, 1], [264, 362, 1]] as const).map(([x, y, c]) => (
           <Tentacle key={x} to={[x, y]} curl={c} />
         ))}
       </g>

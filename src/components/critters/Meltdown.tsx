@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { beatClock, bend } from './arm';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt, trefoil } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt, trefoil } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -144,13 +144,13 @@ export function Meltdown({ species, still }: ActProps) {
       <rect data-part="wash" className="meltdown-wash" x="0" y="0" width="400" height="400" style={{ opacity: 0 }} />
 
       {/* the vessel: a halo, the cracked steel shell, the core showing through a window, cracks glowing */}
-      <circle data-part="halo" className="meltdown-halo" cx={CORE[0]} cy={CORE[1]} r="150" filter="url(#critter-blur)" />
+      <Glow id="glow-meltdown-halo" color="#7dff5a" data-part="halo" className="meltdown-halo" cx={CORE[0]} cy={CORE[1]} r={150} />
       {Array.from({ length: RINGS }, (_, i) => (
         <circle key={i} data-ring="" className="radiation-ring" cx={CORE[0]} cy={CORE[1]} r={CORE_R} fill="none" style={{ opacity: 0 }} />
       ))}
       <circle className="vessel ol" cx={CORE[0]} cy={CORE[1]} r={CORE_R + 8} />
       <circle data-part="core" cx={CORE[0]} cy={CORE[1]} r={CORE_R - 18} fill="url(#meltdown-core-grad)" />
-      <circle data-part="core-flash" cx={CORE[0]} cy={CORE[1]} r={CORE_R + 30} className="core-flash" filter="url(#critter-blur)" style={{ opacity: 0 }} />
+      <Glow id="glow-meltdown-flash" color="#f2ffe0" data-part="core-flash" cx={CORE[0]} cy={CORE[1]} r={CORE_R + 30} className="core-flash" style={{ opacity: 0 }} />
       <circle className="vessel-rim" cx={CORE[0]} cy={CORE[1]} r={CORE_R - 18} fill="none" strokeWidth="8" />
       <g data-part="cracks" className="meltdown-cracks" fill="none" strokeLinecap="round" strokeLinejoin="round">
         {CRACKS.map((d) => <path key={d} d={d} strokeWidth="5" filter="url(#critter-glow)" />)}
