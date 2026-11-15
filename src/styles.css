@@ -3189,3 +3189,21 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .critter .fx-flash { display: none; }
 }
+
+/* Move from Spotify (views/SpotifyImport.tsx): stacked panels and big buttons that work on a phone */
+.spotify-move .panel { max-width: 720px; }
+.spotify-move .steps { padding-left: 20px; margin: 8px 0 14px; display: grid; gap: 8px; }
+.spotify-move .big-choice { display: inline-flex; justify-content: center; min-height: 44px; padding: 10px 22px; font-size: 15px; }
+.spotify-move .spotify-lists { display: grid; gap: 2px; margin: 8px 0; max-height: 340px; overflow-y: auto; }
+.spotify-move .spotify-lists .check { align-items: flex-start; }
+.spotify-move .copy-row { flex-wrap: wrap; margin: 6px 0; }
+.spotify-move .copy-row code { word-break: break-all; padding: 4px 8px; border-radius: 6px; background: var(--bg); }
+.spotify-move .spotify-keys { display: grid; gap: 8px; max-width: 420px; margin: 10px 0; }
+.spotify-move .spotify-setup { margin-top: 10px; }
+.spotify-move details > summary { cursor: pointer; margin-top: 10px; }
+.spotify-move .spotify-skipped { justify-content: space-between; padding: 4px 0; }
+.spotify-move .spotify-go { align-items: center; flex-wrap: wrap; margin: 4px 0 24px; }
+@media (max-width: 760px) {
+  .spotify-move .big-choice { width: 100%; }
+}
+.spotify-move a.btn { text-decoration: none; }

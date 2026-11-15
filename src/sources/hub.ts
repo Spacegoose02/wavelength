@@ -46,7 +46,23 @@ export interface HubFamily {
   people: number;
 }
 
-export type HubSharedKeyName = 'anthropic' | 'openai' | 'ollama' | 'tours' | 'lastfmKey' | 'lastfmSecret' | 'fanart' | 'discordAppId';
+export type HubSharedKeyName = 'anthropic' | 'openai' | 'ollama' | 'tours' | 'lastfmKey' | 'lastfmSecret' | 'fanart' | 'discordAppId' | 'spotifyClientId' | 'spotifyClientSecret';
+/** Whether Connect Spotify is set up for you, and who may set it up (hub/src/routes/spotify.ts). */
+export interface HubSpotifyStatus {
+  configured: boolean;
+  /** What to paste into the Spotify app's Redirect URIs. */
+  redirectUri: string;
+  /** false when the Hub's public URL isn't https, which Spotify won't send people back to. */
+  redirectOk: boolean;
+  /** 'hub': you're the admin; 'family': you manage a family allowed its own keys. */
+  setUp: 'hub' | 'family' | null;
+}
+
+export type HubSpotifyJob =
+  | { state: 'working'; at: number; read?: number }
+  | { state: 'ready'; at: number; data: import('../lib/spotifyExport').SpotifyBundle }
+  | { state: 'error'; at: number; error: string };
+
 /** A shared key's state: whether it's set and its last characters, never the value of a secret. */
 export interface HubSharedKey {
   name: HubSharedKeyName;
@@ -1241,6 +1257,11 @@ export class HubClient {
   saveCreditSettings = (auto: boolean) => this.call<{ auto: boolean }>('PUT', '/api/admin/credits', { auto });
   undoTags = (batch: string) => this.call<{ undone: number; failed: { path: string; error: string }[] }>('POST', `/api/admin/tags/undo/${encodeURIComponent(batch)}`);
   importYoutube = (url: string) => this.call<{ tracks: { title: string; artist: string; duration?: number }[] }>('POST', '/api/import/youtube', { url });
+  // Move from Spotify by signing in (hub/src/spotify.ts, views/SpotifyImport.tsx)
+  spotifyStatus = () => this.call<HubSpotifyStatus>('GET', '/api/spotify');
+  spotifyConnect = () => this.call<{ url: string }>('POST', '/api/spotify/connect');
+  spotifyImport = () => this.call<{ job: HubSpotifyJob | null }>('GET', '/api/spotify/import');
+  spotifyForget = () => this.call('DELETE', '/api/spotify/import');
   // remote control and handoff between this person's devices (lib/remote.ts)
   remoteWait = () => this.call<{ commands: HubRemoteCommand[] }>('GET', '/api/me/remote/wait');
   remoteState = (s: Omit<HubRemoteState, 'at'>) => this.call('PUT', '/api/me/remote/state', s);

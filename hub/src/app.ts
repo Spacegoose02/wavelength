@@ -38,6 +38,8 @@ import { notificationRoutes } from './routes/notifications.ts';
 import { slskdRoutes } from './routes/slskd.ts';
 import { mineRoutes } from './routes/mine.ts';
 import { importRoutes } from './routes/imports.ts';
+import { spotifyRoutes } from './routes/spotify.ts';
+import { SpotifyConnect, type Fetch as SpotifyFetch } from './spotify.ts';
 import { inviteRoutes } from './routes/invites.ts';
 import { tagRoutes } from './routes/tags.ts';
 import { genreRoutes } from './routes/genres.ts';
@@ -135,9 +137,11 @@ export interface Ctx {
   tours: Tours;
   /** Music videos (videos.ts). */
   videos: Videos;
+  /** Move from Spotify by signing in (spotify.ts). */
+  spotify: SpotifyConnect;
 }
 
-export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch; plexFetch?: Fetch } = {}): FastifyInstance {
+export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watchLibrary?: boolean; restart?: () => void; djProvider?: ProviderFactory; mixLookups?: MixLookups; tourFetch?: (url: string) => Promise<unknown>; videoSearch?: (q: string, n: number) => Promise<YtResult[]>; ttsFetch?: Fetch; stationChart?: (kid: boolean) => Promise<MixSong[]>; ollamaFetch?: Fetch; plexFetch?: Fetch; spotifyFetch?: SpotifyFetch } = {}): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 2 * 1024 * 1024 });
   const ctx: Ctx = {
     db,
@@ -158,6 +162,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
     tours: new Tours(db, config.secretKey, opts.tourFetch),
     videos: undefined as unknown as Videos,
     plexImport: new PlexImport(db, config.secretKey, opts.plexFetch),
+    spotify: new SpotifyConnect(db, config, opts.spotifyFetch),
   } as Omit<Ctx, 'library' | 'clean'> as Ctx;
   ctx.mixes = new Mixes(db, ctx.mixLookups);
   ctx.mixes.mood = (song) => {
@@ -296,6 +301,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   relayRoutes(app, ctx);
   mineRoutes(app, ctx);
   importRoutes(app, ctx);
+  spotifyRoutes(app, ctx);
   tagRoutes(app, ctx);
   genreRoutes(app, ctx);
   creditRoutes(app, ctx);

@@ -176,6 +176,8 @@ export const SHARED_KEYS = {
   lastfmSecret: { label: 'Last.fm shared secret', secret: true, hubWide: 'here' },
   fanart: { label: 'fanart.tv API key', secret: true, hubWide: 'here' },
   discordAppId: { label: 'Discord application ID', secret: false, hubWide: 'here' },
+  spotifyClientId: { label: 'Spotify sign-in: Client ID', secret: false, hubWide: 'here' },
+  spotifyClientSecret: { label: 'Spotify sign-in: Client secret', secret: true, hubWide: 'here' },
 } as const;
 export type SharedKeyName = keyof typeof SHARED_KEYS;
 export const SHARED_KEY_NAMES = Object.keys(SHARED_KEYS) as SharedKeyName[];
