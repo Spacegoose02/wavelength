@@ -15,7 +15,8 @@ import { deezer, normName, primaryArtist, sameNameArtist } from './radar.ts';
  *
  * Songs are kept like household playlists (title, artist, album, length, cover, plus the played track when there
  * is one), and each person's app finds them in their own library, dropping what it can't find. So suggestions
- * can name songs the library doesn't have: the app just skips them. Kids get no explicit Deezer suggestions,
+ * can name songs the library doesn't have: the app just skips them, except in Discover Weekly, where nearly every
+ * song is new to the library: there it shows the rest as Deezer clips with Get or Request (`MixSong.deezer`). Kids get no explicit Deezer suggestions,
  * and the app's kid filter applies to everything on top.
  *
  * **daylist**: what you play at this time of day (and on weekdays or weekends), changing every few hours, named
@@ -35,6 +36,9 @@ export interface MixSong {
   track?: Record<string, unknown>;
   /** why it's here, when that isn't obvious ("Like Drake") */
   because?: string;
+  /** a Deezer suggestion (Discover Weekly, the new songs in Daily Mixes): its link and 30-second clip, so the app
+   * can play the clip and offer Get or Request when the library doesn't have the song */
+  deezer?: { link: string; preview?: string; explicit?: boolean };
 }
 
 export interface Mix {
@@ -336,7 +340,10 @@ export function deezerLookups(): MixLookups {
         if (!id) return [];
         const r = await deezer(`/artist/${id}/top?limit=10`);
         return ((r?.data ?? []) as any[]).map((t) => ({
-          song: { title: String(t.title ?? ''), artist: String(t.artist?.name ?? name), album: t.album?.title ? String(t.album.title) : undefined, duration: Number(t.duration) || undefined, coverUrl: t.album?.cover_medium ?? undefined } as MixSong,
+          song: {
+            title: String(t.title ?? ''), artist: String(t.artist?.name ?? name), album: t.album?.title ? String(t.album.title) : undefined, duration: Number(t.duration) || undefined, coverUrl: t.album?.cover_medium ?? undefined,
+            ...((t.link || t.id) && { deezer: { link: String(t.link ?? `https://www.deezer.com/track/${t.id}`), ...(typeof t.preview === 'string' && t.preview && { preview: t.preview }), explicit: !!t.explicit_lyrics } }),
+          } as MixSong,
           explicit: !!t.explicit_lyrics,
         }));
       });

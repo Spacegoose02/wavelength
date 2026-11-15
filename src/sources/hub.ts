@@ -367,6 +367,8 @@ export interface HubMixSong {
   /** the track as a device played it, when this person played it */
   track?: Track;
   because?: string;
+  /** a Deezer suggestion's link and 30-second clip (hub/src/mixes.ts MixSong.deezer) */
+  deezer?: { link: string; preview?: string; explicit?: boolean };
 }
 export interface HubMix {
   id: string;

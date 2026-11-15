@@ -18,6 +18,13 @@
   (Pianist); raindrops splash up on the beat and the lamp buzzes on sharp hits (Violinist); petals jump off the
   taiko on every strike; spray flies off the shore at the top of each bar and the tiki torches flare (Bongo, Surf
   rock). They share small particle pools in `src/components/critters/fx.tsx` and add no new filters.
+- **Fix: Discover Weekly showed only one song.** Its songs are by artists you've never played, so the library
+  rarely has more than one or two, and the mix page dropped everything the library didn't have. It now lists the
+  songs you have first, then fills the mix (up to 50) with 30-second Deezer previews under **Not in your library
+  yet**, each with **Get** or **Request**. **Play** and **Shuffle** play them all; **Save as playlist** keeps the
+  songs in your library (`src/lib/mixes.ts` `mixRows`, `src/views/Mix.tsx`). The Hub now sends each Deezer
+  suggestion's link and preview with the mix (`hub/src/mixes.ts`); mixes made before that are looked up on Deezer
+  by the app.
 
 ## 0.46.1
 - **Fix: Up next showed initials instead of covers, and credits like "BigXthaPlug;Loe Shimmy".** Songs from

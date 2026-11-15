@@ -1572,9 +1572,12 @@ With a [Wavelength Hub](HUB.md), **Home** opens on what's made for you:
 | **Time Capsule** | Your most played songs from one to three years ago |
 | **daylist** | What you play at this time of day, changing every few hours: late night, early morning, morning, afternoon, evening and night, with weekends apart from weekdays. Named after it, like "daylist: chill Saturday night" (the mood comes from [sound-alike analysis](#sounds-like-this-and-sonic-journeys) when it's on). Comes first on Home |
 
-A mix only shows songs your library has: the Hub suggests, and Wavelength finds each one on your Navidrome or Plex
-server. So Discover Weekly gets better as you add music, and a mix that finds nothing tells you so. Open a mix to
-**Play**, **Shuffle** or **Save as playlist** (today's songs, as an ordinary playlist). Mixes need a few days of
+A mix shows the songs your library has: the Hub suggests, and Wavelength finds each one on your Navidrome or Plex
+server, and a mix that finds nothing tells you so. **Discover Weekly** is the exception, since its songs are new to
+you and the library rarely has many of them: it lists the ones you have first, then up to 50 songs in all under
+**Not in your library yet**, as 30-second previews with **Get** (or **Request**, for people who ask an admin) to
+add the full song. Open a mix to **Play** (Discover Weekly plays the previews too), **Shuffle** or **Save as
+playlist** (today's songs in your library, as an ordinary playlist). Mixes need a few days of
 listening before they appear. Kid profiles get no explicit suggestions, and the kid filter applies as everywhere.
 [Smart offline](#smart-offline) can keep every mix downloaded.
 
