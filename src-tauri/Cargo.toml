@@ -29,7 +29,7 @@ symphonia = { version = "0.6", default-features = false, features = ["flac", "mp
 tauri-plugin-global-shortcut = "2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_NetworkManagement_WNet", "Win32_Foundation"] }
+windows-sys = { version = "0.61", features = ["Win32_NetworkManagement_WNet", "Win32_Foundation", "Win32_Graphics_Dwm"] }
 windows-native-keyring-store = "1"
 wasapi = "0.27"
 

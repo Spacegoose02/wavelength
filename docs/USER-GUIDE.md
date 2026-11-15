@@ -1072,6 +1072,9 @@ feature off in **Settings → Features**.
 
 **Settings → Themes & critters → Theme** changes the app's colours and chrome. Tap a card to switch; the choice is saved on this
 device and applies straight away. The visualizers and the LCD follow the skin's colours too.
+On the Windows app the window's title bar follows the skin as well: on Windows 11 it takes the skin's sidebar and text
+colours, and on Windows 10 it turns dark or light to match. Dragging, Snap layouts and the minimise, maximise and close
+buttons work as before.
 Every skin works on Windows, Android phones and tablets, and Android TV.
 
 <img src="screenshots/themes.png" alt="Settings, Themes tab: Seasonal and Random daily switches, a search box, and the Holidays group with Halloween marked in season" width="80%">

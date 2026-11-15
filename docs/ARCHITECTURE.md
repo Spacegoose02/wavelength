@@ -90,6 +90,7 @@ Small on purpose. The UI does almost everything; Rust only does what a WebView c
 | `share.rs` | Logs into an SMB share (`\\server\share`) with `WNetAddConnection2W` so yt-dlp can write to a NAS; checks the folder is writable. Windows only (no-op elsewhere). | `connect_share` |
 | `update.rs` | In-app updates: lists GitHub releases, downloads a release file into `<app cache>/updates` (progress events `update-progress`), runs the Windows installer or swaps the portable exe. See [USER-GUIDE.md](USER-GUIDE.md#updates). | `update_target`, `update_releases`, `update_download`, `update_install` |
 | `offline.rs` | Downloads songs/covers into `<app data>/offline/…` for offline playback (temp `.part` file then rename). Deletes them. | `offline_save`, `offline_delete`, `offline_delete_file` |
+| `titlebar.rs` | Paints the window's title bar in the active theme's colours: on Windows 11 the bar, its text and the window border via `DwmSetWindowAttribute` (caption, text and border colours); everywhere on desktop, dark or light window buttons via `set_theme`. The bar stays the native one, so drag, Snap layouts and the window buttons are untouched. `src/lib/titleBar.ts` sends the theme's `--bg-2` and `--text` whenever the shown theme changes. Desktop only. | `titlebar_paint` |
 
 **Why `tauri-plugin-http`?** Self-hosted servers rarely send CORS headers, and chart sites never do.
 `lib/http.ts` routes every request through Rust (no CORS), and falls back to `window.fetch` in a plain
