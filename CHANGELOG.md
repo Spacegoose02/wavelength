@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.49.0
 - **Single sign-on is set up in the app.** Settings → Users → Single sign-on turns tinyauth on, generates the
   proxy secret, sets who's an admin, and shows the proxy config to copy, filled in, for either layout: the whole
   site behind tinyauth like your other apps (the apps, share links, invites and password pages skip it), or only
