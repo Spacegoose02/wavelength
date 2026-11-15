@@ -1,6 +1,6 @@
 import { HttpError } from './http.ts';
 import type { Db } from './db.ts';
-import type { Role } from './roles.ts';
+import { isFamilyDownloads, type FamilyDownloads, type Role } from './roles.ts';
 
 export interface User {
   id: number;
@@ -18,6 +18,8 @@ export interface User {
   familyManager: boolean;
   /** Has a PIN their family can switch to them with (POST /api/me/switch). */
   hasSwitchPin: boolean;
+  /** Their family's download rule (families.ts `FamilyDownloads`); 'person' without a family. */
+  familyDownloads: FamilyDownloads;
 }
 
 interface UserRow {
@@ -33,6 +35,7 @@ interface UserRow {
   family_id: number | null;
   family_manager: number;
   switch_pin: string | null;
+  family_downloads?: string | null;
 }
 
 export const toUser = (r: UserRow): User => ({
@@ -48,28 +51,29 @@ export const toUser = (r: UserRow): User => ({
   familyId: r.family_id ?? null,
   familyManager: !!r.family_manager && r.family_id !== null,
   hasSwitchPin: !!r.switch_pin,
+  familyDownloads: isFamilyDownloads(r.family_downloads) ? r.family_downloads : 'person',
 });
 
 export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{0,31}$/;
 
 export function getUser(db: Db, id: number): User | undefined {
-  const r = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as UserRow | undefined;
+  const r = db.prepare('SELECT u.*, f.downloads AS family_downloads FROM users u LEFT JOIN families f ON f.id = u.family_id WHERE u.id = ?').get(id) as UserRow | undefined;
   return r && toUser(r);
 }
 
 /** The row with its password hash, for login only. */
 export function getUserForLogin(db: Db, username: string): (User & { passwordHash: string | null }) | undefined {
-  const r = db.prepare('SELECT * FROM users WHERE username = ?').get(username.toLowerCase()) as UserRow | undefined;
+  const r = db.prepare('SELECT u.*, f.downloads AS family_downloads FROM users u LEFT JOIN families f ON f.id = u.family_id WHERE u.username = ?').get(username.toLowerCase()) as UserRow | undefined;
   return r && { ...toUser(r), passwordHash: r.password_hash };
 }
 
 export function getUserBySso(db: Db, subject: string): User | undefined {
-  const r = db.prepare('SELECT * FROM users WHERE sso_subject = ?').get(subject.toLowerCase()) as UserRow | undefined;
+  const r = db.prepare('SELECT u.*, f.downloads AS family_downloads FROM users u LEFT JOIN families f ON f.id = u.family_id WHERE u.sso_subject = ?').get(subject.toLowerCase()) as UserRow | undefined;
   return r && toUser(r);
 }
 
 export function listUsers(db: Db): User[] {
-  return (db.prepare('SELECT * FROM users ORDER BY username').all() as unknown as UserRow[]).map(toUser);
+  return (db.prepare('SELECT u.*, f.downloads AS family_downloads FROM users u LEFT JOIN families f ON f.id = u.family_id ORDER BY u.username').all() as unknown as UserRow[]).map(toUser);
 }
 
 export const countUsers = (db: Db) => (db.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number }).n;
@@ -136,8 +140,8 @@ export function deleteUser(db: Db, id: number) {
  * The kept profile keeps its own username, name and role.
  */
 export function mergeUsers(db: Db, fromId: number, intoId: number): User {
-  const from = db.prepare('SELECT * FROM users WHERE id = ?').get(fromId) as UserRow | undefined;
-  const into = db.prepare('SELECT * FROM users WHERE id = ?').get(intoId) as UserRow | undefined;
+  const from = db.prepare('SELECT u.*, f.downloads AS family_downloads FROM users u LEFT JOIN families f ON f.id = u.family_id WHERE u.id = ?').get(fromId) as UserRow | undefined;
+  const into = db.prepare('SELECT u.*, f.downloads AS family_downloads FROM users u LEFT JOIN families f ON f.id = u.family_id WHERE u.id = ?').get(intoId) as UserRow | undefined;
   if (!from || !into) throw new HttpError(404, 'No such user');
   if (fromId === intoId) throw new HttpError(400, 'Pick two different profiles');
   if (from.sso_subject && into.sso_subject && from.sso_subject !== into.sso_subject) {

@@ -2,6 +2,7 @@ import { seal, unseal } from './crypto.ts';
 import type { Db } from './db.ts';
 import type { Auth } from './http.ts';
 import { HttpError } from './http.ts';
+import { isFamilyDownloads, type FamilyDownloads } from './roles.ts';
 import { getUser, type User } from './users.ts';
 
 /**
@@ -10,7 +11,10 @@ import { getUser, type User } from './users.ts';
  *
  * - A family can have **managers** (users.family_manager). What a manager may do is the family's switches:
  *   `canRegister` (add people and make invite links into the family), `ownKeys` (set the family's own shared
- *   keys) and `kidControls` (bedtimes, daily limits and a grown-up PIN for the family's kids).
+ *   keys), `kidControls` (bedtimes, daily limits and a grown-up PIN for the family's kids) and
+ *   `approveRequests` (approve or turn down music requests from people in the family).
+ * - **Downloads** (`downloads`, roles.ts `FamilyDownloads`): whether the family's people follow their own
+ *   Autodownload switch, all download straight away, all have to request, or can't get music at all.
  * - **Shared keys** (`SHARED_KEYS`) can have a value for the whole Hub and one per family; a family's own
  *   value wins for its members. Keys stay on the Hub, sealed; only the Discord app ID (not a secret) is sent
  *   to devices, and it wins over anything typed into a device.
@@ -24,6 +28,8 @@ export interface Family {
   canRegister: boolean;
   ownKeys: boolean;
   kidControls: boolean;
+  approveRequests: boolean;
+  downloads: FamilyDownloads;
   maxPeople: number | null;
   createdAt: number;
 }
@@ -34,6 +40,8 @@ interface FamilyRow {
   can_register: number;
   own_keys: number;
   kid_controls: number;
+  approve_requests: number;
+  downloads: string;
   max_people: number | null;
   created_at: number;
 }
@@ -44,6 +52,8 @@ const toFamily = (r: FamilyRow): Family => ({
   canRegister: !!r.can_register,
   ownKeys: !!r.own_keys,
   kidControls: !!r.kid_controls,
+  approveRequests: !!r.approve_requests,
+  downloads: isFamilyDownloads(r.downloads) ? r.downloads : 'person',
   maxPeople: r.max_people,
   createdAt: r.created_at,
 });
@@ -60,7 +70,7 @@ export function getFamily(db: Db, id: number | null | undefined): Family | undef
 
 export const familySize = (db: Db, id: number) => (db.prepare('SELECT COUNT(*) AS n FROM users WHERE family_id = ?').get(id) as { n: number }).n;
 
-/** `{ name?, canRegister?, ownKeys?, kidControls?, maxPeople? }`. */
+/** `{ name?, canRegister?, ownKeys?, kidControls?, approveRequests?, downloads?, maxPeople? }`. */
 function readFamily(b: unknown, creating: boolean) {
   const o = (b ?? {}) as Record<string, unknown>;
   const out: Partial<Omit<Family, 'id' | 'createdAt'>> = {};
@@ -69,7 +79,11 @@ function readFamily(b: unknown, creating: boolean) {
     if (!name) throw new HttpError(400, 'Give the family a name');
     out.name = name;
   }
-  for (const k of ['canRegister', 'ownKeys', 'kidControls'] as const) if (o[k] !== undefined) out[k] = o[k] === true;
+  for (const k of ['canRegister', 'ownKeys', 'kidControls', 'approveRequests'] as const) if (o[k] !== undefined) out[k] = o[k] === true;
+  if (o.downloads !== undefined) {
+    if (!isFamilyDownloads(o.downloads)) throw new HttpError(400, 'Downloads is person, auto, request or off');
+    out.downloads = o.downloads;
+  }
   if (o.maxPeople !== undefined) {
     if (o.maxPeople === null || o.maxPeople === '' || o.maxPeople === 0) out.maxPeople = null;
     else if (typeof o.maxPeople === 'number' && Number.isInteger(o.maxPeople) && o.maxPeople > 0 && o.maxPeople <= 100) out.maxPeople = o.maxPeople;
@@ -82,8 +96,8 @@ export function createFamily(db: Db, body: unknown): Family {
   const f = readFamily(body, true);
   if (db.prepare('SELECT 1 FROM families WHERE name = ? COLLATE NOCASE').get(f.name!)) throw new HttpError(409, 'There’s already a family with that name');
   const res = db
-    .prepare('INSERT INTO families (name, can_register, own_keys, kid_controls, max_people, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(f.name!, f.canRegister ? 1 : 0, f.ownKeys ? 1 : 0, f.kidControls ? 1 : 0, f.maxPeople ?? null, Date.now());
+    .prepare('INSERT INTO families (name, can_register, own_keys, kid_controls, approve_requests, downloads, max_people, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(f.name!, f.canRegister ? 1 : 0, f.ownKeys ? 1 : 0, f.kidControls ? 1 : 0, f.approveRequests ? 1 : 0, f.downloads ?? 'person', f.maxPeople ?? null, Date.now());
   return getFamily(db, Number(res.lastInsertRowid))!;
 }
 
@@ -94,8 +108,8 @@ export function updateFamily(db: Db, id: number, body: unknown): Family {
   if (f.name !== cur.name && db.prepare('SELECT 1 FROM families WHERE name = ? COLLATE NOCASE AND id != ?').get(f.name, id)) {
     throw new HttpError(409, 'There’s already a family with that name');
   }
-  db.prepare('UPDATE families SET name = ?, can_register = ?, own_keys = ?, kid_controls = ?, max_people = ? WHERE id = ?')
-    .run(f.name, f.canRegister ? 1 : 0, f.ownKeys ? 1 : 0, f.kidControls ? 1 : 0, f.maxPeople, id);
+  db.prepare('UPDATE families SET name = ?, can_register = ?, own_keys = ?, kid_controls = ?, approve_requests = ?, downloads = ?, max_people = ? WHERE id = ?')
+    .run(f.name, f.canRegister ? 1 : 0, f.ownKeys ? 1 : 0, f.kidControls ? 1 : 0, f.approveRequests ? 1 : 0, f.downloads, f.maxPeople, id);
   return getFamily(db, id)!;
 }
 
@@ -132,7 +146,7 @@ export const familyMembers = (db: Db, familyId: number): User[] =>
 
 // ---- what a manager may do ----
 
-export type FamilyPower = 'canRegister' | 'ownKeys' | 'kidControls';
+export type FamilyPower = 'canRegister' | 'ownKeys' | 'kidControls' | 'approveRequests';
 
 /** The family this person manages with `power` switched on for it, or undefined. Admins aren't covered here. */
 export function managedFamily(db: Db, user: User, power: FamilyPower): Family | undefined {
@@ -150,6 +164,24 @@ export function familyActor(db: Db, auth: Auth, power: FamilyPower, familyId?: n
   const f = managedFamily(db, auth.user, power);
   if (!f || (familyId !== undefined && familyId !== f.id)) throw new HttpError(403, 'You do not have permission to do that');
   return { admin: false, family: f };
+}
+
+/**
+ * Whose music requests this person may approve as a manager (`approveRequests`): everyone else in their family
+ * except admins, whose requests never wait. Empty when they aren't such a manager.
+ */
+export function requestsManagedBy(db: Db, user: User): number[] {
+  const f = managedFamily(db, user, 'approveRequests');
+  if (!f) return [];
+  return (db.prepare("SELECT id FROM users WHERE family_id = ? AND id != ? AND role != 'admin'").all(f.id, user.id) as { id: number }[]).map((r) => r.id);
+}
+
+/** Managers who approve this person's requests (their family's, with `approveRequests` on), for notifications. */
+export function requestManagersOf(db: Db, userId: number): number[] {
+  const u = getUser(db, userId);
+  const f = getFamily(db, u?.familyId);
+  if (!u || !f?.approveRequests) return [];
+  return (db.prepare("SELECT id FROM users WHERE family_id = ? AND family_manager = 1 AND disabled = 0 AND role != 'kid' AND id != ?").all(f.id, userId) as { id: number }[]).map((r) => r.id);
 }
 
 /** A manager may only touch people in their own family who aren't admins or other managers. */

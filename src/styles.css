@@ -2809,6 +2809,8 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .family-members > .source-row { background: color-mix(in srgb, var(--text) 5%, transparent); box-shadow: none; }
 .family-members .source-row select { max-width: 160px; }
 .family-add { align-self: flex-start; }
+.family-downloads { align-items: center; flex-wrap: wrap; }
+.family-downloads select { width: auto; }
 .family-logins { margin: 8px 0; }
 .family-logins > summary { cursor: pointer; color: var(--muted); }
 .family-picker .row.wrap .btn { min-width: 120px; }

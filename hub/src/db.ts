@@ -764,6 +764,11 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   );
   ALTER TABLE pairings ADD COLUMN family_login_id INTEGER;  -- family_logins(id): approved with a family sign-in
   `,
+  // 41 — what a family may download (families.ts FamilyDownloads), and managers who approve their family's requests
+  `
+  ALTER TABLE families ADD COLUMN downloads TEXT NOT NULL DEFAULT 'person';  -- person | auto | request | off
+  ALTER TABLE families ADD COLUMN approve_requests INTEGER NOT NULL DEFAULT 0; -- its managers approve its requests
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

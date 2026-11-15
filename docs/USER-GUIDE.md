@@ -2139,6 +2139,17 @@ Admins get a **Users** tab:
   them out of their old one), the drop-down on a person's row moves them to another family or takes them out,
   and **Manager** makes a grown-up its manager. Moving someone to another family takes their manager switch off.
   People in no family are listed under **No family** at the bottom.
+- **Families → Getting music**: per family, **Each person's own setting** (their Autodownload switch, as usual),
+  **Download straight away** (every grown-up in it gets music without asking; kids still request), **Request only**
+  (everyone asks, even with Autodownload) or **Off** (nobody in it can request or download). You're never held by
+  your own family's setting.
+- **Families → Approve requests**: that family's managers see its requests in **Inbox → To approve** and can
+  approve or turn them down, like a kid's parents do. You still can too.
+
+  <p align="center">
+    <img src="screenshots/family-manager-inbox.png" alt="A family manager's Inbox: the To approve tab lists two requests from someone in their family, with Approve, Already have and Reject" width="80%">
+  </p>
+
 
   <p align="center">
     <img src="screenshots/families.png" alt="Families: each family card lists its people with a Manager switch and a move drop-down, an Add someone picker, and a No family group at the bottom" width="80%">

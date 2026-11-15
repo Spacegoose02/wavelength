@@ -24,8 +24,8 @@ type Tab = InboxTab;
 export function Inbox({ tab: start }: { tab?: InboxTab } = {}) {
   const tabsRef = useTabStrip();
   const signedIn = useHub((s) => !!s.token);
-  // parents decide their own kids' requests (hub/src/family.ts)
-  const approver = useHub((s) => s.permissions.includes('requests.approve') || s.kids.length > 0);
+  // parents decide their own kids' requests (hub/src/family.ts), family managers their family's when allowed (families.ts)
+  const approver = useHub((s) => s.permissions.includes('requests.approve') || s.kids.length > 0 || !!s.approvesFamily);
   // Clean versions: for people who can download or request, once the library check found any
   const getter = useHub((s) => s.user?.role !== 'kid' && (s.permissions.includes('downloads.run') || s.permissions.includes('requests.create')));
   const cleanCount = useCleanOffers().length;
@@ -310,7 +310,7 @@ function Approve() {
         <button className={`chip ${filter === '' ? 'on' : ''}`} onClick={() => setFilter('')}>All</button>
       </div>
       {error && <div className="errors">{error}</div>}
-      {!data ? <Spinner /> : !data.length ? <Empty title="Nothing to approve">{admin ? 'Requests from the household show up here.' : 'Your kids’ requests show up here.'}</Empty> : (
+      {!data ? <Spinner /> : !data.length ? <Empty title="Nothing to approve">{admin ? 'Requests from the household show up here.' : 'Requests from the people you look after show up here.'}</Empty> : (
         <div className="tracklist">
           {data.map((r) => (
             <RequestRow key={r.id} r={r} who>
