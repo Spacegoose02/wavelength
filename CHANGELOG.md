@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.50.0
 - **Families list their people.** In Settings → Users → Families each family's card now shows who's in it, with
   the Manager switch, a drop-down to move someone to another family, and **+ Add someone…**. People without a
   family get their own **No family** group, and the separate "Who's in which family" list is gone
