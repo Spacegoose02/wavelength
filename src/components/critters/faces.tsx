@@ -982,8 +982,8 @@ export function PenguinFace() {
       </HeadShape>
       {/* freckles */}
       <g fill="#e05a5a" opacity="0.75">
-        <circle cx="140" cy="210" r="2.4" /><circle cx="148" cy="216" r="2.4" /><circle cx="136" cy="218" r="2" />
-        <circle cx="272" cy="210" r="2.4" /><circle cx="264" cy="216" r="2.4" /><circle cx="276" cy="218" r="2" />
+        <circle cx="154" cy="208" r="2.4" /><circle cx="162" cy="214" r="2.4" /><circle cx="152" cy="216" r="2" />
+        <circle cx="258" cy="208" r="2.4" /><circle cx="250" cy="214" r="2.4" /><circle cx="260" cy="216" r="2" />
       </g>
       <g data-part="eyes">
         <Eye cx={168} cy={172} r={21} iris="#2f6a96" />
