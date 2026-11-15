@@ -98,6 +98,10 @@ export function gatewayHint(msg: string) {
  * (Safari), with no status. Name both causes, and for Audiobookshelf the setting that fixes the second.
  * `origin` is the page's own address, the one the server has to allow. Inside the apps there's no CORS, so it's left alone.
  */
+/** fetch() threw without an answer (server down, unreachable, or blocked by the browser), rather than an error status. */
+export const isNetworkError = (e: unknown) =>
+  e instanceof TypeError || /NetworkError when attempting|Failed to fetch|^Load failed|error sending request/i.test(String((e as Error)?.message ?? e));
+
 export function browserFetchHint(msg: string, kind: string, origin: string | undefined) {
   if (!origin || !/NetworkError when attempting|Failed to fetch|^Load failed/i.test(msg)) return msg;
   const fix =

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- **Audiobookshelf works in a browser without CORS setup.** In a browser, an Audiobookshelf kept on the Hub is now
+  reached through the Hub (`/api/abs/<id>/…`, `hub/src/routes/absRelay.ts`), which calls it with the saved API
+  key. Before, the page called Audiobookshelf itself, and the browser blocked it unless the Hub's address was in
+  Audiobookshelf's **Allowed CORS Origins** (or Audiobookshelf was `http://` under an `https://` Hub, or only
+  reachable from the Hub's network), which showed as "Audiobookshelf: NetworkError when attempting to fetch
+  resource" on Home. Covers and audio go through the Hub too, with a per-device key, so seeking still works. The
+  desktop and Android apps still call Audiobookshelf directly. Needs this Hub version; with an older Hub the app
+  calls Audiobookshelf directly as before.
+- **A server Home can do without fails quietly.** When Audiobookshelf (or another server that isn't a music library)
+  doesn't answer, Home shows one small line with **Try again** instead of the red box; the full reason is on the
+  Audiobooks and Podcasts pages. A server that drops the connection gets one more try after 3 seconds before it
+  counts as failed (`src/store/catalog.ts`).
+
 ## 0.50.0
 - **Families list their people.** In Settings → Users → Families each family's card now shows who's in it, with
   the Manager switch, a drop-down to move someone to another family, and **+ Add someone…**. People without a

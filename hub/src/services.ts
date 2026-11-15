@@ -98,6 +98,12 @@ export interface DeviceService {
    * the app labels it as the Hub rather than Navidrome. Missing (not false) when Navidrome is on.
    */
   hubServed?: boolean;
+  /**
+   * Audiobookshelf: this device's key for the Hub's relay at `/api/abs/<id>/…` (routes/absRelay.ts), for covers and
+   * audio, which a browser loads without headers. A browser page goes through the relay, since Audiobookshelf
+   * usually refuses it (CORS), may be http under an https page, or may only be reachable from the Hub.
+   */
+  relayKey?: string;
 }
 
 const aadShared = (id: number) => `service:${id}`;
@@ -306,7 +312,8 @@ export function servicesFor(db: Db, key: Buffer, { user, device, permissions }: 
     const secrets = { ...open(key, r.secrets, aadShared(r.id)).fields, ...own };
     const hubAdmin = r.kind === 'subwave' ? permissions.includes('subwave.control') && !!secrets.username && !!secrets.password : undefined;
     for (const f of s.hubOnly ?? []) delete secrets[f];
-    out.push({ id: r.id, kind: r.kind, name: r.name, url: r.url, config, secrets, ownLogin: Object.keys(own).length > 0, ...(hubAdmin !== undefined && { hubAdmin }) });
+    const relayKey = r.kind === 'audiobookshelf' ? absRelayKey(key, device.id) : undefined;
+    out.push({ id: r.id, kind: r.kind, name: r.name, url: r.url, config, secrets, ownLogin: Object.keys(own).length > 0, ...(hubAdmin !== undefined && { hubAdmin }), ...(relayKey && { relayKey }) });
   }
   return out;
 }
@@ -360,4 +367,15 @@ export function relayTarget(db: Db, key: Buffer, id: number, userId: number, rol
   if (own.username && own.password) return { url: r.url, username: own.username, password: own.password };
   // without Navidrome the login isn't used; the Hub still checks who may use the library above
   return off ? { url: r.url, username: '', password: '' } : undefined;
+}
+
+// ---- Audiobookshelf relay (routes/absRelay.ts) ----
+
+/** Per device, so revoking a device ends its access straight away. `<device id>.<signature>` */
+export const absRelayKey = (key: Buffer, deviceId: number) => `${deviceId}.${hmac(key, `abs-relay:${deviceId}`)}`;
+
+/** The Audiobookshelf address and API key the relay uses for this person, if they may use that server. */
+export function absTarget(db: Db, key: Buffer, id: number, auth: Auth): { url: string; token: string } | undefined {
+  const s = servicesFor(db, key, auth).find((x) => x.id === id && x.kind === 'audiobookshelf');
+  return s?.url && s.secrets.token ? { url: s.url, token: s.secrets.token } : undefined;
 }

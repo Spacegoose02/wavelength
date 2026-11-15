@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import { mergeAlbums, mergeArtists, sourceFor } from '../sources/registry';
 import type { Album, Artist, Book, MusicSource, Podcast } from '../sources/types';
 import { enabledSources } from './settings';
+import { isNetworkError } from '../lib/http';
+
+/** A server that didn't answer gets one more go after this long (a container waking up, a Wi-Fi blip). */
+export const RETRY_MS = 3000;
 
 interface CatalogState {
   albums: Album[];
@@ -18,11 +22,18 @@ interface CatalogState {
 async function gather<T>(fn: (s: MusicSource) => Promise<T[]> | undefined, errors: Record<string, string>) {
   return Promise.all(
     enabledSources().map(async (cfg) => {
+      const source = sourceFor(cfg);
       try {
-        return (await fn(sourceFor(cfg))) ?? [];
-      } catch (e) {
-        errors[cfg.name] = String((e as Error).message ?? e);
-        return [] as T[];
+        return (await fn(source)) ?? [];
+      } catch (first) {
+        try {
+          if (!isNetworkError(first)) throw first;
+          await new Promise((ok) => setTimeout(ok, RETRY_MS));
+          return (await fn(source)) ?? [];
+        } catch (e) {
+          errors[cfg.name] = String((e as Error).message ?? e);
+          return [] as T[];
+        }
       }
     }),
   );

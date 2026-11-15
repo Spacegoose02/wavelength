@@ -1,4 +1,4 @@
-import { getJson, http, qs, trimSlash } from '../lib/http';
+import { getJson, http, hubEndpoint, isTauri, qs, trimSlash } from '../lib/http';
 import type { Book, BookDetails, BookPlayback, Chapter, MusicSource, Podcast, SearchResults, SourceConfig, Track } from './types';
 
 /** Continue listening: how many episodes, how far back the latest list reaches, and how many older shows to read. */
@@ -12,26 +12,40 @@ type Progress = Map<string, { progress: number; currentTime: number; finished: b
 export class AudiobookshelfSource implements MusicSource {
   constructor(public config: SourceConfig) {}
 
-  private get base() {
-    return trimSlash(this.config.url);
+  /**
+   * In a browser, an Audiobookshelf kept on the Hub is reached through the Hub (hub/src/routes/absRelay.ts). Called
+   * directly, the browser blocks it unless Audiobookshelf lists this page under Allowed CORS Origins, and also when
+   * it's plain http under an https page or its address only works from the Hub; all the page gets back is
+   * "NetworkError when attempting to fetch resource". The apps call it directly, as there's no CORS there.
+   */
+  private get relay() {
+    if (isTauri || this.config.hubId === undefined || !this.config.hubRelayKey) return undefined;
+    const hub = hubEndpoint();
+    return hub && { base: `${trimSlash(hub.url)}/api/abs/${this.config.hubId}`, token: hub.token, key: this.config.hubRelayKey };
+  }
+
+  private url(path: string) {
+    return `${this.relay?.base ?? trimSlash(this.config.url)}${path}`;
   }
 
   private headers(json = false): Record<string, string> {
-    const h: Record<string, string> = { Authorization: `Bearer ${this.config.token ?? ''}` };
+    const h: Record<string, string> = { Authorization: `Bearer ${this.relay?.token ?? this.config.token ?? ''}` };
     if (json) h['Content-Type'] = 'application/json';
     return h;
   }
 
   private get(path: string) {
-    return getJson(`${this.base}${path}`, { headers: this.headers() });
+    return getJson(this.url(path), { headers: this.headers() });
   }
 
   private post(path: string, body: unknown) {
-    return getJson(`${this.base}${path}`, { method: 'POST', headers: this.headers(true), body: JSON.stringify(body) });
+    return getJson(this.url(path), { method: 'POST', headers: this.headers(true), body: JSON.stringify(body) });
   }
 
+  /** For covers and audio, which <img> and <audio> load without headers. */
   private withToken(path: string) {
-    return `${this.base}${path}${path.includes('?') ? '&' : '?'}${qs({ token: this.config.token })}`;
+    const relay = this.relay;
+    return `${this.url(path)}${path.includes('?') ? '&' : '?'}${qs(relay ? { k: relay.key } : { token: this.config.token })}`;
   }
 
   private cover(itemId: string) {
@@ -196,7 +210,7 @@ export class AudiobookshelfSource implements MusicSource {
   }
 
   private patch(path: string, body: unknown) {
-    return http(`${this.base}${path}`, { method: 'PATCH', headers: this.headers(true), body: JSON.stringify(body) }).then((res) => {
+    return http(this.url(path), { method: 'PATCH', headers: this.headers(true), body: JSON.stringify(body) }).then((res) => {
       if (!res.ok) throw new Error(`Audiobookshelf said ${res.status}`);
     });
   }
@@ -278,7 +292,7 @@ export class AudiobookshelfSource implements MusicSource {
 
   async syncBook(track: Track, absoluteTime: number, listened: number) {
     if (!track.sessionId) return;
-    await http(`${this.base}/api/session/${track.sessionId}/sync`, {
+    await http(this.url(`/api/session/${track.sessionId}/sync`), {
       method: 'POST',
       headers: this.headers(true),
       body: JSON.stringify({ currentTime: absoluteTime, timeListened: listened, duration: track.bookDuration }),
