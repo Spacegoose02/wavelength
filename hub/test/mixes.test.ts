@@ -109,7 +109,7 @@ test('daylist: the part of the day in the listener’s own time zone, with late 
 });
 
 test('daylist: songs played at this time of day, named after it, sent first when the app says its time zone', async () => {
-  const { daylist } = await import('../src/mixes.ts');
+  const { daylist, dayPart } = await import('../src/mixes.ts');
   const now = Date.UTC(2026, 10, 7, 23, 0); // Saturday 23:00 UTC
   const rows: any[] = [];
   const add = (at: number, title: string, artist: string) => rows.push({ played_at: at, title, artist, album: '', seconds: 200, track: '{}' });
@@ -125,9 +125,13 @@ test('daylist: songs played at this time of day, named after it, sent first when
   assert.equal(daylist(rows.slice(0, 3), now), null);
 
   const { app, db, tokens, ids } = await seeded({}, {}, { mixLookups: look });
+  // plays at this time of day in past weeks, all inside the part of the day it is now: in the first minutes of
+  // a part, the twelve minutes before now would fall in the part before, so they go after this time instead
   const t = Date.now();
-  for (let i = 0; i < 12; i++) for (let w = 0; w < 3; w++) play(db, ids.member, t - w * 7 * DAY - i * 60_000 - 3_600_000 * 0, `Song ${i}`, 'Drake');
-  const r = await json(app, 'GET', `/api/mixes?tz=${new Date().getTimezoneOffset()}`, { token: tokens.member });
+  const tz = new Date().getTimezoneOffset();
+  const step = dayPart(t - 12 * 60_000, tz).part === dayPart(t, tz).part ? -60_000 : 60_000;
+  for (let i = 0; i < 12; i++) for (let w = 1; w <= 3; w++) play(db, ids.member, t - w * 7 * DAY + i * step, `Song ${i}`, 'Drake');
+  const r = await json(app, 'GET', `/api/mixes?tz=${tz}`, { token: tokens.member });
   assert.equal(r.status, 200);
   assert.equal(r.body.mixes[0].kind, 'daylist');
   const old = await json(app, 'GET', '/api/mixes', { token: tokens.member });
