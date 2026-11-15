@@ -2,12 +2,15 @@
  * Frame pacing for the animation loops (components/Visualizer.tsx, components/Scenes.tsx,
  * components/critters/rig.ts). While music plays they draw every frame; paused, nothing reacts to the
  * audio, so they slow to IDLE_FPS, which is plenty for a blink or a slow sway and costs a third of the work.
+ * Playing, they never go past MAX_FPS, even on a faster screen.
  *
  * Call the returned function with the requestAnimationFrame timestamp. It returns 0 when this frame
  * should be skipped, else the seconds since the last drawn frame (capped, so a tab coming back from the
  * background doesn't jump the clock).
  */
 export const IDLE_FPS = 20;
+/** Playing, at most this many: a 120 or 144 Hz screen would otherwise draw twice the frames for no visible gain. */
+export const MAX_FPS = 60;
 /** With "Reduce motion" (lib/motion.ts): a couple of calm frames a second, playing or not. */
 export const REDUCED_FPS = 2;
 
@@ -18,6 +21,7 @@ export function createPacer(idleFps = IDLE_FPS, reduced: () => boolean = reduced
   let last = -1;
   const gap = 1000 / idleFps - 2; // a little slack, so 60 Hz frames land on every third one
   const slowGap = 1000 / REDUCED_FPS - 2;
+  const fastGap = 1000 / MAX_FPS - 2;
   return (now: number, busy: boolean): number => {
     if (last < 0) {
       last = now;
@@ -28,7 +32,7 @@ export function createPacer(idleFps = IDLE_FPS, reduced: () => boolean = reduced
       last = now;
       return 1 / 60; // the clock barely moves: a sway or a bounce stays nearly still
     }
-    if (!busy && now - last < gap) return 0;
+    if (now - last < (busy ? fastGap : gap)) return 0;
     const dt = Math.min(0.1, Math.max(0.001, (now - last) / 1000));
     last = now;
     return dt;

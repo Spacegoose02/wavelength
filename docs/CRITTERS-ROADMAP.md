@@ -156,7 +156,7 @@ the asset work and a risk on low-end phones and the iOS WebView.
   keeps its slant.
 - Nine more (November 2026): a penguin, fox, axolotl, sloth, octopus, dragon, frog, bunny and red panda. Most share
   one soft round body (`roundFigure` in `bodies.tsx`) with their own tail, feet and markings; the octopus is its own
-  figure, six tentacles in the `tail` part with an empty boot. Three move their own way through `Figure.move`, which
+  figure, four tentacles in the `tail` part (with its four arms, eight limbs) with an empty boot. Three move their own way through `Figure.move`, which
   `CritterFrame` puts on the svg as `data-move` for the rig: the sloth (`late`) runs the beat half a beat behind,
   and off the beat grid its bob trails by a quarter second; the frog (`hop`) hops the head and body up on each beat.
   The dragon's face has a hidden `smoke` part the rig puffs out on a flourish. The axolotl's gills, the dragon's
@@ -202,7 +202,7 @@ the asset work and a risk on low-end phones and the iOS WebView.
   arms up on the last beat of the bar) and **Disco** (`Disco.tsx`, a hand mic held beside the face so they sing, the
   disco point, a light-up floor and a mirror ball). All four sing along.
 - **A squirrel** joined (November 2026), kept clear of famous cartoon squirrels (no sabre-tooth, diving helmet or
-  flying cap): a round chestnut head with chubby cream cheeks, tall tufted ears (`ear-l` / `ear-r`, hidden under the
+  flying cap): a round chestnut head with chubby cream cheeks, tall rounded ears (`ear-l` / `ear-r`, hidden under the
   cowboy hat), pale rings round big dark eyes, whiskers and two buck teeth drawn inside the closed `smile`, so they
   hide while it sings. Its figure (`FIGURES.squirrel`) is the round top with dark paws and a big bushy tail curling up
   behind with a paler core.

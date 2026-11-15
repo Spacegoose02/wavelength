@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { beatClock, bend, lift } from './arm';
 import { swell, windUp } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -103,7 +103,7 @@ export function Spooky({ species, still }: ActProps) {
   return (
     <CritterFrame ref={root} kind="spooky" species={species} label={`A ${species.noun} playing a haunted pipe organ in a graveyard`}>
       {/* the moon, a lightning flash, bats */}
-      <circle className="moon-glow" cx="320" cy="58" r="52" filter="url(#critter-blur)" />
+      <Glow id="glow-spooky-moon" color="#f4ecc8" className="moon-glow" cx={320} cy={58} r={52} />
       <circle className="moon" cx="320" cy="58" r="36" />
       <circle cx="306" cy="48" r="7" className="moon-crater" />
       <circle cx="332" cy="72" r="5" className="moon-crater" />
@@ -138,7 +138,7 @@ export function Spooky({ species, still }: ActProps) {
       <text x="350" y="314" textAnchor="middle" className="rip">RIP</text>
       {[[86, 346, 1], [300, 352, 0.85]].map(([x, y, k]) => (
         <g key={x} transform={`translate(${x} ${y}) scale(${k})`}>
-          <ellipse data-jack="" className="jack-glow" cx="0" cy="-4" rx="34" ry="24" filter="url(#critter-blur)" />
+          <Glow id="glow-jack" color="color-mix(in srgb, var(--viz-low) 40%, #ffb02a)" data-jack="" className="jack-glow" cx={0} cy={-4} rx={34} ry={24} />
           <path className="pumpkin ol" d="M-24 -4 Q -26 -24 -8 -24 Q 0 -28 8 -24 Q 26 -24 24 -4 Q 22 14 0 14 Q -22 14 -24 -4 Z" />
           <path d="M-8 -24 Q -10 -6 -6 12 M8 -24 Q 10 -6 6 12" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2" fill="none" />
           <path className="pumpkin-stem" d="M-2 -24 Q 0 -34 6 -36" strokeWidth="4" fill="none" strokeLinecap="round" />

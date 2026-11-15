@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { beatClock, bend, lift } from './arm';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import { Burst, burst, newFx, onBeat } from './fx';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
@@ -167,7 +167,7 @@ export function Bongo({ species, still }: ActProps) {
           <Shadow cx={x} cy={356} rx={12} ry={3} />
           <rect className="bamboo ol-thin" x={x - 4} y="240" width="8" height="116" rx="3" />
           <path d={`M${x - 4} 280 H${x + 4} M${x - 4} 320 H${x + 4}`} stroke="rgb(0 0 0 / 0.3)" strokeWidth="2" />
-          <circle data-glow="" className="fire-glow" cx={x} cy="222" r="22" />
+          <Glow id="glow-tiki" color="#ff9a3a" data-glow="" className="fire-glow" cx={x} cy={222} r={22} soft={16} />
           <g data-part={i ? 'torch-r' : 'torch-l'}>
             <path className="flame-a" d={`M${x} 234 C ${x - 14} 224 ${x - 10} 208 ${x - 2} 196 C ${x} 208 ${x + 6} 206 ${x + 4} 194 C ${x + 16} 208 ${x + 14} 226 ${x} 234 Z`} />
             <path className="flame-b" d={`M${x} 234 C ${x - 6} 228 ${x - 5} 220 ${x} 212 C ${x + 2} 220 ${x + 6} 222 ${x + 5} 216 C ${x + 9} 226 ${x + 6} 232 ${x} 234 Z`} />

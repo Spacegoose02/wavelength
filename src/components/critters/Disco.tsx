@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { beatClock, bend } from './arm';
 import { swell } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -99,7 +99,7 @@ export function Disco({ species, still }: ActProps) {
 
       {/* the mirror ball on its chain, with glints thrown round the room */}
       <path className="ball-chain" d={`M${BALL[0]} 0 V${BALL[1] - BALL[2]}`} strokeWidth="2" />
-      <circle data-part="ball-flash" className="ball-flash" cx={BALL[0]} cy={BALL[1]} r={BALL[2] + 16} filter="url(#critter-blur)" style={{ opacity: 0 }} />
+      <Glow id="glow-disco-ball" color="#ffffff" data-part="ball-flash" className="ball-flash" cx={BALL[0]} cy={BALL[1]} r={BALL[2] + 16} style={{ opacity: 0 }} />
       <defs>
         <clipPath id="disco-ball">
           <circle cx={BALL[0]} cy={BALL[1]} r={BALL[2]} />

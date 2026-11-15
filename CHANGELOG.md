@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+- **Critters run lighter.** Every soft glow (the reactor and meltdown halos, the volcano crater, moons, lamps,
+  lanterns, campfires, candles, the hover glow) and the contact and chin shadows are now radial gradients instead
+  of blur filters, which the browser re-ran every frame. Average CPU across the 25 scenes drops from about 95% to
+  80% of a core, the Reactor from 159% to 89% (`src/components/critters/glow.tsx`). Playing, the critter, the
+  visualizer and the scenes now draw at most 60 frames a second on faster screens, and a critter scrolled out of
+  view or hidden stops drawing (`src/lib/framePace.ts`, `rig.ts`). The Night drive's street lamps glow as drawn
+  again: sharing a class name with the Acoustic room's lamp gave them its heavier blur, which nearly hid them.
+- **The squirrel's ears** lose the dark pointed tufts behind them. **The octopus** has eight limbs, not ten: four
+  tentacles on the floor, two reaching out from its sides and its two arms.
+
 ## 0.47.0
 - **New critter: the squirrel**, chestnut with chubby cream cheeks, tufted ears, buck teeth and a big bushy tail,
   as a boy or a girl in every act (`src/components/critters/faces.tsx`, `bodies.tsx`).

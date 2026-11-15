@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { beatClock } from './arm';
 import { swell, windUp } from './flourish';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -144,14 +144,14 @@ export function Volcano({ species, still }: ActProps) {
       {[0, 1, 2].map((i) => <circle key={i} data-puff="" className="smoke-puff" r="14" style={{ opacity: 0 }} />)}
 
       {/* the volcano behind, on the right: a glow over the crater, ash above, lava down its flanks */}
-      <circle data-part="crater-glow" className="crater-glow" cx={CRATER[0]} cy={CRATER[1]} r="60" filter="url(#critter-blur)" />
+      <Glow id="glow-crater" color="#ff7a1a" data-part="crater-glow" className="crater-glow" cx={CRATER[0]} cy={CRATER[1]} r={60} />
       <g data-part="ash">
         <path className="ash" d="M250 46 Q 254 22 282 26 Q 296 6 324 16 Q 352 4 366 26 Q 394 28 392 50 Q 370 62 340 54 Q 318 66 296 56 Q 266 64 250 46 Z" />
       </g>
       <path className="volcano ol" d="M150 344 L 274 96 Q 296 80 318 84 Q 342 80 364 96 L 420 210 V344 Z" />
       <path d="M150 344 L 274 96 Q 296 80 318 84 Q 342 80 364 96 L 420 210 V344 Z" fill="url(#critter-vinyl)" />
       <ellipse className="lava-pool" cx={CRATER[0]} cy={CRATER[1] + 2} rx="38" ry="7" fill="url(#volcano-lava)" />
-      <ellipse data-part="crater-flash" className="crater-flash" cx={CRATER[0]} cy={CRATER[1] - 20} rx="70" ry="50" filter="url(#critter-blur)" style={{ opacity: 0 }} />
+      <Glow id="glow-crater-flash" color="#ffd27a" data-part="crater-flash" className="crater-flash" cx={CRATER[0]} cy={CRATER[1] - 20} rx={70} ry={50} style={{ opacity: 0 }} />
       {FLOWS.map((d) => (
         <g key={d}>
           <path data-lava="" d={d} className="lava-flow" fill="none" strokeWidth="11" strokeLinecap="round" />

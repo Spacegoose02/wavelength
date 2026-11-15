@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { beatClock, bend, lift } from './arm';
 import { swell, windUp } from './flourish';
-import { Arm, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -170,7 +170,7 @@ export function Piano({ species, still }: ActProps) {
       {[[100, 258], [114, 250], [128, 258]].map(([x, y]) => (
         <g key={x}>
           <rect className="candle" x={x - 3} y={y - 14} width="6" height="14" rx="1" />
-          <circle data-glow="" className="candle-glow" cx={x} cy={y - 20} r="7" />
+          <Glow id="glow-candle" color="#ffcf6a" data-glow="" className="candle-glow" cx={x} cy={y - 20} r={7} soft={6} />
           <path data-flame={`${x} ${y - 14}`} className="flame-b" d={`M${x} ${y - 14} C ${x - 4} ${y - 18} ${x - 2} ${y - 24} ${x} ${y - 28} C ${x + 2} ${y - 24} ${x + 4} ${y - 18} ${x} ${y - 14} Z`} />
         </g>
       ))}

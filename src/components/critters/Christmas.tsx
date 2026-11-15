@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { beatClock } from './arm';
 import { swell, windUp } from './flourish';
 import { playGuitar, newGuitarHands } from './guitar';
-import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Head, Legs, Shadow, Skirt } from './parts';
+import { Arm, ArmHand, Body, BodyOutfits, CritterFrame, Glow, Head, Legs, Shadow, Skirt } from './parts';
 import type { ActProps } from './species';
 import { useCritterRig } from './rig';
 
@@ -97,7 +97,7 @@ export function Christmas({ species, still }: ActProps) {
       <path d="M62 92 L 100 150 L 84 150 L 118 206 L 98 206 L 134 276 Q 62 300 -8 276 L 26 206 L 6 206 L 40 150 L 24 150 Z" fill="url(#critter-vinyl)" />
       <path className="tinsel" d="M38 156 Q 70 168 92 152 M22 214 Q 66 230 112 210 M8 272 Q 66 290 124 268" fill="none" strokeWidth="3" />
       {LIGHTS.map(([x, y, c], i) => <circle key={i} data-light="" className={`xmas-light xmas-${c}`} cx={x} cy={y} r="4.6" />)}
-      <circle data-part="star-glow" className="star-glow" cx="62" cy="84" r="24" filter="url(#critter-blur)" />
+      <Glow id="glow-xmas-star" color="#ffe27a" data-part="star-glow" className="star-glow" cx={62} cy={84} r={24} />
       <g data-part="star">
         <path className="xmas-star ol-thin" d="M62 66 L 67 78 L 80 79 L 70 87 L 74 100 L 62 92 L 50 100 L 54 87 L 44 79 L 57 78 Z" />
       </g>

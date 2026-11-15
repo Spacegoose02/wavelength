@@ -113,8 +113,19 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
     const move = svg.dataset.move;
     const late: [number, number][] = [];
 
+    // scrolled away or hidden (display: none), there's nothing to draw: skip the frames until it's back
+    let onScreen = true;
+    const seen =
+      !still && typeof IntersectionObserver !== 'undefined'
+        ? new IntersectionObserver((es) => {
+            onScreen = es[es.length - 1].isIntersecting;
+          })
+        : null;
+    seen?.observe(svg);
+
     const loop = (now = performance.now()) => {
       if (!still) raf = requestAnimationFrame(loop);
+      if (!onScreen) return;
       // paused, the critter only blinks, yawns and sways: a slower frame rate is plenty (lib/framePace.ts)
       const dt = pace(now, usePlayer.getState().playing);
       if (!dt) return;
@@ -259,7 +270,10 @@ export function useCritterRig(root: RefObject<SVGSVGElement | null>, frame: (f: 
       }
     };
     loop();
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      seen?.disconnect();
+    };
     // `frame` is a new function each render; re-running on it would restart the scene
   }, [still]);
 }

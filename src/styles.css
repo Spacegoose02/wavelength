@@ -1930,14 +1930,14 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .rim { fill: var(--viz-high); opacity: 0.85; }
 .critter .rim-line { stroke: var(--viz-high); opacity: 0.8; }
 .critter .antenna-2 { fill: var(--viz-mid); }
-.critter .contact-shadow { fill: rgb(0 0 0 / 0.38); }
+/* contact shadows are filled with a soft-edged gradient (parts.tsx, critter-shadow-fill) */
 .critter .whiskers { stroke: rgb(255 255 255 / 0.75); stroke-width: 1.6; stroke-linecap: round; fill: none; }
 .critter .bear-brow { stroke: color-mix(in srgb, var(--bear-muzzle) 70%, var(--bear-fur)); }
 /* bare skin or fur (accordion legs, the drummer's neckline) */
 .critter .bare { fill: var(--skin); }
 .critter .neckline { fill: var(--belly, var(--skin)); }
 .critter .top { fill: var(--accent); }
-.critter .chin-shadow { fill: rgb(10 5 5 / 0.35); }
+/* the chin shadow is filled with a soft-edged gradient (parts.tsx, critter-chin-fill) */
 /* bodies (bodies.tsx): outlined limbs, bare feet, the shark's fins (its arms stay bare), the aliens' hover glow */
 .critter .limb-outline { stroke: #24170f; }
 .critter .foot { fill: var(--skin-dark); }
@@ -2080,7 +2080,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .pine { fill: #1c3a2b; }
 .critter .forest-floor { fill: #23301f; }
 .critter .log { fill: #6b4626; stroke: #4e321a; stroke-width: 2; }
-.critter .fire-glow { fill: #ff9a3a; opacity: 0.4; filter: blur(8px); }
+.critter .fire-glow { opacity: 0.4; }
 .critter .flame-a { fill: #ff7a1a; }
 .critter .flame-b { fill: #ffd34a; }
 .critter .firefly { fill: #f4ff8a; }
@@ -2224,7 +2224,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .piano-brand { fill: #c9a24a; }
 .critter .brass { fill: #c9a24a; stroke: #c9a24a; }
 .critter .candle { fill: #f4efe0; }
-.critter .candle-glow { fill: #ffcf6a; opacity: 0.35; filter: blur(3px); }
+.critter .candle-glow { opacity: 0.35; }
 .critter-piano .top { fill: #1b1b22; }
 .critter-piano .sleeve { stroke: #1b1b22; }
 .critter-piano .legs { fill: #1b1b22; }
@@ -2325,7 +2325,7 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .critter .room-board { stroke: #5e3d22; }
 .critter .rug { fill: color-mix(in srgb, var(--accent) 55%, #3a2a22); }
 .critter .rug-ring { stroke: color-mix(in srgb, var(--viz-high) 60%, #fff); }
-.critter .lamp-glow { fill: #ffd98a; filter: blur(14px); opacity: 0.4; }
+.critter .room-lamp-glow { opacity: 0.4; }
 .critter .lamp-pole { stroke: #2a2420; }
 .critter .lamp-shade { fill: #f4e2b8; }
 .critter .leaf-2 { fill: #45b06c; }
@@ -2983,7 +2983,7 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
 .critter .lamp-post-arm { stroke: #3a3a44; }
 .critter .lamp-head { fill: #2a2a32; }
 .critter .lamp-bulb { fill: #fff3c4; }
-.critter .lamp-glow { fill: #ffd77a; }
+.critter .street-lamp-glow { }
 .critter-night .top { fill: #26262d; }
 .critter-night .sleeve { stroke: #26262d; }
 .critter .night-tee { fill: var(--viz-high); }
