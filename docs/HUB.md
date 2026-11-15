@@ -855,7 +855,8 @@ Users → Families); everyone else's calls to them get `403`, and the app never 
   The Hub admin is above every family: they see everyone, every family's kids and keys, and every Hub setting.
 - **Shared keys** (Settings → Users → Families → Shared keys). Keys the Hub keeps so nobody types them into a
   device: the AI DJ's Anthropic, OpenAI voice and ollama.com search keys, the tour dates key, Last.fm's API key and
-  shared secret, fanart.tv's key and the Discord application ID. Each can have a value for the whole Hub and one per
+  shared secret, fanart.tv's key, the Discord application ID and the Spotify sign-in app's Client ID and secret
+  ([Spotify sign-in](#spotify-sign-in)). Each can have a value for the whole Hub and one per
   family; a family's own **wins** for the people in it, the whole Hub's comes next, and `WAVELENGTH_LASTFM_*` /
   `WAVELENGTH_FANART_KEY` are only used when neither is saved. The AI DJ's and tour dates' whole-Hub keys stay on
   their own pages (Settings → AI DJ, Settings → Features). Last.fm's key and secret are always taken as a pair from
@@ -1399,6 +1400,10 @@ with a 4xx status.
 | `DELETE /api/admin/library/album/:id` | `library.edit` | move a Navidrome album's files to the trash → `{ batch, label, files, failed }` |
 | `GET /api/admin/trash` | `library.edit` | deleted albums of the last 60 days: `{ albums: [{ batch, label, at, files, by, restoredAt, purgedAt, purgeAt }] }` |
 | `POST /api/admin/trash/:batch/restore`, `DELETE /api/admin/trash/:batch` | `library.edit` | put a deleted album back / remove it for good now |
+| `GET /api/spotify` | signed in | `{ configured, redirectUri, redirectOk, setUp }` for [Spotify sign-in](#spotify-sign-in): whether this person's family (or the whole Hub) has a Spotify app, the Redirect URI to give Spotify, whether the public URL is one Spotify accepts (https, or 127.0.0.1), and whether they may set it up (`'hub'` for an admin, `'family'` for a manager whose family may have its own keys, else `null`) |
+| `POST /api/spotify/connect` | signed in | `{ url }`: Spotify's sign-in page, with a one-time `state` good for 15 minutes. 400 when no Spotify app is set up or the public URL isn't https |
+| `GET /auth/spotify/callback` | public | Where Spotify sends the browser back (`?code&state` or `?error&state`). Swaps the code for a token, starts reading, and shows a page that says to go back to Wavelength |
+| `GET /api/spotify/import` | signed in | `{ job }`: `null`, `{ state: 'working', read }` (items read so far), `{ state: 'ready', data: { account, playlists: [{ name, songs: [{ title, artist, album? }] }], liked, artists, skipped: [{ name, url }] } }` or `{ state: 'error', error }`. Kept in memory for an hour. `DELETE` forgets it |
 | `POST /api/import/youtube` | signed in | `{ url }` of a YouTube / YouTube Music playlist → `{ tracks: [{ title, artist, duration? }] }`, read with the Hub's yt-dlp (titles only, nothing downloaded) |
 | `GET /*` | — | the app's web build (`WAVELENGTH_WEB_DIR`); unknown paths get `index.html` |
 | `GET /api/me/kid?day=YYYY-MM-DD` | signed in | `{ kid, rules: { bedtimeFrom, bedtimeTo, dailyMinutes }, usedSeconds, pinSet }` |
@@ -1420,6 +1425,34 @@ report a week it wasn't watching.
 
 A **session** is `{ token, user, permissions, device }`. Browser pages: `/setup`, `/link`, `/auth/sso/link`,
 `/auth/sso/connect` (the last two sit behind tinyauth).
+
+## Spotify sign-in
+
+**Move from Spotify** in the app (USER-GUIDE.md "Move from Spotify") can read someone's Spotify by signing in, as
+well as from Spotify's data export file, which needs nothing on the Hub. Since 2025 Spotify only lets an app that
+isn't a large business sign in **5 people it was told about by email**, and the app's owner needs **Premium**. So a
+Hub can't ship one Spotify app for everyone: each household makes its own, once, and the Hub uses it for that
+household (`hub/src/spotify.ts`, `hub/src/routes/spotify.ts`).
+
+- **Who sets it up.** Whoever has Premium; on a Spotify Family plan that's the plan manager, and the plan's members
+  are the people to add. Admins do it from **Playlists → Move from Spotify → Set up Spotify for your family**
+  (saved for the whole Hub), or a family's manager does it for their family when the family may have **Own keys**.
+  It's two [shared keys](#families), `spotifyClientId` and `spotifyClientSecret`, so a family's own app wins for
+  the people in it and two households on one Hub can each have their own five.
+- **On developer.spotify.com/dashboard:** Create app, Redirect URI `https://<public URL>/auth/spotify/callback`
+  (the app shows it with a Copy button), tick Web API, then Settings → **User Management** → add each person's
+  name and Spotify email. Whether the owner's own account uses one of the 5 places isn't documented by Spotify, so
+  add them too if they want to bring theirs over.
+- **The public URL must be https** (`WAVELENGTH_PUBLIC_URL`): Spotify won't send people back to a plain http
+  address other than 127.0.0.1. A Hub only reachable on the LAN over http can still use the data file.
+- **What's read**, with the scopes `playlist-read-private playlist-read-collaborative user-library-read
+  user-follow-read`, once, right after signing in: the person's own and collaborative playlists with their songs,
+  liked songs and followed artists. Playlists someone else made (Discover Weekly, ones you follow) come back by
+  name and link only, since Spotify's 2026 API rules for these apps only hand over the songs of playlists you own
+  or collaborate on; the app offers to import those by link. The token isn't stored and nothing is written to
+  Spotify. A Spotify account that isn't on the app's list gets a 403, which the app explains.
+- `show_dialog=true` makes Spotify ask which account to use every time, so family members on a shared phone or
+  computer don't bring over whoever signed in to Spotify last.
 
 ## Push notifications
 

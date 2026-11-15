@@ -206,7 +206,6 @@ lists the artist as related to one you play a lot). It uses your plays from the 
 better the more you listen. With no plays yet it says so.
 
 ### Release Radar: follow artists
-### Release Radar: follow artists
 
 Signed in to a Hub, Release Radar (top of **New releases**) has a **Following** list: new albums, EPs and
 singles from the artists you follow. Press **Follow** on an artist's page (in your library or under
@@ -1377,7 +1376,8 @@ Deleting a playlist deletes its cover too.
 
 - **Deezer** playlist or album links.
 - **Spotify** public playlist or album links. Spotify only shows its first 100 songs or so without signing
-  in, so for longer playlists export a CSV at [exportify.app](https://exportify.app) and import the file.
+  in, so for longer playlists export a CSV at [exportify.app](https://exportify.app) and import the file, or use
+  [Move from Spotify](#move-from-spotify) to bring all your playlists at once.
 - **YouTube Music** or YouTube playlist links. Your Hub reads these with its yt-dlp (nothing is downloaded),
   so you need to be signed in to a Hub.
 - **CSV** files (Exportify, TuneMyMusic, Soundiiz or any sheet with title and artist columns), **M3U**
@@ -1393,6 +1393,53 @@ for kids are left out.
 > `src/views/ImportPlaylist.tsx`, and getting a missing song is shared with Discover in `src/lib/getSong.ts`.
 > YouTube goes through the Hub's `POST /api/import/youtube`; Spotify's embed page and Deezer's API go through
 > `/api/fetch` in a browser.
+
+## Move from Spotify
+
+**Playlists → Move from Spotify** brings your Spotify over in one go: the playlists you made, your liked songs and
+the artists you follow. There are two ways in.
+
+**Connect Spotify** (quickest, with a Hub). Press **Connect Spotify**, sign in on Spotify's page (pick your own
+account if it asks), then come back to Wavelength: it picks up what was read by itself, usually within a minute.
+This has to be set up once for your household (below). Playlists someone else made, like Discover Weekly or ones
+you follow, are listed with an **Import link** button, which reads up to about 100 of their songs.
+
+**Use your Spotify data file** (works for everyone). On Spotify's privacy page
+([spotify.com/account/privacy](https://www.spotify.com/account/privacy/)) tick **Account data** and press **Request
+data**, then confirm in the email. A few days later Spotify emails a link to a zip: download it on your phone or
+computer, then press **Choose the zip** in Wavelength. No need to unzip it. It holds every playlist you made, however
+long. Exportify's CSVs or its "Export all" zip work here too (*liked_songs.csv* is your liked songs).
+
+Either way Wavelength shows what it found. Untick any playlists you don't want, then choose:
+
+- **Playlists** become Wavelength playlists of the songs in your library. If you already have one with the same name
+  only its missing songs are added, so doing it again later (after getting more music) is safe.
+- **Liked songs** go into **Favorites** (♥ on Navidrome), and/or a playlist called *Liked Songs*.
+- **Artists you follow** are followed on [Release Radar](#release-radar-follow-artists), so you hear about their
+  new music. Ones Deezer doesn't know are listed.
+
+**Bring it over** does it, then lists the songs that aren't in your library with **Get all** (or **Request all**)
+and a button per song, like Import a playlist. On a kid profile, songs that aren't for kids are left out.
+
+### Setting up Connect Spotify (once per household)
+
+Spotify only lets an app like this sign in **5 people** it was told about, and the app's owner needs Premium, so
+each household makes its own. Whoever pays for Premium (on a **Family plan**, the plan's manager) does this, or
+the Hub admin with them. On **Move from Spotify**, open **Set up Spotify for your family** and follow the steps:
+
+1. Open the Spotify developer dashboard, sign in with the Premium account, and **Create app**.
+2. Paste the **Redirect URI** Wavelength shows (it has a Copy button), tick **Web API**, and save.
+3. In the app's **Settings → User Management**, add each person who'll connect: their name and *their* Spotify
+   login's email. On a Family plan that's each member's own account. Add yourself too if you're bringing yours over.
+4. Copy the **Client ID** and **Client secret** into Wavelength and press **Save**.
+
+The Hub needs an https address for this (HUB.md "Spotify sign-in"). If someone sees an error from Spotify after
+signing in, their email isn't on the list yet. More than five people? A second household (family) on the Hub can
+set up its own app.
+
+> **Developer notes:** the page is `src/views/SpotifyImport.tsx`; the data file is read in `src/lib/spotifyExport.ts`
+> with the small zip reader in `src/lib/zip.ts`; signing in is `hub/src/spotify.ts`. Matching and getting songs is
+> shared with Import a playlist (`src/lib/match.ts`, `src/lib/getSong.ts`).
 
 ## Move your Navidrome or Plex playlists into Wavelength
 

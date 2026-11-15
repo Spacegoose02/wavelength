@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSong, NotOnDeezer } from '../lib/getSong';
 import { useMustRequest } from '../lib/inbox';
 import { useHidden } from '../lib/kids';
@@ -20,8 +20,8 @@ type Row = ImportedSong & {
  * Import a playlist from Deezer, Spotify, YouTube Music or a file (lib/playlistImport.ts): match each song to
  * the library, save the ones found as a Wavelength playlist, and request or download the rest.
  */
-export function ImportPlaylist() {
-  const [link, setLink] = useState('');
+export function ImportPlaylist({ link: given }: { link?: string } = {}) {
+  const [link, setLink] = useState(given ?? '');
   const [name, setName] = useState('');
   const [rows, setRows] = useState<Row[]>();
   const [checked, setChecked] = useState(0);
@@ -69,6 +69,11 @@ export function ImportPlaylist() {
     }
   };
 
+  // opened from Move from Spotify with a playlist's link: read it straight away
+  useEffect(() => {
+    if (given) void start(() => fromLink(given));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const visible = (rows ?? []).map((r, i) => ({ r, i })).filter(({ r }) => !hidden.track({ kind: 'track', id: '', sourceId: '', title: r.title, artist: r.artist, explicit: r.lib?.explicit }));
   const owned = visible.filter(({ r }) => r.lib).map(({ r }) => r.lib!);
   const missing = visible.filter(({ r }) => r.lib === null && !r.dl);
@@ -83,6 +88,7 @@ export function ImportPlaylist() {
       <p className="muted small">
         Paste a Deezer, Spotify or YouTube Music playlist link, or choose a CSV, M3U or text file (one “Artist - Title” per line).
         Spotify links read public playlists, up to about 100 songs; for longer ones export a CSV with exportify.app.
+        To bring everything over from Spotify at once, use <a href="#" onClick={(e) => { e.preventDefault(); useUi.getState().go({ view: 'spotify' }); }}>Move from Spotify</a>.
       </p>
       <form className="inline-form" onSubmit={(e) => { e.preventDefault(); if (link.trim()) start(() => fromLink(link)); }}>
         <input className="wide" placeholder="https://open.spotify.com/playlist/…" value={link} onChange={(e) => setLink(e.target.value)} aria-label="Playlist link" />

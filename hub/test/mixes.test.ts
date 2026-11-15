@@ -126,7 +126,9 @@ test('daylist: songs played at this time of day, named after it, sent first when
 
   const { app, db, tokens, ids } = await seeded({}, {}, { mixLookups: look });
   const t = Date.now();
-  for (let i = 0; i < 12; i++) for (let w = 0; w < 3; w++) play(db, ids.member, t - w * 7 * DAY - i * 60_000 - 3_600_000 * 0, `Song ${i}`, 'Drake');
+  // the same time of day in the last three weeks, a second apart: plays spread over the last few minutes fell in
+  // the part of the day before when the test ran just after one began (17:00, 21:00…)
+  for (let i = 0; i < 12; i++) for (let w = 1; w <= 3; w++) play(db, ids.member, t - w * 7 * DAY + i * 1000, `Song ${i}`, 'Drake');
   const r = await json(app, 'GET', `/api/mixes?tz=${new Date().getTimezoneOffset()}`, { token: tokens.member });
   assert.equal(r.status, 200);
   assert.equal(r.body.mixes[0].kind, 'daylist');

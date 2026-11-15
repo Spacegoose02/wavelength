@@ -13,6 +13,19 @@
   family sign-ins, the profile picker, PINs, Stay signed in and admin linking work as with proxy sign-in, which
   still works, alone or next to OIDC. The client secret is kept encrypted and never shown again. Also
   `WAVELENGTH_OIDC_*` environment variables (`hub/src/oidc.ts`, `hub/src/sso.ts`, `src/views/SsoAdmin.tsx`).
+- **Move from Spotify.** Playlists → **Move from Spotify** brings over your Spotify playlists, liked songs and
+  followed artists in one go: playlists become Wavelength playlists, liked songs go to Favorites (and/or a *Liked
+  Songs* playlist), followed artists are followed on Release Radar, and what isn't in your library can be got or
+  requested. Two ways in: **Connect Spotify** (sign in, with a Hub) or Spotify's own **data export zip** (or
+  Exportify's CSVs / zip), read on the device, phone included (`src/views/SpotifyImport.tsx`,
+  `src/lib/spotifyExport.ts`, `src/lib/zip.ts`). Doing it again only adds what's new.
+- **Connect Spotify, with a guided setup for your household.** Spotify only lets an app like this sign in 5 people
+  it knows by email, so whoever has Premium (on a Family plan, the plan manager) makes one once, following the steps
+  on the page; the Client ID and secret are shared keys for the whole Hub or one family. The Hub reads your own
+  playlists, liked songs and followed artists once and keeps no Spotify login (`hub/src/spotify.ts`,
+  `/api/spotify…`, HUB.md "Spotify sign-in").
+- **Exportify CSVs import properly.** The Track URI and Artist URI(s) columns were being read as the title and
+  artist, so Exportify files matched nothing; the name columns are used now.
 
 ## 0.49.0
 - **Single sign-on is set up in the app.** Settings → Users → Single sign-on turns tinyauth on, generates the
