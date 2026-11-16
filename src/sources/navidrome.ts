@@ -45,8 +45,14 @@ export class NavidromeSource implements MusicSource {
     return res.json();
   }
 
-  private url(method: string, params: Record<string, string | number | undefined | string[] | number[]> = {}) {
-    const salt = Math.random().toString(36).slice(2, 10);
+  /**
+   * A Subsonic address with the login in it. Each call gets a fresh salt; pictures get the same one every time
+   * (`stable`), so a cover has one address for good and the webview's cache keeps it between visits and launches.
+   * With a new salt each time, every cover was fetched again on every launch (or when the library reloaded), which is
+   * what left Browse and genre pages blank for half a minute.
+   */
+  private url(method: string, params: Record<string, string | number | undefined | string[] | number[]> = {}, stable = false) {
+    const salt = stable ? this.picSalt : Math.random().toString(36).slice(2, 10);
     const auth = {
       u: this.config.username ?? '',
       t: SparkMD5.hash((this.config.password ?? '') + salt),
@@ -65,8 +71,13 @@ export class NavidromeSource implements MusicSource {
     return res;
   }
 
+  /** The salt for picture addresses: fixed for this source and login, and not made from the password. */
+  private get picSalt() {
+    return SparkMD5.hash(`wavelength-cover|${this.config.id}|${this.config.url ?? ''}|${this.config.username ?? ''}`).slice(0, 10);
+  }
+
   private cover(id?: string) {
-    return id ? this.url('getCoverArt', { id, size: 500 }) : undefined;
+    return id ? this.url('getCoverArt', { id, size: 500 }, true) : undefined;
   }
 
   private album = (a: any): Album => ({
