@@ -41,14 +41,15 @@ export function applyRemote(c: HubRemoteCommand) {
 export async function sendState(force = false) {
   const c = hubClient();
   if (!c || !useSettings.getState().remoteControl) return;
-  const { queue, index, position, duration, playing, volume } = usePlayer.getState();
+  const { queue, index, position, duration, playing, volume, liveTitle, liveCover } = usePlayer.getState();
   // the queue around what's playing, so a long one still fits
   const from = Math.max(0, index - 50);
   const near = queue.slice(from, from + 300);
-  const key = `${near.length}:${queue[index]?.id}:${index}:${playing}:${volume}:${Math.round(position / 15)}`;
+  const key = `${near.length}:${queue[index]?.id}:${index}:${playing}:${volume}:${Math.round(position / 15)}:${liveTitle}`;
   if (!force && key === lastSent) return;
   lastSent = key;
-  await c.remoteState({ queue: near.map(forHub), index: index - from, position, duration, playing, volume }).catch(() => {
+  // live: the song a radio station says it's playing now (store/player.ts watchNowPlaying)
+  await c.remoteState({ queue: near.map(forHub), index: index - from, position, duration, playing, volume, live: liveTitle, liveCover }).catch(() => {
     lastSent = '';
   });
 }
@@ -85,7 +86,7 @@ export function startRemote() {
   });
   let timer: ReturnType<typeof setTimeout> | undefined;
   usePlayer.subscribe((s, prev) => {
-    if (s.playing === prev.playing && s.index === prev.index && s.queue === prev.queue && s.volume === prev.volume) return;
+    if (s.playing === prev.playing && s.index === prev.index && s.queue === prev.queue && s.volume === prev.volume && s.liveTitle === prev.liveTitle) return;
     clearTimeout(timer);
     timer = setTimeout(() => void sendState(), 800);
   });
