@@ -152,7 +152,10 @@ fail every song after it, and stop the player after three failures. Now:
   lost connection often raises no error at all), calls `failed()`, which asks the hook's `check()`: a GET to the
   song's server with a 5 s timeout. Any answer, even a 401, means the network works, and the old skip rules apply
   (a stall just keeps waiting). No answer marks the device offline and polls every 15 s, plus the
-  `online`/`offline` window events.
+  `online`/`offline` window events. 30-second Deezer clips (`isClip`) are the exception: they're always watched,
+  cushion or not, and a stalled clip is skipped, since the music server answering says nothing about Deezer. A clip
+  that waits within a second of its end, or plays on past its length, counts as ended (`clipOver`). The cushion
+  doesn't save clips.
 - *Standing in.* While offline, `loadCurrent` doesn't try the network for a song that isn't saved.
   `standInFor` puts `standIn()`'s pick in front of it in the queue and plays that, so the real song waits in place.
   The pick order is `cushion:similar`, then the `auto` shelves, then album/playlist downloads, kid-safe, not used

@@ -130,6 +130,29 @@ export const setDeadZoneHook = (h?: DeadZoneHook) => {
   deadZone = h;
 };
 
+/** A 30-second Deezer clip (Discover, Discover Weekly, Release Radar): it streams from Deezer, not the music server. */
+export const isClip = (t?: Track) => t?.sourceId === 'preview';
+
+/** How long the clip playing is: what the file says once it's known, else the length it was listed with. */
+function clipLength(t: Track): number {
+  const d = engine.el.duration;
+  return Number.isFinite(d) && d > 0 ? d : t.duration || 30;
+}
+
+/**
+ * A clip that waits for more data within a second of its end, or plays on past its length, is over: move on.
+ * A Deezer clip whose stream stops there (or whose length the file misstates) otherwise sat on BUF for good,
+ * since no "ended" ever came. Returns true when it moved on.
+ */
+let clipDoneFor = -1;
+function clipOver(t: Track, slack: number): boolean {
+  if (!isClip(t) || clipDoneFor === loadSeq || engine.el.currentTime < clipLength(t) - slack) return false;
+  clipDoneFor = loadSeq;
+  armStallWatch(false);
+  songEnded(engine.el);
+  return true;
+}
+
 /** Whether a song plays without the network: downloaded on this device (and not going to a speaker). */
 const isSaved = (t: Track) => !engine.isRemote() && !!useOffline.getState().tracks[trackKey(t)];
 
@@ -359,11 +382,16 @@ export function reloadCurrent(startAt: number, play: boolean) {
  * A 30s Deezer clip whose signed link has run out (Discover charts, the Weekly Mix and Release Radar keep links for
  * hours or days): ask Deezer for a fresh one, so it plays instead of failing with "Playback failed".
  */
-async function freshPreview(t: Track): Promise<{ track: Track; startAt?: number }> {
+async function freshPreview(t: Track, urgent = true): Promise<{ track: Track; startAt?: number }> {
   if (t.sourceId !== 'preview' || !t.streamUrl || !previewExpired(t.streamUrl)) return { track: t };
-  const found = await deezerLookup({ title: t.title, artist: t.artist ?? '' }).catch(() => ({}) as { preview?: string });
+  // Deezer slow to answer: try the link it has rather than sit on BUF (a dead one fails and moves on)
+  const timeout = new Promise<{ preview?: string }>((r) => setTimeout(() => r({}), FRESH_PREVIEW_MS));
+  const lookup = deezerLookup({ title: t.title, artist: t.artist ?? '' }, urgent).catch(() => ({}) as { preview?: string });
+  const found = await Promise.race([lookup, timeout]);
   return { track: found.preview ? { ...t, streamUrl: found.preview } : t };
 }
+/** How long a clip about to play waits for Deezer's fresh link. */
+const FRESH_PREVIEW_MS = 8000;
 
 /**
  * Pick up where you left off (lib/resume.ts): the queue is back after a restart, paused, and nothing loads until
@@ -386,7 +414,12 @@ async function loadCurrent(startAt = 0) {
   pendingResume = undefined;
   const t = usePlayer.getState().current();
   if (!t) return;
+  // a clip can't start past its end (a spot kept from a full song, a party's clock): start it from the top
+  if (isClip(t) && startAt >= (t.duration || 30) - 1) startAt = 0;
   const token = begin(t, startAt);
+  // the song that was playing stops now, not once this one is ready: while a clip waited for a fresh Deezer link,
+  // the last song played on under this one's title, its clock running past this clip's 0:30 with BUF showing
+  if (ahead?.key !== trackKey(t) && !engine.el.paused) engine.pause();
   try {
     // Loaded ahead on the idle deck while the last song played: starts with no gap
     if (ahead?.key === trackKey(t)) {
@@ -474,8 +507,9 @@ function failed(message: string, stalled = false) {
         usePlayer.setState({ error: 'No signal · it carries on when the signal is back', buffering: false, playing: false, noSignal: true });
         return;
       }
-      // the server answers, so it's only a slow connection: keep waiting rather than skip a song that works
-      if (!off && stalled) return armStallWatch(true);
+      // the server answers, so it's only a slow connection: keep waiting rather than skip a song that works.
+      // Not a Deezer clip: the music server answering says nothing about Deezer, and waiting kept it on BUF for ever
+      if (!off && stalled && !isClip(t)) return armStallWatch(true);
       skipOrStop(message);
     });
     return;
@@ -519,19 +553,25 @@ const rememberSpot = (t: Track) => {
 /**
  * A stream that's buffering for this long counts as failed. Losing signal often doesn't raise an error at
  * all: the `<audio>` element just waits, so without this the music would stop until the signal came back.
+ * Songs from the music server are watched with the dead zone cushion on; Deezer clips always are, so a clip
+ * that stops loading is skipped instead of leaving the player on BUF.
  */
 export const STALL_SECONDS = 12;
 let stallTimer: number | undefined;
 function armStallWatch(on: boolean) {
   window.clearTimeout(stallTimer);
   stallTimer = undefined;
-  if (!on || !deadZone) return;
+  if (!on) return;
   const t = usePlayer.getState().current();
-  if (!t || t.kind !== 'track' || !fromStream) return;
+  if (!t || t.kind !== 'track') return;
+  const clip = isClip(t);
+  if (!clip && (!deadZone || !fromStream)) return;
   const seq = loadSeq;
   stallTimer = window.setTimeout(() => {
     stallTimer = undefined;
-    if (seq === loadSeq && usePlayer.getState().buffering && !engine.el.paused) failed('The stream stopped', true);
+    if (seq !== loadSeq || !usePlayer.getState().buffering || engine.el.paused) return;
+    if (clip && clipOver(t, 3)) return;
+    failed(clip ? 'The preview stopped loading' : 'The stream stopped', true);
   }, STALL_SECONDS * 1000);
 }
 
@@ -575,7 +615,7 @@ async function prepareAhead(cur: Track) {
       }
       return;
     }
-    const ready = ((await sourceOf(next)?.prepare?.(next)) ?? (await freshPreview(next))).track;
+    const ready = ((await sourceOf(next)?.prepare?.(next)) ?? (await freshPreview(next, false))).track;
     if (!ready.streamUrl || usePlayer.getState().queue[i!] !== next) return;
     if (ready !== next) usePlayer.setState((s) => ({ queue: s.queue.map((q, j) => (j === i ? ready : q)) }));
     const url = streamAt(ready);
@@ -643,6 +683,8 @@ engine.on('timeupdate', (_, el) => {
   lastTick = now;
   usePlayer.setState({ position: now });
   if (!t) return;
+  // a clip playing on well past its length has really ended
+  if (isClip(t) && now > (t.duration || 30) + 2 && clipOver(t, 0)) return;
   const dur = el.duration || t.duration || 0;
   if (t.kind === 'track' && dur > 0) {
     const remaining = dur - now;
@@ -677,12 +719,18 @@ engine.on('playing', () => {
   usePlayer.setState({ playing: true, buffering: false });
 });
 engine.on('waiting', () => {
+  // a clip waiting for more at its very end has nothing more to come
+  const t = usePlayer.getState().current();
+  if (t && clipOver(t, 1)) return;
   usePlayer.setState({ buffering: true });
   armStallWatch(true);
 });
 engine.on('pause', () => usePlayer.setState({ playing: false }));
 engine.on('error', (_, el) => failed(`Playback failed (code ${el.error?.code ?? '?'})`));
-engine.on('ended', (_, el) => {
+engine.on('ended', (_, el) => songEnded(el));
+
+/** The song playing reached its end: tell the server for books and episodes, then repeat it or go on. */
+function songEnded(el: HTMLAudioElement) {
   // a book's file or an episode that played to the end: tell the server now, so it's marked finished (the
   // regular sync is every 15 s and would leave the last few seconds unheard)
   const ended = usePlayer.getState().current();
@@ -701,10 +749,11 @@ engine.on('ended', (_, el) => {
   if (intercept?.('ended')) return;
   const st = usePlayer.getState();
   if (st.repeat === 'one') {
+    clipDoneFor = -1;
     engine.seek(0);
     engine.play();
   } else st.next();
-});
+}
 
 /**
  * Radio: every 15 s, the station's now-playing page (SUB/WAVE, AzuraCast, Icecast `status-json.xsl`…) and,
