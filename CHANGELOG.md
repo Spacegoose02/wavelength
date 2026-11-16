@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.51.1
+- **The on-air DJ's picture shows on the SUB/WAVE player.** `/now-playing` gives `dj.avatar` as a path under the API
+  (`/persona-avatar/<id>`), but the app resolved it against the site root, dropping `/api`, so the picture 404'd and the
+  On air card showed initials. It's now resolved with `SubWaveSource.apiAbs()` (`src/sources/subwave.ts`). A DJ with no
+  picture gets SUB/WAVE's 1×1 placeholder, which `Cover` now treats as missing and shows initials (`src/components/common.tsx`).
+
 ## 0.51.0
 - **Home Assistant sees what a radio station is playing.** A device now sends the song its radio station says it's
   playing (the title the app already shows, `watchNowPlaying` in `src/store/player.ts`) with its state, and
