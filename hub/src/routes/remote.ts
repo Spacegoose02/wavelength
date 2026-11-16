@@ -17,6 +17,9 @@ import { clientIp, HttpError, signedIn } from '../http.ts';
  * (POST /api/ha/players/:id/handoff). It never shows up as a player itself.
  */
 
+/** An http(s) link, or undefined: covers are only passed on when a browser or Home Assistant could load them. */
+const webUrl = (v: unknown) => (typeof v === 'string' && /^https?:\/\//i.test(v) && v.length <= 2000 ? v : undefined);
+
 export const HA_PLATFORM = 'homeassistant';
 const HA_ACTIONS = ['toggle', 'play', 'pause', 'next', 'prev', 'seek', 'volume'] as const;
 
@@ -26,7 +29,7 @@ const MAX_QUEUE = 300;
 const ACTIONS = ['toggle', 'play', 'pause', 'next', 'prev', 'seek', 'volume', 'jump', 'load'] as const;
 type Action = (typeof ACTIONS)[number];
 
-interface State { queue: unknown[]; index: number; position: number; duration: number; playing: boolean; volume: number; at: number }
+interface State { queue: unknown[]; index: number; position: number; duration: number; playing: boolean; volume: number; at: number; live?: string; liveCover?: string }
 interface Command { id: number; action: Action; value?: number; queue?: unknown[]; index?: number; position?: number; play?: boolean; from: string; at: number }
 interface Live {
   userId: number;
@@ -83,6 +86,9 @@ export function remoteRoutes(app: FastifyInstance, { db, config }: Ctx) {
       playing: b.playing === true && queue.length > 0,
       volume: num(b.volume, 0, 1, 1),
       at: Date.now(),
+      // radio: the song the station says it's playing, and its cover when the station sends one
+      live: typeof b.live === 'string' && b.live.trim() ? b.live.trim().slice(0, 300) : undefined,
+      liveCover: webUrl(b.liveCover),
     };
     return { ok: true };
   });
@@ -145,7 +151,7 @@ export function remoteRoutes(app: FastifyInstance, { db, config }: Ctx) {
   const named = (t: unknown) => {
     const x = (t ?? {}) as Record<string, unknown>;
     const s = (k: string) => (typeof x[k] === 'string' ? (x[k] as string).slice(0, 300) : undefined);
-    return { title: s('title'), artist: s('artist'), album: s('album') };
+    return { title: s('title'), artist: s('artist'), album: s('album'), kind: s('kind'), cover: webUrl(x.coverUrl) };
   };
 
   /** Turns Home Assistant on for this person: a token of its own (shown once), revoked from the devices list. */
@@ -173,6 +179,9 @@ export function remoteRoutes(app: FastifyInstance, { db, config }: Ctx) {
           platform: d.platform,
           state: !t ? 'idle' : s?.playing ? 'playing' : 'paused',
           ...named(t),
+          // radio: what the station is playing now (its title stays the station's name)
+          ...(s?.live ? { live: s.live } : {}),
+          ...(s?.liveCover ? { cover: s.liveCover } : {}),
           position: Math.round(position),
           duration: Math.round(s?.duration ?? 0),
           volume: s?.volume ?? 1,

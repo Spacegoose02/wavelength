@@ -735,7 +735,7 @@ export interface HubParty {
 }
 export interface HubPartyRequest { id: number; action: 'add' | 'playNext' | 'next' | 'prev' | 'toggle' | 'seek' | 'jump'; tracks?: Track[]; value?: number; index?: number; from: string; at: number }
 
-export interface HubRemoteState { queue: Track[]; index: number; position: number; duration: number; playing: boolean; volume: number; at: number }
+export interface HubRemoteState { queue: Track[]; index: number; position: number; duration: number; playing: boolean; volume: number; at: number; live?: string; liveCover?: string }
 export interface HubRemoteDevice { id: number; name: string; platform: string; current: boolean; listening: boolean; state: HubRemoteState | null }
 export interface HubRemoteCommand {
   id: number;

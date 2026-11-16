@@ -109,6 +109,22 @@ test('Home Assistant: its own token lists the players by name and sends them com
   assert.equal((await json(app, 'GET', '/api/ha/players', { token: ha.token })).status, 401);
 });
 
+test('Home Assistant: a radio station shows the song it is playing, and covers only as web links', async () => {
+  const { app, tokens } = await seeded();
+  const ha = (await json(app, 'POST', '/api/me/homeassistant', { token: tokens.member })).body;
+  const station = { id: 'radio:1', sourceId: 'radio', kind: 'radio', title: 'SGI Wave', artist: 'Live radio', coverUrl: 'https://wave.example/logo.png' };
+  await json(app, 'PUT', '/api/me/remote/state', {
+    token: tokens.member,
+    body: { queue: [station], index: 0, position: 5, duration: 0, playing: true, volume: 1, live: '  Daft Punk — One More Time ', liveCover: 'https://wave.example/cover/9' },
+  });
+  let p = (await json(app, 'GET', '/api/ha/players', { token: ha.token })).body.players[0];
+  assert.deepEqual([p.title, p.kind, p.live, p.cover], ['SGI Wave', 'radio', 'Daft Punk — One More Time', 'https://wave.example/cover/9']);
+  // no song from the station: the station's own logo; a non-web cover is dropped
+  await json(app, 'PUT', '/api/me/remote/state', { token: tokens.member, body: { queue: [station], index: 0, position: 5, duration: 0, playing: true, volume: 1, liveCover: 'javascript:alert(1)' } });
+  p = (await json(app, 'GET', '/api/ha/players', { token: ha.token })).body.players[0];
+  assert.deepEqual([p.live, p.cover], [undefined, 'https://wave.example/logo.png']);
+});
+
 test('Home Assistant: hands playback off from one player to another', async () => {
   const { app, tokens } = await seeded();
   const ha = (await json(app, 'POST', '/api/me/homeassistant', { token: tokens.member })).body;
