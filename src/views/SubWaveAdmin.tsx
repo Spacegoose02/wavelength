@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { list, swTrack, txt, type SubWaveSource, type SwSchedule as Schedule, type SwShow, type SwTrack } from '../sources/subwave';
 import { Cover, Spinner } from '../components/common';
 import { IconRefresh } from '../components/Icons';
-import { SwList, usePoll } from './subwaveShared';
+import { avatarDataUrl, SwList, usePoll } from './subwaveShared';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // display Monday first
@@ -275,6 +275,8 @@ export function SwSchedule({ sw }: { sw: SubWaveSource }) {
 
 // ------------------------------------------------------------------ shows
 
+const withV = (url: string | undefined, v: number) => (url && v ? `${url}${url.includes('?') ? '&' : '?'}r=${v}` : url);
+
 const BLANK: Partial<SwShow> = { name: '', topic: '', personaId: '', guestPersonaIds: [], moods: [] };
 
 export function SwShows({ sw }: { sw: SubWaveSource }) {
@@ -300,6 +302,12 @@ export function SwShows({ sw }: { sw: SubWaveSource }) {
   if (error) return <div className="errors">{error}</div>;
   if (!shows) return <Spinner />;
   const persona = (id?: string) => personas.find((p) => p.id === id);
+  // Bumped after a picture upload so the cards fetch it again (SUB/WAVE lets browsers cache it for an hour).
+  const [picV, setPicV] = useState(0);
+  const changePicture = (host: { id: string; name: string }, file?: File) => {
+    if (!file) return;
+    run(`pic${host.id}`, async () => { await sw.setAvatar(host.id, await avatarDataUrl(file)); setPicV((v) => v + 1); }, `Saved ${host.name}'s picture`);
+  };
 
   return (
     <div className="sw-admin">
@@ -360,7 +368,14 @@ export function SwShows({ sw }: { sw: SubWaveSource }) {
           const host = persona(s.personaId);
           return (
             <div key={s.id} className="show-card">
-              <Cover src={sw.abs(host?.avatar)} alt={host?.name ?? s.name} round className="avatar" />
+              {host?.id ? (
+                <label className="avatar-pick" title={`Change ${host.name}'s picture`}>
+                  <Cover src={withV(sw.avatarFor(host), picV)} alt={host.name} round className="avatar" />
+                  <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={!!busy} onChange={(e) => { changePicture(host, e.target.files?.[0]); e.target.value = ''; }} />
+                </label>
+              ) : (
+                <Cover alt={s.name} round className="avatar" />
+              )}
               <div className="track-main">
                 <div className="track-title">{s.name}</div>
                 <div className="track-sub">

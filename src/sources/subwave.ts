@@ -551,8 +551,15 @@ export class SubWaveSource implements MusicSource {
   installPersona(slug: string) {
     return this.req('POST', `/personas/community/${encodeURIComponent(slug)}/install`, { admin: true, body: {} });
   }
-  avatarFor(p: SwPersonaFull) {
-    return p.avatar && p.id ? `${this.api}/persona-avatar/${encodeURIComponent(p.id)}?v=${encodeURIComponent(p.avatar)}` : undefined;
+  /**
+   * A DJ's picture. /settings gives `avatar` as the stored file name (`<id>.jpg`, '' when none);
+   * /schedule and /personas give it as the public route (`/persona-avatar/<id>`, set even when
+   * there is no picture: SUB/WAVE then serves a 1×1 placeholder, which `Cover` shows as initials).
+   */
+  avatarFor(p: { id?: string; avatar?: string }) {
+    if (!p.avatar) return undefined;
+    if (p.avatar.includes('/')) return this.apiAbs(p.avatar);
+    return p.id ? `${this.api}/persona-avatar/${encodeURIComponent(p.id)}?v=${encodeURIComponent(p.avatar)}` : undefined;
   }
 
   // ---- admin: skills ----

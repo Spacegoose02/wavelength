@@ -23,6 +23,10 @@ describe('SUB/WAVE station admin', () => {
     expect(sw.guestAvatar({ id: 'katt', name: 'Katt', avatar: '/persona-avatar/katt' })).toBe('http://radio:7700/api/persona-avatar/katt');
     expect(sw.guestAvatar({ id: 'x y', name: 'X' })).toBe('http://radio:7700/api/persona-avatar/x%20y');
     expect(sw.guestAvatar('Katt')).toBeUndefined();
+    // /settings hands back the file name, /schedule the public route: both find the picture.
+    expect(sw.avatarFor({ id: 'rick_james', avatar: 'rick_james.jpg' })).toBe('http://radio:7700/api/persona-avatar/rick_james?v=rick_james.jpg');
+    expect(sw.avatarFor({ id: 'rick_james', avatar: '/persona-avatar/rick_james' })).toBe('http://radio:7700/api/persona-avatar/rick_james');
+    expect(sw.avatarFor({ id: 'rick_james', avatar: '' })).toBeUndefined();
     const custom = new SubWaveSource({ id: 'sw', kind: 'subwave', name: 'SW', url: 'http://radio:7700', apiUrl: 'http://radio:7701', enabled: true } as any);
     expect(custom.apiAbs('/persona-avatar/x')).toBe('http://radio:7701/persona-avatar/x');
   });
