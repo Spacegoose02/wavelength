@@ -282,6 +282,14 @@ export class SubWaveSource implements MusicSource {
     return `${this.api}${path.startsWith('/') ? '' : '/'}${path}`;
   }
 
+  /** A show co-host's picture: their own `avatar` link, or the public avatar route by id. */
+  guestAvatar(g: unknown) {
+    if (!g || typeof g !== 'object') return undefined;
+    const o = g as { id?: unknown; avatar?: unknown };
+    if (typeof o.avatar === 'string' && o.avatar) return this.apiAbs(o.avatar);
+    return typeof o.id === 'string' && o.id ? `${this.api}/persona-avatar/${encodeURIComponent(o.id)}` : undefined;
+  }
+
   coverFor(t?: SwTrack) {
     if (!t) return undefined;
     if (t.coverUrl) return this.abs(t.coverUrl);

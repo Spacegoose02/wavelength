@@ -128,7 +128,10 @@ function OnAir({ sw }: { sw: SubWaveSource }) {
   const elapsed = Math.max(0, duration ? Math.min(rawElapsed, duration) : rawElapsed);
   const show = d.activeShow ?? d.context?.activeShow;
   const showName = txt(show?.name ?? show);
-  const guests = list(show?.guests).map(txt).filter(Boolean);
+  // Co-hosts: SUB/WAVE sends { id, name, avatar: '/persona-avatar/<id>' } each (older ones just names).
+  const guests = list<any>(show?.guests)
+    .map((g) => ({ name: txt(g), avatar: sw.guestAvatar(g) }))
+    .filter((g) => g.name);
   const dj = d.dj && typeof d.dj === 'object' ? d.dj : undefined;
   const lst = d.listeners ?? d.context?.listeners;
   const listeners = txt(lst && typeof lst === 'object' ? lst.current ?? lst.count : lst) || '0';
@@ -176,7 +179,14 @@ function OnAir({ sw }: { sw: SubWaveSource }) {
             <div className="sw-show">
               <div className="kicker">Now on</div>
               <b>{showName}</b>
-              {guests.length ? <div className="muted small">with {guests.join(', ')}</div> : null}
+              {guests.length ? (
+                <div className="sw-guests">
+                  <span className="sw-guest-faces">
+                    {guests.map((g, i) => <Cover key={`${g.name}:${i}`} src={g.avatar} alt={g.name} round className="avatar mini" />)}
+                  </span>
+                  <span className="muted small">with {guests.map((g) => g.name).join(', ')}</span>
+                </div>
+              ) : null}
             </div>
           )}
         </div>

@@ -36,6 +36,7 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | SUB/WAVE tab: blank or errors | API URL wrong (no `/api` behind Caddy, or controller on `:7701`) | Settings → SUB/WAVE → set "API URL" explicitly; admin tabs need ADMIN_USER/ADMIN_PASS |
 | SUB/WAVE: no song time | now-playing has `timestamp` (seconds), not `startedAt` | Handled by `swTrack()`; if SUB/WAVE renames fields, update it there |
 | SUB/WAVE: DJ shows initials, not their picture | `/now-playing`'s `dj.avatar` is a path under the API (`/persona-avatar/<id>`); resolving it against the site root drops `/api` | Resolved with `sw.apiAbs()`. A DJ with no picture gets SUB/WAVE's 1×1 placeholder, which `Cover` treats as missing and shows initials |
+| SUB/WAVE: co-host shows initials | An older SUB/WAVE sends `activeShow.guests` as names only, with no `id` or `avatar` | `sw.guestAvatar()` uses the guest's `avatar`, else `/persona-avatar/<id>`; with neither there is no picture to show |
 | SUB/WAVE: "Too late — already on its way to air" on cancel | The song was already handed to Liquidsoap and is playing | Expected; only songs still in the queue can be cancelled |
 
 ## Playback
