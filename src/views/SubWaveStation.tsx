@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   archiveDays,
+  availableEngines,
   blankPersona,
   type SubWaveSource,
   type SwArchive,
@@ -199,7 +200,7 @@ function PersonaEditor({ sw, s, persona, busy, onSave, onCancel }: {
   const [avatarMsg, setAvatarMsg] = useState<string>();
   const [avatarV, setAvatarV] = useState(0);
   const engines = ['inherit', ...(s.tts?.engines ?? Object.keys(ENGINE_NAMES).filter((e) => e !== 'inherit'))];
-  const available = new Set(s.tts?.available ?? []);
+  const available = availableEngines(s.tts?.available);
   const engine = p.tts?.engine ?? 'inherit';
   const setTts = (patch: Partial<NonNullable<SwPersonaFull['tts']>>) => setP({ ...p, tts: { ...(p.tts ?? {}), ...patch } });
 
@@ -384,7 +385,7 @@ export function SwStationSettings({ sw }: { sw: SubWaveSource }) {
   if (loaded.error) return <div className="errors">{loaded.error}</div>;
   if (!s || !form) return <Spinner />;
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
-  const available = new Set(s.tts?.available ?? []);
+  const available = availableEngines(s.tts?.available);
 
   const save = () =>
     run('save', async () => {

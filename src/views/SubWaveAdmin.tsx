@@ -285,6 +285,8 @@ export function SwShows({ sw }: { sw: SubWaveSource }) {
   const [editing, setEditing] = useState<Partial<SwShow> | null>(null);
   const [error, setError] = useState<string>();
   const { run, busy, view } = useAction();
+  // Bumped after a picture upload so the cards fetch it again (SUB/WAVE lets browsers cache it for an hour).
+  const [picV, setPicV] = useState(0);
 
   const load = async () => {
     try {
@@ -302,8 +304,6 @@ export function SwShows({ sw }: { sw: SubWaveSource }) {
   if (error) return <div className="errors">{error}</div>;
   if (!shows) return <Spinner />;
   const persona = (id?: string) => personas.find((p) => p.id === id);
-  // Bumped after a picture upload so the cards fetch it again (SUB/WAVE lets browsers cache it for an hour).
-  const [picV, setPicV] = useState(0);
   const changePicture = (host: { id: string; name: string }, file?: File) => {
     if (!file) return;
     run(`pic${host.id}`, async () => { await sw.setAvatar(host.id, await avatarDataUrl(file)); setPicV((v) => v + 1); }, `Saved ${host.name}'s picture`);

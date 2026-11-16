@@ -79,7 +79,7 @@ export interface SwSettings {
   streamOnAir?: boolean | null;
   budget?: { mode?: string };
   llm?: { providers?: string[]; active?: string };
-  tts?: { engines?: string[]; available?: string[]; kokoroVoices?: string[]; frequencies?: string[] };
+  tts?: { engines?: string[]; available?: string[] | Record<string, unknown>; kokoroVoices?: string[]; frequencies?: string[] };
   /** Which API keys SUB/WAVE has (true/false only, never the key). */
   env?: Record<string, boolean>;
 }
@@ -183,6 +183,17 @@ export interface SwSchedule {
 }
 
 /** Anything → display text. SubWave fields are sometimes objects ({name}) or arrays. */
+/**
+ * Which voice engines are running. Older SUB/WAVE sends a list of names; newer sends an object
+ * (`{ kokoro: true, piper: false, heavyEnabled: [...], cloudByProvider: {...} }`), where an engine
+ * is up when its value is `true`.
+ */
+export function availableEngines(v: unknown): Set<string> {
+  if (Array.isArray(v)) return new Set(v.filter((x): x is string => typeof x === 'string'));
+  if (v && typeof v === 'object') return new Set(Object.entries(v).filter(([, on]) => on === true).map(([k]) => k));
+  return new Set();
+}
+
 export function txt(v: unknown): string {
   if (v == null || v === false) return '';
   if (typeof v === 'string' || typeof v === 'number') return String(v);

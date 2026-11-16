@@ -38,6 +38,7 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | SUB/WAVE: DJ shows initials, not their picture | `/now-playing`'s `dj.avatar` is a path under the API (`/persona-avatar/<id>`); resolving it against the site root drops `/api` | Resolved with `sw.apiAbs()`. A DJ with no picture gets SUB/WAVE's 1×1 placeholder, which `Cover` treats as missing and shows initials |
 | SUB/WAVE: co-host shows initials | An older SUB/WAVE sends `activeShow.guests` as names only, with no `id` or `avatar` | `sw.guestAvatar()` uses the guest's `avatar`, else `/persona-avatar/<id>`; with neither there is no picture to show |
 | SUB/WAVE: Shows list has initials, not the hosts' pictures | `/schedule` gives each persona's `avatar` as `/persona-avatar/<id>` (under the API), unlike `/settings`, which gives the file name | `sw.avatarFor()` takes both. A host with no picture still shows initials: click the circle on the show (or DJs → Edit → Change picture) to upload one |
+| SUB/WAVE: editing a DJ crashes the page (`object is not iterable … at new Set`) | Newer SUB/WAVE sends `/settings` → `tts.available` as an object (`{ kokoro: true, … }`), not a list | Read through `availableEngines()` in `sources/subwave.ts`, which takes either |
 | SUB/WAVE: "Too late — already on its way to air" on cancel | The song was already handed to Liquidsoap and is playing | Expected; only songs still in the queue can be cancelled |
 
 ## Playback
