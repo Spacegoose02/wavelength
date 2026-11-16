@@ -164,7 +164,7 @@ function OnAir({ sw }: { sw: SubWaveSource }) {
         <div className="sw-dj">
           {dj && (
             <div className="persona">
-              <Cover src={typeof dj.avatar === 'string' ? sw.abs(dj.avatar) : undefined} alt={txt(dj.name) || 'DJ'} round className="avatar" />
+              <Cover src={typeof dj.avatar === 'string' ? sw.apiAbs(dj.avatar) : undefined} alt={txt(dj.name) || 'DJ'} round className="avatar" />
               <div>
                 <div className="kicker">On the mic</div>
                 <b>{txt(dj.name)}</b>

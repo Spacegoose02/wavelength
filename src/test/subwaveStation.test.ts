@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { archiveDays, blankPersona, mergePersona, SW_FIXES, type SwPersonaFull } from '../sources/subwave';
+import { archiveDays, blankPersona, mergePersona, SubWaveSource, SW_FIXES, type SwPersonaFull } from '../sources/subwave';
 
 describe('SUB/WAVE station admin', () => {
   test('editing a DJ keeps the fields Wavelength does not show', () => {
@@ -11,6 +11,17 @@ describe('SUB/WAVE station admin', () => {
     expect(next).toHaveLength(2);
     expect(next[0]).toMatchObject({ soul: 'new', skills: ['weather'], musicLean: 'dub', tts: { engine: 'kokoro', voice: 'am_michael', gainDb: 2, speed: 1.1 } });
     expect(next[1]).toBe(roster[1]);
+  });
+
+  test("the on-air DJ's picture is looked up under the API, not the site root", () => {
+    const sw = new SubWaveSource({ id: 'sw', kind: 'subwave', name: 'SW', url: 'http://radio:7700/', enabled: true } as any);
+    expect(sw.apiAbs('/persona-avatar/dj_trump')).toBe('http://radio:7700/api/persona-avatar/dj_trump');
+    expect(sw.apiAbs('persona-avatar/x')).toBe('http://radio:7700/api/persona-avatar/x');
+    expect(sw.apiAbs('/api/persona-avatar/x')).toBe('http://radio:7700/api/persona-avatar/x');
+    expect(sw.apiAbs('https://cdn.example/x.png')).toBe('https://cdn.example/x.png');
+    expect(sw.apiAbs('')).toBeUndefined();
+    const custom = new SubWaveSource({ id: 'sw', kind: 'subwave', name: 'SW', url: 'http://radio:7700', apiUrl: 'http://radio:7701', enabled: true } as any);
+    expect(custom.apiAbs('/persona-avatar/x')).toBe('http://radio:7701/persona-avatar/x');
   });
 
   test('a DJ without an id is new and goes on the end', () => {
