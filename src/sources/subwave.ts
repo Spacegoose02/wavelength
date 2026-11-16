@@ -79,7 +79,7 @@ export interface SwSettings {
   streamOnAir?: boolean | null;
   budget?: { mode?: string };
   llm?: { providers?: string[]; active?: string };
-  tts?: { engines?: string[]; available?: string[]; kokoroVoices?: string[]; frequencies?: string[] };
+  tts?: { engines?: string[]; available?: string[] | Record<string, unknown>; kokoroVoices?: string[]; frequencies?: string[] };
   /** Which API keys SUB/WAVE has (true/false only, never the key). */
   env?: Record<string, boolean>;
 }
@@ -183,6 +183,17 @@ export interface SwSchedule {
 }
 
 /** Anything → display text. SubWave fields are sometimes objects ({name}) or arrays. */
+/**
+ * Which voice engines are running. Older SUB/WAVE sends a list of names; newer sends an object
+ * (`{ kokoro: true, piper: false, heavyEnabled: [...], cloudByProvider: {...} }`), where an engine
+ * is up when its value is `true`.
+ */
+export function availableEngines(v: unknown): Set<string> {
+  if (Array.isArray(v)) return new Set(v.filter((x): x is string => typeof x === 'string'));
+  if (v && typeof v === 'object') return new Set(Object.entries(v).filter(([, on]) => on === true).map(([k]) => k));
+  return new Set();
+}
+
 export function txt(v: unknown): string {
   if (v == null || v === false) return '';
   if (typeof v === 'string' || typeof v === 'number') return String(v);
@@ -551,8 +562,15 @@ export class SubWaveSource implements MusicSource {
   installPersona(slug: string) {
     return this.req('POST', `/personas/community/${encodeURIComponent(slug)}/install`, { admin: true, body: {} });
   }
-  avatarFor(p: SwPersonaFull) {
-    return p.avatar && p.id ? `${this.api}/persona-avatar/${encodeURIComponent(p.id)}?v=${encodeURIComponent(p.avatar)}` : undefined;
+  /**
+   * A DJ's picture. /settings gives `avatar` as the stored file name (`<id>.jpg`, '' when none);
+   * /schedule and /personas give it as the public route (`/persona-avatar/<id>`, set even when
+   * there is no picture: SUB/WAVE then serves a 1×1 placeholder, which `Cover` shows as initials).
+   */
+  avatarFor(p: { id?: string; avatar?: string }) {
+    if (!p.avatar) return undefined;
+    if (p.avatar.includes('/')) return this.apiAbs(p.avatar);
+    return p.id ? `${this.api}/persona-avatar/${encodeURIComponent(p.id)}?v=${encodeURIComponent(p.avatar)}` : undefined;
   }
 
   // ---- admin: skills ----

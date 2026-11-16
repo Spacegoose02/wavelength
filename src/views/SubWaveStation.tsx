@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   archiveDays,
+  availableEngines,
   blankPersona,
   type SubWaveSource,
   type SwArchive,
@@ -11,6 +12,7 @@ import {
   type SwStationProfile,
 } from '../sources/subwave';
 import { Cover, Spinner } from '../components/common';
+import { avatarDataUrl } from './subwaveShared';
 import { IconRefresh } from '../components/Icons';
 import { sourceFor } from '../sources/registry';
 import { useSettings } from '../store/settings';
@@ -89,28 +91,6 @@ const ENGINE_NAMES: Record<string, string> = {
   gemini: 'Gemini',
 };
 const label = (pairs: [string, string][], v?: string) => pairs.find(([k]) => k === v)?.[1] ?? v ?? '';
-
-/** Shrink a picked image to a square JPEG small enough for SUB/WAVE (300 KB at most). */
-async function avatarDataUrl(file: File): Promise<string> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    const side = Math.min(img.naturalWidth, img.naturalHeight);
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = Math.min(512, side);
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, canvas.width, canvas.height);
-    for (const q of [0.88, 0.75, 0.6, 0.45]) {
-      const data = canvas.toDataURL('image/jpeg', q);
-      if (data.length * 0.75 < 290 * 1024) return data;
-    }
-    throw new Error('That picture is too big even after shrinking it');
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
 
 // ------------------------------------------------------------------ DJs (personas)
 
@@ -220,7 +200,7 @@ function PersonaEditor({ sw, s, persona, busy, onSave, onCancel }: {
   const [avatarMsg, setAvatarMsg] = useState<string>();
   const [avatarV, setAvatarV] = useState(0);
   const engines = ['inherit', ...(s.tts?.engines ?? Object.keys(ENGINE_NAMES).filter((e) => e !== 'inherit'))];
-  const available = new Set(s.tts?.available ?? []);
+  const available = availableEngines(s.tts?.available);
   const engine = p.tts?.engine ?? 'inherit';
   const setTts = (patch: Partial<NonNullable<SwPersonaFull['tts']>>) => setP({ ...p, tts: { ...(p.tts ?? {}), ...patch } });
 
@@ -405,7 +385,7 @@ export function SwStationSettings({ sw }: { sw: SubWaveSource }) {
   if (loaded.error) return <div className="errors">{loaded.error}</div>;
   if (!s || !form) return <Spinner />;
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
-  const available = new Set(s.tts?.available ?? []);
+  const available = availableEngines(s.tts?.available);
 
   const save = () =>
     run('save', async () => {

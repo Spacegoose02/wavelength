@@ -1928,7 +1928,7 @@ tabs under **Run the station** need SUB/WAVE's admin login, either on the source
 | **On air** | What's playing, what's next and what just played. Request a song or heart the one on air. Admins also get a **Skip** button beside **Like**. |
 | **DJ control** | Skip, make the DJ say something, fire a segment, jingle or sound effect, and queue songs, albums or artist blocks from the library. |
 | **Schedule** | Paint the week's hours with shows, and take over what's on right now. |
-| **Shows** | Make and edit shows: host, guests, brief and moods. |
+| **Shows** | Make and edit shows: host, guests, brief and moods. Each show has its host's picture: click it to upload a new one (it changes that DJ's picture everywhere). |
 | **DJs** | The station's DJs (SUB/WAVE calls them personas). Edit one's name, tagline, how much and how long they talk, humour, warmth and local colour, personality, language, voice engine and voice, and picture. **Make default** picks who hosts when no show is on. **New DJ** starts from SUB/WAVE's default, and **Browse the catalog** adds a ready-made one. Deleting a DJ also deletes the shows they host. |
 | **Skills** | What the DJ does between songs: weather, time checks, trivia and so on. Switch each on or off. A skill that's off can still be fired by hand from DJ control. |
 | **AI & voice** | The AI provider and model (the refresh button lists the provider's models), its API key, and a daily token limit. Near the limit the DJ talks less, and at the limit the music carries on without the DJ. Below that: whether the DJ talks at all, the station's voice engine and its Kokoro voice. **Restart the mixer** if the stream is stuck. |

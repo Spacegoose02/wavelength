@@ -42,3 +42,25 @@ export function SwList({ sw, tracks, timestamps, action }: { sw: SubWaveSource; 
     </div>
   );
 }
+
+/** Shrink a picked image to a square JPEG small enough for SUB/WAVE (300 KB at most). */
+export async function avatarDataUrl(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = Math.min(512, side);
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, canvas.width, canvas.height);
+    for (const q of [0.88, 0.75, 0.6, 0.45]) {
+      const data = canvas.toDataURL('image/jpeg', q);
+      if (data.length * 0.75 < 290 * 1024) return data;
+    }
+    throw new Error('That picture is too big even after shrinking it');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

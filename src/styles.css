@@ -712,6 +712,9 @@ textarea:focus { border-color: var(--accent); }
 .persona { display: flex; gap: 12px; align-items: center; background: rgb(255 255 255 / 0.08); padding: 12px; border-radius: var(--radius); }
 .avatar { width: 54px !important; height: 54px; flex: none; font-size: 16px; }
 .sw-show { background: rgb(255 255 255 / 0.08); padding: 12px; border-radius: var(--radius); }
+.avatar-pick { position: relative; cursor: pointer; flex: none; border-radius: 50%; }
+.avatar-pick::after { content: 'Change'; position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; background: rgb(0 0 0 / 0.55); color: #fff; font-size: 11px; font-weight: 600; opacity: 0; transition: opacity 0.15s; }
+.avatar-pick:hover::after, .avatar-pick:focus-within::after { opacity: 1; }
 .sw-guests { display: flex; align-items: center; gap: 8px; margin-top: 6px; min-width: 0; }
 .sw-guest-faces { display: flex; flex: none; }
 .sw-guests > .small { min-width: 0; }
