@@ -37,7 +37,7 @@ rest:
       - name: Wavelength Phone
         unique_id: wavelength_phone
         value_template: "{{ value_json.state }}"
-        json_attributes: [id, title, artist, album, position, duration, volume, queued]
+        json_attributes: [id, title, artist, album, kind, live, cover, position, duration, volume, queued]
   # how many of your devices are playing, with all of them in the attributes
   - resource: https://hub.example.com/api/ha/players
     headers:
@@ -60,7 +60,9 @@ rest_command:
 ```
 
 Restart Home Assistant. `sensor.wavelength_phone` is `playing`, `paused`, `idle` (open, nothing queued) or `off`
-(Wavelength isn't open there), with the song in its attributes.
+(Wavelength isn't open there), with the song in its attributes. For a radio station, `title` is the station's
+name and `live` is the song the station says it's playing now (when it sends one); `cover` is the song's or
+station's picture (a web link, so it shows in a dashboard's picture card).
 
 ## 3. Use it
 
@@ -118,7 +120,7 @@ anyone else's devices.
 | Route | Who | What |
 |---|---|---|
 | `POST /api/me/homeassistant` | signed in, not kids | `{ token, url, deviceId }`: a new token for Home Assistant (a device with the `homeassistant` platform) |
-| `GET /api/ha/players` | any of your tokens | `{ playing, players: [{ id, name, platform, state, title, artist, album, position, duration, volume, queued }] }` |
+| `GET /api/ha/players` | any of your tokens | `{ playing, players: [{ id, name, platform, state, title, artist, album, kind, live?, cover?, position, duration, volume, queued }] }`; `live` is a radio station's now-playing song, `cover` an http(s) picture link |
 | `GET /api/ha/player?name=` | any of your tokens | one of those by device name (any case), or `{ state: 'off', name }` while it isn't open |
 | `POST /api/ha/players/:id` | any of your tokens | `{ action, value? }`, sent to that device like a Devices command; `404` when it isn't online |
 | `POST /api/ha/players/:id/handoff` | the Home Assistant token | `{ to: <player id or name> }`: the other player picks up this one's queue at the same song and spot and plays; this one pauses. `404` when either isn't online, `409` when nothing is queued there |

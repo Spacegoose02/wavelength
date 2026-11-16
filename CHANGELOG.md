@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.51.0
+- **Home Assistant sees what a radio station is playing.** A device now sends the song its radio station says it's
+  playing (the title the app already shows, `watchNowPlaying` in `src/store/player.ts`) with its state, and
+  `/api/ha/players` passes it on as `live`, next to `kind` and a `cover` (the station's or track's picture, http(s)
+  links only). Home Assistant and dashboards can show what's on instead of just the station's name
+  (`hub/src/routes/remote.ts`, `src/lib/remote.ts`). Needs this Hub version and app version.
+
 ## 0.50.1
 - **Audiobookshelf works in a browser without CORS setup.** In a browser, an Audiobookshelf kept on the Hub is now
   reached through the Hub (`/api/abs/<id>/…`, `hub/src/routes/absRelay.ts`), which calls it with the saved API
