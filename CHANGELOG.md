@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.52.0
+- **Co-hosts' pictures on the SUB/WAVE Now on card.** `/now-playing`'s `activeShow.guests` now carry `{ id, name, avatar }`,
+  and the Now on card shows each co-host's picture as a small overlapping avatar beside the names
+  (`src/views/SubWave.tsx`), resolved by `SubWaveSource.guestAvatar()` (`src/sources/subwave.ts`). A co-host with no
+  picture, or an older SUB/WAVE that sends names only, gets initials.
+
 ## 0.51.1
 - **The on-air DJ's picture shows on the SUB/WAVE player.** `/now-playing` gives `dj.avatar` as a path under the API
   (`/persona-avatar/<id>`), but the app resolved it against the site root, dropping `/api`, so the picture 404'd and the
