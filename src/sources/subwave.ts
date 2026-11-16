@@ -270,6 +270,18 @@ export class SubWaveSource implements MusicSource {
     }
   }
 
+  /**
+   * Resolve a path SUB/WAVE gives relative to its API, such as the on-air DJ's
+   * `avatar` in /now-playing (`/persona-avatar/<id>`, with no `/api` in front).
+   * Full links are kept, and a path that already starts with `/api/` stays on the site.
+   */
+  apiAbs(path?: string) {
+    if (!path) return undefined;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith('//')) return path;
+    if (path === '/api' || path.startsWith('/api/')) return this.abs(path);
+    return `${this.api}${path.startsWith('/') ? '' : '/'}${path}`;
+  }
+
   coverFor(t?: SwTrack) {
     if (!t) return undefined;
     if (t.coverUrl) return this.abs(t.coverUrl);

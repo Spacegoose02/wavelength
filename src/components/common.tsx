@@ -32,12 +32,13 @@ export function fmtTime(s?: number) {
 }
 
 export function Cover({ src, alt, round, className }: { src?: string; alt: string; round?: boolean; className?: string }) {
-  // the picture that failed to load: a new picture for the same card gets its own try
+  // the picture that failed to load (or was a 1×1 placeholder, which SUB/WAVE serves for a DJ with no picture):
+  // a new picture for the same card gets its own try
   const [failed, setFailed] = useState<string>();
   const initials = String(alt ?? '').replace(/[^\p{L}\p{N} ]/gu, '').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   return (
     <div className={`cover ${round ? 'round' : ''} ${className ?? ''}`}>
-      {src && failed !== src ? <img src={src} alt={alt} loading="lazy" onError={() => setFailed(src)} /> : <span>{initials || '♪'}</span>}
+      {src && failed !== src ? <img src={src} alt={alt} loading="lazy" onError={() => setFailed(src)} onLoad={(e) => e.currentTarget.naturalWidth <= 1 && setFailed(src)} /> : <span>{initials || '♪'}</span>}
     </div>
   );
 }

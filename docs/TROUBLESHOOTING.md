@@ -35,6 +35,7 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | Album page: **"Expected ':' after property name in JSON"** (or "Failed to execute 'close' on 'ReadableStreamDefaultController'"); an artist page with no albums; albums that come and go | Navidrome through the Hub's relay, Hub older than 0.17.4: the Hub passed on Navidrome's size for a gzipped reply but sent it unzipped, so the app read only that many bytes | Update the Hub. `hub/src/routes/relay.ts` leaves `content-length` off replies fetch() unzipped |
 | SUB/WAVE tab: blank or errors | API URL wrong (no `/api` behind Caddy, or controller on `:7701`) | Settings → SUB/WAVE → set "API URL" explicitly; admin tabs need ADMIN_USER/ADMIN_PASS |
 | SUB/WAVE: no song time | now-playing has `timestamp` (seconds), not `startedAt` | Handled by `swTrack()`; if SUB/WAVE renames fields, update it there |
+| SUB/WAVE: DJ shows initials, not their picture | `/now-playing`'s `dj.avatar` is a path under the API (`/persona-avatar/<id>`); resolving it against the site root drops `/api` | Resolved with `sw.apiAbs()`. A DJ with no picture gets SUB/WAVE's 1×1 placeholder, which `Cover` treats as missing and shows initials |
 | SUB/WAVE: "Too late — already on its way to air" on cancel | The song was already handed to Liquidsoap and is playing | Expected; only songs still in the queue can be cancelled |
 
 ## Playback
