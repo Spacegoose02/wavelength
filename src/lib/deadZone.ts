@@ -45,7 +45,7 @@ const PROBE_EVERY = 15_000;
 
 /**
  * The songs to keep ready from the queue: the one playing and those after it, until `seconds` of music.
- * Music only (radio, books and podcasts aren't cached). Wraps round when the queue repeats.
+ * Music only (radio, books, podcasts and 30-second Deezer clips aren't cached). Wraps round when the queue repeats.
  */
 export function aheadPlan(queue: Track[], index: number, repeat: Repeat, seconds: number): Track[] {
   const out: Track[] = [];
@@ -59,7 +59,8 @@ export function aheadPlan(queue: Track[], index: number, repeat: Repeat, seconds
       j -= queue.length;
     }
     const t = queue[j];
-    if (t.kind !== 'track' || seen.has(trackKey(t))) continue;
+    // Deezer clips aren't songs to keep: their links run out, and the full song is a Get away
+    if (t.kind !== 'track' || t.sourceId === 'preview' || seen.has(trackKey(t))) continue;
     seen.add(trackKey(t));
     out.push(t);
     total += t.duration || AVG_SECONDS;
