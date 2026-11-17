@@ -455,8 +455,11 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
 - **New people:** `GET`/`PUT /api/admin/new-people` (`keys.manage`, `hub/src/newPeople.ts`):
   `{ navidromeAccount: boolean, services: { [server id]: boolean } }`. Whenever a profile is made (an admin adding
   someone, an invite, a family manager, tinyauth making one; not the first admin), the Hub switches each listed server
-  on or off for them (one not listed follows its access) and, with `navidromeAccount` on (the default) and Navidrome
-  on, makes them a Navidrome account with the admin login on every Navidrome that has one, as **Make account** does.
+  on or off for them (one not listed follows its access) and, with Navidrome on, makes them a Navidrome account with
+  the admin login on every Navidrome that's on for them and has one, as **Make account** does. With Navidrome off
+  (`catalog.standalone`) no account is made: the Hub serves the music and checks the Music switch itself.
+  `navidromeAccount: false` (API only; the app shows no separate switch) stops the accounts while Navidrome is on.
+  `GET` also answers `navidromeOff`.
   A Navidrome that's down or already has that name doesn't stop the profile: it's logged as
   `navidrome.account_failed`.
 - **Own logins:** for Plex and Audiobookshelf an admin can give someone their own token or API key (Settings

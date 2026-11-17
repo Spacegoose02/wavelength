@@ -2058,8 +2058,11 @@ Admins can always use every server.
 
 **New people get (admins):** set once, under Settings → Hub admin → Users, what someone gets the moment their
 profile is made, whether you added them, they used an invite, a family manager added them, or single sign-on made
-their profile: their own **Navidrome account** (on by default, when the Hub has the Navidrome admin login) and each
-server on or off. A server you leave alone follows its access: on when it's for everyone. If Navidrome already has
+their profile: each server on or off, listed by its own name (two SUB/WAVE stations show as, say, **SGI Wave** and
+**SGI Space**). A server you leave alone follows its access: on when it's for everyone. While your Hub still uses
+Navidrome, the Navidrome switch also makes them their own Navidrome account (with the admin login the Hub keeps), so
+their hearts and plays are their own there. Once the Hub serves the music itself (Navidrome turned off on the Music
+catalog card), nobody needs a Navidrome account and none is made; the switch then just says "served by the Hub". If Navidrome already has
 someone by that name, the profile is still made and the audit log says so (`navidrome.account_failed`); use
 **Use their login** under Settings → Server → Navidrome accounts.
 

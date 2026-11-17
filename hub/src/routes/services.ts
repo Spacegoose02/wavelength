@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need, signedIn } from '../http.ts';
-import { createService, deleteService, getService, listServices, relayPassword, relayTarget, relayUsername, removeServiceUser, serviceIdOfKind, servicesFor, servicesForPerson, setServiceAccess, setServiceFamilies, setServiceUser, updateService } from '../services.ts';
+import { createService, deleteService, getService, listServices, relayPassword, relayTarget, relayUsername, removeServiceUser, serviceIdOfKind, servicesFor, navidromeOff, servicesForPerson, setServiceAccess, setServiceFamilies, setServiceUser, updateService } from '../services.ts';
 import { getNewPeople, putNewPeople } from '../newPeople.ts';
 import { createDevice, listDevices } from '../devices.ts';
 import { getUser } from '../users.ts';
@@ -119,7 +119,8 @@ export function serviceRoutes(app: FastifyInstance, { db, config }: Ctx) {
   /** What someone new gets (newPeople.ts): `{ navidromeAccount, services: { [id]: boolean } }`. */
   app.get('/api/admin/new-people', async (req) => {
     need(req, 'keys.manage');
-    return { newPeople: getNewPeople(db) };
+    // the Hub serves the music itself: nobody gets a Navidrome account, so the app says "Music" without Navidrome
+    return { newPeople: getNewPeople(db), navidromeOff: navidromeOff(db) };
   });
   app.put('/api/admin/new-people', async (req) => {
     const { user } = need(req, 'keys.manage');

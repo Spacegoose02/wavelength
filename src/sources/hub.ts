@@ -1264,7 +1264,8 @@ export class HubClient {
   setServiceAccess = (id: number, userId: number, on: boolean) =>
     this.call<{ service: HubAdminService; services: HubPersonService[] }>('PUT', `/api/admin/services/${id}/users/${userId}/access`, { on });
   personServices = (userId: number) => this.call<{ services: HubPersonService[] }>('GET', `/api/admin/users/${userId}/services`);
-  newPeople = () => this.call<{ newPeople: HubNewPeople }>('GET', '/api/admin/new-people');
+  /** `navidromeOff`: the Hub serves the music itself (older Hubs leave it out). */
+  newPeople = () => this.call<{ newPeople: HubNewPeople; navidromeOff?: boolean }>('GET', '/api/admin/new-people');
   setNewPeople = (b: { navidromeAccount?: boolean; services?: Record<string, boolean | null> }) => this.call<{ newPeople: HubNewPeople }>('PUT', '/api/admin/new-people', b);
   /** Make a Navidrome account for someone with the admin login the Hub keeps, saved as their own login. */
   createNavidromeAccount = (id: number, userId: number) => this.call<{ service: HubAdminService }>('POST', `/api/admin/services/${id}/users/${userId}/navidrome-account`, {});

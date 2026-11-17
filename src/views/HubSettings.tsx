@@ -907,13 +907,26 @@ export function AccountTab() {
 
 const EMPTY_USER = { username: '', displayName: '', role: 'member' as HubRole, password: '', ssoSubject: '' };
 
-/** What each kind of server gives someone, in words for the switches. */
+/**
+ * What each kind of server gives someone, in words, shown under the server's own name (two SUB/WAVE stations are
+ * told apart by their names). New people get also notes who serves the music (musicNote).
+ */
 const SERVICE_WHAT: Record<string, string> = {
   navidrome: 'Music',
   plex: 'Music from Plex',
   audiobookshelf: 'Podcasts and audiobooks',
   subwave: 'SUB/WAVE radio',
 };
+
+/** A server's switch label: its own name, then what it gives. */
+function ServiceLabel({ name, what, note }: { name: string; what: string; note?: string }) {
+  return (
+    <span className="service-label">
+      <span>{name}</span>
+      <small className="muted">{what}{note ? ` · ${note}` : ''}</small>
+    </span>
+  );
+}
 
 /**
  * One person's servers, each with a switch (hub/src/services.ts setServiceAccess): Music, Podcasts and audiobooks,
@@ -953,10 +966,7 @@ function PersonServices({ user }: { user: HubAdminUser }) {
             <span className="switch">
               <input type="checkbox" checked={s.on} disabled={s.locked || busy === s.id} onChange={(e) => run(s.id, () => c.setServiceAccess(s.id, user.id, e.target.checked))} /><span />
             </span>
-            <span>
-              {SERVICE_WHAT[s.kind] ?? s.name} <span className="muted small">· {s.name}</span>
-              {s.on && s.otherFamilies && <small className="muted"> · only for other families, so they don’t get it yet</small>}
-            </span>
+            <ServiceLabel name={s.name} what={SERVICE_WHAT[s.kind] ?? s.kind} note={s.on && s.otherFamilies ? 'only for other families, so they don’t get it yet' : undefined} />
           </label>
           {s.on && s.needsAccount && (
             <button className="btn small" disabled={busy === s.id} onClick={() => run(s.id, () => c.createNavidromeAccount(s.id, user.id))} title="Navidrome gives music only to people with an account there">
@@ -976,6 +986,7 @@ function PersonServices({ user }: { user: HubAdminUser }) {
 function NewPeopleSettings() {
   const c = hubClient();
   const [np, setNp] = useState<HubNewPeople>();
+  const [hubServesMusic, setHubServesMusic] = useState(false);
   const [servers, setServers] = useState<HubAdminService[]>([]);
   const [err, setErr] = useState('');
   useEffect(() => {
@@ -983,6 +994,7 @@ function NewPeopleSettings() {
     Promise.all([c.newPeople(), c.adminServices()])
       .then(([n, s]) => {
         setNp(n.newPeople);
+        setHubServesMusic(!!n.navidromeOff);
         setServers(s.services.filter((x) => x.kind in SERVICE_WHAT));
       })
       .catch((e) => setErr(errText(e)));
@@ -996,7 +1008,8 @@ function NewPeopleSettings() {
     }
   };
   if (!c || (!np && !err)) return null;
-  const hasNavidrome = servers.some((s) => s.kind === 'navidrome');
+  // with Navidrome on, Music on also makes them a Navidrome account (hub/src/newPeople.ts); with it off the Hub serves it
+  const musicNote = hubServesMusic ? 'served by the Hub' : np?.navidromeAccount === false ? undefined : 'makes them a Navidrome account';
   return (
     <section>
       <h2>New people get</h2>
@@ -1007,18 +1020,12 @@ function NewPeopleSettings() {
       {err && <div className="errors">{err}</div>}
       {np && (
         <div className="editor">
-          {hasNavidrome && (
-            <label className="check">
-              <span className="switch"><input type="checkbox" checked={np.navidromeAccount} onChange={(e) => save({ navidromeAccount: e.target.checked })} /><span /></span>
-              Make them a Navidrome account (with the admin login the Hub keeps)
-            </label>
-          )}
           {servers.map((s) => {
             const on = np.services[String(s.id)] ?? s.access === 'everyone';
             return (
               <label key={s.id} className="check">
                 <span className="switch"><input type="checkbox" checked={on} onChange={(e) => save({ services: { [s.id]: e.target.checked } })} /><span /></span>
-                {SERVICE_WHAT[s.kind]} <span className="muted small">· {s.name}</span>
+                <ServiceLabel name={s.name} what={SERVICE_WHAT[s.kind]} note={s.kind === 'navidrome' ? musicNote : undefined} />
               </label>
             );
           })}
