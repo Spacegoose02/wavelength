@@ -9,6 +9,7 @@ import { clientIp, html, HttpError, signedIn, str } from '../http.ts';
 import { familySize, getFamily, managedFamily, setMembership } from '../families.ts';
 import { invitePage, message } from '../pages.ts';
 import { isRole, type Role } from '../roles.ts';
+import { welcomeNewPerson } from '../newPeople.ts';
 import { createUser, getUserForLogin, USERNAME_RE, type User } from '../users.ts';
 import { MIN_PASSWORD, session } from './auth.ts';
 
@@ -126,7 +127,7 @@ export function inviteRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
     if (!USERNAME_RE.test(username)) throw new HttpError(400, 'Usernames are 1–32 letters, numbers, dots, dashes or underscores');
     if (password.length < MIN_PASSWORD) throw new HttpError(400, `Passwords need at least ${MIN_PASSWORD} characters`);
     const passwordHash = await hashPassword(password);
-    return tx(db, () => {
+    const made = tx(db, () => {
       const inv = live(code);
       if (!inv) throw new HttpError(410, 'This invite has been used or has expired. Ask for a new one');
       if (getUserForLogin(db, username)) throw new HttpError(409, 'That username is taken. Pick another');
@@ -138,6 +139,8 @@ export function inviteRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
       audit(db, { actorId: u.id, action: 'invite.accepted', target: u.username, detail: { role: u.role, invite: inv.id, by: inv.created_by }, ip });
       return u;
     });
+    await welcomeNewPerson(db, config.secretKey, made, ip);
+    return made;
   }
 
   const codeOf = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);

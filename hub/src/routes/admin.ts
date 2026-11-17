@@ -6,6 +6,7 @@ import { tx } from '../db.ts';
 import { getDevice, listDevices, revokeDevice, revokeUserDevices } from '../devices.ts';
 import { clientIp, HttpError, need, str } from '../http.ts';
 import { isRole, permissionsFor } from '../roles.ts';
+import { welcomeNewPerson } from '../newPeople.ts';
 import { countActiveAdmins, createUser, deleteUser, getUser, getUserBySso, getUserForLogin, listUsers, updateUser, USERNAME_RE, type User, type UserPatch } from '../users.ts';
 import { disableTotp, totpEnabled } from '../totp.ts';
 import { guardiansOf, setGuardians } from '../family.ts';
@@ -17,7 +18,7 @@ import { ssoIsFamilyLogin } from '../familyLogins.ts';
  * Admin-only routes. Every handler starts with `need(req, …)`, which answers 401/403 before anything
  * happens; test/admin.test.ts checks that members and kids are refused on each of them.
  */
-export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
+export function adminRoutes(app: FastifyInstance, { db, config }: Ctx) {
   const withDevices = (u: User) => {
     const devices = listDevices(db, u.id);
     return { ...u, permissions: permissionsFor(u), devices: devices.length, lastSeenAt: devices[0]?.lastSeenAt ?? null, twoFactor: totpEnabled(db, u.id), ...(u.role === 'kid' && { guardians: guardiansOf(db, u.id) }) };
@@ -79,6 +80,7 @@ export function adminRoutes(app: FastifyInstance, { db }: Ctx) {
       return createUser(db, { username, ...p, role: p.role! });
     });
     audit(db, { actorId: actor.id, action: 'user.created', target: u.username, detail: { role: u.role, sso: !!u.ssoSubject }, ip: clientIp(req) });
+    await welcomeNewPerson(db, config.secretKey, u, clientIp(req));
     return { user: withDevices(u) };
   });
 

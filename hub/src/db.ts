@@ -769,6 +769,11 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   ALTER TABLE families ADD COLUMN downloads TEXT NOT NULL DEFAULT 'person';  -- person | auto | request | off
   ALTER TABLE families ADD COLUMN approve_requests INTEGER NOT NULL DEFAULT 0; -- its managers approve its requests
   `,
+  // 42 — a per-person switch for each server (services.ts setServiceAccess): 0 turns a server off for someone while
+  // keeping their own login, so it can be turned back on without making them a new one
+  `
+  ALTER TABLE service_users ADD COLUMN allowed INTEGER NOT NULL DEFAULT 1;
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

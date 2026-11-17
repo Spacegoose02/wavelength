@@ -10,6 +10,7 @@ import {
 } from '../families.ts';
 import { guardiansOf, setGuardians } from '../family.ts';
 import { clientIp, HttpError, need, signedIn, str } from '../http.ts';
+import { welcomeNewPerson } from '../newPeople.ts';
 import { createUser, getUser, getUserForLogin, updateUser, USERNAME_RE, type User } from '../users.ts';
 import { MIN_PASSWORD, session } from './auth.ts';
 
@@ -152,6 +153,7 @@ export function familyRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
       return setMembership(db, made.id, f.id, false);
     });
     audit(db, { actorId: user.id, action: 'user.created', target: u.username, detail: { role: u.role, family: f.name }, ip: clientIp(req) });
+    await welcomeNewPerson(db, config.secretKey, u, clientIp(req));
     return { user: person(u) };
   });
 

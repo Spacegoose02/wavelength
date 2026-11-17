@@ -66,8 +66,11 @@ export function Home() {
   if (!sources.length) {
     return (
       <Empty title="Welcome to Wavelength">
-        <p>Add your Navidrome, Plex, Audiobookshelf and SubWave servers to build one catalog.</p>
-        <button className="btn primary" onClick={() => go({ view: 'settings' })}>Add a source</button>
+        <p>Connect to your Wavelength Hub, or add your Navidrome, Plex, Audiobookshelf and SubWave servers to build one catalog.</p>
+        <div className="row gap" style={{ justifyContent: 'center' }}>
+          <button className="btn primary" onClick={() => go({ view: 'settings', tab: 'account' })}>Connect to a Hub</button>
+          <button className="btn" onClick={() => go({ view: 'settings', tab: 'sources' })}>Add a source</button>
+        </div>
       </Empty>
     );
   }

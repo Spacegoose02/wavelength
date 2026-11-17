@@ -13,6 +13,7 @@ import { checkFamilyPassword, getFamilyLogin, checkFamilyToken, familyLoginBySso
 import { permissionsFor } from '../roles.ts';
 import { cookie, IDENTITY_COOKIE, IDENTITY_TTL_S, identityCookieValue, readCookie, safeNext, STATE_COOKIE } from '../oidc.ts';
 import { isSsoAdmin, requestIdentity, ssoSettings, type SsoIdentity } from '../sso.ts';
+import { applyNewPeopleServices, makeNavidromeAccounts } from '../newPeople.ts';
 import { countUsers, createUser, getUser, getUserBySso, getUserForLogin, updateUser, USERNAME_RE, type User } from '../users.ts';
 
 export const MIN_PASSWORD = 10;
@@ -90,6 +91,9 @@ export function authRoutes(app: FastifyInstance, { db, config, limits, oidc }: C
       for (let n = 2; getUserForLogin(db, username); n++) username = `${username.replace(/\d+$/, '')}${n}`;
       const u = createUser(db, { username, displayName: id.name || id.username, role: admin ? 'admin' : 'member', ssoSubject: id.username });
       audit(db, { actorId: u.id, action: 'user.created_by_sso', target: u.username, detail: { role: u.role }, ip });
+      applyNewPeopleServices(db, u);
+      // after this transaction commits: the Navidrome account is made over the network
+      queueMicrotask(() => void makeNavidromeAccounts(db, config.secretKey, u, ip));
       return u;
     });
   }

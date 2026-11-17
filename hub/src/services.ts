@@ -71,7 +71,8 @@ export interface AdminService {
   secretsSet: string[];
   /** The secret key changed since these were saved, so they can't be read. Re-enter them. */
   unreadable: boolean;
-  users: { userId: number; secretsSet: string[]; unreadable: boolean }[];
+  /** `allowed: false`: switched off for this person (setServiceAccess), whatever the access says. */
+  users: { userId: number; secretsSet: string[]; unreadable: boolean; allowed: boolean }[];
   /** Only these families get it (families.ts); empty = every family. Admins always do. */
   families: number[];
 }
@@ -145,7 +146,18 @@ export function setServiceFamilies(db: Db, key: Buffer, id: number, ids: unknown
   return getService(db, key, id)!;
 }
 
-const userRows = (db: Db, id: number) => db.prepare('SELECT user_id, secrets FROM service_users WHERE service_id = ? ORDER BY user_id').all(id) as { user_id: number; secrets: string | null }[];
+const userRows = (db: Db, id: number) => db.prepare('SELECT user_id, secrets, allowed FROM service_users WHERE service_id = ? ORDER BY user_id').all(id) as { user_id: number; secrets: string | null; allowed: number }[];
+
+type Mine = { secrets: string | null; allowed: number } | undefined;
+const mineOf = (db: Db, id: number, userId: number) =>
+  db.prepare('SELECT secrets, allowed FROM service_users WHERE service_id = ? AND user_id = ?').get(id, userId) as Mine;
+
+/**
+ * May this person use this (non-download) server? Admins always may. Otherwise the server's access decides, and a
+ * per-person switch that's off (`allowed = 0`) wins over it. Families are checked separately (familyAllows).
+ */
+const accessAllows = (r: { access: Access }, role: string, mine: Mine) =>
+  role === 'admin' || (mine?.allowed !== 0 && (r.access === 'everyone' || (r.access === 'chosen' && !!mine)));
 
 export function listServices(db: Db, key: Buffer): AdminService[] {
   return rows(db).map((r) => {
@@ -161,7 +173,7 @@ export function listServices(db: Db, key: Buffer): AdminService[] {
       unreadable: shared.unreadable,
       users: userRows(db, r.id).map((u) => {
         const own = open(key, u.secrets, aadUser(r.id, u.user_id));
-        return { userId: u.user_id, secretsSet: Object.keys(own.fields), unreadable: own.unreadable };
+        return { userId: u.user_id, secretsSet: Object.keys(own.fields), unreadable: own.unreadable, allowed: u.allowed !== 0 };
       }),
       families: familyIds(db, r.id),
     };
@@ -266,7 +278,10 @@ export function deleteService(db: Db, id: number): Row {
   return r;
 }
 
-/** Give someone access (for 'chosen'), and/or their own login. `secrets` follows patchFields. */
+/**
+ * Give someone access (for 'chosen'), and/or their own login. `secrets` follows patchFields. Without `secrets` it's
+ * "let them use it", which also turns their switch back on; setting a login leaves the switch as it is.
+ */
 export function setServiceUser(db: Db, key: Buffer, id: number, userId: number, secretsPatch: unknown): AdminService {
   tx(db, () => {
     const r = getRow(db, id);
@@ -275,7 +290,7 @@ export function setServiceUser(db: Db, key: Buffer, id: number, userId: number, 
     const own = patchFields(open(key, cur?.secrets ?? null, aadUser(id, userId)).fields, secretsPatch, spec(r.kind).own, 'secrets');
     db.prepare(
       `INSERT INTO service_users (service_id, user_id, secrets) VALUES (?, ?, ?)
-       ON CONFLICT (service_id, user_id) DO UPDATE SET secrets = excluded.secrets`,
+       ON CONFLICT (service_id, user_id) DO UPDATE SET secrets = excluded.secrets${secretsPatch === undefined ? ', allowed = 1' : ''}`,
     ).run(id, userId, close(key, own, aadUser(id, userId)));
   });
   return getService(db, key, id)!;
@@ -288,6 +303,67 @@ export function removeServiceUser(db: Db, key: Buffer, id: number, userId: numbe
 }
 
 /**
+ * The per-person switch (Settings → Hub admin → Users → a person → Services, and a server's "Who can use it"). On: an
+ * admins-only server becomes "People I choose" so this person can be added (admins keep it either way); a server for
+ * everyone needs nothing more. Off: kept as a row with `allowed = 0`, so the person's own login (their Navidrome
+ * account, their own Plex token) survives and turning it back on gives them the same one. Admins can't be switched off.
+ */
+export function setServiceAccess(db: Db, key: Buffer, id: number, user: { id: number; role: string }, on: boolean): AdminService {
+  tx(db, () => {
+    const r = getRow(db, id);
+    if (!r) throw new HttpError(404, 'No such server');
+    if (spec(r.kind).download) throw new HttpError(400, 'Who may download is set by Autodownload, not per server');
+    if (user.role === 'admin') {
+      if (!on) throw new HttpError(400, 'Admins can always use every server');
+      return;
+    }
+    if (on && r.access === 'admins') db.prepare("UPDATE services SET access = 'chosen', updated_at = ? WHERE id = ?").run(Date.now(), id);
+    db.prepare(
+      `INSERT INTO service_users (service_id, user_id, secrets, allowed) VALUES (?, ?, NULL, ?)
+       ON CONFLICT (service_id, user_id) DO UPDATE SET allowed = excluded.allowed`,
+    ).run(id, user.id, on ? 1 : 0);
+  });
+  return getService(db, key, id)!;
+}
+
+/** One server as a person's switch shows it (GET /api/admin/users/:id/services). */
+export interface PersonService {
+  id: number;
+  kind: ServiceKind;
+  name: string;
+  access: Access;
+  /** They can use it now. */
+  on: boolean;
+  /** An admin: always on. */
+  locked: boolean;
+  /** The server is limited to families this person isn't in, so the switch alone doesn't give it to them. */
+  otherFamilies: boolean;
+  /** Navidrome: they have their own Navidrome login (without one, the switch on still gives them no music). */
+  ownLogin: boolean;
+  /** Navidrome is on and they have no account on it yet. */
+  needsAccount: boolean;
+}
+
+export function servicesForPerson(db: Db, user: { id: number; role: string; familyId: number | null }): PersonService[] {
+  const off = navidromeOff(db);
+  return rows(db).filter((r) => !spec(r.kind).download).map((r) => {
+    const mine = mineOf(db, r.id, user.id);
+    const own = !!mine?.secrets;
+    return {
+      id: r.id,
+      kind: r.kind,
+      name: r.name,
+      access: r.access,
+      on: accessAllows(r, user.role, mine),
+      locked: user.role === 'admin',
+      otherFamilies: !familyAllows(db, r.id, user),
+      ownLogin: own,
+      needsAccount: r.kind === 'navidrome' && !off && !own,
+    };
+  });
+}
+
+/**
  * The servers this person's devices may use, with the logins filled in. This is the only place a secret
  * leaves the Hub, so every rule about who gets what lives here.
  */
@@ -295,10 +371,8 @@ export function servicesFor(db: Db, key: Buffer, { user, device, permissions }: 
   const out: DeviceService[] = [];
   for (const r of rows(db)) {
     const s = spec(r.kind);
-    const mine = db.prepare('SELECT secrets FROM service_users WHERE service_id = ? AND user_id = ?').get(r.id, user.id) as { secrets: string | null } | undefined;
-    const allowed = s.download
-      ? permissions.includes('downloads.run')
-      : r.access === 'everyone' || user.role === 'admin' || (r.access === 'chosen' && !!mine);
+    const mine = mineOf(db, r.id, user.id);
+    const allowed = s.download ? permissions.includes('downloads.run') : accessAllows(r, user.role, mine);
     if (!allowed || !familyAllows(db, r.id, user)) continue;
     const own = open(key, mine?.secrets ?? null, aadUser(r.id, user.id)).fields;
     const off = r.kind === 'navidrome' && navidromeOff(db);
@@ -359,8 +433,8 @@ export function relayTarget(db: Db, key: Buffer, id: number, userId: number, rol
   const r = getRow(db, id);
   const off = navidromeOff(db);
   if (!r || r.kind !== 'navidrome' || !(off || relayed(role, JSON.parse(r.config) as Config))) return undefined;
-  const mine = db.prepare('SELECT secrets FROM service_users WHERE service_id = ? AND user_id = ?').get(id, userId) as { secrets: string | null } | undefined;
-  if (!(r.access === 'everyone' || role === 'admin' || (r.access === 'chosen' && mine))) return undefined;
+  const mine = mineOf(db, id, userId);
+  if (!accessAllows(r, role, mine)) return undefined;
   const familyId = (db.prepare('SELECT family_id FROM users WHERE id = ?').get(userId) as { family_id: number | null } | undefined)?.family_id ?? null;
   if (!familyAllows(db, id, { role, familyId })) return undefined;
   const own = open(key, mine?.secrets ?? null, aadUser(id, userId)).fields;
