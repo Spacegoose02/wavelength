@@ -12,11 +12,12 @@ import { ProfileSwitcher } from '../components/ProfileSwitcher';
 import { FamiliesAdmin, ServiceFamilies } from './Families';
 import { SsoAdmin } from './SsoAdmin';
 import { SwitchPinSetting } from '../components/WhosListening';
-import { HubClient, HubError, isPick, type HubPickResponse, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubAuditEntry, type HubAppLogin, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
+import { HubClient, HubError, isPick, type HubPickResponse, type HubPush, type HubPublicLink, type HubSession, type HubAccess as Access, type HubAdminService, type HubAdminUser, type HubNewPeople, type HubPersonService, type HubAuditEntry, type HubAppLogin, type HubDevice, type HubHealth, type HubInvite, type HubPairing, type HubRole, type HubScrobbleAccount, type KidRules } from '../sources/hub';
 import { hubClient, sameFamily, thisDevice, useHub } from '../store/hub';
 import { useFeature } from '../lib/features';
 import { useWebHub, wantsWebSso } from '../lib/webHub';
 import { FamilyPicker } from '../components/FamilyPicker';
+import { findHub, HubNotFound } from '../lib/hubAddress';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 
@@ -102,8 +103,11 @@ function Pairing({ client, onDone, take, sso, onPick }: { client: HubClient; onD
   );
 }
 
-/** Signing in; with `adding`, a second person on this device (ProfileSwitcher) and `onCancel` to go back. */
-export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: () => void } = {}) {
+/**
+ * Signing in; with `adding`, a second person on this device (ProfileSwitcher) and `onCancel` to go back. `firstRun`:
+ * the welcome screen (components/FirstRun.tsx), which words it for someone who has never heard of a Hub.
+ */
+export function SignedOut({ adding, onCancel, firstRun }: { adding?: boolean; onCancel?: () => void; firstRun?: boolean } = {}) {
   const { url, setUrl, signedIn: first, addProfile } = useHub();
   const [err, setErr] = useState('');
   const me = useHub((s) => s.user);
@@ -120,6 +124,9 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
   const [draft, setDraft] = useState(url);
   const [health, setHealth] = useState<HubHealth>();
   const [mode, setMode] = useState<'code' | 'sso' | 'password' | 'invite' | null>(null);
+  /** "Other ways to sign in" is open. */
+  const [more, setMore] = useState(false);
+  const [finding, setFinding] = useState(false);
   /** A family sign-in answered: pick a profile (components/FamilyPicker.tsx). */
   const [pick, setPick] = useState<HubPickResponse['pick']>();
   const family = useHub((s) => s.family);
@@ -140,21 +147,24 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
     setErr('');
     setHealth(undefined);
     setMode(null);
+    setMore(false);
     // an invite link pasted as the address: connect to its Hub and fill the invite in
     const inv = /^(.*?)\/invite\/([\w-]+)/.exec(draft.trim());
-    const address = inv ? inv[1] : draft;
+    setFinding(true);
     try {
-      const h = await new HubClient(address).health();
-      if (h.ok !== true) throw new Error("That address answered, but it isn't a Wavelength Hub");
-      setUrl(address.trim().replace(/\/+$/, ''));
+      // typed the way people type it: no http://, no port, a link to one of the Hub's pages (lib/hubAddress.ts)
+      const found = await findHub(inv ? inv[1] : draft);
+      setUrl(found.url);
+      setDraft(found.url);
       if (inv) {
-        setDraft(inv[1]);
         setInvite(inv[2]);
         setMode('invite');
       }
-      setHealth(h);
+      setHealth(found.health);
     } catch (e) {
-      setErr(`Couldn't reach a Hub there: ${errText(e)}`);
+      setErr(e instanceof HubNotFound ? e.message : `Couldn't reach a Hub there: ${errText(e)}`);
+    } finally {
+      setFinding(false);
     }
   };
   useEffect(() => {
@@ -205,19 +215,40 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
     }
   };
 
+  // one way to sign in up front (single sign-on when it's on, otherwise a password); the rest under "Other ways"
+  const primary = health?.sso ? 'sso' : 'password';
+  const shown = mode ?? (primary === 'password' ? 'password' : null);
+  // single sign-on, when it's on, keeps its own big button above, so it's never one of the others
+  const others = (['code', 'password', 'invite'] as const).filter((m) => m !== shown);
+  const otherLabel = { code: 'Sign in with a code', password: 'Sign in with a password', invite: 'I have an invite' };
+  const ssoLabel = `Sign in with ${health?.ssoName || 'single sign-on'}`;
+  const startSso = () => (onHubPage ? void webSso(false) : setMode('sso'));
+
   return (
     <section>
-      <h2>{adding ? 'Add someone to this device' : 'Wavelength Hub'}</h2>
+      <h2>{adding ? 'Add someone to this device' : firstRun ? 'Connect to your server' : 'Wavelength Hub'}</h2>
       {adding && <button className="btn small ghost" onClick={onCancel}>← Back</button>}
-      <p className="muted small">
-        A Hub gives everyone in the house their own profile: their own settings on every device, and admin-only controls that
-        really are admin-only. It's optional; without one Wavelength works as before. Downloaded music always plays, signed in or not.
-      </p>
+      {firstRun ? (
+        <p className="muted small">
+          Type the address of your Wavelength Hub: the one you open Wavelength at in a browser, like <b>192.168.1.10:7780</b> or{' '}
+          <b>music.example.com</b>. Your music, podcasts and settings come with it.
+        </p>
+      ) : (
+        <p className="muted small">
+          A Hub gives everyone in the house their own profile: their own settings on every device, and admin-only controls that
+          really are admin-only. It's optional; without one Wavelength works as before. Downloaded music always plays, signed in or not.
+        </p>
+      )}
       <form className="editor" onSubmit={connect}>
         <div className="editor-grid">
-          <label className="span2">Hub address<input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="https://hub.example.com" required /></label>
+          <label className="span2">{firstRun ? 'Server address' : 'Hub address'}
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="192.168.1.10:7780 or music.example.com" required autoFocus={firstRun} autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode="url" />
+          </label>
         </div>
-        <div className="row gap"><button className="btn">Connect</button>{health && <span className="ok">✓ Wavelength Hub {health.version}</span>}</div>
+        <div className="row gap">
+          <button className={`btn ${health ? '' : 'primary'}`} disabled={finding}>{finding ? 'Looking…' : 'Connect'}</button>
+          {health && <span className="ok">✓ Wavelength Hub {health.version}</span>}
+        </div>
       </form>
       {err && <div className="errors">{err}</div>}
 
@@ -236,17 +267,12 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
 
       {health && !health.setupNeeded && (
         <div className="editor">
-          <div className="row gap wrap">
-            {health.sso && (
-              <button className={`btn ${mode === 'sso' ? 'primary' : ''}`} onClick={() => (onHubPage ? void webSso(false) : setMode('sso'))}>Sign in with {health.ssoName || 'single sign-on'}</button>
-            )}
-            <button className={`btn ${mode === 'code' ? 'primary' : ''}`} onClick={() => setMode('code')}>Sign in with a code</button>
-            <button className={`btn ${mode === 'password' ? 'primary' : ''}`} onClick={() => setMode('password')}>Sign in with a password</button>
-            <button className={`btn ${mode === 'invite' ? 'primary' : ''}`} onClick={() => setMode('invite')}>I have an invite</button>
-          </div>
-          {mode === 'code' && <Pairing client={client} onDone={() => setMode(null)} take={adding ? signedIn : undefined} onPick={onPick} />}
-          {mode === 'sso' && <Pairing client={client} onDone={() => setMode(null)} take={adding ? signedIn : undefined} onPick={onPick} sso={health.ssoName || 'single sign-on'} />}
-          {mode === 'password' && (
+          {primary === 'sso' && mode !== 'sso' && (
+            <div className="row gap"><button className="btn primary" onClick={startSso}>{ssoLabel}</button></div>
+          )}
+          {shown === 'code' && <Pairing client={client} onDone={() => setMode(null)} take={adding ? signedIn : undefined} onPick={onPick} />}
+          {shown === 'sso' && <Pairing client={client} onDone={() => setMode(null)} take={adding ? signedIn : undefined} onPick={onPick} sso={health.ssoName || 'single sign-on'} />}
+          {shown === 'password' && (
             <form onSubmit={submit}>
               <div className="editor-grid">
                 <label>Username<input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required autoComplete="username" /></label>
@@ -256,7 +282,7 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
               <div className="row gap" style={{ marginTop: 12 }}><button className="btn primary">Sign in</button></div>
             </form>
           )}
-          {mode === 'invite' && (
+          {shown === 'invite' && (
             <form onSubmit={submit}>
               <p className="muted small">Paste the invite link you were sent, then pick your username and password.</p>
               <div className="editor-grid">
@@ -268,6 +294,15 @@ export function SignedOut({ adding, onCancel }: { adding?: boolean; onCancel?: (
               <div className="row gap" style={{ marginTop: 12 }}><button className="btn primary">Make my account</button></div>
             </form>
           )}
+          <div className="row gap wrap signin-others">
+            {!more ? (
+              <button className="btn small ghost" onClick={() => setMore(true)}>Other ways to sign in</button>
+            ) : (
+              others.map((m) => (
+                <button key={m} className={`btn small ${mode === m ? 'primary' : ''}`} onClick={() => setMode(m)}>{otherLabel[m]}</button>
+              ))
+            )}
+          </div>
         </div>
       )}
     </section>
@@ -872,6 +907,139 @@ export function AccountTab() {
 
 const EMPTY_USER = { username: '', displayName: '', role: 'member' as HubRole, password: '', ssoSubject: '' };
 
+/** What each kind of server gives someone, in words for the switches. */
+const SERVICE_WHAT: Record<string, string> = {
+  navidrome: 'Music',
+  plex: 'Music from Plex',
+  audiobookshelf: 'Podcasts and audiobooks',
+  subwave: 'SUB/WAVE radio',
+};
+
+/**
+ * One person's servers, each with a switch (hub/src/services.ts setServiceAccess): Music, Podcasts and audiobooks,
+ * Plex, SUB/WAVE. Off keeps their own login. Navidrome also needs an account of theirs, made here with one press.
+ */
+function PersonServices({ user }: { user: HubAdminUser }) {
+  const c = hubClient();
+  const [list, setList] = useState<HubPersonService[]>();
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState<number>();
+  useEffect(() => {
+    c?.personServices(user.id).then((r) => setList(r.services), (e) => setErr(errText(e)));
+  }, [user.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const run = async (id: number, f: () => Promise<unknown>) => {
+    setBusy(id);
+    setErr('');
+    try {
+      await f();
+      setList((await c!.personServices(user.id)).services);
+      await loadHubServices();
+    } catch (e) {
+      setErr(errText(e));
+    } finally {
+      setBusy(undefined);
+    }
+  };
+  if (!c) return null;
+  if (!list) return err ? <div className="errors">{err}</div> : <small className="muted">Loading…</small>;
+  return (
+    <div className="hub-guardians-list person-services">
+      {err && <div className="errors">{err}</div>}
+      {!list.length && <small className="muted">No servers on the Hub yet. Add them under Settings → Sources and press Move to Hub.</small>}
+      {user.role === 'admin' && list.length > 0 && <small className="muted">Admins can always use every server.</small>}
+      {list.map((s) => (
+        <div key={s.id} className="person-service">
+          <label className="check">
+            <span className="switch">
+              <input type="checkbox" checked={s.on} disabled={s.locked || busy === s.id} onChange={(e) => run(s.id, () => c.setServiceAccess(s.id, user.id, e.target.checked))} /><span />
+            </span>
+            <span>
+              {SERVICE_WHAT[s.kind] ?? s.name} <span className="muted small">· {s.name}</span>
+              {s.on && s.otherFamilies && <small className="muted"> · only for other families, so they don’t get it yet</small>}
+            </span>
+          </label>
+          {s.on && s.needsAccount && (
+            <button className="btn small" disabled={busy === s.id} onClick={() => run(s.id, () => c.createNavidromeAccount(s.id, user.id))} title="Navidrome gives music only to people with an account there">
+              Make their Navidrome account
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * What someone new gets the moment their profile is made (hub/src/newPeople.ts): an invite, an admin adding them, a
+ * family manager, or tinyauth making a profile. A server left alone follows its access.
+ */
+function NewPeopleSettings() {
+  const c = hubClient();
+  const [np, setNp] = useState<HubNewPeople>();
+  const [servers, setServers] = useState<HubAdminService[]>([]);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    if (!c) return;
+    Promise.all([c.newPeople(), c.adminServices()])
+      .then(([n, s]) => {
+        setNp(n.newPeople);
+        setServers(s.services.filter((x) => x.kind in SERVICE_WHAT));
+      })
+      .catch((e) => setErr(errText(e)));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const save = async (b: Parameters<HubClient['setNewPeople']>[0]) => {
+    try {
+      setNp((await c!.setNewPeople(b)).newPeople);
+      setErr('');
+    } catch (e) {
+      setErr(errText(e));
+    }
+  };
+  if (!c || (!np && !err)) return null;
+  const hasNavidrome = servers.some((s) => s.kind === 'navidrome');
+  return (
+    <section>
+      <h2>New people get</h2>
+      <p className="muted small">
+        Set once, and everyone you add, invite, or who signs in with single sign-on for the first time gets these straight away. Change
+        someone later with <b>Services</b> on their row above.
+      </p>
+      {err && <div className="errors">{err}</div>}
+      {np && (
+        <div className="editor">
+          {hasNavidrome && (
+            <label className="check">
+              <span className="switch"><input type="checkbox" checked={np.navidromeAccount} onChange={(e) => save({ navidromeAccount: e.target.checked })} /><span /></span>
+              Make them a Navidrome account (with the admin login the Hub keeps)
+            </label>
+          )}
+          {servers.map((s) => {
+            const on = np.services[String(s.id)] ?? s.access === 'everyone';
+            return (
+              <label key={s.id} className="check">
+                <span className="switch"><input type="checkbox" checked={on} onChange={(e) => save({ services: { [s.id]: e.target.checked } })} /><span /></span>
+                {SERVICE_WHAT[s.kind]} <span className="muted small">· {s.name}</span>
+              </label>
+            );
+          })}
+          {!servers.length && <small className="muted">No servers on the Hub yet. Add them under Settings → Sources and press Move to Hub.</small>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** A row's Services button: loads the person's switches only when opened. */
+function ServicesButton({ user }: { user: HubAdminUser }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details className="hub-guardians" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary className="btn small" title="Which servers they can use: music, podcasts and audiobooks, Plex, SUB/WAVE">Services</summary>
+      {open && <PersonServices user={user} />}
+    </details>
+  );
+}
+
 /** Settings → Users: only shown to Hub admins, and the Hub refuses every call here from anyone else. */
 export function UsersTab() {
   const me = useHub((s) => s.user);
@@ -916,7 +1084,7 @@ export function UsersTab() {
         <p className="muted small">Roles: <b>Admin</b> can do everything. <b>Member</b> listens and requests music; turn on <b>Autodownload</b> to let them download without your approval. <b>Kid</b> gets the kid-safe view and can never autodownload. Give a kid <b>Parents</b> and their requests and weekly listening report go to those grown-ups too, who can approve them from their Inbox.</p>
         {err && <div className="errors">{err}</div>}
         {users.map((u) => (
-          <div key={u.id} className={`source-row ${u.disabled ? 'off' : ''}`}>
+          <div key={u.id} className={`source-row hub-user-row ${u.disabled ? 'off' : ''}`}>
             <div className="hub-avatar">{u.displayName.slice(0, 1).toUpperCase()}</div>
             <div className="track-main">
               <div className="track-title">{u.displayName}{u.id === me?.id ? <span className="muted small"> · you</span> : null}</div>
@@ -933,6 +1101,7 @@ export function UsersTab() {
                 <small>Autodownload</small>
               </label>
             )}
+            <ServicesButton user={u} />
             <button className="btn small" onClick={() => {
               const password = prompt(`New Hub password for ${u.displayName} (at least 10 characters):`);
               if (password) run(() => c.updateUser(u.id, { password }));
@@ -1000,6 +1169,8 @@ export function UsersTab() {
           <div className="row gap"><button className="btn primary">Add</button></div>
         </form>
       </section>
+
+      <NewPeopleSettings />
 
       <SsoAdmin />
 
@@ -1335,9 +1506,11 @@ export function HubAccess({ serviceId, kind }: { serviceId: number; kind: string
           {(Object.keys(ACCESS_LABELS) as Access[]).map((a) => <option key={a} value={a}>{ACCESS_LABELS[a]}</option>)}
         </select>
       </label>
-      {(svc.access === 'chosen' || ownable) && users.map((u) => {
+      {(svc.access !== 'admins' || ownable) && users.map((u) => {
         const entry = svc.users.find((x) => x.userId === u.id);
         const own = !!entry?.secretsSet.length;
+        // a switch that's off wins over the access (hub/src/services.ts setServiceAccess); it keeps their own login
+        const canUse = entry?.allowed !== false && (svc.access === 'everyone' || !!entry);
         return (
           <div key={u.id} className="source-row">
             <div className="hub-avatar">{u.displayName.slice(0, 1).toUpperCase()}</div>
@@ -1345,9 +1518,9 @@ export function HubAccess({ serviceId, kind }: { serviceId: number; kind: string
               <div className="track-title">{u.displayName}</div>
               <div className="track-sub">{ROLE_LABELS[u.role]}{own ? ' · own login' : ''}{entry?.unreadable ? ' · login unreadable, set it again' : ''}</div>
             </div>
-            {svc.access === 'chosen' && u.role !== 'admin' && (
+            {svc.access !== 'admins' && u.role !== 'admin' && (
               <label className="check">
-                <span className="switch"><input type="checkbox" checked={!!entry} onChange={(e) => run(() => (e.target.checked ? c.setServiceUser(svc.id, u.id) : c.removeServiceUser(svc.id, u.id)))} /><span /></span>
+                <span className="switch"><input type="checkbox" checked={canUse} onChange={(e) => run(() => c.setServiceAccess(svc.id, u.id, e.target.checked))} /><span /></span>
                 <small>Can use</small>
               </label>
             )}
@@ -1361,7 +1534,7 @@ export function HubAccess({ serviceId, kind }: { serviceId: number; kind: string
         );
       })}
       <ServiceFamilies serviceId={svc.id} chosen={svc.families ?? []} onSaved={(families) => setSvc({ ...svc, families })} />
-      <p className="muted small">Admins can always use every server. With an own login, that person gets it instead of the shared one{svc.access === 'chosen' ? ', and setting one also lets them use the server' : ''}.</p>
+      <p className="muted small">Admins can always use every server. Turning someone off keeps their own login for when you turn them back on. With an own login, that person gets it instead of the shared one{svc.access === 'chosen' ? ', and setting one also lets them use the server' : ''}.</p>
     </div>
   );
 }

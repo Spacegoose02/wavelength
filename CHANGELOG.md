@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.53.0
+- **A welcome screen that gets beginners in.** A fresh install opens on **Connect to your server**: one box for the
+  Hub's address, then sign in, and music, podcasts and settings arrive by themselves (`src/components/FirstRun.tsx`).
+  **Skip, I'm not using a Hub** leaves it for good; Home's empty state now offers **Connect to a Hub** next to **Add a
+  source**. Anyone who already has a server or a Hub on the device never sees it.
+- **Addresses typed the way people type them.** `192.168.1.10`, `nas.local:7780` or `music.example.com` now find the
+  Hub: the app tries `http://`, `https://` and port 7780 at once and takes the likeliest that answers
+  (`src/lib/hubAddress.ts`). A link to one of the Hub's pages works too. When nothing answers, it says what to check.
+- **One sign-in button.** After connecting, the sign-in shows one way up front (tinyauth when single sign-on is on,
+  otherwise username and password), with the code, password and invite under **Other ways to sign in**.
+- **Service switches for each person (Hub).** **Services** on each row in Settings → Hub admin → Users switches Music,
+  Podcasts and audiobooks, Plex and SUB/WAVE on or off for that person; off keeps their own login. The same switches
+  show on each server's **Who can use it**, now for "Everyone" servers too (`hub/src/services.ts` `setServiceAccess`,
+  migration 42 adds `service_users.allowed`).
+- **New people are set up by themselves (Hub).** **New people get** under Users picks which servers someone new gets,
+  and the Hub makes them a Navidrome account the moment their profile is made, by an admin, an invite, a family
+  manager or single sign-on (`hub/src/newPeople.ts`). Needs this Hub version.
+
 ## 0.52.0
 - **Co-hosts' pictures on the SUB/WAVE Now on card.** `/now-playing`'s `activeShow.guests` now carry `{ id, name, avatar }`,
   and the Now on card shows each co-host's picture as a small overlapping avatar beside the names

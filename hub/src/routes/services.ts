@@ -2,7 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import type { Ctx } from '../app.ts';
 import { audit } from '../audit.ts';
 import { clientIp, HttpError, need, signedIn } from '../http.ts';
-import { createService, deleteService, getService, listServices, relayPassword, relayTarget, relayUsername, removeServiceUser, serviceIdOfKind, servicesFor, setServiceFamilies, setServiceUser, updateService } from '../services.ts';
+import { createService, deleteService, getService, listServices, relayPassword, relayTarget, relayUsername, removeServiceUser, serviceIdOfKind, servicesFor, servicesForPerson, setServiceAccess, setServiceFamilies, setServiceUser, updateService } from '../services.ts';
+import { getNewPeople, putNewPeople } from '../newPeople.ts';
 import { createDevice, listDevices } from '../devices.ts';
 import { getUser } from '../users.ts';
 
@@ -90,6 +91,41 @@ export function serviceRoutes(app: FastifyInstance, { db, config }: Ctx) {
     const own = s.users.find((u) => u.userId === target.id)?.secretsSet ?? [];
     audit(db, { actorId: user.id, action: 'service.user_set', target: s.name, detail: { user: target.username, ownLogin: own }, ip: clientIp(req) });
     return { service: s };
+  });
+
+  /**
+   * One person's switch for one server, `{ on }` (services.ts setServiceAccess). Off keeps their own login, so on
+   * gives them the same one back.
+   */
+  app.put<{ Params: { id: string; userId: string } }>('/api/admin/services/:id/users/:userId/access', async (req) => {
+    const { user } = need(req, 'keys.manage');
+    const target = getUser(db, Number(req.params.userId));
+    if (!target) throw new HttpError(404, 'No such user');
+    const on = body(req.body).on;
+    if (typeof on !== 'boolean') throw new HttpError(400, 'Send { on: true } or { on: false }');
+    const s = setServiceAccess(db, key, Number(req.params.id), target, on);
+    audit(db, { actorId: user.id, action: on ? 'service.user_on' : 'service.user_off', target: s.name, detail: { user: target.username, access: s.access }, ip: clientIp(req) });
+    return { service: s, services: servicesForPerson(db, target) };
+  });
+
+  /** Every server as one person's switches show it (Settings → Hub admin → Users → the person). */
+  app.get<{ Params: { id: string } }>('/api/admin/users/:id/services', async (req) => {
+    need(req, 'keys.manage');
+    const target = getUser(db, Number(req.params.id));
+    if (!target) throw new HttpError(404, 'No such user');
+    return { services: servicesForPerson(db, target) };
+  });
+
+  /** What someone new gets (newPeople.ts): `{ navidromeAccount, services: { [id]: boolean } }`. */
+  app.get('/api/admin/new-people', async (req) => {
+    need(req, 'keys.manage');
+    return { newPeople: getNewPeople(db) };
+  });
+  app.put('/api/admin/new-people', async (req) => {
+    const { user } = need(req, 'keys.manage');
+    const newPeople = putNewPeople(db, req.body);
+    audit(db, { actorId: user.id, action: 'service.new_people', detail: newPeople, ip: clientIp(req) });
+    return { newPeople };
   });
 
   app.delete<{ Params: { id: string; userId: string } }>('/api/admin/services/:id/users/:userId', async (req) => {

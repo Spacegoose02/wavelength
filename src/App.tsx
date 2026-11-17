@@ -26,6 +26,7 @@ import { startListeningReports } from './lib/listening';
 import { startRemote } from './lib/remote';
 import { startTogether } from './lib/together';
 import { WebSignIn } from './components/WebSignIn';
+import { FirstRun } from './components/FirstRun';
 import { startKidTime } from './lib/kidTime';
 import { KidLockScreen, KidSettings, KidSignedOutScreen } from './components/KidLock';
 import { ProfileButton } from './components/WhosListening';
@@ -369,6 +370,7 @@ export default function App() {
       <KidLockScreen />
       <KidSignedOutScreen />
       <WebSignIn />
+      <FirstRun />
     </div>
   );
 }

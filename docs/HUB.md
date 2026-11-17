@@ -342,8 +342,15 @@ profile's username signs into that profile instead of getting a new one.
 
 ## How signing in works
 
+**Connecting.** A fresh app opens on one box for the Hub's address (`src/components/FirstRun.tsx`, skippable). The
+address can be typed without `http://` or the port: `findHub()` (`src/lib/hubAddress.ts`) asks `GET /api/health` on
+every likely spelling at once (for a LAN name or IP `http://host`, `http://host:7780`, `https://host`; for a public
+name `https://` first) and takes the likeliest that answers `{ ok: true }`. A link to `/link`, `/setup`, `/auth/…`
+or `/invite/<code>` finds the Hub in front of it (an invite also fills the invite in).
+
 Every device shows the same choices: **Sign in with tinyauth** (while single sign-on is on), **Sign in with a
-code**, **Sign in with a password** and **I have an invite**. A family sign-in, whichever way, ends at the profile
+code**, **Sign in with a password** and **I have an invite**. One shows up front, single sign-on when it's on and
+otherwise the password; the others are under **Other ways to sign in**. A family sign-in, whichever way, ends at the profile
 picker ([Family sign-ins](#family-sign-ins)).
 
 **Sign in with tinyauth**: in the apps, this pairs the device (below) with a link that goes straight to
@@ -437,6 +444,21 @@ device: **Plex**, **Audiobookshelf**, **SUB/WAVE**, **deemix** and **yt-dlp**, a
   Artist / Title / Title and its tags are set with ffmpeg afterwards: artist, title, album (the title) and album
   artist. The cover link, https only, is saved as `cover.jpg` next to it. Otherwise the uploader and the video
   title name it.
+- **Per-person switches:** every listening server (not the downloaders, which **Autodownload** decides) has a switch
+  for each person: `PUT /api/admin/services/:id/users/:userId/access { on }` (`keys.manage`, audited
+  `service.user_on` / `service.user_off`). Off is a `service_users` row with `allowed = 0`, which wins over the
+  server's access and keeps the person's own login, so on gives them the same Navidrome account or Plex token back.
+  On for an **Admins only** server turns it into **People I choose** with them added. Admins can't be switched off.
+  `GET /api/admin/users/:id/services` lists one person's servers with `on`, `locked` (an admin), `otherFamilies`
+  (limited to families they aren't in) and `needsAccount` (Navidrome on, no account of theirs yet). In the app:
+  Settings → Hub admin → Users → **Services** on their row, and **Who can use it** on each server.
+- **New people:** `GET`/`PUT /api/admin/new-people` (`keys.manage`, `hub/src/newPeople.ts`):
+  `{ navidromeAccount: boolean, services: { [server id]: boolean } }`. Whenever a profile is made (an admin adding
+  someone, an invite, a family manager, tinyauth making one; not the first admin), the Hub switches each listed server
+  on or off for them (one not listed follows its access) and, with `navidromeAccount` on (the default) and Navidrome
+  on, makes them a Navidrome account with the admin login on every Navidrome that has one, as **Make account** does.
+  A Navidrome that's down or already has that name doesn't stop the profile: it's logged as
+  `navidrome.account_failed`.
 - **Own logins:** for Plex and Audiobookshelf an admin can give someone their own token or API key (Settings
   → Sources → Edit → **Own login**), so their listening progress and history are their own. They get that
   instead of the shared one.

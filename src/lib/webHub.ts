@@ -8,7 +8,8 @@ import { useHub } from '../store/hub';
  */
 const SKIP_KEY = 'tonearm.webSkipSignIn';
 
-export const useWebHub = create<{ origin?: string; skipped: boolean }>()(() => ({ skipped: readSkip() }));
+/** `checked`: detectWebHub has finished (or there was nothing to check), so a missing `origin` means "not a Hub". */
+export const useWebHub = create<{ origin?: string; skipped: boolean; checked: boolean }>()(() => ({ skipped: readSkip(), checked: isTauri || typeof location === 'undefined' }));
 
 function readSkip() {
   try {
@@ -29,7 +30,7 @@ export function skipWebSignIn() {
 
 /** Is this page served by a Hub? Then that's the Hub to sign in to. */
 export async function detectWebHub() {
-  if (isTauri || typeof location === 'undefined' || !/^https?:$/.test(location.protocol)) return;
+  if (isTauri || typeof location === 'undefined' || !/^https?:$/.test(location.protocol)) return void useWebHub.setState({ checked: true });
   try {
     const h = await (await fetch('/api/health', { headers: { accept: 'application/json' } })).json();
     if (h?.name !== 'wavelength-hub') return;
@@ -38,6 +39,8 @@ export async function detectWebHub() {
     useWebHub.setState({ origin: location.origin });
   } catch {
     /* not a Hub (the dev server, a plain web host) */
+  } finally {
+    useWebHub.setState({ checked: true });
   }
 }
 

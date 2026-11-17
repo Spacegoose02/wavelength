@@ -1982,9 +1982,26 @@ music in (from your Navidrome library's genre counts, so tidy genres help). It s
 If your household runs a [Wavelength Hub](HUB.md), everyone gets their own profile. Without one, nothing
 changes: Wavelength works on its own, as before.
 
+### Getting started
+
+A fresh install opens on **Connect to your server**: one box for your Hub's address. Type it the way you'd say
+it: `192.168.1.10`, `192.168.1.10:7780`, `nas.local` or `music.example.com` all work, and so does a link to one of
+the Hub's pages or an invite link. Wavelength tries `http://`, `https://` and the Hub's port (7780) by itself and
+takes the one that answers. Then sign in, and your music, podcasts and settings arrive on their own.
+
+Not using a Hub? Press **Skip, I'm not using a Hub**. The welcome screen doesn't come back; add Navidrome, Plex and
+your other servers under **Settings → Sources**, or connect to a Hub later from Home (**Connect to a Hub**) or
+**Settings → Account**. Anyone who already has a server or a Hub on the device never sees the welcome screen.
+
+> **Developer note:** `src/components/FirstRun.tsx` shows it until `tonearm.firstRunDone` is set (signing in,
+> skipping, or a device that already has sources or a Hub token). `findHub()` in `src/lib/hubAddress.ts` asks every
+> likely spelling at once (`hubCandidates()`) and takes the likeliest one that answers `/api/health` as a Hub.
+
 ### Signing in
 
-**Settings → Account**: type the Hub's address (e.g. `https://hub.example.com`) and press **Connect**.
+**Settings → Account** (or the welcome screen): type the Hub's address and press **Connect**. One way to sign in
+shows straight away: **Sign in with tinyauth** when single sign-on is on, otherwise your username and password.
+**Other ways to sign in** has the rest:
 
 - **Sign in with a code** is the easy way, and the only comfortable one on a TV. Wavelength shows a code and
   a QR code. Scan it with your phone (or open the address shown and type the code), sign in there with single
@@ -2030,6 +2047,21 @@ Once you're signed in, your **theme** (and Seasonal / Random daily), **equalizer
 skin on the TV and your phone has it next time it checks in (at start, when the window gets focus, and every
 few minutes; **Sync now** does it at once). Each setting syncs on its own, so changing the EQ on one device and
 the skin on another never overwrite each other. Changes made with no connection are kept and sent later.
+
+**Services for each person (admins):** **Services** on someone's row in **Settings → Hub admin → Users** has a switch
+for each server on the Hub: **Music** (Navidrome), **Podcasts and audiobooks** (Audiobookshelf), **Music from Plex**
+and **SUB/WAVE radio**. Turn one off and that person's devices lose it at their next check-in; turn it back on and they
+get it again with the same login (their own Navidrome account isn't lost). Turning on an "Admins only" server for
+someone makes it **People I choose**, with them in it. Without a Navidrome account yet, **Make their Navidrome
+account** makes one. The same switches show per server under Settings → Sources → the server → **Who can use it**.
+Admins can always use every server.
+
+**New people get (admins):** set once, under Settings → Hub admin → Users, what someone gets the moment their
+profile is made, whether you added them, they used an invite, a family manager added them, or single sign-on made
+their profile: their own **Navidrome account** (on by default, when the Hub has the Navidrome admin login) and each
+server on or off. A server you leave alone follows its access: on when it's for everyone. If Navidrome already has
+someone by that name, the profile is still made and the audit log says so (`navidrome.account_failed`); use
+**Use their login** under Settings → Server → Navidrome accounts.
 
 Server logins your admin keeps on the Hub arrive too: Plex, Audiobookshelf and SUB/WAVE show up in
 Settings → Sources marked **from your Hub**, and people allowed to download can use the Hub's deemix and

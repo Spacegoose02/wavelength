@@ -710,9 +710,32 @@ export interface HubAdminService {
   config: Config;
   secretsSet: string[];
   unreadable: boolean;
-  users: { userId: number; secretsSet: string[]; unreadable: boolean }[];
+  /** `allowed: false`: switched off for this person whatever the access says (older Hubs leave it out). */
+  users: { userId: number; secretsSet: string[]; unreadable: boolean; allowed?: boolean }[];
   /** Only these families get it; empty = every family (older Hubs leave it out). */
   families?: number[];
+}
+
+/** One server as one person's switches show it (hub/src/services.ts servicesForPerson). */
+export interface HubPersonService {
+  id: number;
+  kind: HubServiceKind;
+  name: string;
+  access: HubAccess;
+  on: boolean;
+  /** An admin: always on. */
+  locked: boolean;
+  /** Limited to families this person isn't in. */
+  otherFamilies: boolean;
+  ownLogin: boolean;
+  /** Navidrome is on and they have no account on it yet. */
+  needsAccount: boolean;
+}
+
+/** What someone new gets (hub/src/newPeople.ts). A server left out follows its access. */
+export interface HubNewPeople {
+  navidromeAccount: boolean;
+  services: Record<string, boolean>;
 }
 
 /** Secrets to save: a value sets it, '' or null clears it, a missing key keeps it. */
@@ -1237,6 +1260,12 @@ export class HubClient {
   deleteService = (id: number) => this.call('DELETE', `/api/admin/services/${id}`);
   setServiceUser = (id: number, userId: number, secrets?: Record<string, string | null>) =>
     this.call<{ service: HubAdminService }>('PUT', `/api/admin/services/${id}/users/${userId}`, { secrets });
+  /** One person's switch for one server; off keeps their own login. */
+  setServiceAccess = (id: number, userId: number, on: boolean) =>
+    this.call<{ service: HubAdminService; services: HubPersonService[] }>('PUT', `/api/admin/services/${id}/users/${userId}/access`, { on });
+  personServices = (userId: number) => this.call<{ services: HubPersonService[] }>('GET', `/api/admin/users/${userId}/services`);
+  newPeople = () => this.call<{ newPeople: HubNewPeople }>('GET', '/api/admin/new-people');
+  setNewPeople = (b: { navidromeAccount?: boolean; services?: Record<string, boolean | null> }) => this.call<{ newPeople: HubNewPeople }>('PUT', '/api/admin/new-people', b);
   /** Make a Navidrome account for someone with the admin login the Hub keeps, saved as their own login. */
   createNavidromeAccount = (id: number, userId: number) => this.call<{ service: HubAdminService }>('POST', `/api/admin/services/${id}/users/${userId}/navidrome-account`, {});
   playing = (b: { title: string; artist?: string; album?: string; source?: string } | { stopped: true }) => this.call('POST', '/api/me/playing', b);

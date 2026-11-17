@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+// past the welcome screen (components/FirstRun.tsx; e2e/firstRun.spec.ts tests it)
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('tonearm.firstRunDone', '1'));
+});
+
 // The browser build with no servers set up: every top-level page has to open without throwing or showing
 // the "Something went wrong" panel (components/ErrorBoundary.tsx).
 test('every sidebar page opens without a crash', async ({ page }) => {
