@@ -17,6 +17,9 @@
 - **New people are set up by themselves (Hub).** **New people get** under Users picks which servers someone new gets,
   and the Hub makes them a Navidrome account the moment their profile is made, by an admin, an invite, a family
   manager or single sign-on (`hub/src/newPeople.ts`). Needs this Hub version.
+- **New people get, clearer.** No separate "Make them a Navidrome account" switch: the Navidrome server's own switch
+  decides, and an account is only made while the Hub still uses Navidrome (never once the Hub serves the music
+  itself). Each switch now leads with the server's own name, so two SUB/WAVE stations are told apart.
 - **Hosts' pictures on the SUB/WAVE Shows list, and change them from there.** `/schedule` gives each persona's `avatar`
   as `/persona-avatar/<id>` (under the API), but the Shows list resolved it against the site root, so every host showed
   initials. `SubWaveSource.avatarFor()` now takes both that and `/settings`' file name. Clicking a host's picture on a

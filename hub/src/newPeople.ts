@@ -16,7 +16,11 @@ import type { User } from './users.ts';
  * otherwise.
  */
 export interface NewPeople {
-  /** Make them a Navidrome account with the admin login the Hub keeps (when Navidrome is on and has one). */
+  /**
+   * Make them a Navidrome account with the admin login the Hub keeps, on each Navidrome they get (its switch below).
+   * Only while Navidrome is on: when the Hub serves the music itself, nobody needs one. The app no longer shows this
+   * switch (the Music switch decides); it's kept so a Hub can still turn the accounts off through the API.
+   */
   navidromeAccount: boolean;
   /** Server id → on or off for new people. */
   services: Record<string, boolean>;
@@ -97,8 +101,11 @@ export function applyNewPeopleServices(db: Db, user: Pick<User, 'id' | 'role'>) 
  */
 export async function makeNavidromeAccounts(db: Db, key: Buffer, user: Pick<User, 'id' | 'username' | 'displayName'>, ip?: string) {
   if (!getNewPeople(db).navidromeAccount || navidromeOff(db)) return;
+  const { services } = getNewPeople(db);
   for (const s of listServices(db, key).filter((x) => x.kind === 'navidrome')) {
     if (s.users.some((u) => u.userId === user.id && u.secretsSet.includes('password'))) continue;
+    // only on a Navidrome their Music switch gives them
+    if (!(services[String(s.id)] ?? s.access === 'everyone')) continue;
     const hub = serviceForHub(db, key, s.id);
     if (!hub?.secrets.adminUsername || !hub.secrets.adminPassword) continue;
     try {

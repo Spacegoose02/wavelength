@@ -104,6 +104,13 @@ test('someone new gets their own Navidrome account and the servers picked for ne
   assert.equal((await form(app, `/invite/${inv.body.code}`, { username: 'nan', password: 'nan-password-123' })).status, 200);
   assert.deepEqual(nd.created.map((c) => c.userName), ['zoe', 'nan']);
 
+  // Music off for new people: no Navidrome account either
+  await json(app, 'PUT', '/api/admin/new-people', { token: tokens.admin, body: { services: { [navi.id]: false } } });
+  await json(app, 'POST', '/api/admin/users', { token: tokens.admin, body: { username: 'pip', role: 'member', password: 'pip-password-123' } });
+  assert.equal(nd.created.length, 2);
+  await json(app, 'PUT', '/api/admin/new-people', { token: tokens.admin, body: { services: { [navi.id]: null } } });
+  assert.equal((await json(app, 'GET', '/api/admin/new-people', { token: tokens.admin })).body.navidromeOff, false);
+
   // turned off: nobody new gets an account
   await json(app, 'PUT', '/api/admin/new-people', { token: tokens.admin, body: { navidromeAccount: false } });
   await json(app, 'POST', '/api/admin/users', { token: tokens.admin, body: { username: 'ola', role: 'member', password: 'ola-password-123' } });
