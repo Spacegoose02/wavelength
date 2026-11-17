@@ -17,6 +17,23 @@
 - **New people are set up by themselves (Hub).** **New people get** under Users picks which servers someone new gets,
   and the Hub makes them a Navidrome account the moment their profile is made, by an admin, an invite, a family
   manager or single sign-on (`hub/src/newPeople.ts`). Needs this Hub version.
+- **Hosts' pictures on the SUB/WAVE Shows list, and change them from there.** `/schedule` gives each persona's `avatar`
+  as `/persona-avatar/<id>` (under the API), but the Shows list resolved it against the site root, so every host showed
+  initials. `SubWaveSource.avatarFor()` now takes both that and `/settings`' file name. Clicking a host's picture on a
+  show uploads a new one (`sw.setAvatar`), and the card refetches it (`src/views/SubWaveAdmin.tsx`).
+- **Editing a DJ no longer crashes on newer SUB/WAVE.** Newer SUB/WAVE sends `/settings` → `tts.available` as an object
+  of engine flags, not a list, so `new Set()` threw. It's read through `availableEngines()` (`src/sources/subwave.ts`),
+  which takes either.
+- **Navidrome covers load from the cache.** Every `getCoverArt` address was signed with a new random salt each time the
+  library loaded, so covers got new addresses on every launch and Browse and genre pages fetched them all again (six at
+  a time). Covers now use a fixed salt per source and login, not made from the password; every other call still gets a
+  fresh one (`src/sources/navidrome.ts`).
+- **Discover previews don't get stuck on BUF past 0:30.** A clip whose saved Deezer link had run out waited for a fresh
+  one behind every other lookup on the page (Discover Weekly makes 50), while the last song kept playing under the
+  clip's title. Now the playing song stops as soon as another is picked, the clip's lookup skips the pacing queue and
+  gives up after 8 s, a clip that waits at its end or plays past its length counts as ended (`clipOver`), and a clip
+  stuck loading for 12 s is skipped, with or without the dead zone cushion, which no longer saves clips
+  (`src/store/player.ts`).
 
 ## 0.52.0
 - **Co-hosts' pictures on the SUB/WAVE Now on card.** `/now-playing`'s `activeShow.guests` now carry `{ id, name, avatar }`,
