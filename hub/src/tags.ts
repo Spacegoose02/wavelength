@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { existsSync, renameSync, rmSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { ART_APIS } from './artwork.ts';
 import { HttpError } from './http.ts';
@@ -101,7 +101,55 @@ export async function readTags(file: string): Promise<Tags> {
     const v = READ[k].map((n) => all[n]).find((x) => x !== undefined && x !== '');
     if (v !== undefined) out[k] = v;
   }
+  // yt-dlp writes a video's upload day as the date, run together (20260921): the Year is its first four digits
+  if (out.year && /^\d{8}$/.test(out.year)) out.year = out.year.slice(0, 4);
   return out;
+}
+
+interface Picture { index: number; codec: string; width: number; height: number; description: string; front: boolean }
+
+/** The cover pictures ffmpeg found in a file: an Ogg file's METADATA_BLOCK_PICTURE comment shows up as one of these. */
+async function pictures(file: string): Promise<Picture[]> {
+  const r = await run(FFPROBE, ['-v', 'error', '-show_entries', 'stream=index,codec_type,codec_name,width,height:stream_disposition=attached_pic:stream_tags=title,comment', '-of', 'json', '--', file])
+    .catch(() => ({ code: 1, out: '', err: '' }));
+  if (r.code !== 0) return [];
+  const json = JSON.parse(r.out || '{}') as { streams?: { index: number; codec_type?: string; codec_name?: string; width?: number; height?: number; disposition?: { attached_pic?: number }; tags?: Record<string, string> }[] };
+  return (json.streams ?? [])
+    .filter((s) => s.codec_type === 'video' && s.disposition?.attached_pic && PICTURE_MIME[s.codec_name ?? ''])
+    .map((s) => ({ index: s.index, codec: s.codec_name!, width: s.width ?? 0, height: s.height ?? 0, description: s.tags?.title ?? '', front: /front/i.test(s.tags?.comment ?? '') }));
+}
+const PICTURE_MIME: Record<string, string> = { mjpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp' };
+
+/** A FLAC picture block (what Vorbis comments carry in METADATA_BLOCK_PICTURE), as a front cover. */
+export function pictureBlock(image: Buffer, mime: string, width: number, height: number, description = ''): Buffer {
+  const m = Buffer.from(mime), d = Buffer.from(description);
+  const u32 = (n: number) => { const b = Buffer.alloc(4); b.writeUInt32BE(n >>> 0); return b; };
+  return Buffer.concat([u32(3), u32(m.length), m, u32(d.length), d, u32(width), u32(height), u32(24), u32(0), u32(image.length), image]);
+}
+
+/** Text safe inside an ffmetadata file: these characters need a backslash. */
+const ffmetaEscape = (s: string) => s.replace(/[\\=;#\n]/g, (c) => `\\${c}`);
+
+/**
+ * ffmpeg's Ogg muxer can't write a picture stream (it fails with "Could not write header (incorrect codec
+ * parameters ?)"), so an Ogg / Opus file with cover art, which yt-dlp's --embed-thumbnail makes, is copied with
+ * its audio only and the cover goes back in as a METADATA_BLOCK_PICTURE comment. That comment is far too big for
+ * a command-line argument, so it travels in an ffmetadata file. Returns the extra input's ffmpeg arguments.
+ */
+async function oggCover(file: string, work: string): Promise<{ input: string[]; mapping: string[] }> {
+  const pics = await pictures(file);
+  const pic = pics.find((p) => p.front) ?? pics[0];
+  if (!pic) return { input: [], mapping: [] };
+  const img = `${work}.img`;
+  try {
+    const r = await run(FFMPEG, ['-v', 'error', '-nostdin', '-y', '-i', file, '-map', `0:${pic.index}`, '-c', 'copy', '-frames:v', '1', '-f', 'image2pipe', '--', img]);
+    if (r.code !== 0 || !existsSync(img) || statSync(img).size === 0) throw new HttpError(502, `Couldn't copy the cover of ${basename(file)}: ${r.err.trim().split('\n').pop() ?? ''}`);
+    const block = pictureBlock(readFileSync(img), PICTURE_MIME[pic.codec]!, pic.width, pic.height, pic.description).toString('base64');
+    writeFileSync(`${work}.meta`, `;FFMETADATA1\n[STREAM]\nMETADATA_BLOCK_PICTURE=${ffmetaEscape(block)}\n`);
+  } finally {
+    rmSync(img, { force: true });
+  }
+  return { input: ['-f', 'ffmetadata', '-i', `${work}.meta`], mapping: ['-map_metadata:s:a:0', '1:s:0'] };
 }
 
 /** Set these tags (an empty string removes one); the others stay as they are. */
@@ -110,18 +158,25 @@ export async function writeTags(file: string, tags: Tags): Promise<void> {
   if (!keys.length) return;
   const ext = extname(file);
   const tmp = join(dirname(file), `.wavelength-${randomBytes(6).toString('hex')}${ext}`);
-  const flag = STREAM_TAGS.test(file) ? '-metadata:s:a:0' : '-metadata';
-  const args = ['-v', 'error', '-nostdin', '-y', '-i', file, '-map', '0', '-c', 'copy', '-map_metadata', '0'];
-  if (STREAM_TAGS.test(file)) args.push('-map_metadata:s:a', '0:s:a');
-  for (const k of keys) args.push(flag, `${ffName(file, k)}=${tags[k]!.replace(/[\r\n]+/g, ' ').slice(0, 1000)}`);
-  if (/\.mp3$/i.test(file)) args.push('-id3v2_version', '3');
-  args.push('--', tmp);
-  const r = await run(FFMPEG, args).catch(() => ({ code: 1, out: '', err: 'ffmpeg is missing' }));
-  if (r.code !== 0 || !existsSync(tmp) || statSync(tmp).size === 0) {
-    rmSync(tmp, { force: true });
-    throw new HttpError(502, `Couldn't write the tags of ${basename(file)}: ${r.err.trim().split('\n').pop() ?? ''}`);
+  const ogg = STREAM_TAGS.test(file);
+  const flag = ogg ? '-metadata:s:a:0' : '-metadata';
+  const cover = ogg ? await oggCover(file, tmp) : { input: [], mapping: [] };
+  try {
+    // an Ogg file takes only its audio across: its cover is a comment (oggCover), and the Ogg muxer refuses a picture stream
+    const args = ['-v', 'error', '-nostdin', '-y', '-i', file, ...cover.input, '-map', ogg ? '0:a' : '0', '-c', 'copy', '-map_metadata', '0'];
+    if (ogg) args.push('-map_metadata:s:a', '0:s:a', ...cover.mapping);
+    for (const k of keys) args.push(flag, `${ffName(file, k)}=${tags[k]!.replace(/[\r\n]+/g, ' ').slice(0, 1000)}`);
+    if (/\.mp3$/i.test(file)) args.push('-id3v2_version', '3');
+    args.push('--', tmp);
+    const r = await run(FFMPEG, args).catch(() => ({ code: 1, out: '', err: 'ffmpeg is missing' }));
+    if (r.code !== 0 || !existsSync(tmp) || statSync(tmp).size === 0) {
+      rmSync(tmp, { force: true });
+      throw new HttpError(502, `Couldn't write the tags of ${basename(file)}: ${r.err.trim().split('\n').pop() ?? ''}`);
+    }
+    renameSync(tmp, file);
+  } finally {
+    rmSync(`${tmp}.meta`, { force: true });
   }
-  renameSync(tmp, file);
 }
 
 // ---- looking albums up ----

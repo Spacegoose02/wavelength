@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.56.1
+- **Tags save on Opus and Ogg files with cover art (Hub).** Saving in Edit song failed on files yt-dlp downloads
+  ("Could not write header (incorrect codec parameters ?)"): `--embed-thumbnail` puts the thumbnail in the file, ffmpeg
+  reads it as a picture stream, and its Ogg muxer can't write one. The tag editor now copies only the audio of an
+  .opus / .ogg / .oga file and puts the cover back as a METADATA_BLOCK_PICTURE comment, passed in an ffmetadata file
+  (`hub/src/tags.ts`, `oggCover`), so the same picture stays in the file.
+- **Year from a YouTube download.** yt-dlp writes the upload day as the date run together (20260921); the tag editor
+  now reads that as the year (2026).
+
 ## 0.56.0
 - **Mark AI-generated artists (admins, Hub).** **Edit artist → General → AI-generated artist**, a **✦ Mark as AI**
   button on an artist's Deezer page (and on library artists with no Edit artist), and **Mark *artist* as AI** in a
