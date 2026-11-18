@@ -41,6 +41,7 @@ interface Row {
   year: number | null;
   genre: string;
   explicit: string;
+  release_type: string;
   duration: number;
   bit_rate: number | null;
   created: number | null;
@@ -65,6 +66,8 @@ interface Album {
   duration: number;
   genres: string[];
   explicit: string;
+  /** OpenSubsonic releaseTypes, from the songs' release type tags ("album; mixtape/street" → album, mixtape/street) */
+  releaseTypes: string[];
 }
 
 interface Artist {
@@ -96,7 +99,7 @@ const shuffle = <T>(xs: T[]) => {
 };
 
 /** The catalog's matched songs, grouped into albums and album artists, kept in memory until the catalog changes. */
-const COLUMNS = `path, size, title, artist, album, album_artist, track, disc, year, genre, explicit, duration, bit_rate, created,
+const COLUMNS = `path, size, title, artist, album, album_artist, track, disc, year, genre, explicit, release_type, duration, bit_rate, created,
   rg_track_gain, rg_album_gain, rg_track_peak, rg_album_peak, nd_id, nd_album_id, nd_artist_id, nd_album_artist_id`;
 const LISTED = 'nd_id IS NOT NULL AND nd_album_id IS NOT NULL AND error IS NULL';
 const byPlace = (a: Row, b: Row) => (a.disc ?? 0) - (b.disc ?? 0) || (a.track ?? 0) - (b.track ?? 0) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
@@ -120,7 +123,7 @@ class View {
       this.byPath.set(r.path, r);
       let a = this.albums.get(r.nd_album_id);
       if (!a) {
-        a = { id: r.nd_album_id, name: r.album, artist: r.album_artist || r.artist, artistId: r.nd_album_artist_id || r.nd_artist_id || '', songs: [], year: null, created: Infinity, duration: 0, genres: [], explicit: '' };
+        a = { id: r.nd_album_id, name: r.album, artist: r.album_artist || r.artist, artistId: r.nd_album_artist_id || r.nd_artist_id || '', songs: [], year: null, created: Infinity, duration: 0, genres: [], explicit: '', releaseTypes: [] };
         this.albums.set(a.id, a);
       }
       a.songs.push(r);
@@ -209,7 +212,9 @@ function sumUp(a: Album) {
   a.duration = 0;
   a.genres = [];
   a.explicit = '';
+  a.releaseTypes = [];
   for (const r of a.songs) {
+    for (const t of genresOf(r.release_type ?? '')) if (!a.releaseTypes.includes(t.toLowerCase())) a.releaseTypes.push(t.toLowerCase());
     a.year = Math.max(a.year ?? 0, r.year ?? 0) || null;
     a.created = Math.min(a.created, r.created || Infinity);
     a.duration += r.duration;
@@ -311,6 +316,7 @@ function album(a: Album, starred: Starred) {
     ...(a.year && { year: a.year }),
     ...(a.genres.length && { genre: a.genres[0] }),
     genres: a.genres.map((name) => ({ name })),
+    ...(a.releaseTypes.length && { releaseTypes: a.releaseTypes }),
     explicitStatus: a.explicit,
     isDir: true,
     ...(starred.has(a.id) && { starred: starred.get(a.id) }),

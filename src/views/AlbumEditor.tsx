@@ -16,7 +16,7 @@ import { LibraryServer, libraryServer } from '../lib/serverName';
 /**
  * Edit album (docs/USER-GUIDE.md, "Editing an album"): an album's own tags in one dialog, Plex style. **General**
  * has the album, album artist, sort title, release date, release type (Album / EP / Single / Compilation, which
- * puts it on the artist page's Albums or Singles & EPs shelf) and record label; **Tags** the genres, styles, moods
+ * puts it on the artist page's Albums, Singles & EPs, Compilations, Soundtracks or Leaks & Mixtapes shelf) and record label; **Tags** the genres, styles, moods
  * and collections as chips; **Poster** the cover picker; **Info** the files. A file tag changed here is written into
  * every song of the album through the Hub's tag editor (PUT /api/admin/tags, in parts: lib/tagSave.ts), so one Save
  * is one entry under Settings → Server → Tag edits. Values that differ from song to song stay as they are unless
@@ -212,8 +212,10 @@ export function AlbumEditor({ album, cover, onClose }: { album: Album; cover?: s
           ))}
           {field('label', text('label'), true)}
           <p className="span2 muted small">
-            The release type decides where the album shows on the artist’s page: Albums, Singles &amp; EPs, or Compilations.
-            Without one, up to 3 songs count as a single and 4 to 6 as an EP.
+            The release type decides where the album shows on the artist’s page: Albums, Singles &amp; EPs, Compilations,
+            Soundtracks, or Leaks &amp; Mixtapes. Without one, up to 3 songs count as a single and 4 to 6 as an EP; a title
+            like “(Leaks)”, “Mixtape” or “Hosted by…” goes with the leaks and mixtapes, and “(Original Motion Picture
+            Soundtrack)” with the soundtracks.
           </p>
         </div>
       ) : tab === 'tags' ? (

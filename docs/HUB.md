@@ -586,9 +586,15 @@ how their page orders albums) on the Hub in `artist_meta` (migration 32, `hub/sr
 The extra tags are written under the names Navidrome reads (`hub/src/tags.ts`): in an mp3, TSOA / TSOP for the sort
 names, TPUB for the label, and TXXX frames for ALBUMARTISTSORT, RELEASETYPE and MOOD; in FLAC, Ogg and Opus, Vorbis
 comments of those names. ffmpeg keeps only a fixed set of MP4 atoms, so an .m4a gets none of them: a Save leaves
-them out for such files (`canWrite`). The artist page puts albums on **Albums**, **Singles & EPs** and
-**Compilations** shelves by Navidrome's `releaseTypes` (from RELEASETYPE), else its compilation flag, else the song
-count (up to 3 a single, 4 to 6 an EP) (`src/lib/releaseKind.ts`).
+them out for such files (`canWrite`). The artist page puts albums on **Albums**, **Singles & EPs**,
+**Compilations**, **Soundtracks** and **Leaks & Mixtapes** shelves by the album's `releaseTypes` (from RELEASETYPE /
+MusicBrainz Album Type: `mixtape`, `mixtape/street`, `demo` → mixtape; `leak`, `bootleg`, `unreleased` → leak;
+`soundtrack`), else words in its title or genre ("(Leaks)", "Mixtape", "Demo Tapes", "DatPiff", "Hosted by", "No DJ",
+"Soundtrack", "Original Score", "OST"; these also beat a plain `album` tag, which Picard writes for nearly everything),
+else its compilation flag, else the song count (up to 3 a single, 4 to 6 an EP) (`src/lib/releaseKind.ts`). Edit
+album writes `mixtape`, `leak` and `soundtrack` as they are. When the Hub serves the music itself
+(`subsonicCatalog.ts`), it reads RELEASETYPE / MusicBrainz Album Type into `catalog_songs.release_type` (migration
+43, which reads every file once more) and answers each album's OpenSubsonic `releaseTypes` from it, split on ";".
 
 
 **Merging** (Albums or Artists → **Select → Merge**, or **Merge into…** on an artist or album page; `src/lib/merge.ts`) uses the same endpoints: it reads the

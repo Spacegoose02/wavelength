@@ -40,6 +40,8 @@ export interface FileTags {
   genre: string;
   /** ITUNESADVISORY: 'explicit', 'clean', or '' */
   explicit: string;
+  /** RELEASETYPE / MusicBrainz Album Type, as tagged ("album; mixtape/street"), or '' */
+  releaseType: string;
   duration: number;
   bitRate: number | null;
   codec: string;
@@ -144,6 +146,7 @@ export function parseProbe(json: { format?: { duration?: string; bit_rate?: stri
     year,
     genre: get('genre'),
     explicit: advisory === '1' || advisory === '4' ? 'explicit' : advisory === '2' ? 'clean' : '',
+    releaseType: get('releasetype', 'musicbrainzalbumtype'),
     duration: Math.round(Number(json.format?.duration ?? 0) * 1000) / 1000 || 0,
     bitRate: num(String(Math.round(Number(json.format?.bit_rate ?? 0) / 1000))),
     codec: audio?.codec_name ?? '',
@@ -235,7 +238,7 @@ export function fromNavidromePath(navidromeRoot: string, path: string): string |
  * is marked to be read again on the next scan, which picks up everything else the write changed.
  */
 export function catalogWrote(db: Db, rel: string, tags: Tags) {
-  const cols: Record<string, string> = { title: 'title', artist: 'artist', album: 'album', albumArtist: 'album_artist', genre: 'genre' };
+  const cols: Record<string, string> = { title: 'title', artist: 'artist', album: 'album', albumArtist: 'album_artist', genre: 'genre', releaseType: 'release_type' };
   const sets: string[] = ['mtime = 0'];
   const args: (string | number | null)[] = [];
   for (const [k, v] of Object.entries(tags)) {
@@ -547,14 +550,14 @@ export class Catalog {
     const added = todo.filter(([p]) => !known.has(p)).length;
     this.progress = { step: 'reading', done: 0, total: todo.length };
     const upsert = this.db.prepare(`INSERT INTO catalog_songs (path, size, mtime, title, artist, album, album_artist, track, disc, year, genre, explicit,
-        duration, bit_rate, codec, mb_track_id, mb_album_id, error, read_at, rg_track_gain, rg_album_gain, rg_track_peak, rg_album_peak, created)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        duration, bit_rate, codec, mb_track_id, mb_album_id, error, read_at, rg_track_gain, rg_album_gain, rg_track_peak, rg_album_peak, created, release_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT (path) DO UPDATE SET size = excluded.size, mtime = excluded.mtime, title = excluded.title, artist = excluded.artist,
         album = excluded.album, album_artist = excluded.album_artist, track = excluded.track, disc = excluded.disc, year = excluded.year,
         genre = excluded.genre, explicit = excluded.explicit, duration = excluded.duration, bit_rate = excluded.bit_rate,
         codec = excluded.codec, mb_track_id = excluded.mb_track_id, mb_album_id = excluded.mb_album_id, error = excluded.error,
         read_at = excluded.read_at, rg_track_gain = excluded.rg_track_gain, rg_album_gain = excluded.rg_album_gain,
-        rg_track_peak = excluded.rg_track_peak, rg_album_peak = excluded.rg_album_peak,
+        rg_track_peak = excluded.rg_track_peak, rg_album_peak = excluded.rg_album_peak, release_type = excluded.release_type,
         created = COALESCE(catalog_songs.created, excluded.created)`);
     let pending: [string, Seen, FileTags | null, string | null][] = [];
     const flush = () => {
@@ -564,7 +567,7 @@ export class Catalog {
         for (const [p, s, t, err] of rows) {
           upsert.run(p, s.size, s.mtime, t?.title ?? '', t?.artist ?? '', t?.album ?? '', t?.albumArtist ?? '', t?.track ?? null, t?.disc ?? null, t?.year ?? null,
             t?.genre ?? '', t?.explicit ?? '', t?.duration ?? 0, t?.bitRate ?? null, t?.codec ?? '', t?.mbTrackId ?? '', t?.mbAlbumId ?? '', err, this.now(),
-            t?.trackGain ?? null, t?.albumGain ?? null, t?.trackPeak ?? null, t?.albumPeak ?? null, s.mtime || this.now());
+            t?.trackGain ?? null, t?.albumGain ?? null, t?.trackPeak ?? null, t?.albumPeak ?? null, s.mtime || this.now(), t?.releaseType ?? '');
         }
       });
     };

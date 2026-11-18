@@ -26,12 +26,12 @@ function song(file: string, tags: Record<string, string>) {
 
 test('reads tags whatever the format calls them', () => {
   const t = parseProbe({
-    format: { duration: '201.5', bit_rate: '320000', tags: { TITLE: 'Nonstop', ARTIST: 'Drake', album_artist: 'Drake', ALBUM: 'Scorpion', track: '3/25', disc: '1/2', date: '2018-06-29', GENRE: 'Rap; Hip-Hop', ITUNESADVISORY: '1', 'MusicBrainz Track Id': 'abc', REPLAYGAIN_TRACK_GAIN: '-7.20 dB', replaygain_track_peak: '0.988' } },
+    format: { duration: '201.5', bit_rate: '320000', tags: { TITLE: 'Nonstop', ARTIST: 'Drake', album_artist: 'Drake', ALBUM: 'Scorpion', track: '3/25', disc: '1/2', date: '2018-06-29', GENRE: 'Rap; Hip-Hop', ITUNESADVISORY: '1', 'MusicBrainz Album Type': 'album; mixtape/street', 'MusicBrainz Track Id': 'abc', REPLAYGAIN_TRACK_GAIN: '-7.20 dB', replaygain_track_peak: '0.988' } },
     streams: [{ codec_type: 'audio', codec_name: 'mp3' }],
   });
   assert.deepEqual(t, {
     title: 'Nonstop', artist: 'Drake', album: 'Scorpion', albumArtist: 'Drake', track: 3, disc: 1, year: 2018, genre: 'Rap; Hip-Hop',
-    explicit: 'explicit', duration: 201.5, bitRate: 320, codec: 'mp3', mbTrackId: 'abc', mbAlbumId: '',
+    explicit: 'explicit', releaseType: 'album; mixtape/street', duration: 201.5, bitRate: 320, codec: 'mp3', mbTrackId: 'abc', mbAlbumId: '',
     trackGain: -7.2, albumGain: null, trackPeak: 0.988, albumPeak: null,
   });
   // Ogg keeps tags on the stream
