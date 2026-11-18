@@ -1270,8 +1270,31 @@ The bar at the top says how many you've ticked and has the actions:
 |---|---|---|
 | **Play** / **Shuffle** | Everyone | Plays the songs on everything ticked, in the order you ticked them. |
 | **Play next** / **Add to queue** | Everyone | Puts those songs after the current one, or at the end of the queue. |
+| **Edit** | Hub admins, albums only | Sets the release type, date, album artist, label or genres of every ticked album at once (below). |
 | **Merge** | Hub admins | Merges everything ticked into the **first** one you ticked (below). |
 | **Delete selected** | Hub admins, albums only | Deletes the albums from your server (below). |
+
+### Editing several albums at once (admins)
+
+Tick albums on **Albums** or an artist's page and press **Edit** in the bar. One dialog covers them all:
+
+<p align="center">
+  <img src="screenshots/bulk-album-edit.png" alt="Edit 7 albums: Release type set to Mixtape, empty boxes for date, artist and label, and four titles losing their Lil Wayne prefix" width="70%">
+</p>
+
+- **Release type** (Album, EP, Single, Compilation, Soundtrack, Mixtape or Leak), which moves the albums to that
+  shelf on the artist's page.
+- **Release date**, **Album artist** and **Record label**.
+- **Genres**: keep each album's, **add** some to each album's own, or **replace** them all with yours.
+- **Take the artist's name off the start of titles**: "Lil Wayne - Tha Carter III" becomes "Tha Carter III". The
+  dialog lists every title it will change before you save.
+
+Anything you leave empty, or set to **Keep each as it is**, stays the way each album has it. **Save changes**
+writes only what differs into the songs, with progress for a big selection, and the whole Save is one entry under
+**Settings → Server → Tag edits**, so **Undo** in the dialog (or there) puts every album back at once. Albums that
+are only on Plex are skipped, and the dialog says how many. .m4a files can't hold a release type or record label,
+so those are left out for them, as in Edit album. To change one album's cover, sort title, styles or moods, use
+**Edit album** on its page.
 
 ### Merging albums and artists (admins)
 
