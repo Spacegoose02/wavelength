@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.57.0
+- **Edit several albums at once (admins, Hub).** The album select bar on **Albums** and an artist's page has an
+  **Edit (N)** button next to Merge. It opens one dialog for every ticked album: **Release type**, **Release date**,
+  **Album artist**, **Record label**, and **Genres** (keep, add to each album's, or replace). A field left empty keeps
+  each album's own value. A tickbox takes a leading "Artist - " off the titles ("Lil Wayne - Tha Carter III" →
+  "Tha Carter III"), with the renames listed before saving. It reads the albums through `GET /api/admin/tags/albums`
+  ten at a time and writes only the tags that differ, through `PUT /api/admin/tags` in parts sharing one batch, so
+  the whole Save is one entry (and one Undo) under Settings → Server → Tag edits. Styles, moods and collections on
+  the Hub follow renamed albums. Plex-only albums are skipped and counted; .m4a files skip release type and label
+  as in Edit album (`src/views/BulkAlbumEditor.tsx`, plan in `src/lib/bulkAlbumEdit.ts`). No Hub change.
+
 ## 0.56.0
 - **Mark AI-generated artists (admins, Hub).** **Edit artist → General → AI-generated artist**, a **✦ Mark as AI**
   button on an artist's Deezer page (and on library artists with no Edit artist), and **Mark *artist* as AI** in a

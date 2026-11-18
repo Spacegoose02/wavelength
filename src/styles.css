@@ -2948,6 +2948,12 @@ button.browse-tile, .browse-tile-main { cursor: pointer; }
 .edit-dialog .art-dialog.inline .art-results { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
 .edit-dialog-foot .btn.ghost { white-space: nowrap; }
 .edit-dialog.narrow { width: min(520px, 100%); }
+/* Edit several albums (views/BulkAlbumEditor.tsx) */
+.edit-field select { width: 100%; min-width: 0; color: var(--text); font-weight: 500; }
+.edit-fields label.edit-check { flex-direction: row; color: var(--text); font-weight: 500; font-size: 13px; }
+.edit-fields label.edit-check input { width: auto; margin-right: 8px; vertical-align: middle; }
+.bulk-renames { margin: 4px 0 0; padding-left: 18px; max-height: 180px; overflow: auto; overflow-wrap: anywhere; }
+.bulk-renames s { color: var(--muted); }
 .edit-dialog.narrow .edit-dialog-pane { min-height: 0; }
 .station-edit-preview { --fam: #6b7280; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); }
 .station-edit-preview > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

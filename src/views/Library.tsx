@@ -27,6 +27,7 @@ import { AlbumTagChips, ArtistTagChips } from '../components/TagChips';
 import { AiBadge, AiMarkButton, AiNote } from '../components/AiBadge';
 import { useItemTags } from '../lib/itemTags';
 import { EditAlbumButton, EditAlbumTagsButton } from './AlbumEditor';
+import { BulkEditAlbumsButton } from './BulkAlbumEditor';
 import { EditArtistButton } from './ArtistEditor';
 import { confirmMerge, forgetAlbums, forgetArtists, MergeIntoButton } from '../components/MergeInto';
 import { SelectBar, useSelection, type Selection } from '../components/Selection';
@@ -333,7 +334,7 @@ function NoLibrary({ count }: { count: number }) {
 
 // ---- what the select bar does (components/Selection.tsx) ----
 
-/** Play, Merge and Delete for ticked albums (Albums, and an artist's page). */
+/** Play, Edit, Merge and Delete for ticked albums (Albums, and an artist's page). */
 function AlbumSelectActions({ sel, busy, setBusy }: { sel: Selection<Album>; busy?: string; setBusy(s?: string): void }) {
   const kid = useIsKid();
   const canEdit = useCan('library.edit') && !kid;
@@ -365,6 +366,7 @@ function AlbumSelectActions({ sel, busy, setBusy }: { sel: Selection<Album>; bus
   return (
     <>
       <SelectionPlayButtons disabled={!chosen.length || !!busy} play={play} />
+      {canEdit && <BulkEditAlbumsButton albums={chosen} disabled={!chosen.length || !!busy} />}
       {canEdit && <button className="btn" disabled={chosen.length < 2 || !!busy} title="Merge the others into the first one you ticked" onClick={merge}>Merge{chosen.length > 1 ? ` (${chosen.length})` : ''}</button>}
       {canEdit && <button className="btn danger" disabled={!chosen.length || !!busy} onClick={() => void removeChosen()}>Delete selected{chosen.length ? ` (${chosen.length})` : ''}</button>}
     </>
