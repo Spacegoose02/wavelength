@@ -774,6 +774,13 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   `
   ALTER TABLE service_users ADD COLUMN allowed INTEGER NOT NULL DEFAULT 1;
   `,
+  // 43 — each file's release type tag (RELEASETYPE / MusicBrainz Album Type), so the Hub's own Subsonic answers carry
+  // OpenSubsonic releaseTypes and the artist page's shelves (Albums, Singles & EPs, Leaks & Mixtapes…) work when the
+  // Hub serves the music. Every file is read again once for it.
+  `
+  ALTER TABLE catalog_songs ADD COLUMN release_type TEXT NOT NULL DEFAULT '';
+  UPDATE catalog_songs SET mtime = 0;
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

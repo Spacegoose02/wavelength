@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.54.0
+- **Leaks & Mixtapes, and Soundtracks, on the artist page.** Two new shelves after Compilations
+  (`src/lib/releaseKind.ts`). **Edit album → Release type** offers **Soundtrack**, **Mixtape** and **Leak** (written to
+  RELEASETYPE as `soundtrack`, `mixtape`, `leak`); MusicBrainz's `mixtape/street`, `demo` and `soundtrack` count too.
+  Albums with no type, or only Picard's plain `album`, are guessed from the title or genre: "(Leaks)", "Unreleased",
+  "Mixtape", "Demo Tapes", "DatPiff", "Hosted by", "Gangsta Grillz", "No DJ" → Leaks & Mixtapes; "Soundtrack",
+  "Original Score", "Motion Picture", "OST" → Soundtracks. A Single, EP or Compilation type always wins.
+- **Release types work when the Hub serves the music (Hub).** The Hub's own Subsonic answers had no `releaseTypes`, so
+  every album sat on the Albums shelf whatever its tag said. The catalog now reads RELEASETYPE / MusicBrainz Album Type
+  (`catalog_songs.release_type`, migration 43, which reads every file once more) and lists it per album
+  (`hub/src/subsonicCatalog.ts`). Edits from Edit album show straight away.
+- **New people get, clearer.** No separate "Make them a Navidrome account" switch: the Navidrome server's own switch
+  decides, and an account is only made while the Hub still uses Navidrome (never once the Hub serves the music
+  itself). Each switch now leads with the server's own name, so two SUB/WAVE stations are told apart.
+
 ## 0.53.0
 - **A welcome screen that gets beginners in.** A fresh install opens on **Connect to your server**: one box for the
   Hub's address, then sign in, and music, podcasts and settings arrive by themselves (`src/components/FirstRun.tsx`).
@@ -17,9 +32,6 @@
 - **New people are set up by themselves (Hub).** **New people get** under Users picks which servers someone new gets,
   and the Hub makes them a Navidrome account the moment their profile is made, by an admin, an invite, a family
   manager or single sign-on (`hub/src/newPeople.ts`). Needs this Hub version.
-- **New people get, clearer.** No separate "Make them a Navidrome account" switch: the Navidrome server's own switch
-  decides, and an account is only made while the Hub still uses Navidrome (never once the Hub serves the music
-  itself). Each switch now leads with the server's own name, so two SUB/WAVE stations are told apart.
 - **Hosts' pictures on the SUB/WAVE Shows list, and change them from there.** `/schedule` gives each persona's `avatar`
   as `/persona-avatar/<id>` (under the API), but the Shows list resolved it against the site root, so every host showed
   initials. `SubWaveSource.avatarFor()` now takes both that and `/settings`' file name. Clicking a host's picture on a

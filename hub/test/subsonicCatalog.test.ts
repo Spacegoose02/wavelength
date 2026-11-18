@@ -64,7 +64,7 @@ const TAGS: Record<string, Record<string, string>> = {
   'Drake/Scorpion/01.mp3': { title: 'Nonstop', artist: 'Drake', album_artist: 'Drake', album: 'Scorpion', track: '1', date: '2018', genre: 'Rap; Hip-Hop', ITUNESADVISORY: '1', REPLAYGAIN_TRACK_GAIN: '-7.20 dB', REPLAYGAIN_ALBUM_GAIN: '-6.80 dB' },
   'Drake/Scorpion/02.mp3': { title: 'Elevate', artist: 'Drake', album_artist: 'Drake', album: 'Scorpion', track: '2', date: '2018', genre: 'Rap; Hip-Hop' },
   'The Beatles/Abbey Road/01.flac': { title: 'Come Together', artist: 'The Beatles', album_artist: 'The Beatles', album: 'Abbey Road', track: '1', date: '1969', genre: 'Rock' },
-  'Mariah Carey/Merry Christmas/01.mp3': { title: 'All I Want for Christmas Is You', artist: 'Mariah Carey', album_artist: 'Mariah Carey', album: 'Merry Christmas', track: '1', date: '1994', genre: 'Pop; Christmas' },
+  'Mariah Carey/Merry Christmas/01.mp3': { title: 'All I Want for Christmas Is You', artist: 'Mariah Carey', album_artist: 'Mariah Carey', album: 'Merry Christmas', track: '1', date: '1994', genre: 'Pop; Christmas', RELEASETYPE: 'album; mixtape/street' },
 };
 const ND: Record<string, { id: string; albumId: string; artistId: string; albumArtistId: string }> = {
   'Drake/Scorpion/01.mp3': { id: 'nd1', albumId: 'al1', artistId: 'ar1', albumArtistId: 'ar1' },
@@ -122,6 +122,8 @@ test('with the switch on, the Hub answers browsing and search from the catalog, 
   assert.equal(album.body.album.songCount, 2);
   assert.equal(album.body.album.explicitStatus, 'explicit');
   assert.deepEqual(album.body.album.genres, [{ name: 'Rap' }, { name: 'Hip-Hop' }]);
+  assert.equal(album.body.album.releaseTypes, undefined, 'no release type tag, none listed');
+  assert.deepEqual((await rest('getAlbum', { id: 'al3' })).body.album.releaseTypes, ['album', 'mixtape/street'], 'RELEASETYPE as OpenSubsonic releaseTypes (the artist page shelves)');
   assert.deepEqual(album.body.album.song.map((x: { id: string }) => x.id), ['nd1', 'nd2']);
   const [first, second] = album.body.album.song;
   assert.equal(first.title, 'Nonstop');

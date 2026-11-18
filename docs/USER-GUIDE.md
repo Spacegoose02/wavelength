@@ -2407,8 +2407,20 @@ rules tidy them); check them and press **Write genres**, which you can undo unde
 **Review songs…** opens the song-by-song rename page described under [Fixing tags](#fixing-tags-admins), which
 lists every song a rename changes, album by album.
 
-The artist page puts their releases on separate shelves: **Albums**, **Singles & EPs** and **Compilations**, each in
-the order **Album sorting** sets.
+The artist page puts their releases on separate shelves: **Albums**, **Singles & EPs**, **Compilations**,
+**Soundtracks** and **Leaks & Mixtapes**, each in the order **Album sorting** sets. Empty shelves don't show.
+
+**Edit album → Release type** decides which shelf an album goes on: Album, EP, Single, Compilation, Soundtrack,
+Mixtape or Leak (Mixtape and Leak share the Leaks & Mixtapes shelf). Albums without a type are guessed:
+
+- A title with "Leak", "Leaks", "Unreleased", "Mixtape", "Demo Tape", "DatPiff", "Hosted by", "Gangsta Grillz" or
+  "No DJ" goes to **Leaks & Mixtapes**, as does a "Mixtape" genre. Old DatPiff downloads mostly sort themselves.
+- A title with "Soundtrack", "Original Score", "Motion Picture" or "OST", or a "Soundtrack" genre, goes to
+  **Soundtracks**.
+- Otherwise up to 3 songs is a single, 4 to 6 an EP, and anything longer an album.
+
+The title guess also wins over a plain "Album" type, which tagging apps like Picard write on nearly everything. A type
+of Single, EP or Compilation always wins. If something lands on the wrong shelf, set its type once and it stays.
 
 ### Editing a song (admins)
 
