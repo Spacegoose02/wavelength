@@ -6,6 +6,7 @@ import { songFacets, useItemTags, useItemTagStore } from '../lib/itemTags';
 import { useHub } from '../store/hub';
 import { SaveSmartButton } from '../components/SaveSmartButton';
 import { useHidden } from '../lib/kids';
+import { useAiArtists } from '../lib/aiArtists';
 import { sourceFor } from '../sources/registry';
 import type { Album, Track } from '../sources/types';
 import { useCatalog } from '../store/catalog';
@@ -76,6 +77,7 @@ function Landing({ albums, tree }: { albums: Album[]; tree: GenreNode[] }) {
   const [filter, setFilter] = useState('');
   const decades = useMemo(() => decadeCounts(albums), [albums]);
   const collections = useMemo(() => tagCounts(albums, 'collection'), [albums]);
+  const aiCount = useAiArtists((s) => s.artists.length);
   const f = genreKey(filter);
   // searching looks in sub-genres too
   const matching = f ? tree.filter((g) => genreKey(g.label).includes(f) || g.subs.some((s) => genreKey(s.label).includes(f))) : tree;
@@ -86,6 +88,13 @@ function Landing({ albums, tree }: { albums: Album[]; tree: GenreNode[] }) {
         <h1>Browse</h1>
         <input className="filter" placeholder="Find a genre…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       </header>
+      {aiCount > 0 && !f && (
+        <div className="row gap browse-ai">
+          <button className="chip" onClick={() => useUi.getState().go({ view: 'aiArtists' })} title="Every artist your Hub admin marked as AI-generated">
+            <span className="ai-badge">✦ AI</span> AI artists <small className="muted">{aiCount}</small>
+          </button>
+        </div>
+      )}
       {collections.length > 0 && !f && (
         <>
           <h2>Collections</h2>

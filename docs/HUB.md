@@ -588,6 +588,26 @@ also answers `memberOf`, the groups whose list has that artist, matched loosely 
 ignored, `$` read as `s`). A rename in Edit artist calls `PUT /api/admin/artist-meta/member-rename` so groups follow
 the new name; the artist page shows both as shelves of artist cards (`src/components/ArtistMembers.tsx`).
 
+## AI-generated artists
+
+Admins can mark an artist as AI-generated (`hub/src/aiArtists.ts`, table `ai_artists`, migration 45): from **Edit
+artist → General → AI-generated artist**, the **✦ Mark as AI** button on an artist's Deezer page (or the library
+page of an artist with no Edit artist), or **Mark *artist* as AI** in a song's menu. A mark is kept by name, keyed
+the same way as styles and collections (`tagKey`: no case, accents or punctuation), so it covers artists who are only
+on the charts as well as the library, and Edit artist moves it when it renames someone. Every signed-in person reads
+the whole list (`GET /api/ai-artists`); the app keeps a copy on the device (`src/lib/aiArtists.ts`), shows a
+**✦ AI** badge on those artists, and lists them all under **Browse → AI artists**. Marks are audited as
+`artist.aiMarked` and `artist.aiUnmarked`.
+
+What a mark does is up to each person, in **Settings → Playback → AI artists** (the synced setting
+`settings.aiArtists`, `{ hideInDiscover, outOfPicks }`, both off to start):
+
+- **Hide AI artists from Discover** is done by the app: Discover's charts, Release Radar, the Weekly Mix and Artists
+  you might like leave them out, with a "Show N by AI artists" link on the charts.
+- **Keep AI artists out of my picks** makes every marked artist count as one of that person's Don't play artists
+  (`dontPlayOf` in `hub/src/dontPlay.ts`), so the Hub leaves them out of their Made for you mixes and DJ mode, and the
+  app out of song radio, Sounds like this and Smart Shuffle. Playing them yourself still works.
+
 The extra tags are written under the names Navidrome reads (`hub/src/tags.ts`): in an mp3, TSOA / TSOP for the sort
 names, TPUB for the label, and TXXX frames for ALBUMARTISTSORT, RELEASETYPE and MOOD; in FLAC, Ogg and Opus, Vorbis
 comments of those names. ffmpeg keeps only a fixed set of MP4 atoms, so an .m4a gets none of them: a Save leaves
@@ -1430,6 +1450,9 @@ with a 4xx status.
 | `GET /api/artist-meta?name=` | signed in | an artist's `bio`, `albumSort` and `members` set in Edit artist (`''` / `null` when none), and `memberOf`: the groups that list them |
 | `PUT /api/admin/artist-meta` | `library.edit` | `{ name, bio?, albumSort?, members? }` (`albumSort`: `''`, `newest`, `oldest` or `title`; `members`: a list of names, `[]` for none, or `null` for not set); only what's sent changes, and an artist with nothing set is forgotten |
 | `PUT /api/admin/artist-meta/member-rename` | `library.edit` | `{ from, to }`: every group listing `from` as a member lists `to` instead; answers `{ groups }` |
+| `GET /api/ai-artists` | signed in | every artist marked as AI-generated: `{ artists: [{ name, setBy, setAt }] }`, A to Z (`setBy` is the admin's display name, `null` once their account is gone) |
+| `PUT /api/admin/ai-artists` | `library.edit` | `{ name, ai }`: mark (`true`) or unmark (`false`) an artist, matched without case, accents or punctuation; answers `{ artist }`, `null` when unmarked |
+| `POST /api/admin/ai-artists/rename` | `library.edit` | `{ from, to }`: an artist was renamed, so their mark follows; answers `{ moved }` |
 | `GET /api/item-tags` | signed in | every album's and artist's tags kept on the Hub: `{ artists, albums, values }`; each item is `{ kind, artist, title, facets: { genre?, style?, mood?, collection? }, sources, updatedAt }`, and `values` lists every name per facet with how many albums and artists have it |
 | `GET /api/item-tags/one?kind=&artist=&title=` | signed in | one album (`kind=album`, its album artist and title) or artist (`kind=artist`) |
 | `PUT /api/admin/item-tags` | `library.edit` | `{ kind, artist, title?, genres?, styles?, moods?, collections? }`: each list sent replaces what was there, an empty one clears it; albums take no `genres` (theirs are in the files) |

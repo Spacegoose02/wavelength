@@ -21,6 +21,7 @@ import { discHeading, hasDiscs } from '../lib/discs';
 import { EditSongButton } from './EditSong';
 import { useUi } from '../store/ui';
 import { tidyCredit } from '../lib/songIssues';
+import { AiBadge } from './AiBadge';
 
 export function fmtTime(s?: number) {
   if (!s || !Number.isFinite(s)) return '0:00';
@@ -102,7 +103,7 @@ export function AlbumCard({ album, onOpen, selected, badge, onPick }: { album: A
       <div className="card-title" title={album.title}><Rating explicit={explicitOfAlbum(album)} />{album.title}</div>
       <div className="card-sub">
         <SourceDots sourceIds={(album.refs ?? [album]).map((r) => r.sourceId)} />
-        <span>{album.artist}{album.year ? ` · ${album.year}` : ''}</span>
+        <span>{album.artist}<AiBadge artist={album.artist} />{album.year ? ` · ${album.year}` : ''}</span>
       </div>
     </button>
   );
@@ -116,7 +117,7 @@ export function ArtistCard({ artist, onOpen, selected, badge, onPick }: { artist
     <button className={cardClass(selected, !!onPick)} onClick={(e) => onOpen(artist, e)} aria-pressed={selected}>
       <PickMarks x={artist} selected={selected} badge={badge} onPick={onPick} />
       <Cover src={artistArt(artist)} alt={artist.name} round />
-      <div className="card-title center">{artist.name}</div>
+      <div className="card-title center">{artist.name}<AiBadge artist={artist.name} /></div>
       <div className="card-sub center"><SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} /></div>
     </button>
   );
@@ -252,6 +253,7 @@ function TrackSub({ track: t, showAlbum }: { track: Track; showAlbum?: boolean }
   return (
     <>
       <ArtistCredit credit={t.artist} fallback={artist} linkClass="sub-link" links={isLibraryTrack(t)} discography="several" />
+      <AiBadge artist={t.artist} />
       {showAlbum && t.album ? <>{' — '}{album
         ? <button className="sub-link" title="Go to album" onClick={() => go({ view: 'album', album, track: { id: t.id, sourceId: t.sourceId, title: t.title } })}>{t.album}</button>
         : t.album}</> : null}

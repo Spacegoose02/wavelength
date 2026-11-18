@@ -787,6 +787,16 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   `
   ALTER TABLE artist_meta ADD COLUMN members TEXT;
   `,
+  // 45 — artists an admin marked as AI-generated (aiArtists.ts): a badge in the app, and each person can hide them
+  // from Discover or keep them out of their picks. Keyed by tagKey(name), so it covers artists not in the library.
+  `
+  CREATE TABLE ai_artists (
+    key    TEXT PRIMARY KEY,
+    name   TEXT NOT NULL,
+    set_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    set_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

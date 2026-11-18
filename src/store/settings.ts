@@ -6,6 +6,7 @@ import type { SourceConfig, Station } from '../sources/types';
 import type { ChartSource, Genre } from '../sources/charts';
 import { DEFAULT_EQ, type EqSettings } from '../player/eq';
 import type { SmartPlaylist } from '../lib/smartPlaylists';
+import type { AiArtistPrefs } from '../../hub/src/api/aiArtists';
 import type { DontPlay } from '../../hub/src/api/dontPlay';
 import type { MotionPref } from '../lib/motion';
 import { cleanTune, DEFAULT_TUNE, type MouthTune } from '../player/voice';
@@ -179,6 +180,9 @@ interface SettingsState {
   /** "Don't play this" (lib/dontPlay.ts): left out of radio, mixes, DJ mode and Smart Shuffle; synced. */
   dontPlay: DontPlay;
   setDontPlay(d: DontPlay): void;
+  /** AI-generated artists (lib/aiArtists.ts): hide them from Discover, keep them out of picks. Both off; synced. */
+  aiArtists: AiArtistPrefs;
+  setAiArtists(p: Partial<AiArtistPrefs>): void;
   /** Reduce motion (lib/motion.ts): follow the system, always, or never. Synced. */
   motion: MotionPref;
   setMotion(m: MotionPref): void;
@@ -352,6 +356,8 @@ export const useSettings = create<SettingsState>()(
       setVersions: (versions) => set({ versions }),
       dontPlay: { artists: [], songs: [] },
       setDontPlay: (dontPlay) => set({ dontPlay }),
+      aiArtists: { hideInDiscover: false, outOfPicks: false },
+      setAiArtists: (p) => set((st) => ({ aiArtists: { ...st.aiArtists, ...p } })),
       motion: 'system',
       setMotion: (motion) => set({ motion }),
       smartShuffle: false,
@@ -479,7 +485,7 @@ export const useSettings = create<SettingsState>()(
       // fill in defaults for settings added after someone's first run
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<SettingsState>;
-        return { ...current, ...s, ...(s.act && RETIRED_ACTS[s.act] && { act: RETIRED_ACTS[s.act] }), ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, deadZone: { ...current.deadZone, ...s.deadZone }, streamQuality: { ...current.streamQuality, ...s.streamQuality }, mouthTune: cleanTune(s.mouthTune) };
+        return { ...current, ...s, ...(s.act && RETIRED_ACTS[s.act] && { act: RETIRED_ACTS[s.act] }), ytdlp: { ...current.ytdlp, ...s.ytdlp }, updates: { ...current.updates, ...s.updates }, smartOffline: { ...current.smartOffline, ...s.smartOffline }, deadZone: { ...current.deadZone, ...s.deadZone }, streamQuality: { ...current.streamQuality, ...s.streamQuality }, mouthTune: cleanTune(s.mouthTune), aiArtists: { ...current.aiArtists, ...s.aiArtists } };
       },
     },
   ),

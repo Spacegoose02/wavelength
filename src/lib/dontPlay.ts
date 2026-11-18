@@ -1,6 +1,7 @@
 import type { DontPlay } from '../../hub/src/api/dontPlay';
 import type { Track } from '../sources/types';
 import { useSettings } from '../store/settings';
+import { aiOutOfPicks } from './aiArtists';
 import { primaryArtist } from './match';
 
 /**
@@ -26,9 +27,11 @@ export function allowedBy(rules: DontPlay): (t: Pick<Track, 'artist' | 'title'>)
   };
 }
 
-/** The songs Wavelength may pick for you, in order. */
+/** The songs Wavelength may pick for you, in order: without Don't play, nor AI artists when you keep them out (lib/aiArtists.ts). */
 export function withoutDontPlay<T extends Pick<Track, 'artist' | 'title'>>(tracks: T[]): T[] {
-  const ok = allowedBy(useSettings.getState().dontPlay);
+  const rules = useSettings.getState().dontPlay;
+  const ai = aiOutOfPicks();
+  const ok = allowedBy(ai.length ? { ...rules, artists: [...rules.artists, ...ai] } : rules);
   return tracks.filter(ok);
 }
 

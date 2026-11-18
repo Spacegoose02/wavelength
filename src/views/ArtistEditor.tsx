@@ -3,6 +3,7 @@ import { ArtworkPicker } from '../components/ArtworkButton';
 import { Spinner } from '../components/common';
 import { ChipInput, EditDialog } from '../components/EditDialog';
 import { forgetTagValues, HubTagLists, TagLists, useTagValues } from '../components/TagLists';
+import { isAiIn, loadAiArtists, setAiArtist } from '../lib/aiArtists';
 import { useArtistMetaStore } from '../lib/artistMeta';
 import { useMusicBrainzBio } from '../lib/artistMembers';
 import { type ArtistSong, loadArtistSongs } from '../lib/artistSongs';
@@ -24,7 +25,8 @@ import { LibraryServer } from '../lib/serverName';
  *   credits like "A feat. B" too), the sort name (ARTISTSORT / ALBUMARTISTSORT, so "The Weeknd" can sort under W),
  *   a biography, which the Hub keeps and the artist page shows instead of Wikipedia's, and a group's members, which
  *   the Hub keeps too: the page lists them under the music, and each member's page links back (components/ArtistMembers.tsx).
- *   Until members are set the page shows MusicBrainz's, and the field offers them.
+ *   Until members are set the page shows MusicBrainz's, and the field offers them. **AI-generated artist** badges
+ *   them for everyone on the Hub, and lets people hide them (lib/aiArtists.ts); the mark follows a rename.
  * - **Tags:** the artist's own genres, styles, moods and collections as chips, kept on the Hub (hub/src/itemTags.ts),
  *   so an album can have genres of its own (a Christmas album by a pop group). Until the artist has genres of their
  *   own, the ones most of their songs have are shown. Their songs' genres change only when "Also write these genres
@@ -56,7 +58,7 @@ function usual(values: (string | undefined)[]): string {
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
 }
 
-interface Draft { name: string; sort: string; bio: string; members: string[]; genres: string[]; styles: string[]; moods: string[]; collections: string[]; albumSort: HubAlbumSort }
+interface Draft { name: string; sort: string; bio: string; members: string[]; ai: boolean; genres: string[]; styles: string[]; moods: string[]; collections: string[]; albumSort: HubAlbumSort }
 /** Members are artist names, which can have commas in them (Tyler, the Creator): a list pastes in one per line or split by ';'. */
 const splitNames = (s: string) => s.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
 const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -75,9 +77,11 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const [tab, setTab] = useState<Tab>('general');
   const [msg, setMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState<{ batches: string[]; files: number; name: string; meta?: Meta; memberMoved?: boolean; hub?: { lists: Pick<Draft, HubKey>; hadAny: boolean; moved: boolean } }>();
+  const [saved, setSaved] = useState<{ batches: string[]; files: number; name: string; meta?: Meta; memberMoved?: boolean; ai?: { was: boolean; moved: boolean; changed: boolean }; hub?: { lists: Pick<Draft, HubKey>; hadAny: boolean; moved: boolean } }>();
   /** The members the Hub had (null = not set), and whether it keeps members at all (an older one doesn't). */
   const [hubMembers, setHubMembers] = useState<string[] | null | undefined>();
+  /** The Hub keeps AI marks (an older one doesn't). */
+  const [aiKnown, setAiKnown] = useState(false);
   /** The Hub keeps artist tags (an older one doesn't), and whether this artist has any yet. */
   const [hubOn, setHubOn] = useState(false);
   const [hubHad, setHubHad] = useState(false);
@@ -88,7 +92,8 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const load = async (who = name) => {
     if (!c) return;
     try {
-      const [r, meta] = await Promise.all([loadArtistSongs({ ...artist, name: who }, sources, c), c.artistMeta(who), useItemTagStore.getState().load()]);
+      const [r, meta, ai] = await Promise.all([loadArtistSongs({ ...artist, name: who }, sources, c), c.artistMeta(who), c.aiArtists().catch(() => undefined), useItemTagStore.getState().load()]);
+      setAiKnown(!!ai);
       const own = useItemTagStore.getState().ready ? await c.itemTagsOf('artist', who).catch(() => undefined) : undefined;
       setHubOn(!!own);
       setHubHad(own?.updatedAt != null);
@@ -99,6 +104,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         sort: usual([...mine.map((s) => (same(readCredit(s.tags.artist ?? '').main, who) ? s.tags.artistSort : undefined)), ...mine.map((s) => (same(s.tags.albumArtist, who) ? s.tags.albumArtistSort : undefined))]),
         bio: meta.bio,
         members: meta.members ?? [],
+        ai: !!ai && isAiIn(ai.artists, who),
         genres: own?.facets.genre ?? splitGenres(usual(mine.map((s) => s.tags.genre))),
         styles: own?.facets.style ?? [],
         moods: own?.facets.mood ?? [],
@@ -128,6 +134,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const membersOn = hubMembers !== undefined;
   const membersChanged = membersOn && !!draft && !!start && !sameList(draft.members, start.members);
   const metaChanged = !!draft && !!start && (draft.bio.trim() !== start.bio || draft.albumSort !== start.albumSort || membersChanged);
+  const aiChanged = aiKnown && !!draft && !!start && draft.ai !== start.ai;
 
   /** The tags each song gets: the rename first, then the sort name and genres on the songs that are theirs. */
   const changes = useMemo(() => {
@@ -149,7 +156,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
       return Object.keys(tags).length ? [{ path: s.path, tags }] : [];
     });
   }, [songs, draft, start, renamed, sortChanged, songGenres]);
-  const dirty = changes.length > 0 || metaChanged || hubDirty;
+  const dirty = changes.length > 0 || metaChanged || hubDirty || aiChanged;
 
   const save = async () => {
     if (!c || !draft || !start || !dirty) return;
@@ -175,6 +182,14 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
       // groups that list them as a member list the new name
       const memberMoved = membersOn && renamed && (await c.renameMember(start.name, to)).groups.length > 0;
       if (memberMoved) forgetMemberPages();
+      // the AI mark follows a rename, then takes the switch
+      let ai: NonNullable<typeof saved>['ai'];
+      if (aiKnown && (aiChanged || (renamed && start.ai))) {
+        const moved = renamed && start.ai && (await c.renameAiArtist(start.name, to)).moved;
+        if (aiChanged) await setAiArtist(to, draft.ai);
+        else await loadAiArtists();
+        ai = { was: start.ai, moved, changed: aiChanged };
+      }
       // the Hub's genres, styles, moods and collections follow a rename (their albums' too), then take what changed
       let hub: NonNullable<typeof saved>['hub'];
       const moved = hubOn && renamed;
@@ -185,7 +200,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         void useItemTagStore.getState().load(true);
       }
       forgetTagValues();
-      setSaved({ batches: r.batches, files: r.changed.length, name: start.name, meta, memberMoved, hub });
+      setSaved({ batches: r.batches, files: r.changed.length, name: start.name, meta, memberMoved, ai, hub });
       setMsg(r.failed.length ? `${plural(r.failed.length, 'song')} failed: ${r.failed[0].error}` : undefined);
       setName(to);
       await load(to);
@@ -209,6 +224,12 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         await c.renameMember(draft.name, saved.name);
         forgetMemberPages();
       }
+      if (saved.ai) {
+        if (saved.ai.moved) await c.renameAiArtist(draft.name, saved.name);
+        else if (saved.ai.changed && !same(draft.name, saved.name)) await setAiArtist(draft.name, false);
+        if (saved.ai.changed) await setAiArtist(saved.name, saved.ai.was);
+        else await loadAiArtists();
+      }
       if (saved.hub) {
         if (saved.hub.moved) await c.renameItemTags('artist', { artist: draft.name }, { artist: saved.name });
         await c.setItemTags('artist', saved.name, '', saved.hub.hadAny ? saved.hub.lists : { genres: [], styles: [], moods: [], collections: [] });
@@ -231,7 +252,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   };
 
   const what = [
-    renamed && 'name', sortChanged && 'sort name', membersChanged && 'members', ...HUB_LISTS.filter(([k]) => listChanged(k)).map(([k]) => k), draft && start && draft.bio.trim() !== start.bio && 'biography', draft && start && draft.albumSort !== start.albumSort && 'album order',
+    renamed && 'name', sortChanged && 'sort name', membersChanged && 'members', aiChanged && (draft?.ai ? 'marked as AI' : 'not AI'), ...HUB_LISTS.filter(([k]) => listChanged(k)).map(([k]) => k), draft && start && draft.bio.trim() !== start.bio && 'biography', draft && start && draft.albumSort !== start.albumSort && 'album order',
   ].filter(Boolean).join(', ');
 
   return (
@@ -262,6 +283,15 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
             <textarea rows={7} value={draft.bio} onChange={(e) => set('bio', e.target.value)} placeholder="Leave empty to show Wikipedia’s" />
           </label>
           {membersOn && <MembersField members={draft.members} onChange={(v) => set('members', v)} suggested={mbBio?.members.map((m) => m.name) ?? []} group={draft.name} />}
+          {aiKnown && (
+            <div className="span2 edit-field">
+              <label className="check">
+                <span className="switch"><input type="checkbox" checked={draft.ai} onChange={(e) => set('ai', e.target.checked)} /><span /></span>
+                <span><b>AI-generated artist</b></span>
+              </label>
+              <p className="edit-hint small muted"><span>A ✦ AI badge on {draft.name.trim() || 'them'} everywhere, for everyone on your Hub. Each person can then hide AI artists from Discover or keep them out of their radio, mixes and DJ mode (Settings → Playback → AI artists).</span></p>
+            </div>
+          )}
         </div>
       ) : tab === 'tags' ? (
         <div className="edit-fields">
@@ -344,7 +374,7 @@ export function EditArtistButton({ artist, picture }: { artist: Artist; picture?
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button className="btn" title="Rename, sort name, biography, members, genres, picture and album order" onClick={() => setOpen(true)}>Edit artist</button>
+      <button className="btn" title="Rename, sort name, biography, members, AI-generated, genres, picture and album order" onClick={() => setOpen(true)}>Edit artist</button>
       {open && <ArtistEditor artist={artist} picture={picture} onClose={() => setOpen(false)} />}
     </>
   );

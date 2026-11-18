@@ -3,6 +3,7 @@ import { StreamingSettings } from '../components/StreamingSettings';
 import { DesktopSettings } from '../components/DesktopSettings';
 import { MotionSettings } from '../components/MotionSettings';
 import { DontPlaySettings } from '../components/DontPlaySettings';
+import { AiArtistSettings } from '../components/AiArtistSettings';
 import { useEffect, useState } from 'react';
 import { ytdlp as ytdlpApi } from '../sources/ytdlp';
 import { isAndroid, isMobileApp } from '../lib/platform';
@@ -767,6 +768,7 @@ const SEARCH_INDEX: { tab: SettingsTab; heading: string; also?: string; sub?: Lo
   { tab: 'playback', heading: 'Bit-perfect output', also: 'wasapi exclusive hi-res' },
   { tab: 'playback', heading: 'Explicit and clean versions', also: 'explicit clean' },
   { tab: 'playback', heading: "Don't play", also: 'block hide ban skip artist song never dislike' },
+  { tab: 'playback', heading: 'AI artists', also: 'ai generated artificial intelligence suno udio fake bot badge hide discover' },
   { tab: 'playback', heading: 'Equalizer', also: 'eq bass treble' },
   { tab: 'downloads', heading: 'Dead zones', also: 'offline signal tunnel' },
   { tab: 'downloads', heading: 'Smart offline', also: 'offline favorites mixes storage' },
@@ -965,6 +967,7 @@ export function Settings({ tab: initial }: { tab?: SettingsTab }) {
           <HifiSettings />
           <VersionsPicker />
           <DontPlaySettings />
+          <AiArtistSettings />
           <section id="equalizer">
             <h2>Equalizer</h2>
             <Equalizer />

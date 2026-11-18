@@ -1,3 +1,5 @@
+import { AiBadge } from '../components/AiBadge';
+import { useAiHiddenInDiscover } from '../lib/aiArtists';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHubRuns } from '../lib/hubServices';
 import { primaryArtist } from '../lib/match';
@@ -187,6 +189,9 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
     return hidden.track({ kind: 'track', id: '', sourceId: '', title: r.title, artist: r.artist, explicit: r.explicit ? 'explicit' : 'clean' });
   };
   const hiddenSet = useMemo(() => new Set(notInterested), [notInterested]);
+  // AI-generated artists, for people who hide them from Discover (lib/aiArtists.ts): out like a kid-hidden song, but can be shown
+  const aiOff = useAiHiddenInDiscover();
+  const [showAi, setShowAi] = useState(false);
   const isNotInterested = (r: Row) => hiddenSet.has(songKey(r));
   const ytAvailable = hubYt || (!isMobileApp && !!yt.outDir);
   const nowPlayingId = usePlayer((s) => s.queue[s.index]?.id);
@@ -221,7 +226,9 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
     setJustHidden({ key: songKey(r), title: r.title });
   };
 
-  const all = (rows ?? []).map((r, i) => ({ r, i })).filter(({ r }) => !kidHidden(r));
+  const unfiltered = (rows ?? []).map((r, i) => ({ r, i })).filter(({ r }) => !kidHidden(r));
+  const aiHere = unfiltered.filter(({ r }) => aiOff(r.artist)).length;
+  const all = showAi ? unfiltered : unfiltered.filter(({ r }) => !aiOff(r.artist));
   const wanted = all.filter(({ r }) => !isNotInterested(r));
   const owned = wanted.filter(({ r }) => r.lib).map(({ r }) => r.lib!) as Track[];
   const missing = wanted.filter(({ r }) => r.lib === null && gets[songKey(r)]?.state !== 'queued' && gets[songKey(r)]?.state !== 'sending').map(({ r }) => r);
@@ -304,15 +311,17 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
           }}>New playlist from chart</button>
         </div>
       )}
-      {(justHidden || hiddenHere > 0) && rows && (
+      {(justHidden || hiddenHere > 0 || aiHere > 0) && rows && (
         <div className="muted small hidden-note">
           {justHidden && notInterested.includes(justHidden.key) && (
             <>Hid “{justHidden.title}” from Discover. <button className="link small" onClick={() => {
               setNotInterested(justHidden.key, false);
               setJustHidden(undefined);
-            }}>Undo</button>{hiddenHere > 0 && ' · '}</>
+            }}>Undo</button>{(hiddenHere > 0 || aiHere > 0) && ' · '}</>
           )}
           {hiddenHere > 0 && <button className="link small" onClick={() => setShowHidden(!showHidden)}>{showHidden ? 'Hide' : 'Show'} {hiddenHere} you're not interested in</button>}
+          {hiddenHere > 0 && aiHere > 0 && ' · '}
+          {aiHere > 0 && <button className="link small" title="You hide AI-generated artists from Discover (Settings → Playback → AI artists)" onClick={() => setShowAi(!showAi)}>{showAi ? 'Hide' : 'Show'} {aiHere} by AI artists</button>}
         </div>
       )}
 
@@ -338,6 +347,7 @@ export function Discover({ initialGenre }: { initialGenre?: Genre } = {}) {
                   <div className="track-title">{r.title}</div>
                   <div className="track-sub">
                     <button className="sub-link" title="Go to artist" onClick={(e) => { e.stopPropagation(); goArtist(r.artist); }}>{r.artist}</button>
+                    <AiBadge artist={r.artist} />
                     {mv && mv.weeks >= 2 && <span className="chart-weeks" title={`${mv.weeks} weeks in a row on this chart`}> · {mv.weeks} wks</span>}
                     {r.because && <span className="chart-because"> · {r.because}</span>}
                   </div>
