@@ -7,7 +7,10 @@ import { hubClient, useHub } from '../store/hub';
 
 const fmtDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: new Date(`${d}T12:00:00`).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined });
 
-/** Artist page: the story (Wikipedia), facts and members (MusicBrainz), links, and upcoming shows (lib/artistInfo.ts, hub/src/tours.ts). */
+/**
+ * Artist page: the story (Wikipedia), facts (MusicBrainz), links, and upcoming shows (lib/artistInfo.ts, hub/src/tours.ts).
+ * A group's members have their own shelf above it (components/ArtistMembers.tsx).
+ */
 export function ArtistAbout({ name }: { name: string }) {
   const info = useFeature('artistInfo');
   const [bio, setBio] = useState<ArtistBio | null | undefined>();
@@ -31,7 +34,7 @@ export function ArtistAbout({ name }: { name: string }) {
   // a biography an admin wrote in Edit artist comes first, and shows even with artist info turned off
   const own = useArtistMeta(name)?.bio;
   const summary = own || bio?.summary;
-  const hasBio = !!own || (info && !!bio && (!!bio.summary || facts.length > 0 || bio.members.length > 0));
+  const hasBio = !!own || (info && !!bio && (!!bio.summary || facts.length > 0));
 
   return (
     <>
@@ -43,14 +46,6 @@ export function ArtistAbout({ name }: { name: string }) {
             {summary.length > 420 && <button className="link small" onClick={() => setMore(!more)}>{more ? 'Less' : 'Read more'}</button>}
           </>}
           {bio && facts.length > 0 && <div className="facts muted small">{facts.map((f) => <span key={f}>{f}</span>)}</div>}
-          {bio && bio.members.length > 0 && (
-            <div className="members small">
-              <b>Members:</b>{' '}
-              {bio.members.slice(0, 16).map((m, i) => (
-                <span key={m.name} className={m.current ? '' : 'muted'}>{i ? ', ' : ''}{m.name}{m.years ? ` (${m.years})` : ''}</span>
-              ))}
-            </div>
-          )}
           {bio && (bio.links.length > 0 || bio.wikipedia) && (
             <div className="row gap wrap small">
               {bio.links.map((l) => <a key={l.url} className="chip" href={l.url} target="_blank" rel="noreferrer">{l.label}</a>)}

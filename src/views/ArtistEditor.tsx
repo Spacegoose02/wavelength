@@ -4,6 +4,7 @@ import { Spinner } from '../components/common';
 import { ChipInput, EditDialog } from '../components/EditDialog';
 import { forgetTagValues, HubTagLists, TagLists, useTagValues } from '../components/TagLists';
 import { useArtistMetaStore } from '../lib/artistMeta';
+import { useMusicBrainzBio } from '../lib/artistMembers';
 import { type ArtistSong, loadArtistSongs } from '../lib/artistSongs';
 import { useItemTagStore } from '../lib/itemTags';
 import { renameArtist } from '../lib/merge';
@@ -20,8 +21,10 @@ import { LibraryServer } from '../lib/serverName';
  * Edit artist (docs/USER-GUIDE.md, "Editing an artist"): an artist in one dialog, Plex style.
  *
  * - **General:** the name (a rename, written into the Artist and Album artist tags of every song on their albums,
- *   credits like "A feat. B" too), the sort name (ARTISTSORT / ALBUMARTISTSORT, so "The Weeknd" can sort under W)
- *   and a biography, which the Hub keeps and the artist page shows instead of Wikipedia's.
+ *   credits like "A feat. B" too), the sort name (ARTISTSORT / ALBUMARTISTSORT, so "The Weeknd" can sort under W),
+ *   a biography, which the Hub keeps and the artist page shows instead of Wikipedia's, and a group's members, which
+ *   the Hub keeps too: the page lists them under the music, and each member's page links back (components/ArtistMembers.tsx).
+ *   Until members are set the page shows MusicBrainz's, and the field offers them.
  * - **Tags:** the artist's own genres, styles, moods and collections as chips, kept on the Hub (hub/src/itemTags.ts),
  *   so an album can have genres of its own (a Christmas album by a pop group). Until the artist has genres of their
  *   own, the ones most of their songs have are shown. Their songs' genres change only when "Also write these genres
@@ -29,8 +32,8 @@ import { LibraryServer } from '../lib/serverName';
  * - **Poster:** the artist picture picker.
  * - **Advanced:** how their page orders their albums (newest or oldest first, or A to Z).
  *
- * Tag changes go through the Hub's tag editor as one Save (Settings → Server → Tag edits undoes it); the biography
- * and album order are saved on the Hub (hub/src/routes/artistMeta.ts). The song-by-song rename page
+ * Tag changes go through the Hub's tag editor as one Save (Settings → Server → Tag edits undoes it); the biography,
+ * members and album order are saved on the Hub (hub/src/routes/artistMeta.ts). The song-by-song rename page
  * (views/ArtistTagEditor.tsx) is a button away.
  */
 
@@ -53,7 +56,11 @@ function usual(values: (string | undefined)[]): string {
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
 }
 
-interface Draft { name: string; sort: string; bio: string; genres: string[]; styles: string[]; moods: string[]; collections: string[]; albumSort: HubAlbumSort }
+interface Draft { name: string; sort: string; bio: string; members: string[]; genres: string[]; styles: string[]; moods: string[]; collections: string[]; albumSort: HubAlbumSort }
+/** Members are artist names, which can have commas in them (Tyler, the Creator): a list pastes in one per line or split by ';'. */
+const splitNames = (s: string) => s.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
+const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+type Meta = { bio: string; albumSort: HubAlbumSort; members?: string[] | null };
 const HUB_LISTS = [['genres', 'Genres', 'Add a genre', 'tag-genres'], ['styles', 'Styles', 'Add a style, like Teen Pop', 'tag-styles'], ['moods', 'Moods', 'Add a mood, like Cheerful', 'tag-moods'], ['collections', 'Collections', 'Add to a collection', 'tag-collections']] as const;
 type HubKey = (typeof HUB_LISTS)[number][0];
 const hubBody = (d: Pick<Draft, HubKey>) => ({ genres: d.genres, styles: d.styles, moods: d.moods, collections: d.collections });
@@ -68,12 +75,15 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const [tab, setTab] = useState<Tab>('general');
   const [msg, setMsg] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState<{ batches: string[]; files: number; name: string; meta?: Pick<Draft, 'bio' | 'albumSort'>; hub?: { lists: Pick<Draft, HubKey>; hadAny: boolean; moved: boolean } }>();
+  const [saved, setSaved] = useState<{ batches: string[]; files: number; name: string; meta?: Meta; memberMoved?: boolean; hub?: { lists: Pick<Draft, HubKey>; hadAny: boolean; moved: boolean } }>();
+  /** The members the Hub had (null = not set), and whether it keeps members at all (an older one doesn't). */
+  const [hubMembers, setHubMembers] = useState<string[] | null | undefined>();
   /** The Hub keeps artist tags (an older one doesn't), and whether this artist has any yet. */
   const [hubOn, setHubOn] = useState(false);
   const [hubHad, setHubHad] = useState(false);
   const [writeSongs, setWriteSongs] = useState(false);
   const [name, setName] = useState(artist.name);
+  const mbBio = useMusicBrainzBio(name);
 
   const load = async (who = name) => {
     if (!c) return;
@@ -88,12 +98,14 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         name: who,
         sort: usual([...mine.map((s) => (same(readCredit(s.tags.artist ?? '').main, who) ? s.tags.artistSort : undefined)), ...mine.map((s) => (same(s.tags.albumArtist, who) ? s.tags.albumArtistSort : undefined))]),
         bio: meta.bio,
+        members: meta.members ?? [],
         genres: own?.facets.genre ?? splitGenres(usual(mine.map((s) => s.tags.genre))),
         styles: own?.facets.style ?? [],
         moods: own?.facets.mood ?? [],
         collections: own?.facets.collection ?? [],
         albumSort: meta.albumSort,
       };
+      setHubMembers(meta.members);
       setStart(d);
       setDraft(d);
       if (r.missing.length) setMsg(`${plural(r.missing.length, 'file')} weren’t found in the Hub’s music folder and are left out`);
@@ -113,7 +125,9 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const hubDirty = hubOn && HUB_LISTS.some(([k]) => listChanged(k));
   // without a Hub that keeps them, genres can only go into the songs
   const songGenres = genresChanged && (writeSongs || !hubOn);
-  const metaChanged = !!draft && !!start && (draft.bio.trim() !== start.bio || draft.albumSort !== start.albumSort);
+  const membersOn = hubMembers !== undefined;
+  const membersChanged = membersOn && !!draft && !!start && !sameList(draft.members, start.members);
+  const metaChanged = !!draft && !!start && (draft.bio.trim() !== start.bio || draft.albumSort !== start.albumSort || membersChanged);
 
   /** The tags each song gets: the rename first, then the sort name and genres on the songs that are theirs. */
   const changes = useMemo(() => {
@@ -149,14 +163,18 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         r = { error: undefined, ...(await saveInParts(c, label, changes, (done, total) => total > 25 && setMsg(`Saving… ${done} of ${total}`))) };
         if (r.error) throw new Error(r.error);
       }
-      let meta: Pick<Draft, 'bio' | 'albumSort'> | undefined;
-      // the biography and album order follow a rename
-      if (metaChanged || (renamed && (start.bio || start.albumSort))) {
-        const m = await c.setArtistMeta(to, { bio: draft.bio, albumSort: draft.albumSort });
+      let meta: Meta | undefined;
+      // the biography, album order and members follow a rename; emptying the members goes back to MusicBrainz's
+      if (metaChanged || (renamed && (start.bio || start.albumSort || hubMembers != null))) {
+        const members = membersChanged ? (draft.members.length ? draft.members : null) : hubMembers;
+        const m = await c.setArtistMeta(to, { bio: draft.bio, albumSort: draft.albumSort, ...(membersOn && { members }) });
         useArtistMetaStore.getState().put(m);
-        meta = { bio: start.bio, albumSort: start.albumSort };
-        if (renamed) useArtistMetaStore.getState().put(await c.setArtistMeta(start.name, { bio: '', albumSort: '' }));
+        meta = { bio: start.bio, albumSort: start.albumSort, ...(membersOn && { members: hubMembers }) };
+        if (renamed) useArtistMetaStore.getState().put(await c.setArtistMeta(start.name, { bio: '', albumSort: '', ...(membersOn && { members: null }) }));
       }
+      // groups that list them as a member list the new name
+      const memberMoved = membersOn && renamed && (await c.renameMember(start.name, to)).groups.length > 0;
+      if (memberMoved) forgetMemberPages();
       // the Hub's genres, styles, moods and collections follow a rename (their albums' too), then take what changed
       let hub: NonNullable<typeof saved>['hub'];
       const moved = hubOn && renamed;
@@ -167,7 +185,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         void useItemTagStore.getState().load(true);
       }
       forgetTagValues();
-      setSaved({ batches: r.batches, files: r.changed.length, name: start.name, meta, hub });
+      setSaved({ batches: r.batches, files: r.changed.length, name: start.name, meta, memberMoved, hub });
       setMsg(r.failed.length ? `${plural(r.failed.length, 'song')} failed: ${r.failed[0].error}` : undefined);
       setName(to);
       await load(to);
@@ -184,8 +202,12 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
     try {
       for (const b of saved.batches) await c.undoTags(b);
       if (saved.meta) {
-        if (!same(draft.name, saved.name)) useArtistMetaStore.getState().put(await c.setArtistMeta(draft.name, { bio: '', albumSort: '' }));
+        if (!same(draft.name, saved.name)) useArtistMetaStore.getState().put(await c.setArtistMeta(draft.name, { bio: '', albumSort: '', ...(saved.meta.members !== undefined && { members: null }) }));
         useArtistMetaStore.getState().put(await c.setArtistMeta(saved.name, saved.meta));
+      }
+      if (saved.memberMoved) {
+        await c.renameMember(draft.name, saved.name);
+        forgetMemberPages();
       }
       if (saved.hub) {
         if (saved.hub.moved) await c.renameItemTags('artist', { artist: draft.name }, { artist: saved.name });
@@ -209,7 +231,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   };
 
   const what = [
-    renamed && 'name', sortChanged && 'sort name', ...HUB_LISTS.filter(([k]) => listChanged(k)).map(([k]) => k), draft && start && draft.bio.trim() !== start.bio && 'biography', draft && start && draft.albumSort !== start.albumSort && 'album order',
+    renamed && 'name', sortChanged && 'sort name', membersChanged && 'members', ...HUB_LISTS.filter(([k]) => listChanged(k)).map(([k]) => k), draft && start && draft.bio.trim() !== start.bio && 'biography', draft && start && draft.albumSort !== start.albumSort && 'album order',
   ].filter(Boolean).join(', ');
 
   return (
@@ -239,6 +261,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
           <label className="span2">Biography
             <textarea rows={7} value={draft.bio} onChange={(e) => set('bio', e.target.value)} placeholder="Leave empty to show Wikipedia’s" />
           </label>
+          {membersOn && <MembersField members={draft.members} onChange={(v) => set('members', v)} suggested={mbBio?.members.map((m) => m.name) ?? []} group={draft.name} />}
         </div>
       ) : tab === 'tags' ? (
         <div className="edit-fields">
@@ -287,6 +310,30 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   );
 }
 
+/** A group's members as chips, with MusicBrainz's to start from. */
+function MembersField({ members, onChange, suggested, group }: { members: string[]; onChange: (v: string[]) => void; suggested: string[]; group: string }) {
+  const offer = suggested.length > 0 && !sameList(members, suggested);
+  return (
+    <div className="span2 edit-field">
+      <span className="edit-field-label">Members</span>
+      <ChipInput values={members} onChange={onChange} list="tag-artists" placeholder="Add a member" split={splitNames} label="member" />
+      <p className="edit-hint small muted">
+        <span>
+          {members.length
+            ? `Shown on ${group.trim() || 'their'}’s page under the music, and each member’s page shows “Member of”. Remove them all to go back to MusicBrainz’s.`
+            : 'For a group: the artists in it. Their page lists them under the music, and each member’s page links back.'}
+          {offer && <> MusicBrainz lists {suggested.slice(0, 8).join(', ')}{suggested.length > 8 ? '…' : ''}. <button type="button" className="link small" onClick={() => onChange(suggested)}>Use these</button></>}
+        </span>
+      </p>
+    </div>
+  );
+}
+
+/** Member pages read their groups from the Hub once per session: after a member rename, read them again. */
+function forgetMemberPages() {
+  useArtistMetaStore.setState({ byName: {} });
+}
+
 /** Their songs: where they're the album artist or the main artist. */
 function theirs(songs: ArtistSong[], name: string) {
   return songs.filter((s) => same(s.tags.albumArtist, name) || same(readCredit(s.tags.artist ?? '').main, name));
@@ -297,7 +344,7 @@ export function EditArtistButton({ artist, picture }: { artist: Artist; picture?
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button className="btn" title="Rename, sort name, biography, genres, picture and album order" onClick={() => setOpen(true)}>Edit artist</button>
+      <button className="btn" title="Rename, sort name, biography, members, genres, picture and album order" onClick={() => setOpen(true)}>Edit artist</button>
       {open && <ArtistEditor artist={artist} picture={picture} onClose={() => setOpen(false)} />}
     </>
   );

@@ -22,6 +22,8 @@ export interface ArtistBio {
   began?: string;
   ended?: string;
   members: { name: string; years?: string; current: boolean }[];
+  /** The groups this artist is (or was) in, current ones first. Missing from bios cached before it was added. */
+  memberOf?: { name: string; years?: string; current: boolean }[];
   links: { label: string; url: string }[];
   mbid?: string;
 }
@@ -34,7 +36,11 @@ export interface Credit {
 // ---- cache ----
 
 const mem = new Map<string, { at: number; v: unknown }>();
+// the artist page asks for the same bio from more than one place at once: one lookup answers them all
+const loading = new Map<string, Promise<unknown>>();
 function cached<T>(key: string, ttl: number, load: () => Promise<T>): Promise<T> {
+  const pending = loading.get(key);
+  if (pending) return pending as Promise<T>;
   const hit = mem.get(key) ?? (() => {
     try {
       const raw = localStorage.getItem(`wl.info.${key}`);
@@ -44,7 +50,7 @@ function cached<T>(key: string, ttl: number, load: () => Promise<T>): Promise<T>
     }
   })();
   if (hit && Date.now() - hit.at < ttl) return Promise.resolve(hit.v as T);
-  return load().then((v) => {
+  const run = load().then((v) => {
     const e = { at: Date.now(), v };
     mem.set(key, e);
     try {
@@ -53,7 +59,9 @@ function cached<T>(key: string, ttl: number, load: () => Promise<T>): Promise<T>
       /* storage full: memory only */
     }
     return v;
-  });
+  }).finally(() => loading.delete(key));
+  loading.set(key, run);
+  return run;
 }
 
 // ---- MusicBrainz, one request a second ----
@@ -70,7 +78,8 @@ function mb<T>(path: string): Promise<T> {
 }
 
 const q = (s: string) => `"${s.replace(/["\\]/g, ' ')}"`;
-const norm = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+// "$" reads as "s", so Hot Boy$ finds MusicBrainz's Hot Boys and Ke$ha finds Kesha
+const norm = (s: string) => s.toLowerCase().replace(/\$/g, 's').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
 interface MbRelation {
   type: string;
@@ -141,18 +150,22 @@ async function wikipediaFor(a: MbArtist): Promise<{ summary?: string; url?: stri
 
 /** Who this artist is. null when MusicBrainz doesn't know them well enough to be sure. */
 export function artistBio(name: string): Promise<ArtistBio | null> {
-  return cached(`bio.${norm(name)}`, 7 * DAY, async () => {
-    const found = await mb<{ artists: MbArtist[] }>(`/artist/?limit=5&query=${encodeURIComponent(`artist:${q(name)}`)}`);
+  return cached(`bio2.${norm(name)}`, 7 * DAY, async () => {
+    const query = name.includes('$') ? `artist:${q(name)} OR artist:${q(name.replace(/\$/g, 's'))}` : `artist:${q(name)}`;
+    const found = await mb<{ artists: MbArtist[] }>(`/artist/?limit=5&query=${encodeURIComponent(query)}`);
     const best = found.artists.find((a) => (a.score ?? 0) >= 90 && norm(a.name) === norm(name)) ?? found.artists.find((a) => (a.score ?? 0) >= 98);
     if (!best) return null;
     const a = await mb<MbArtist>(`/artist/${best.id}?inc=url-rels+artist-rels`);
     const wiki = await wikipediaFor(a).catch(() => ({}) as Awaited<ReturnType<typeof wikipediaFor>>);
     const year = (d?: string | null) => d?.slice(0, 4);
-    const members = (a.relations ?? [])
-      .filter((r) => r.type === 'member of band' && r.direction === 'backward' && r.artist)
+    // "member of band" points from the member to the group: backward on a group's page, forward on a member's
+    const band = (direction: 'backward' | 'forward') => (a.relations ?? [])
+      .filter((r) => r.type === 'member of band' && r.direction === direction && r.artist)
       .map((r) => ({ name: r.artist!.name, years: [year(r.begin), year(r.end)].some(Boolean) ? `${year(r.begin) ?? '?'}–${r.ended ? (year(r.end) ?? '?') : ''}` : undefined, current: !r.ended }))
       .filter((m, i, all) => all.findIndex((x) => x.name === m.name) === i)
       .sort((x, y) => Number(y.current) - Number(x.current));
+    const members = band('backward');
+    const memberOf = band('forward');
     const links: ArtistBio['links'] = [];
     for (const r of a.relations ?? []) {
       const label = linkLabel(r);
@@ -168,6 +181,7 @@ export function artistBio(name: string): Promise<ArtistBio | null> {
       began: a['life-span']?.begin,
       ended: a['life-span']?.ended ? a['life-span']?.end : undefined,
       members,
+      memberOf,
       links,
       mbid: a.id,
     };
