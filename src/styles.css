@@ -2750,7 +2750,9 @@ h2 .rating { width: 18px; height: 18px; font-size: 11px; vertical-align: 4px; }
 .artist-about .bio { line-height: 1.55; white-space: pre-line; }
 .artist-about .bio.short { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 .artist-about .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0; }
-.artist-about .members { margin: 8px 0; }
+.artist-members { margin-top: 34px; }
+.artist-members h2 small { font-size: 12px; font-weight: 500; margin-left: 6px; }
+.member-elsewhere .cover { opacity: .75; }
 .artist-about .credit-src { margin-top: 8px; }
 .tour-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; }
 .tour-list li { display: grid; grid-template-columns: 92px 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--panel-2, rgba(255,255,255,.04)); }

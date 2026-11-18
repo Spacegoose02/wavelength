@@ -581,7 +581,12 @@ dialog (`src/components/EditDialog.tsx`). Edit album writes album-wide tags into
 `PUT /api/admin/tags` in parts (`src/lib/tagSave.ts`): album, album artist, year, genre, and the tags added for it,
 **albumSort**, **label**, **releaseType** and **mood**. Edit artist renames (the song-by-song page's `renameArtist`),
 writes **artistSort** / **albumArtistSort** and genres into their songs, and keeps what has no tag (the biography and
-how their page orders albums) on the Hub in `artist_meta` (migration 32, `hub/src/routes/artistMeta.ts`).
+how their page orders albums) on the Hub in `artist_meta` (migration 32, `hub/src/routes/artistMeta.ts`). A group's
+**Members** live there too (`artist_meta.members`, migration 44): a JSON list of artist names in order, `NULL` when not
+set (the app then shows MusicBrainz's "member of band" relations, `src/lib/artistMembers.ts`). `GET /api/artist-meta`
+also answers `memberOf`, the groups whose list has that artist, matched loosely (case, accents and punctuation
+ignored, `$` read as `s`). A rename in Edit artist calls `PUT /api/admin/artist-meta/member-rename` so groups follow
+the new name; the artist page shows both as shelves of artist cards (`src/components/ArtistMembers.tsx`).
 
 The extra tags are written under the names Navidrome reads (`hub/src/tags.ts`): in an mp3, TSOA / TSOP for the sort
 names, TPUB for the label, and TXXX frames for ALBUMARTISTSORT, RELEASETYPE and MOOD; in FLAC, Ogg and Opus, Vorbis
@@ -1422,8 +1427,9 @@ with a 4xx status.
 | `GET /api/radar/suggestions[?fresh=1]`, `POST /api/radar/suggestions/:id/hide` | signed in | artists you might like (`{ id, name, picture, fans, because, plays? }`) / never suggest this one again |
 | `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
 | `GET /api/admin/tags/song/:id?album=` | `library.edit` | one Navidrome song's file and its tags (`{ id, path, tags }`), for Edit song. `album` (the song's Navidrome album id) finds it when the catalog hasn't matched it yet |
-| `GET /api/artist-meta?name=` | signed in | an artist's `bio` and `albumSort` set in Edit artist (`''` when none) |
-| `PUT /api/admin/artist-meta` | `library.edit` | `{ name, bio?, albumSort? }` (`albumSort`: `''`, `newest`, `oldest` or `title`); only what's sent changes, and an artist with neither is forgotten |
+| `GET /api/artist-meta?name=` | signed in | an artist's `bio`, `albumSort` and `members` set in Edit artist (`''` / `null` when none), and `memberOf`: the groups that list them |
+| `PUT /api/admin/artist-meta` | `library.edit` | `{ name, bio?, albumSort?, members? }` (`albumSort`: `''`, `newest`, `oldest` or `title`; `members`: a list of names, `[]` for none, or `null` for not set); only what's sent changes, and an artist with nothing set is forgotten |
+| `PUT /api/admin/artist-meta/member-rename` | `library.edit` | `{ from, to }`: every group listing `from` as a member lists `to` instead; answers `{ groups }` |
 | `GET /api/item-tags` | signed in | every album's and artist's tags kept on the Hub: `{ artists, albums, values }`; each item is `{ kind, artist, title, facets: { genre?, style?, mood?, collection? }, sources, updatedAt }`, and `values` lists every name per facet with how many albums and artists have it |
 | `GET /api/item-tags/one?kind=&artist=&title=` | signed in | one album (`kind=album`, its album artist and title) or artist (`kind=artist`) |
 | `PUT /api/admin/item-tags` | `library.edit` | `{ kind, artist, title?, genres?, styles?, moods?, collections? }`: each list sent replaces what was there, an empty one clears it; albums take no `genres` (theirs are in the files) |

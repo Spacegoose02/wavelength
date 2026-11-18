@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.55.0
+- **Group members on the artist page.** A group's page lists its **Members** under the music as artist cards (Hot
+  Boy$: Lil Wayne, Turk, Juvenile, B.G.), and each member's page gets a **Member of** shelf linking back
+  (`src/components/ArtistMembers.tsx`, `src/lib/artistMembers.ts`). Members in the library open their page; anyone
+  else gets a card that searches for them. The MusicBrainz members line in About is replaced by the shelf.
+- **Members fill in from MusicBrainz.** With Artist bios and credits on, a group nobody has set shows MusicBrainz's
+  "member of band" relations, and a member's page shows the groups MusicBrainz lists them in. Names match loosely
+  (`$` reads as `s`), so "Hot Boy$" finds MusicBrainz's Hot Boys; the bio lookup also searches the `s` spelling.
+  Concurrent lookups of the same artist now share one request.
+- **Edit artist → General → Members (admins, Hub).** Chips with your library's artists suggested, and **Use these**
+  to start from MusicBrainz's. Kept on the Hub (`artist_meta.members`, migration 44) and replaces MusicBrainz's;
+  removing them all goes back to MusicBrainz's. `GET /api/artist-meta` answers `members` and `memberOf`; renaming an
+  artist updates every group that lists them (`PUT /api/admin/artist-meta/member-rename`), and Undo puts it back.
+
 ## 0.54.0
 - **Leaks & Mixtapes, and Soundtracks, on the artist page.** Two new shelves after Compilations
   (`src/lib/releaseKind.ts`). **Edit album → Release type** offers **Soundtrack**, **Mixtape** and **Leak** (written to

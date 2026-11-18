@@ -198,7 +198,7 @@ test('album tags beyond the basics: sort names, record label, release type and m
 test('artist details without a tag: biography and album order, set by admins and read by everyone', async () => {
   const { app, tokens } = await seeded();
   const empty = await json(app, 'GET', '/api/artist-meta?name=Kodak%20Black', { token: tokens.member });
-  assert.deepEqual(empty.body, { name: 'Kodak Black', bio: '', albumSort: '', updatedAt: null });
+  assert.deepEqual(empty.body, { name: 'Kodak Black', bio: '', albumSort: '', members: null, memberOf: [], updatedAt: null });
   assert.equal((await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.member, body: { name: 'Kodak Black', bio: 'x' } })).status, 403);
   assert.equal((await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', albumSort: 'sideways' } })).status, 400);
   const set = await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', bio: ' From Pompano Beach. ', albumSort: 'oldest' } });
@@ -211,4 +211,39 @@ test('artist details without a tag: biography and album order, set by admins and
   // clearing both forgets the artist
   await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', bio: '', albumSort: '' } });
   assert.equal((await json(app, 'GET', '/api/artist-meta?name=Kodak%20Black', { token: tokens.member })).body.updatedAt, null);
+});
+
+test('a group\'s members, set in Edit artist, and each member\'s groups', async () => {
+  const { app, tokens } = await seeded();
+  const get = async (name: string) => (await json(app, 'GET', `/api/artist-meta?name=${encodeURIComponent(name)}`, { token: tokens.member })).body;
+  const put = (body: unknown, token = tokens.admin) => json(app, 'PUT', '/api/admin/artist-meta', { token, body });
+  assert.equal((await put({ name: 'Hot Boy$', members: ['Lil Wayne'] }, tokens.member)).status, 403);
+  assert.equal((await put({ name: 'Hot Boy$', members: 'Lil Wayne' })).status, 400);
+  assert.equal((await put({ name: 'Hot Boy$', members: ['Lil Wayne', 3] })).status, 400);
+  // trimmed, blanks, repeats and the group itself left out, the order kept
+  const set = await put({ name: 'Hot Boy$', members: [' Lil Wayne ', 'Turk', '', 'lil wayne', 'Juvenile', 'Hot Boys', 'B.G.'] });
+  assert.equal(set.status, 200, JSON.stringify(set.body));
+  assert.deepEqual(set.body.members, ['Lil Wayne', 'Turk', 'Juvenile', 'B.G.']);
+  // a member's page reads the group back, in any case
+  assert.deepEqual((await get('LIL WAYNE')).memberOf, ['Hot Boy$']);
+  assert.deepEqual((await get('Lil Wayne')).members, null);
+  await put({ name: 'Young Money', members: ['Lil Wayne', 'Nicki Minaj', 'Drake'] });
+  assert.deepEqual((await get('Lil Wayne')).memberOf, ['Hot Boy$', 'Young Money']);
+  // sending other fields leaves the members alone
+  await put({ name: 'Hot Boy$', bio: 'New Orleans.' });
+  assert.deepEqual((await get('Hot Boy$')).members, ['Lil Wayne', 'Turk', 'Juvenile', 'B.G.']);
+  // a rename follows into every group's list
+  const moved = await json(app, 'PUT', '/api/admin/artist-meta/member-rename', { token: tokens.admin, body: { from: 'lil wayne', to: 'Weezy' } });
+  assert.deepEqual(moved.body.groups, ['Hot Boy$', 'Young Money']);
+  assert.deepEqual((await get('Hot Boy$')).members, ['Weezy', 'Turk', 'Juvenile', 'B.G.']);
+  assert.deepEqual((await get('Weezy')).memberOf, ['Hot Boy$', 'Young Money']);
+  assert.deepEqual((await get('Lil Wayne')).memberOf, []);
+  // [] is "no members" (kept, so MusicBrainz's aren't shown); null goes back to not set, and with nothing else set the artist is forgotten
+  await put({ name: 'Young Money', members: [] });
+  const none = await get('Young Money');
+  assert.deepEqual(none.members, []);
+  assert.notEqual(none.updatedAt, null);
+  await put({ name: 'Young Money', members: null });
+  assert.equal((await get('Young Money')).updatedAt, null);
+  assert.deepEqual((await get('Weezy')).memberOf, ['Hot Boy$']);
 });

@@ -355,8 +355,9 @@ number** tag (a song without one counts as disc 1), so:
 ## About the artist, song credits and tour dates
 
 At the bottom of an artist page, **About** tells the artist's story (from Wikipedia), where and when they
-started, the members of a band (past members greyed), and links to their website and socials (from
-MusicBrainz). In Now Playing, **Credits** shows who wrote, produced, mixed and played on the song, when
+started, and links to their website and socials (from MusicBrainz). Above it, a group's **Members** show as artist
+cards, and an artist who's in a group gets a **Member of** shelf linking to it (see
+[Group members](#group-members)). In Now Playing, **Credits** shows who wrote, produced, mixed and played on the song, when
 MusicBrainz knows. Both need no setup and are kept on the device for a week. An admin can turn them off with
 **Artist bios and credits** in **Settings → Features**.
 
@@ -2393,16 +2394,31 @@ rules tidy them); check them and press **Write genres**, which you can undo unde
 
 **Edit artist**, on an artist's page, opens the same kind of dialog:
 
-- **General:** the artist's name, their **Sort artist** ("Weeknd, The"), and a **Biography**. Changing the name
-  renames them in every song on their albums, credits like "Kodak Black feat. …" included; picking a name your
-  library already has merges the two. The biography is kept on your Hub and shown on the artist page in place of
-  Wikipedia's; leave it empty to get Wikipedia's back.
+- **General:** the artist's name, their **Sort artist** ("Weeknd, The"), a **Biography**, and a group's
+  **Members**. Changing the name renames them in every song on their albums, credits like "Kodak Black feat. …"
+  included; picking a name your library already has merges the two (and any group listing them follows the new
+  name). The biography is kept on your Hub and shown on the artist page in place of Wikipedia's; leave it empty to
+  get Wikipedia's back.
 - **Tags:** the artist's own **Genres**, **Styles**, **Moods** and **Collections**, kept on your Hub and shown under
   their name. Until you set them, Genres shows what most of their songs have. Saving keeps the artist's genres apart
   from their albums', so each album keeps its own; tick **Also write these genres into every song of theirs** to
   set every album of theirs to them as before.
 - **Poster:** the artist picture picker.
 - **Advanced:** **Album sorting**: newest first (the default), oldest first, or A to Z, for everyone on your Hub.
+
+#### Group members
+
+A group's page can list the artists in it, under the music: Hot Boy$ shows **Members** with Lil Wayne, Turk,
+Juvenile and B.G. as artist cards, and Lil Wayne's page shows **Member of: Hot Boy$**. Members you have in your
+library open their page; anyone else gets a plain card marked "Not in your library" that searches for them.
+
+- **Automatic:** with **Artist bios and credits** on, a group nobody has set members for shows MusicBrainz's
+  members ("from MusicBrainz" next to the heading), and an artist MusicBrainz lists in a group gets **Member of** for
+  it. Names match loosely, so MusicBrainz's "Hot Boys" finds your "Hot Boy$".
+- **By hand:** **Edit artist → General → Members**. Type a name (your library's artists are suggested) and press
+  Enter; paste several at once one per line or split by `;` (names can have commas, like "Tyler, the Creator").
+  When MusicBrainz knows the group, **Use these** fills in its members to start from. What you set is kept on your
+  Hub for everyone and replaces MusicBrainz's; remove them all to go back to MusicBrainz's.
 
 **Review songs…** opens the song-by-song rename page described under [Fixing tags](#fixing-tags-admins), which
 lists every song a rename changes, album by album.

@@ -781,6 +781,12 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
   ALTER TABLE catalog_songs ADD COLUMN release_type TEXT NOT NULL DEFAULT '';
   UPDATE catalog_songs SET mtime = 0;
   `,
+  // 44 — a group's members, set in Edit artist (routes/artistMeta.ts): a JSON array of artist names in order, so the
+  // artist page lists them and each member's page links back ("Member of"). NULL = not set, and the app shows
+  // MusicBrainz's members instead; '[]' = set to none, which hides MusicBrainz's too.
+  `
+  ALTER TABLE artist_meta ADD COLUMN members TEXT;
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

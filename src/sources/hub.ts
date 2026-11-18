@@ -280,7 +280,16 @@ export type HubTagKey = 'title' | 'artist' | 'album' | 'albumArtist' | 'track' |
   | 'albumSort' | 'artistSort' | 'albumArtistSort' | 'label' | 'releaseType' | 'mood';
 /** How an artist page orders that artist's albums (hub/src/routes/artistMeta.ts); '' is the app's default, newest first. */
 export type HubAlbumSort = '' | 'newest' | 'oldest' | 'title';
-export interface HubArtistMeta { name: string; bio: string; albumSort: HubAlbumSort; updatedAt: number | null }
+export interface HubArtistMeta {
+  name: string;
+  bio: string;
+  albumSort: HubAlbumSort;
+  /** A group's members set in Edit artist; null when not set (the page shows MusicBrainz's). An older Hub has none. */
+  members?: string[] | null;
+  /** The groups whose members list has this artist. */
+  memberOf?: string[];
+  updatedAt: number | null;
+}
 export type HubTags = Partial<Record<HubTagKey, string>>;
 /** Styles, moods, collections and artist genres kept on the Hub (hub/src/itemTags.ts). */
 export type HubFacet = 'genre' | 'style' | 'mood' | 'collection';
@@ -1283,7 +1292,9 @@ export class HubClient {
   /** One song's file and tags (Navidrome song id; its album id helps a Hub whose catalog hasn't matched it yet). */
   tagSong = (id: string, albumId?: string) => this.call<HubTagSong>('GET', `/api/admin/tags/song/${encodeURIComponent(id)}${albumId ? `?album=${encodeURIComponent(albumId)}` : ''}`);
   artistMeta = (name: string) => this.call<HubArtistMeta>('GET', `/api/artist-meta?name=${encodeURIComponent(name)}`);
-  setArtistMeta = (name: string, meta: { bio?: string; albumSort?: HubAlbumSort }) => this.call<HubArtistMeta>('PUT', '/api/admin/artist-meta', { name, ...meta });
+  setArtistMeta = (name: string, meta: { bio?: string; albumSort?: HubAlbumSort; members?: string[] | null }) => this.call<HubArtistMeta>('PUT', '/api/admin/artist-meta', { name, ...meta });
+  /** An artist was renamed: every group listing them as a member lists the new name. */
+  renameMember = (from: string, to: string) => this.call<{ groups: string[] }>('PUT', '/api/admin/artist-meta/member-rename', { from, to });
   /** Every album's and artist's styles, moods, collections and artist genres (404 on an older Hub). */
   itemTags = () => this.call<HubAllItemTags>('GET', '/api/item-tags');
   itemTagsOf = (kind: 'artist' | 'album', artist: string, title = '') => this.call<HubItemTags>('GET', `/api/item-tags/one?${new URLSearchParams({ kind, artist, ...(kind === 'album' && { title }) })}`);
