@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { ART_APIS } from '../src/artwork.ts';
-import { readTags } from '../src/tags.ts';
+import { pictureBlock, readTags, writeTags } from '../src/tags.ts';
 import { json, seeded } from './helpers.ts';
 
 const servers: Server[] = [];
@@ -14,7 +14,7 @@ after(() => servers.forEach((s) => s.close()));
 
 /** A second of silence with some tags, in a real audio format. */
 function audio(file: string, tags: Record<string, string>, codec: string[]) {
-  const meta = Object.entries(tags).flatMap(([k, v]) => [file.endsWith('.opus') ? '-metadata:s:a:0' : '-metadata', `${k}=${v}`]);
+  const meta = Object.entries(tags).flatMap(([k, v]) => [/\.(opus|ogg|oga)$/.test(file) ? '-metadata:s:a:0' : '-metadata', `${k}=${v}`]);
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono', '-t', '1', ...codec, ...meta, '-y', file]);
 }
 
@@ -246,4 +246,50 @@ test('a group\'s members, set in Edit artist, and each member\'s groups', async 
   await put({ name: 'Young Money', members: null });
   assert.equal((await get('Young Money')).updatedAt, null);
   assert.deepEqual((await get('Weezy')).memberOf, ['Hot Boy$']);
+});
+
+/** The cover pictures in a file, as ffmpeg sees them, with each one's bytes. */
+function covers(file: string): Buffer[] {
+  const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=index:stream_disposition=attached_pic', '-of', 'json', file]).toString());
+  return probe.streams.filter((s: any) => s.disposition?.attached_pic).map((s: any) => execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-map', `0:${s.index}`, '-c', 'copy', '-frames:v', '1', '-f', 'image2pipe', '-']));
+}
+
+test('tags save on Ogg and Opus files with cover art (as yt-dlp downloads them), keeping the cover', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wl-ogg-'));
+  const jpg = join(dir, 'cover.jpg');
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=320x180', '-frames:v', '1', '-y', jpg]);
+  const image = readFileSync(jpg);
+  // what yt-dlp's --embed-thumbnail writes into an Ogg file: the picture as a METADATA_BLOCK_PICTURE comment
+  const picture = pictureBlock(image, 'image/jpeg', 320, 180).toString('base64');
+  for (const [name, codec] of [['Bodyguard (Official Video).opus', 'libopus'], ['Song.ogg', 'libvorbis'], ['Song.oga', 'libvorbis']] as const) {
+    const file = join(dir, name);
+    audio(file, { title: 'Bodyguard (Official Video)', artist: 'Ai Ruins Everything', date: '20260921', METADATA_BLOCK_PICTURE: picture }, ['-c:a', codec, '-f', 'ogg']);
+    assert.equal(covers(file).length, 1, `${name} starts with a cover`);
+    // yt-dlp's upload day reads as a year
+    assert.equal((await readTags(file)).year, '2026');
+
+    await writeTags(file, { title: 'Bodyguard', album: 'Singles', mood: 'Hype' });
+    const tags = await readTags(file);
+    assert.equal(tags.title, 'Bodyguard', name);
+    assert.equal(tags.album, 'Singles');
+    assert.equal(tags.mood, 'Hype');
+    assert.equal(tags.artist, 'Ai Ruins Everything', 'tags not in the Save are kept');
+    assert.equal(tags.year, '2026');
+    const after = covers(file);
+    assert.equal(after.length, 1, `${name} keeps its cover`);
+    assert.ok(after[0]!.equals(image), 'the very same picture');
+
+    // and again: a second Save doesn't lose or double the cover
+    await writeTags(file, { year: '2025' });
+    assert.equal((await readTags(file)).year, '2025');
+    assert.equal(covers(file).length, 1);
+  }
+  // an Opus file with no cover still saves, and gains none
+  const bare = join(dir, 'bare.opus');
+  audio(bare, { title: 'x' }, ['-c:a', 'libopus']);
+  await writeTags(bare, { title: 'y' });
+  assert.equal((await readTags(bare)).title, 'y');
+  assert.equal(covers(bare).length, 0);
+  // nothing left behind next to the music
+  assert.deepEqual(readdirSync(dir).filter((f) => f.startsWith('.wavelength-')), []);
 });

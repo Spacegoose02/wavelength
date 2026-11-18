@@ -610,7 +610,10 @@ What a mark does is up to each person, in **Settings → Playback → AI artists
 
 The extra tags are written under the names Navidrome reads (`hub/src/tags.ts`): in an mp3, TSOA / TSOP for the sort
 names, TPUB for the label, and TXXX frames for ALBUMARTISTSORT, RELEASETYPE and MOOD; in FLAC, Ogg and Opus, Vorbis
-comments of those names. ffmpeg keeps only a fixed set of MP4 atoms, so an .m4a gets none of them: a Save leaves
+comments of those names. ffmpeg's Ogg muxer can't write a picture stream, so an .opus / .ogg / .oga file is copied with
+its audio only and its cover (yt-dlp's `--embed-thumbnail` puts one there) goes back in as a METADATA_BLOCK_PICTURE
+comment, by way of an ffmetadata file since the comment is too big for a command line (`oggCover`). A date written run
+together (20260921, as yt-dlp does) reads as its year. ffmpeg keeps only a fixed set of MP4 atoms, so an .m4a gets none of them: a Save leaves
 them out for such files (`canWrite`). The artist page puts albums on **Albums**, **Singles & EPs**,
 **Compilations**, **Soundtracks** and **Leaks & Mixtapes** shelves by the album's `releaseTypes` (from RELEASETYPE /
 MusicBrainz Album Type: `mixtape`, `mixtape/street`, `demo` → mixtape; `leak`, `bootleg`, `unreleased` → leak;
