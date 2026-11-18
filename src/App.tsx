@@ -20,6 +20,7 @@ import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode
 import { useCatalog } from './store/catalog';
 import { startHubSync } from './lib/hubSync';
 import { inboxBadge, startInboxChecks, useInbox } from './lib/inbox';
+import { startAiArtistChecks } from './lib/aiArtists';
 import { KID_VIEWS, startFlagChecks, useIsKid } from './lib/kids';
 import { detectWebHub } from './lib/webHub';
 import { startListeningReports } from './lib/listening';
@@ -81,6 +82,7 @@ const Inbox = page(() => import('./views/Inbox'), 'Inbox');
 const Settings = page(() => import('./views/Settings'), 'Settings');
 const DJ = page(() => import('./views/DJ'), 'DJ');
 const Browse = page(() => import('./views/Browse'), 'Browse');
+const AiArtistsView = page(() => import('./views/AiArtists'), 'AiArtistsView');
 
 type NavGroup = 'main' | 'library' | 'discover' | 'you';
 const NAV: { view: Route['view']; label: string; icon: ReactNode; group: NavGroup }[] = [
@@ -149,6 +151,7 @@ function View({ route }: { route: Route }) {
     case 'household': return <HouseholdPlaylistView key={route.id} id={route.id} />;
     case 'mix': return <MixView key={route.id} id={route.id} />;
     case 'blend': return <BlendView />;
+    case 'aiArtists': return <AiArtistsView />;
     case 'serverPlaylist': return <ServerPlaylistView key={`${route.playlist.sourceId}:${route.playlist.id}`} playlist={route.playlist} />;
     case 'subwave': return <SubWave key={route.sourceId ?? ''} sourceId={route.sourceId} />;
     case 'discover': return <Discover key={route.genre ?? ''} initialGenre={route.genre} />;
@@ -262,6 +265,7 @@ export default function App() {
     startUpdateChecks();
     startInboxChecks();
     startFlagChecks();
+    startAiArtistChecks();
     startArtworkChecks();
     startPlaylistCoverChecks();
     startKidTime();

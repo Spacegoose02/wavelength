@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isPlayed, setPlayed, useMarks, withMarks } from '../lib/episodes';
 import { create } from 'zustand';
+import { isAiArtist, setAiArtist, useAiArtists } from '../lib/aiArtists';
 import { isArtistBlocked, isSongBlocked } from '../lib/dontPlay';
 import { useFeature } from '../lib/features';
 import { shareOfTracks } from '../lib/inbox';
@@ -83,6 +84,22 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
   const artistOff = !!t.artist && isArtistBlocked(dontPlay, t.artist);
   const toggleSong = () =>
     setDontPlay({ ...dontPlay, songs: songOff ? dontPlay.songs.filter((s) => !isSongBlocked({ artists: [], songs: [s] }, t)) : [...dontPlay.songs, { artist: t.artist, title: t.title }] });
+  // admins: badge the artist as AI-generated for everyone on the Hub (lib/aiArtists.ts)
+  const aiAdmin = useHub((s) => !!s.token && s.permissions.includes('library.edit'));
+  useAiArtists((s) => s.artists);
+  const aiOn = !!t.artist && isAiArtist(t.artist);
+  const aiName = aiOn ? t.artist : primaryArtist(t.artist ?? '');
+  const toggleAi = async () => {
+    setMsg(aiOn ? 'Taking the AI badge off…' : 'Marking as AI…');
+    try {
+      // unmarking takes whichever name the mark is under: the full credit or its main artist
+      if (aiOn) for (const n of new Set([t.artist, primaryArtist(t.artist)])) await setAiArtist(n, false);
+      else await setAiArtist(aiName, true);
+      onClose();
+    } catch (e) {
+      setMsg(String((e as Error).message ?? e));
+    }
+  };
   const toggleArtist = () =>
     setDontPlay({ ...dontPlay, artists: artistOff ? dontPlay.artists.filter((a) => !isArtistBlocked({ artists: [a], songs: [] }, t.artist)) : [...dontPlay.artists, primaryArtist(t.artist)] });
 
@@ -164,6 +181,11 @@ function TrackMenu({ x, y, track: t, list, index, onClose }: NonNullable<MenuSta
           {t.artist && (
             <button type="button" className="menu-item" onClick={run(toggleArtist)}>
               {artistOff ? `Play ${primaryArtist(t.artist)} again` : `Don't play ${primaryArtist(t.artist)}`}
+            </button>
+          )}
+          {t.artist && aiAdmin && (
+            <button type="button" className="menu-item" disabled={!!msg} title="For everyone on your Hub: a ✦ AI badge, and people can hide AI artists from Discover and their picks" onClick={() => void toggleAi()}>
+              {aiOn ? `${primaryArtist(t.artist)} isn't AI` : `Mark ${primaryArtist(t.artist)} as AI`}
             </button>
           )}
         </>

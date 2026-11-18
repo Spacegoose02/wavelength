@@ -1,3 +1,4 @@
+import type { AiArtist } from '../../hub/src/api/aiArtists';
 import { http, trimSlash } from '../lib/http';
 import type { DeemixItem } from '../lib/deemixQueue';
 import type { Track } from './types';
@@ -1295,6 +1296,10 @@ export class HubClient {
   setArtistMeta = (name: string, meta: { bio?: string; albumSort?: HubAlbumSort; members?: string[] | null }) => this.call<HubArtistMeta>('PUT', '/api/admin/artist-meta', { name, ...meta });
   /** An artist was renamed: every group listing them as a member lists the new name. */
   renameMember = (from: string, to: string) => this.call<{ groups: string[] }>('PUT', '/api/admin/artist-meta/member-rename', { from, to });
+  /** Artists an admin marked as AI-generated (hub/src/routes/aiArtists.ts). */
+  aiArtists = () => this.call<{ artists: AiArtist[] }>('GET', '/api/ai-artists');
+  setAiArtist = (name: string, ai: boolean) => this.call<{ artist: AiArtist | null }>('PUT', '/api/admin/ai-artists', { name, ai });
+  renameAiArtist = (from: string, to: string) => this.call<{ moved: boolean }>('POST', '/api/admin/ai-artists/rename', { from, to });
   /** Every album's and artist's styles, moods, collections and artist genres (404 on an older Hub). */
   itemTags = () => this.call<HubAllItemTags>('GET', '/api/item-tags');
   itemTagsOf = (kind: 'artist' | 'album', artist: string, title = '') => this.call<HubItemTags>('GET', `/api/item-tags/one?${new URLSearchParams({ kind, artist, ...(kind === 'album' && { title }) })}`);

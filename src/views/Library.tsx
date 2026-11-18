@@ -24,6 +24,7 @@ import { navidromeRefs, planAlbums, planArtists } from '../lib/merge';
 import { useArtistMeta } from '../lib/artistMeta';
 import { shelves } from '../lib/releaseKind';
 import { AlbumTagChips, ArtistTagChips } from '../components/TagChips';
+import { AiBadge, AiMarkButton, AiNote } from '../components/AiBadge';
 import { useItemTags } from '../lib/itemTags';
 import { EditAlbumButton, EditAlbumTagsButton } from './AlbumEditor';
 import { EditArtistButton } from './ArtistEditor';
@@ -490,7 +491,8 @@ export function ArtistView({ artist }: { artist: Artist }) {
         <Cover src={artistArt(artist)} alt={artist.name} round className="hero-art" />
         <div>
           <div className="kicker">Artist</div>
-          <h1>{artist.name}</h1>
+          <h1>{artist.name}<AiBadge artist={artist.name} /></h1>
+          <AiNote artist={artist.name} />
           <SourceDots sourceIds={(artist.refs ?? [artist]).map((r) => r.sourceId)} />
           <div className="hero-actions">
             <FollowButton name={artist.name} />
@@ -503,9 +505,9 @@ export function ArtistView({ artist }: { artist: Artist }) {
             <ShareButton what={() => shareOfArtist(artist.name, artistArt(artist))} />
             <KidFlagButton kind="artist" artist={artist.name} />
             <ArtworkButton kind="artist" artist={artist.name} current={artistArt(artist)} />
-            {canEditTags && (artist.refs ?? [artist]).some((r) => cfgOf(r.sourceId)?.kind === 'navidrome') && (
+            {canEditTags && (artist.refs ?? [artist]).some((r) => cfgOf(r.sourceId)?.kind === 'navidrome') ? (
               <EditArtistButton artist={artist} picture={artistArt(artist)} />
-            )}
+            ) : !notOneArtist(artist.name) && <AiMarkButton artist={artist.name} />}
             {canEditTags && !kid && navidromeRefs(artist).length > 0 && <MergeIntoButton kind="artist" item={artist} />}
           </div>
           <ArtistTagChips name={artist.name} />

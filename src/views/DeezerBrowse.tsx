@@ -24,6 +24,7 @@ import { Cover, Rating, Spinner, fmtTime } from '../components/common';
 import { useHidden } from '../lib/kids';
 import { IconBack, IconDownload, IconPause, IconPlay } from '../components/Icons';
 import { FollowButton } from '../components/FollowButton';
+import { AiBadge, AiMarkButton, AiNote } from '../components/AiBadge';
 import { cleanOnly, ownVersion, withVersions } from '../lib/deezerVersions';
 
 export type Browse = { type: 'artist' | 'album' | 'playlist'; id: number; title: string };
@@ -225,10 +226,12 @@ export function DeezerArtist({ id, ...p }: BrowseProps & { id: number }) {
         <Cover src={artist.cover} alt={artist.title} round className="dz-art" />
         <div>
           <div className="kicker">Artist on Deezer</div>
-          <h2>{artist.title}</h2>
+          <h2>{artist.title}<AiBadge artist={artist.title} /></h2>
+          <AiNote artist={artist.title} />
           <div className="muted small">{artist.fans ? `${artist.fans.toLocaleString()} fans · ` : ''}{allAlbums.length} releases{have ? ` · ${have} in your library` : ''}</div>
           <div className="hero-actions">
             <FollowButton id={artist.id} name={artist.title} picture={artist.cover} className="btn small" />
+            <AiMarkButton artist={artist.title} className="btn small" />
             <GetButton r={artist} send={(r) => confirm(`Send ${artist.title}'s whole discography (${allAlbums.length} releases) to ${mustRequest() ? 'your Hub admin' : 'deemix'}?`) && p.send(r)} status={p.status} label="Get discography" />
           </div>
           {p.status[statusKey(artist)]?.s === 'error' && <div className="card-err">{p.status[statusKey(artist)].msg}</div>}

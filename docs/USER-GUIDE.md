@@ -1667,6 +1667,47 @@ open the same menu (**Play this song again**) or **Settings → Playback → Don
 > `dontPlay`, and `withoutDontPlay` in `songRadio`, `soundsLike` and `journey`. The Hub reads `settings.dontPlay`
 > from the person's prefs in `Mixes.get` and `/api/dj/station`.
 
+## AI-generated artists
+
+Some artists on the charts and streaming services are made by AI. A Hub admin can mark them, and everyone on the Hub
+then sees a **✦ AI** badge next to their name: on their page, their cards, their albums and their songs, and on
+Discover's charts.
+
+<p align="center">
+  <img src="screenshots/ai-artist-badges.png" alt="Two songs by Velvet Sundown with a purple AI badge next to the artist's name, and a song by Adele without one" width="80%">
+</p>
+
+**Marking an artist (admins).** Any of these:
+
+- **Edit artist → General → AI-generated artist**, for an artist in your library.
+- **✦ Mark as AI** on an artist's Deezer page (open an artist from Discover you don't have yet), and on the page of a
+  library artist that has no Edit artist.
+- A song's menu (right-click it, or press and hold on a phone): **Mark *artist* as AI**, or ***artist* isn't AI** to
+  take it off.
+
+**Your own choice.** A badge on its own changes nothing else. In **Settings → Playback → AI artists** (or on
+**Browse → AI artists**) you can turn on:
+
+- **Hide AI artists from Discover:** the charts, Release Radar, the Weekly Mix and Artists you might like skip them.
+  The charts say how many they left out, with **Show N by AI artists** to see them anyway.
+- **Keep AI artists out of my picks:** song radio, Sounds like this, Smart Shuffle, DJ mode and your Made for you
+  mixes leave them out, the same as putting each of them on your [Don't play](#dont-play-this) list.
+
+Both start off, are yours alone, and follow you to every device. You can still play AI artists yourself from an
+album, a playlist or Search. **Browse → AI artists** lists every artist that's been marked, with the ones in your
+library as cards; admins can take a mark off there with **Not AI**.
+
+<p align="center">
+  <img src="screenshots/ai-artists-page.png" alt="The AI artists page: the two switches, Hide AI artists from Discover and Keep AI artists out of my picks, and a list of marked artists with who marked them and a Not AI button" width="80%">
+</p>
+
+> **Developer notes.** The marks live on the Hub (`hub/src/aiArtists.ts`, docs/HUB.md "AI-generated artists"); the app
+> keeps a copy in `src/lib/aiArtists.ts` (`useIsAi`, `useAiHiddenInDiscover`, `aiOutOfPicks`), refreshed every ten
+> minutes. The badge and buttons are `src/components/AiBadge.tsx`, the switches `src/components/AiArtistSettings.tsx`
+> and the page `src/views/AiArtists.tsx`. Matching is Don't play's: the whole credit or its main artist, ignoring case,
+> accents, a leading "the" and punctuation. `withoutDontPlay` adds the marked artists when `outOfPicks` is on, and the
+> Hub's `dontPlayOf` does the same for mixes and DJ mode.
+
 ## Smart Shuffle
 
 The shuffle button has a third setting. Press it once for **Shuffle**, again for **Smart Shuffle** (the button gets
@@ -2403,6 +2444,8 @@ rules tidy them); check them and press **Write genres**, which you can undo unde
   their name. Until you set them, Genres shows what most of their songs have. Saving keeps the artist's genres apart
   from their albums', so each album keeps its own; tick **Also write these genres into every song of theirs** to
   set every album of theirs to them as before.
+  **AI-generated artist** puts a ✦ AI badge on them for everyone on your Hub (see
+  [AI-generated artists](#ai-generated-artists)).
 - **Poster:** the artist picture picker.
 - **Advanced:** **Album sorting**: newest first (the default), oldest first, or A to Z, for everyone on your Hub.
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.56.0
+- **Mark AI-generated artists (admins, Hub).** **Edit artist → General → AI-generated artist**, a **✦ Mark as AI**
+  button on an artist's Deezer page (and on library artists with no Edit artist), and **Mark *artist* as AI** in a
+  song's menu. Marks are kept by name on the Hub (`hub/src/aiArtists.ts`, table `ai_artists`, migration 45), so chart
+  artists you don't have can be marked too, and Edit artist's rename and Undo carry them. `GET /api/ai-artists`,
+  `PUT /api/admin/ai-artists`, `POST /api/admin/ai-artists/rename`; audited as `artist.aiMarked` / `artist.aiUnmarked`.
+- **✦ AI badge.** Next to a marked artist's name on their page (with who marked them), their artist and album cards,
+  song rows, Discover's charts, Release Radar and Artists you might like (`src/components/AiBadge.tsx`).
+- **Settings → Playback → AI artists.** Two switches of your own, both off and synced (`settings.aiArtists`):
+  **Hide AI artists from Discover** (charts, Release Radar, Weekly Mix, Artists you might like; the charts offer
+  **Show N by AI artists**), and **Keep AI artists out of my picks**, which treats every marked artist as Don't play
+  in song radio, Sounds like this, Smart Shuffle, and on the Hub in Made for you mixes and DJ mode (`dontPlayOf`).
+- **Browse → AI artists.** Every marked artist, yours as cards, with the two switches on top; admins can unmark from
+  there (`src/views/AiArtists.tsx`).
+
 ## 0.55.0
 - **Group members on the artist page.** A group's page lists its **Members** under the music as artist cards (Hot
   Boy$: Lil Wayne, Turk, Juvenile, B.G.), and each member's page gets a **Member of** shelf linking back

@@ -18,6 +18,7 @@ import { adminRoutes } from './routes/admin.ts';
 import { signInRoutes } from './routes/signins.ts';
 import { familyRoutes } from './routes/families.ts';
 import { artworkRoutes } from './routes/artwork.ts';
+import { aiArtistRoutes } from './routes/aiArtists.ts';
 import { artistMetaRoutes } from './routes/artistMeta.ts';
 import { itemTagRoutes } from './routes/itemTags.ts';
 import { plexImportRoutes } from './routes/plexImport.ts';
@@ -291,6 +292,7 @@ export function buildApp(db: Db, config: Config, opts: { logger?: boolean; watch
   ratingRoutes(app, ctx);
   artworkRoutes(app, ctx);
   artistMetaRoutes(app, ctx);
+  aiArtistRoutes(app, ctx);
   itemTagRoutes(app, ctx);
   plexImportRoutes(app, ctx);
   radioStationRoutes(app, ctx);

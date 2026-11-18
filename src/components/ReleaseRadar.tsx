@@ -1,3 +1,5 @@
+import { AiBadge } from './AiBadge';
+import { useAiHiddenInDiscover } from '../lib/aiArtists';
 import { useEffect, useMemo, useState } from 'react';
 import { deemixClient } from '../lib/hubServices';
 import { follow, loadRadar, setAutoGet, unfollow, useFollows } from '../lib/follows';
@@ -81,7 +83,8 @@ export function RadarStrip({ onSeeAll }: { onSeeAll: () => void }) {
   useEffect(() => {
     if (signedIn && !radar) void loadRadar();
   }, [signedIn]);
-  const releases = useMemo(() => (radar?.releases ?? []).map(fromHub).sort((a, b) => (a.released < b.released ? 1 : -1)).slice(0, 12), [radar]);
+  const aiOff = useAiHiddenInDiscover();
+  const releases = useMemo(() => (radar?.releases ?? []).map(fromHub).filter((r) => !aiOff(r.artist)).sort((a, b) => (a.released < b.released ? 1 : -1)).slice(0, 12), [radar, aiOff]);
   if (!signedIn || !supported || !releases.length) return null;
   return (
     <section className="radar radar-strip">
@@ -205,6 +208,7 @@ function Suggestions() {
   const follows = useFollows((s) => s.follows.length);
   const [list, setList] = useState<HubSuggestion[]>();
   const hidden = useHidden();
+  const aiOff = useAiHiddenInDiscover();
 
   // worked out again when you follow or unfollow someone (the Hub keeps them a few hours otherwise)
   useEffect(() => {
@@ -222,7 +226,7 @@ function Suggestions() {
     void hubClient()?.hideSuggestion(s.id).catch(() => undefined);
   };
 
-  const shown = (list ?? []).filter((s) => !hidden.artist({ id: '', sourceId: '', name: s.name }));
+  const shown = (list ?? []).filter((s) => !hidden.artist({ id: '', sourceId: '', name: s.name }) && !aiOff(s.name));
   if (!list) return <div className="row gap muted small"><Spinner /> Finding artists you might like…</div>;
   if (!shown.length) return null;
   return (
@@ -232,7 +236,7 @@ function Suggestions() {
         {shown.map((s) => (
           <div key={s.id} className="card radar-card">
             <Cover src={s.picture ?? undefined} alt={s.name} round />
-            <div className="card-title" title={s.name}>{s.name}</div>
+            <div className="card-title" title={s.name}>{s.name}<AiBadge artist={s.name} /></div>
             <div className="card-sub" title={s.because.join(', ')}>
               <span>{s.plays ? `You played them ${s.plays} times` : s.because.length ? `Like ${s.because.slice(0, 2).join(' and ')}` : s.fans ? `${s.fans.toLocaleString()} fans` : ''}</span>
             </div>
@@ -275,6 +279,7 @@ export function ReleaseCards({ releases, upcoming }: { releases: Release[]; upco
   const deemix = useSettings((s) => s.deemix);
   const ask = useMustRequest();
   const hidden = useHidden();
+  const aiOff = useAiHiddenInDiscover();
 
   // already in your library? (same artist + title)
   const owned = useMemo(() => {
@@ -305,7 +310,7 @@ export function ReleaseCards({ releases, upcoming }: { releases: Release[]; upco
 
   return (
     <div className="row-scroll">
-      {releases.filter((r) => !hidden.deezer({ type: 'album', id: r.id, title: r.title, artist: r.artist, link: r.deezerLink, explicit: r.explicit })).map((r) => {
+      {releases.filter((r) => !hidden.deezer({ type: 'album', id: r.id, title: r.title, artist: r.artist, link: r.deezerLink, explicit: r.explicit }) && !aiOff(r.artist)).map((r) => {
         const mine = owned(r);
         return (
           <div key={r.id} className="card radar-card">
@@ -314,7 +319,7 @@ export function ReleaseCards({ releases, upcoming }: { releases: Release[]; upco
               <button className="radar-play" title="Preview" onClick={() => preview(r)}><IconPlay /></button>
             </div>
             <div className="card-title" title={r.title}>{r.title}</div>
-            <div className="card-sub"><span>{r.artist}</span></div>
+            <div className="card-sub"><span>{r.artist}<AiBadge artist={r.artist} /></span></div>
             <div className="card-sub"><span className="tag">{r.type}</span><span>{new Date(r.released + 'T12:00:00').toLocaleDateString()}</span></div>
             {upcoming ? (
               <span className="muted small">Out {new Date(r.released + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
@@ -345,6 +350,7 @@ function WeeklyMix({ nonce }: { nonce: number }) {
   const deemix = useSettings((s) => s.deemix);
   const ask = useMustRequest();
   const hidden = useHidden();
+  const aiOff = useAiHiddenInDiscover();
 
   useEffect(() => {
     let alive = true;
@@ -371,7 +377,7 @@ function WeeklyMix({ nonce }: { nonce: number }) {
 
   const owned = (t: HubMixTrack) => found.get(t.id);
 
-  const shown = (mix?.tracks ?? []).filter((t) => !hidden.deezer({ type: 'track', id: t.id, title: t.title, artist: t.artist, link: t.link, explicit: t.explicit }));
+  const shown = (mix?.tracks ?? []).filter((t) => !hidden.deezer({ type: 'track', id: t.id, title: t.title, artist: t.artist, link: t.link, explicit: t.explicit }) && !aiOff(t.artist));
   // the full song when you have it, otherwise the preview
   const asTrack = (t: HubMixTrack): Track | undefined => owned(t) ?? (t.preview
     ? { id: `preview:${t.preview}`, sourceId: 'preview', kind: 'track' as const, title: t.title, artist: t.artist, album: `${t.album} (preview)`, coverUrl: t.cover ?? undefined, streamUrl: t.preview, duration: 30 }

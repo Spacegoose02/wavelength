@@ -44,6 +44,8 @@ export type Route =
   /** A Made for you mix (views/Mix.tsx), by its id in lib/mixes.ts. */
   | { view: 'mix'; id: string }
   | { view: 'blend' }
+  /** Browse → AI artists (views/AiArtists.tsx). */
+  | { view: 'aiArtists' }
   | { view: 'settings'; tab?: SettingsTab };
 
 /** The tabs of the Settings page (views/Settings.tsx). */
