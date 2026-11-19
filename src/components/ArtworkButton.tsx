@@ -26,7 +26,7 @@ export function ArtworkButton({ kind, artist, album = '', current }: { kind: Hub
  * The picture picker: candidates from the art services, a link, or an upload. `inline` draws it inside another
  * dialog (Edit album / Edit artist → Poster) instead of over the page; picking one then keeps it open.
  */
-export function ArtworkPicker({ kind, artist, album, current, onClose, inline }: { kind: HubArtwork['kind']; artist: string; album: string; current?: string; onClose(): void; inline?: boolean }) {
+export function ArtworkPicker({ kind, artist, album, current, onClose, inline, extra = [] }: { kind: HubArtwork['kind']; artist: string; album: string; current?: string; onClose(): void; inline?: boolean; /** Pictures to offer first (Edit artist: the matched artist's). */ extra?: HubArtCandidate[] }) {
   useArtworkList();
   const set = artworkOn(kind, artist, album);
   const [qArtist, setQArtist] = useState(artist);
@@ -106,9 +106,9 @@ export function ArtworkPicker({ kind, artist, album, current, onClose, inline }:
         </form>
 
         <div className="art-results">
-          {!found ? <Spinner /> : !found.length ? (
+          {!found ? <Spinner /> : !found.length && !extra.length ? (
             <p className="muted small">Nothing found. Try a shorter name, paste an image link, or upload a picture.</p>
-          ) : found.map((c) => (
+          ) : [...extra, ...found.filter((c) => !extra.some((x) => x.url === c.url))].map((c) => (
             <button key={c.url} className="art-pick" disabled={!!busy} onClick={() => save(c.url, { url: c.url, source: c.source })} title={`Use this picture (${c.source})`}>
               <img src={c.thumb} alt="" loading="lazy" className={kind === 'artist' ? 'round' : ''} onError={(e) => ((e.currentTarget.closest('.art-pick') as HTMLElement).hidden = true)} />
               {busy === c.url && <span className="cover-overlay"><Spinner /></span>}

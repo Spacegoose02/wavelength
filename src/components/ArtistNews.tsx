@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { libraryAlbumsBy, matchArtist, type ArtistCandidate } from '../lib/artistMatch';
+import { useArtistMatch } from '../lib/artistMatches';
 import { localToday, newestRelease, useOwnedRelease } from '../lib/artistReleases';
 import { followed, useFollows } from '../lib/follows';
 import { useHubRuns } from '../lib/hubServices';
@@ -7,7 +8,7 @@ import { useMustRequest } from '../lib/inbox';
 import { useHidden } from '../lib/kids';
 import { useVersionPref } from '../lib/versions';
 import { getDeezerReleases, type DeezerResult } from '../sources/deemix';
-import { albumPreview, deezerArtistsNamed, WINDOW_DAYS, type DeezerArtistHit } from '../sources/releaseRadar';
+import { albumPreview, deezerArtistById, deezerArtistsByName, WINDOW_DAYS, type DeezerArtistHit } from '../sources/releaseRadar';
 import type { Artist } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { useCan } from '../store/hub';
@@ -30,10 +31,11 @@ export type DeezerArtistLookup =
   | { state: 'loading' }
   | { state: 'missing' }
   | { state: 'error'; error: string }
-  | { state: 'found'; artist: DeezerArtistHit; sure: boolean; others: ArtistCandidate[]; /** Your albums by this artist, checked against it. */ libraryAlbums: number };
+  | { state: 'found'; artist: DeezerArtistHit; sure: boolean; others: ArtistCandidate[]; /** Your albums by this artist, checked against it. */ libraryAlbums: number; /** An admin matched them by hand (Edit artist → Match). */ byHand?: boolean };
 
 /**
- * The library artist on Deezer: the one you follow with this name (the Hub already matched it) when it has your
+ * The library artist on Deezer. An artist matched by hand (Edit artist → Match, lib/artistMatches.ts) is that Deezer
+ * artist, and sure, or missing when matched to none. Otherwise it's the one you follow with this name (the Hub already matched it) when it has your
  * albums, or else the Deezer artist with exactly this name that has your albums, or the most fans (lib/artistMatch.ts). `sure` says
  * whether the match checked out against your library; the newest release banner only shows when it did, and
  * Browse releases offers the `others` with the same name when it didn't.
@@ -43,14 +45,21 @@ export function useDeezerArtist(name: string): DeezerArtistLookup {
   const all = useCatalog((s) => s.albums);
   const library = useMemo(() => libraryAlbumsBy(name, all), [name, all]);
   const libraryKey = library.map((a) => a.id).sort().join('|');
+  const { ready, match } = useArtistMatch(name);
+  const byHand = match?.deezer ?? null;
   const [found, setFound] = useState<DeezerArtistLookup>({ state: 'loading' });
   useEffect(() => {
-    if (notOneArtist(name)) return;
+    if (notOneArtist(name) || !ready) return;
     let alive = true;
     setFound({ state: 'loading' });
     const releasesOf = (c: ArtistCandidate) => getDeezerReleases(c.id, c);
-    const byName = () => deezerArtistsNamed(name).then((list) => matchArtist(list, library, releasesOf));
+    const byName = () => deezerArtistsByName(name).then((list) => matchArtist(list, library, releasesOf));
     const pick = async () => {
+      if (byHand === 'none') return undefined;
+      if (typeof byHand === 'number') {
+        const a = await deezerArtistById(byHand);
+        return { artist: a, sure: true, inLibrary: 0, others: [] as ArtistCandidate[], byHand: true };
+      }
       if (!mine) return byName();
       const m = await matchArtist([{ id: mine.id, name: mine.name, picture: mine.picture ?? undefined, fans: 0 }], library, releasesOf);
       if (m?.sure) return m;
@@ -59,13 +68,13 @@ export function useDeezerArtist(name: string): DeezerArtistLookup {
       return other?.sure ? other : m && { ...m, others: (other ? [other.artist, ...other.others] : []).filter((x) => x.id !== mine.id) };
     };
     pick().then(
-      (m) => alive && setFound(m ? { state: 'found', artist: { id: m.artist.id, name: m.artist.name, picture: m.artist.picture }, sure: m.sure, others: m.others, libraryAlbums: library.length } : { state: 'missing' }),
+      (m) => alive && setFound(m ? { state: 'found', artist: { id: m.artist.id, name: m.artist.name, picture: m.artist.picture }, sure: m.sure, others: m.others, libraryAlbums: library.length, byHand: 'byHand' in m } : { state: 'missing' }),
       (e) => alive && setFound({ state: 'error', error: String((e as Error)?.message ?? e) }),
     );
     return () => {
       alive = false;
     };
-  }, [name, mine?.id, libraryKey]);
+  }, [name, mine?.id, libraryKey, ready, byHand]);
   if (notOneArtist(name)) return { state: 'missing' };
   return found;
 }

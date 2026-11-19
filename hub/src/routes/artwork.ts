@@ -19,7 +19,7 @@ const toArt = (r: Row) => ({ id: r.id, kind: r.kind, artist: r.artist, album: r.
 
 const FILE = /^[0-9a-f]{32}\.(jpg|png|webp)$/;
 const TYPES: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
-const SOURCES = ['Deezer', 'Apple Music', 'Cover Art Archive', 'fanart.tv'];
+const SOURCES = ['Deezer', 'Apple Music', 'Cover Art Archive', 'fanart.tv', 'Wikipedia'];
 
 function target(b: unknown) {
   const kind = str(b, 'kind', 10);

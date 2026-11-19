@@ -3,9 +3,11 @@ import { notOneArtist, useCanGet, useDeezerArtist } from '../components/ArtistNe
 import { DeemixQueuePanel } from '../components/DeemixQueue';
 import { Empty, Spinner } from '../components/common';
 import { IconBack } from '../components/Icons';
+import { useArtistMatch } from '../lib/artistMatches';
 import { useHidden } from '../lib/kids';
 import { searchDeezer, type DeezerResult } from '../sources/deemix';
 import type { Artist } from '../sources/types';
+import { useCan } from '../store/hub';
 import { useUi } from '../store/ui';
 import { DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, useDeezerBrowse, type Browse } from './DeezerBrowse';
 
@@ -17,6 +19,8 @@ import { DeezerAlbum, DeezerArtist, DeezerPlaylist, DzRow, statusKey, useDeezerB
  */
 export function ArtistReleases({ artist, open: first }: { artist: Artist; open?: Browse }) {
   const lookup = useDeezerArtist(artist.name);
+  const notOnDeezer = useArtistMatch(artist.name).match?.deezer === 'none';
+  const canMatch = useCan('library.edit');
   const { canGet, ask } = useCanGet();
   const hidden = useHidden();
   const { stack, setStack, browse } = useDeezerBrowse({ request: ask });
@@ -53,6 +57,7 @@ export function ArtistReleases({ artist, open: first }: { artist: Artist; open?:
               <span key={o.id}>{i > 0 && ' · '}<button className="dz-link" onClick={() => openFromSearch({ type: 'artist', id: o.id, title: o.name })}>{o.name} ({fansLabel(o.fans)})</button></span>
             ))}
           </>}
+          {canMatch && <>{' '}Pick the right one for good in Edit artist → Match.</>}
         </p>
       )}
       {!canGet && <p className="muted small">To get music from here, set up deemix in Settings → Downloads, or ask your Hub admin to turn on Autodownload for you.</p>}
@@ -66,6 +71,8 @@ export function ArtistReleases({ artist, open: first }: { artist: Artist; open?:
               : <DeezerPlaylist key={current.id} id={current.id} {...browse} />
           ) : lookup.state === 'loading' || (dz && !stack.length) ? (
             <div className="row gap muted small"><Spinner /> Finding {artist.name} on Deezer…</div>
+          ) : notOnDeezer ? (
+            <Empty title="Not on Deezer">{artist.name} is matched to no Deezer artist (Edit artist → Match), so there’s no discography to browse.</Empty>
           ) : notOneArtist(artist.name) ? (
             <Empty title="No one artist">“{artist.name}” isn’t one artist, so there’s no discography to browse.</Empty>
           ) : (
@@ -82,6 +89,7 @@ const fansLabel = (n: number) => `${n.toLocaleString()} fan${n === 1 ? '' : 's'}
 
 /** No artist on Deezer with exactly this name: the closest ones, to pick the right one. */
 function NotOnDeezer({ artist, error, open, browse }: { artist: Artist; error?: string; open(b: Browse): void; browse: ReturnType<typeof useDeezerBrowse>['browse'] }) {
+  const canMatch = useCan('library.edit');
   const [results, setResults] = useState<DeezerResult[]>();
   useEffect(() => {
     let alive = true;
@@ -92,7 +100,7 @@ function NotOnDeezer({ artist, error, open, browse }: { artist: Artist; error?: 
   }, [artist.name]);
   return (
     <>
-      <p className="muted">{error ? `Couldn’t reach Deezer: ${error}` : `Deezer has no artist called exactly “${artist.name}”.`}{results?.length ? ' Is it one of these?' : ''}</p>
+      <p className="muted">{error ? `Couldn’t reach Deezer: ${error}` : `Deezer has no artist called exactly “${artist.name}”.`}{results?.length ? ' Is it one of these?' : ''}{canMatch ? ' To use one for good, match them in Edit artist → Match.' : ''}</p>
       {!results ? <Spinner /> : results.map((r) => <DzRow key={statusKey(r)} r={r} {...browse} open={open} />)}
     </>
   );

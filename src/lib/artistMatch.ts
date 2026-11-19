@@ -77,16 +77,24 @@ export async function matchArtist(
   const owned = ownedIndex(library);
   const checked = await Promise.all(
     candidates.slice(0, CHECK_AT_MOST).map(async (c) => {
-      const releases = await releasesOf(c).catch(() => [] as DeezerResult[]);
-      const mine = new Set<string>();
-      for (const r of releases) {
-        const a = owned({ ...r, artist: r.artist ?? c.name });
-        if (a) mine.add(a.id);
-      }
-      return { c, inLibrary: mine.size };
+      return { c, inLibrary: await inLibraryCount(c, owned, releasesOf) };
     }),
   );
   // most of your albums wins; fans (the candidates' order) break ties
   const best = checked.reduce((b, x) => (x.inLibrary > b.inLibrary ? x : b), checked[0]);
   return { artist: best.c, sure: best.inLibrary > 0, inLibrary: best.inLibrary, others: others(best.c) };
+}
+
+/**
+ * How many of your albums (`owned`, from ownedIndex() of your albums by them) are in this Deezer artist's
+ * discography. `releasesOf` is the discography call; a failed one counts as none.
+ */
+export async function inLibraryCount(c: ArtistCandidate, owned: ReturnType<typeof ownedIndex>, releasesOf: (c: ArtistCandidate) => Promise<DeezerResult[]>): Promise<number> {
+  const releases = await releasesOf(c).catch(() => [] as DeezerResult[]);
+  const mine = new Set<string>();
+  for (const r of releases) {
+    const a = owned({ ...r, artist: r.artist ?? c.name });
+    if (a) mine.add(a.id);
+  }
+  return mine.size;
 }

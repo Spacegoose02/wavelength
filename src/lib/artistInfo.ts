@@ -6,6 +6,7 @@
  */
 import { http, isTauri } from './http';
 import type { Track } from '../sources/types';
+import { matchFor } from './artistMatches';
 
 const MB = 'https://musicbrainz.org/ws/2';
 const DAY = 86_400_000;
@@ -148,44 +149,94 @@ async function wikipediaFor(a: MbArtist): Promise<{ summary?: string; url?: stri
   return { summary: j.extract, url: j.content_urls?.desktop?.page, image: j.thumbnail?.source };
 }
 
-/** Who this artist is. null when MusicBrainz doesn't know them well enough to be sure. */
-export function artistBio(name: string): Promise<ArtistBio | null> {
+/**
+ * Who this artist is. null when MusicBrainz doesn't know them well enough to be sure. An artist matched by hand
+ * (Edit artist → Match, lib/artistMatches.ts) is that MusicBrainz artist, or nobody when matched to none.
+ */
+export async function artistBio(name: string): Promise<ArtistBio | null> {
+  const m = (await matchFor(name))?.musicbrainz;
+  if (m === 'none') return null;
+  if (m) return artistBioById(m);
+  return artistBioByName(name);
+}
+
+/** artistBio without the match: who a lookup by name alone finds. */
+export function artistBioByName(name: string): Promise<ArtistBio | null> {
   return cached(`bio2.${norm(name)}`, 7 * DAY, async () => {
     const query = name.includes('$') ? `artist:${q(name)} OR artist:${q(name.replace(/\$/g, 's'))}` : `artist:${q(name)}`;
     const found = await mb<{ artists: MbArtist[] }>(`/artist/?limit=5&query=${encodeURIComponent(query)}`);
     const best = found.artists.find((a) => (a.score ?? 0) >= 90 && norm(a.name) === norm(name)) ?? found.artists.find((a) => (a.score ?? 0) >= 98);
     if (!best) return null;
-    const a = await mb<MbArtist>(`/artist/${best.id}?inc=url-rels+artist-rels`);
-    const wiki = await wikipediaFor(a).catch(() => ({}) as Awaited<ReturnType<typeof wikipediaFor>>);
-    const year = (d?: string | null) => d?.slice(0, 4);
-    // "member of band" points from the member to the group: backward on a group's page, forward on a member's
-    const band = (direction: 'backward' | 'forward') => (a.relations ?? [])
-      .filter((r) => r.type === 'member of band' && r.direction === direction && r.artist)
-      .map((r) => ({ name: r.artist!.name, years: [year(r.begin), year(r.end)].some(Boolean) ? `${year(r.begin) ?? '?'}–${r.ended ? (year(r.end) ?? '?') : ''}` : undefined, current: !r.ended }))
-      .filter((m, i, all) => all.findIndex((x) => x.name === m.name) === i)
-      .sort((x, y) => Number(y.current) - Number(x.current));
-    const members = band('backward');
-    const memberOf = band('forward');
-    const links: ArtistBio['links'] = [];
-    for (const r of a.relations ?? []) {
-      const label = linkLabel(r);
-      if (label && !links.some((l) => l.label === label)) links.push({ label, url: r.url!.resource });
-    }
-    return {
-      name: a.name,
-      summary: wiki.summary,
-      wikipedia: wiki.url,
-      image: wiki.image,
-      type: a.type,
-      area: a['begin-area']?.name ?? a.area?.name,
-      began: a['life-span']?.begin,
-      ended: a['life-span']?.ended ? a['life-span']?.end : undefined,
-      members,
-      memberOf,
-      links,
-      mbid: a.id,
-    };
+    return bioOf(best.id);
   });
+}
+
+/** The MusicBrainz artist with this id. Throws when MusicBrainz has no such artist. */
+export function artistBioById(mbid: string): Promise<ArtistBio> {
+  return cached(`bio2.id.${mbid.toLowerCase()}`, 7 * DAY, () => bioOf(mbid));
+}
+
+/** A MusicBrainz artist found by searching: enough to tell same-name artists apart. */
+export interface MbCandidate {
+  id: string;
+  name: string;
+  /** MusicBrainz's note to tell them apart ("US rapper"). */
+  disambiguation?: string;
+  type?: string;
+  area?: string;
+  began?: string;
+  ended?: string;
+  score: number;
+}
+
+/** Search MusicBrainz's artists (Edit artist → Match), best first. Not kept: each search asks again. */
+export async function searchMusicBrainz(text: string, limit = 10): Promise<MbCandidate[]> {
+  const t = text.trim();
+  if (!t) return [];
+  const found = await mb<{ artists: (MbArtist & { disambiguation?: string })[] }>(`/artist/?limit=${limit}&query=${encodeURIComponent(`artist:${q(t)} OR alias:${q(t)} OR ${q(t)}`)}`);
+  return found.artists.map((a) => ({
+    id: a.id,
+    name: a.name,
+    disambiguation: a.disambiguation || undefined,
+    type: a.type,
+    area: a['begin-area']?.name ?? a.area?.name,
+    began: a['life-span']?.begin,
+    ended: a['life-span']?.ended ? a['life-span']?.end : undefined,
+    score: a.score ?? 0,
+  }));
+}
+
+async function bioOf(id: string): Promise<ArtistBio> {
+  const a = await mb<MbArtist>(`/artist/${id}?inc=url-rels+artist-rels`);
+  const wiki = await wikipediaFor(a).catch(() => ({}) as Awaited<ReturnType<typeof wikipediaFor>>);
+  const year = (d?: string | null) => d?.slice(0, 4);
+  // "member of band" points from the member to the group: backward on a group's page, forward on a member's
+  const band = (direction: 'backward' | 'forward') => (a.relations ?? [])
+    .filter((r) => r.type === 'member of band' && r.direction === direction && r.artist)
+    .map((r) => ({ name: r.artist!.name, years: [year(r.begin), year(r.end)].some(Boolean) ? `${year(r.begin) ?? '?'}–${r.ended ? (year(r.end) ?? '?') : ''}` : undefined, current: !r.ended }))
+    .filter((m, i, all) => all.findIndex((x) => x.name === m.name) === i)
+    .sort((x, y) => Number(y.current) - Number(x.current));
+  const members = band('backward');
+  const memberOf = band('forward');
+  const links: ArtistBio['links'] = [];
+  for (const r of a.relations ?? []) {
+    const label = linkLabel(r);
+    if (label && !links.some((l) => l.label === label)) links.push({ label, url: r.url!.resource });
+  }
+  return {
+    name: a.name,
+    summary: wiki.summary,
+    wikipedia: wiki.url,
+    image: wiki.image,
+    type: a.type,
+    area: a['begin-area']?.name ?? a.area?.name,
+    began: a['life-span']?.begin,
+    ended: a['life-span']?.ended ? a['life-span']?.end : undefined,
+    members,
+    memberOf,
+    links,
+    mbid: a.id,
+  };
 }
 
 const ROLE: Record<string, string> = {
