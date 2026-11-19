@@ -797,6 +797,15 @@ const MIGRATIONS: (string | ((db: Db) => void))[] = [
     set_at INTEGER NOT NULL
   );
   `,
+  // 46 — an artist matched by hand in Edit artist → Match (routes/artistMeta.ts), when looking them up by name finds
+  // nobody or the wrong one: the MusicBrainz artist id and the Deezer artist id the app uses for them (NULL = look
+  // them up by name as before, 'none' = don't look them up at all), and facts filled in by hand (a JSON object of
+  // type, area, began, ended and links) shown on the artist page over MusicBrainz's.
+  `
+  ALTER TABLE artist_meta ADD COLUMN mb_match TEXT;
+  ALTER TABLE artist_meta ADD COLUMN deezer_match TEXT;
+  ALTER TABLE artist_meta ADD COLUMN facts TEXT;
+  `,
 ];
 
 /** The schema version this Hub writes; a backup from a newer Hub can't be restored into it. */

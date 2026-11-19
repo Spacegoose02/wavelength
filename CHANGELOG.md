@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.58.0
+- **Match an artist by hand (admins, Hub).** **Edit artist → Match** picks which MusicBrainz and Deezer artist a
+  library artist is, when looking them up by name finds nobody or the wrong one. It shows what each site has now
+  (found by name, not found, matched by hand, not on this site), searches both sites by any name, or takes a pasted
+  MusicBrainz or Deezer link or id. Deezer results show fans and how many of your albums by the artist are in each
+  discography. **Not on MusicBrainz** / **Not on Deezer** stop the lookups for an artist on neither. Kept on the Hub
+  (`artist_meta.mb_match` / `deezer_match`, migration 46, `PUT /api/admin/artist-meta` with `musicbrainz` / `deezer`,
+  `GET /api/artist-matches`), read once a session by `src/lib/artistMatches.ts`. The About section and Members use the
+  matched MusicBrainz artist (`artistBioById()`); Browse releases, the newest release banner (a match by hand counts
+  as sure), Follow, Release Radar and Library care use the matched Deezer artist (`deezerArtistById()`). Rename and
+  Undo in Edit artist carry the match. Browse releases tells admins about the tab when it isn't sure.
+- **Artist details by hand.** **Edit artist → General** has **Type**, **From** / **Formed in**, **Started** /
+  **Born**, **Ended** / **Died** and **Links**, kept on the Hub (`artist_meta.facts`) and shown in the artist's About
+  section over MusicBrainz's, field by field (`mergeFacts()`), even with Artist bios and credits turned off. Empty
+  fields show MusicBrainz's as a hint.
+- **Poster.** With a match, Edit artist → Poster offers the matched Deezer artist's picture and Wikipedia's first.
+
 ## 0.57.0
 - **Edit several albums at once (admins, Hub).** The album select bar on **Albums** and an artist's page has an
   **Edit (N)** button next to Merge. It opens one dialog for every ticked album: **Release type**, **Release date**,

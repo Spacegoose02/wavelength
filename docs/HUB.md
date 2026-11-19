@@ -588,6 +588,13 @@ also answers `memberOf`, the groups whose list has that artist, matched loosely 
 ignored, `$` read as `s`). A rename in Edit artist calls `PUT /api/admin/artist-meta/member-rename` so groups follow
 the new name; the artist page shows both as shelves of artist cards (`src/components/ArtistMembers.tsx`).
 
+An artist **matched by hand** (Edit artist → Match, migration 46) keeps `artist_meta.mb_match` (a MusicBrainz artist
+id), `artist_meta.deezer_match` (a Deezer artist id) and `artist_meta.facts` (a JSON object of `type`, `area`,
+`began`, `ended` and `links`, filled in by hand). A match is `NULL` to look the artist up by name as before, or
+`'none'` when they aren't on that site, so the app looks nothing up there. `GET /api/artist-matches` lists every match
+so the app can use it wherever it looks artists up by name (`src/lib/artistMatches.ts`). Saving one is audited as
+`artist.edited` with `musicbrainz`, `deezer` and `facts` in the detail.
+
 ## AI-generated artists
 
 Admins can mark an artist as AI-generated (`hub/src/aiArtists.ts`, table `ai_artists`, migration 45): from **Edit
@@ -1450,8 +1457,9 @@ with a 4xx status.
 | `GET /api/radar/suggestions[?fresh=1]`, `POST /api/radar/suggestions/:id/hide` | signed in | artists you might like (`{ id, name, picture, fans, because, plays? }`) / never suggest this one again |
 | `GET /api/admin/tags/album/:id` | `library.edit` | a Navidrome album's files (`path` relative to the music folder) and their tags |
 | `GET /api/admin/tags/song/:id?album=` | `library.edit` | one Navidrome song's file and its tags (`{ id, path, tags }`), for Edit song. `album` (the song's Navidrome album id) finds it when the catalog hasn't matched it yet |
-| `GET /api/artist-meta?name=` | signed in | an artist's `bio`, `albumSort` and `members` set in Edit artist (`''` / `null` when none), and `memberOf`: the groups that list them |
-| `PUT /api/admin/artist-meta` | `library.edit` | `{ name, bio?, albumSort?, members? }` (`albumSort`: `''`, `newest`, `oldest` or `title`; `members`: a list of names, `[]` for none, or `null` for not set); only what's sent changes, and an artist with nothing set is forgotten |
+| `GET /api/artist-meta?name=` | signed in | an artist's `bio`, `albumSort` and `members` set in Edit artist (`''` / `null` when none), `memberOf`: the groups that list them, `match`: `{ musicbrainz, deezer }` (an id, `'none'`, or `null` for looked up by name; Deezer's id is a number) and `facts`: `{ type, area, began, ended, links: [{ label, url }] }` or `null` |
+| `PUT /api/admin/artist-meta` | `library.edit` | `{ name, bio?, albumSort?, members?, musicbrainz?, deezer?, facts? }` (`albumSort`: `''`, `newest`, `oldest` or `title`; `members`: a list of names, `[]` for none, or `null` for not set; `musicbrainz`: a MusicBrainz artist id, `'none'` or `null`; `deezer`: a Deezer artist id, `'none'` or `null`; `facts`: `type` one of `''`, Person, Group, Orchestra, Choir, Character, Other, dates as YYYY, YYYY-MM or YYYY-MM-DD, up to 20 http(s) links, or `null`); only what's sent changes, and an artist with nothing set is forgotten |
+| `GET /api/artist-matches` | signed in | every artist matched by hand: `{ matches: [{ name, musicbrainz, deezer }] }`, A to Z |
 | `PUT /api/admin/artist-meta/member-rename` | `library.edit` | `{ from, to }`: every group listing `from` as a member lists `to` instead; answers `{ groups }` |
 | `GET /api/ai-artists` | signed in | every artist marked as AI-generated: `{ artists: [{ name, setBy, setAt }] }`, A to Z (`setBy` is the admin's display name, `null` once their account is gone) |
 | `PUT /api/admin/ai-artists` | `library.edit` | `{ name, ai }`: mark (`true`) or unmark (`false`) an artist, matched without case, accents or punctuation; answers `{ artist }`, `null` when unmarked |

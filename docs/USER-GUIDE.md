@@ -361,6 +361,11 @@ cards, and an artist who's in a group gets a **Member of** shelf linking to it (
 MusicBrainz knows. Both need no setup and are kept on the device for a week. An admin can turn them off with
 **Artist bios and credits** in **Settings → Features**.
 
+Artists are looked up by name, so an artist MusicBrainz doesn't have (or has under another name, or confuses with
+someone else) shows no About. A Hub admin can fix that in **Edit artist → Match**, or fill in the details by hand
+(see [Match an artist by hand](#match-an-artist-by-hand-admins)). Details filled in by hand show even with **Artist
+bios and credits** turned off.
+
 **On tour** lists upcoming shows with a **Tickets** link, when a Hub admin turns on **Tour dates** in
 **Settings → Features** and pastes a free Ticketmaster key (from developer.ticketmaster.com) or a Bandsintown
 app ID there. The key stays on the Hub.
@@ -2463,14 +2468,59 @@ rules tidy them); check them and press **Write genres**, which you can undo unde
   included; picking a name your library already has merges the two (and any group listing them follows the new
   name). The biography is kept on your Hub and shown on the artist page in place of Wikipedia's; leave it empty to
   get Wikipedia's back.
+  **Type**, **From** / **Formed in**, **Started** / **Born**, **Ended** / **Died** and **Links** are the artist's
+  details for the About section, for an artist MusicBrainz doesn't have or has wrong (see
+  [Match an artist by hand](#match-an-artist-by-hand-admins)).
 - **Tags:** the artist's own **Genres**, **Styles**, **Moods** and **Collections**, kept on your Hub and shown under
   their name. Until you set them, Genres shows what most of their songs have. Saving keeps the artist's genres apart
   from their albums', so each album keeps its own; tick **Also write these genres into every song of theirs** to
   set every album of theirs to them as before.
   **AI-generated artist** puts a ✦ AI badge on them for everyone on your Hub (see
   [AI-generated artists](#ai-generated-artists)).
-- **Poster:** the artist picture picker.
+- **Match:** which MusicBrainz and Deezer artist they are, when looking them up by name finds nobody or the wrong one.
+- **Poster:** the artist picture picker. With a match, the matched Deezer artist's picture and Wikipedia's come first.
 - **Advanced:** **Album sorting**: newest first (the default), oldest first, or A to Z, for everyone on your Hub.
+
+#### Match an artist by hand (admins)
+
+Wavelength finds each artist on two sites by their exact name: **MusicBrainz** for the About section (story, facts,
+links, Wikipedia) and a group's members, and **Deezer** for **Browse releases**, the newest release banner,
+**Follow**, Release Radar and Library care. When the name finds nobody (a small artist, a different spelling like
+"Lil Nobody" vs "Lil' Nobody") or the wrong one (Deezer has a dozen "Drake"s), **Edit artist → Match** fixes it.
+
+<img src="screenshots/artist-match.png" alt="Edit artist, Match tab: MusicBrainz and Deezer each matched by hand at the top, with Automatic and Not on buttons, a search box, and Deezer and MusicBrainz results each with Use this or Matched" width="70%">
+
+- The two boxes at the top say what each site has for them now: **Found by name** (what Wavelength picks on its own,
+  with how many artists share the name), **Not found by name**, **Matched by hand**, or **Not on this site**.
+  **Open** goes to that artist on the site.
+- **Search** looks the name up on both sites, with any spelling you type. Deezer results show their fans and, when you
+  have albums by this artist, how many of yours are in each one's discography, so the right one stands out.
+  MusicBrainz results show its note ("Atlanta rapper"), where they're from and their years.
+- Paste a link or id instead to go straight to one artist: `musicbrainz.org/artist/…` or a MusicBrainz id, and
+  `deezer.com/artist/…` (with or without the language, like `deezer.com/en/artist/…`) or a Deezer number.
+- **Use this** picks that artist; **Automatic** goes back to looking them up by name; **Not on MusicBrainz** /
+  **Not on Deezer** stops looking them up there, so a same-name stranger's story or releases never show.
+  **Back to automatic** and **Don't match (on neither site)** do both sites at once.
+- **Save changes** keeps the match on your Hub for everyone. The artist page, Browse releases, the banner (shown
+  straight away, as a match by hand is sure), **Follow**, Release Radar and Library care all use it, and so does
+  **Members** from MusicBrainz. A rename in Edit artist takes the match along, and **Undo** puts the old one back.
+
+**Details by hand.** For an artist MusicBrainz doesn't have, fill in **Edit artist → General**: the **Biography**,
+**Type** (Person, Group…), where they're **From** (or **Formed in**), **Started** / **Born** and **Ended** / **Died**
+(a year, or a year and month or day, like 2019 or 2019-04-12), **Links** (a name and a web address each; leave the
+name empty to use the site's) and **Members**. Each shows on their page for everyone on your Hub, over MusicBrainz's
+if MusicBrainz has them too; anything left empty shows MusicBrainz's, which the boxes show as a hint.
+
+<img src="screenshots/artist-details.png" alt="Edit artist, General tab: a biography, Type Group, Formed in Decatur, Georgia, Started 2019, and Instagram and Bandcamp links" width="70%">
+
+> **Developer notes.** The Hub keeps the match and the details in `artist_meta` (migration 46: `mb_match`,
+> `deezer_match`, `facts`; `hub/src/routes/artistMeta.ts`). `GET /api/artist-matches` lists every match;
+> `src/lib/artistMatches.ts` reads it once a session and `matchFor(name)` answers every lookup by name:
+> `artistBio()` in `src/lib/artistInfo.ts` (by id with `artistBioById()`, cached as `bio2.id.<mbid>`) and
+> `deezerArtistsNamed()` in `src/sources/releaseRadar.ts` (by id with `deezerArtistById()`), which Release Radar and
+> Library care use. `useDeezerArtist()` (`src/components/ArtistNews.tsx`) takes a Deezer match as sure, and
+> `FollowButton` follows the matched id. The tab is `src/components/ArtistMatchPanel.tsx`; `parseArtistLink()` reads
+> pasted links and `mergeFacts()` puts the details over MusicBrainz's (tests in `src/test/artistMatches.test.ts`).
 
 #### Group members
 

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Artist } from '../sources/types';
 import { useCatalog } from '../store/catalog';
 import { type ArtistBio, artistBio } from './artistInfo';
+import { useArtistMatch } from './artistMatches';
 import { useArtistMeta } from './artistMeta';
 import { useFeature } from './features';
 
@@ -67,6 +68,8 @@ export function membersFrom(name: string, hub: { members?: string[] | null; memb
 export function useMusicBrainzBio(name: string): ArtistBio | null | undefined {
   const info = useFeature('artistInfo');
   const [bio, setBio] = useState<{ name: string; bio: ArtistBio | null }>();
+  // a match made by hand changes who they are
+  const mbMatch = useArtistMatch(name).match?.musicbrainz;
   useEffect(() => {
     if (!info || !name) return;
     let alive = true;
@@ -74,7 +77,7 @@ export function useMusicBrainzBio(name: string): ArtistBio | null | undefined {
     return () => {
       alive = false;
     };
-  }, [name, info]);
+  }, [name, info, mbMatch]);
   if (!info) return null;
   return bio?.name === name ? bio.bio : undefined;
 }

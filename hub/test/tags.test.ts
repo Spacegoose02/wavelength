@@ -198,7 +198,7 @@ test('album tags beyond the basics: sort names, record label, release type and m
 test('artist details without a tag: biography and album order, set by admins and read by everyone', async () => {
   const { app, tokens } = await seeded();
   const empty = await json(app, 'GET', '/api/artist-meta?name=Kodak%20Black', { token: tokens.member });
-  assert.deepEqual(empty.body, { name: 'Kodak Black', bio: '', albumSort: '', members: null, memberOf: [], updatedAt: null });
+  assert.deepEqual(empty.body, { name: 'Kodak Black', bio: '', albumSort: '', members: null, memberOf: [], match: { musicbrainz: null, deezer: null }, facts: null, updatedAt: null });
   assert.equal((await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.member, body: { name: 'Kodak Black', bio: 'x' } })).status, 403);
   assert.equal((await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', albumSort: 'sideways' } })).status, 400);
   const set = await json(app, 'PUT', '/api/admin/artist-meta', { token: tokens.admin, body: { name: 'Kodak Black', bio: ' From Pompano Beach. ', albumSort: 'oldest' } });
@@ -246,6 +246,55 @@ test('a group\'s members, set in Edit artist, and each member\'s groups', async 
   await put({ name: 'Young Money', members: null });
   assert.equal((await get('Young Money')).updatedAt, null);
   assert.deepEqual((await get('Weezy')).memberOf, ['Hot Boy$']);
+});
+
+test('an artist matched by hand: MusicBrainz and Deezer ids, "none", and facts filled in by hand', async () => {
+  const { app, tokens } = await seeded();
+  const get = async (name: string) => (await json(app, 'GET', `/api/artist-meta?name=${encodeURIComponent(name)}`, { token: tokens.member })).body;
+  const put = (body: unknown, token = tokens.admin) => json(app, 'PUT', '/api/admin/artist-meta', { token, body });
+  const mbid = 'B10BBBFC-CF9E-42E0-BE17-E2C3E1D2600D';
+  assert.equal((await put({ name: 'Lil Nobody', musicbrainz: mbid }, tokens.member)).status, 403);
+  assert.equal((await put({ name: 'Lil Nobody', musicbrainz: 'not-an-id' })).status, 400);
+  assert.equal((await put({ name: 'Lil Nobody', deezer: -4 })).status, 400);
+  assert.equal((await put({ name: 'Lil Nobody', deezer: '12ab' })).status, 400);
+  const set = await put({ name: 'Lil Nobody', musicbrainz: mbid, deezer: '27' });
+  assert.equal(set.status, 200, JSON.stringify(set.body));
+  // ids are kept in lower case, and Deezer's comes back as a number
+  assert.deepEqual(set.body.match, { musicbrainz: mbid.toLowerCase(), deezer: 27 });
+  // sending other fields leaves the match alone
+  await put({ name: 'lil nobody', bio: 'From Atlanta.' });
+  assert.deepEqual((await get('Lil Nobody')).match, { musicbrainz: mbid.toLowerCase(), deezer: 27 });
+  // 'none' is "not on that site"
+  await put({ name: 'Lil Nobody', deezer: 'none' });
+  assert.deepEqual((await get('Lil Nobody')).match, { musicbrainz: mbid.toLowerCase(), deezer: 'none' });
+  // every match, for lookups by name all over the app
+  await put({ name: 'Basement Tapes', musicbrainz: 'none', deezer: 'none' });
+  const all = await json(app, 'GET', '/api/artist-matches', { token: tokens.member });
+  assert.deepEqual(all.body.matches, [
+    { name: 'Basement Tapes', musicbrainz: 'none', deezer: 'none' },
+    { name: 'Lil Nobody', musicbrainz: mbid.toLowerCase(), deezer: 'none' },
+  ]);
+
+  // facts: dates checked, links need http(s), a missing label is the site's name, and nothing filled in is null
+  assert.equal((await put({ name: 'Basement Tapes', facts: { began: 'last year' } })).status, 400);
+  assert.equal((await put({ name: 'Basement Tapes', facts: { type: 'Robot' } })).status, 400);
+  assert.equal((await put({ name: 'Basement Tapes', facts: { links: [{ url: 'javascript:alert(1)' }] } })).status, 400);
+  assert.equal((await put({ name: 'Basement Tapes', facts: 'Atlanta' })).status, 400);
+  const facts = await put({ name: 'Basement Tapes', facts: { type: 'Group', area: ' Atlanta, GA ', began: '2019', ended: '2023-06', links: [{ url: 'https://www.instagram.com/basementtapes' }, { label: 'Bandcamp', url: 'https://basementtapes.bandcamp.com' }, { url: '' }] } });
+  assert.equal(facts.status, 200, JSON.stringify(facts.body));
+  assert.deepEqual(facts.body.facts, { type: 'Group', area: 'Atlanta, GA', began: '2019', ended: '2023-06', links: [{ label: 'instagram.com', url: 'https://www.instagram.com/basementtapes' }, { label: 'Bandcamp', url: 'https://basementtapes.bandcamp.com' }] });
+  assert.equal((await put({ name: 'Basement Tapes', facts: { type: '', area: ' ', links: [] } })).body.facts, null);
+
+  // back to automatic with nothing else set forgets the artist
+  await put({ name: 'Basement Tapes', musicbrainz: null, deezer: null });
+  assert.equal((await get('Basement Tapes')).updatedAt, null);
+  assert.deepEqual((await json(app, 'GET', '/api/artist-matches', { token: tokens.member })).body.matches.map((m: any) => m.name), ['Lil Nobody']);
+  // a members rename keeps a group's match
+  await put({ name: 'Lil Nobody', members: ['Nobody Jr'] });
+  await json(app, 'PUT', '/api/admin/artist-meta/member-rename', { token: tokens.admin, body: { from: 'Nobody Jr', to: 'Somebody' } });
+  const after = await get('Lil Nobody');
+  assert.deepEqual(after.members, ['Somebody']);
+  assert.deepEqual(after.match, { musicbrainz: mbid.toLowerCase(), deezer: 'none' });
 });
 
 /** The cover pictures in a file, as ffmpeg sees them, with each one's bytes. */

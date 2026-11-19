@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArtistMatchPanel } from '../components/ArtistMatchPanel';
 import { ArtworkPicker } from '../components/ArtworkButton';
 import { Spinner } from '../components/common';
 import { ChipInput, EditDialog } from '../components/EditDialog';
 import { forgetTagValues, HubTagLists, TagLists, useTagValues } from '../components/TagLists';
 import { isAiIn, loadAiArtists, setAiArtist } from '../lib/aiArtists';
+import { artistBioById } from '../lib/artistInfo';
+import { putMatch } from '../lib/artistMatches';
 import { useArtistMetaStore } from '../lib/artistMeta';
 import { useMusicBrainzBio } from '../lib/artistMembers';
 import { type ArtistSong, loadArtistSongs } from '../lib/artistSongs';
@@ -11,7 +14,8 @@ import { useItemTagStore } from '../lib/itemTags';
 import { renameArtist } from '../lib/merge';
 import { joinGenres, readCredit, splitGenres } from '../lib/songCredit';
 import { saveInParts } from '../lib/tagSave';
-import type { HubAlbumSort, HubTags } from '../sources/hub';
+import type { HubAlbumSort, HubArtCandidate, HubArtistFacts, HubArtistMatch, HubArtistType, HubTags } from '../sources/hub';
+import { deezerArtistById } from '../sources/releaseRadar';
 import type { Artist } from '../sources/types';
 import { hubClient } from '../store/hub';
 import { useSettings } from '../store/settings';
@@ -31,7 +35,11 @@ import { LibraryServer } from '../lib/serverName';
  *   so an album can have genres of its own (a Christmas album by a pop group). Until the artist has genres of their
  *   own, the ones most of their songs have are shown. Their songs' genres change only when "Also write these genres
  *   into every song of theirs" is ticked.
- * - **Poster:** the artist picture picker.
+ * - **Match:** which MusicBrainz and Deezer artist they are, when looking them up by name finds nobody or the wrong
+ *   one, or that they're on neither (components/ArtistMatchPanel.tsx, lib/artistMatches.ts). Kept on the Hub. For an
+ *   artist on neither, **General** has their details (type, where from, years) and links to fill in by hand, which
+ *   the page shows over MusicBrainz's.
+ * - **Poster:** the artist picture picker, offering the matched Deezer artist's picture and Wikipedia's first.
  * - **Advanced:** how their page orders their albums (newest or oldest first, or A to Z).
  *
  * Tag changes go through the Hub's tag editor as one Save (Settings → Server → Tag edits undoes it); the biography,
@@ -39,8 +47,27 @@ import { LibraryServer } from '../lib/serverName';
  * (views/ArtistTagEditor.tsx) is a button away.
  */
 
-type Tab = 'general' | 'tags' | 'poster' | 'advanced';
-const TABS = [['general', 'General'], ['tags', 'Tags'], ['poster', 'Poster'], ['advanced', 'Advanced']] as const;
+type Tab = 'general' | 'tags' | 'match' | 'poster' | 'advanced';
+const TABS = [['general', 'General'], ['tags', 'Tags'], ['match', 'Match'], ['poster', 'Poster'], ['advanced', 'Advanced']] as const;
+const ARTIST_TYPES: { value: HubArtistType; label: string }[] = [
+  { value: '', label: '—' }, { value: 'Person', label: 'Person' }, { value: 'Group', label: 'Group' }, { value: 'Orchestra', label: 'Orchestra' },
+  { value: 'Choir', label: 'Choir' }, { value: 'Character', label: 'Character' }, { value: 'Other', label: 'Other' },
+];
+const NO_FACTS: HubArtistFacts = { type: '', area: '', began: '', ended: '', links: [] };
+/** Facts as the Hub keeps them: trimmed, links without blanks; null when nothing is filled in. */
+function cleanFacts(f: HubArtistFacts): HubArtistFacts | null {
+  const out = { type: f.type, area: f.area.trim(), began: f.began.trim(), ended: f.ended.trim(), links: f.links.map((l) => ({ label: l.label.trim(), url: l.url.trim() })).filter((l) => l.url) };
+  return out.type || out.area || out.began || out.ended || out.links.length ? out : null;
+}
+const sameFacts = (a: HubArtistFacts, b: HubArtistFacts) => JSON.stringify(cleanFacts(a)) === JSON.stringify(cleanFacts(b));
+const DATE = /^\d{4}(-\d{2}(-\d{2})?)?$/;
+/** What's wrong with the facts, so Save can say it before the Hub does. */
+function factsProblem(f: HubArtistFacts): string | undefined {
+  if (f.began.trim() && !DATE.test(f.began.trim())) return 'Started needs a year, like 1998 or 1998-04-12';
+  if (f.ended.trim() && !DATE.test(f.ended.trim())) return 'Ended needs a year, like 2011 or 2011-09';
+  const bad = f.links.find((l) => l.url.trim() && !/^https?:\/\/[^\s]+\.[^\s]+/i.test(l.url.trim()));
+  return bad ? `“${bad.url.trim()}” isn’t a web link (it starts with https://)` : undefined;
+}
 const SORTS: { value: HubAlbumSort; label: string }[] = [
   { value: '', label: 'Library default (newest first)' },
   { value: 'oldest', label: 'Oldest first' },
@@ -58,11 +85,11 @@ function usual(values: (string | undefined)[]): string {
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
 }
 
-interface Draft { name: string; sort: string; bio: string; members: string[]; ai: boolean; genres: string[]; styles: string[]; moods: string[]; collections: string[]; albumSort: HubAlbumSort }
+interface Draft { name: string; sort: string; bio: string; members: string[]; ai: boolean; genres: string[]; styles: string[]; moods: string[]; collections: string[]; albumSort: HubAlbumSort; mb: HubArtistMatch['musicbrainz']; dz: HubArtistMatch['deezer']; facts: HubArtistFacts }
 /** Members are artist names, which can have commas in them (Tyler, the Creator): a list pastes in one per line or split by ';'. */
 const splitNames = (s: string) => s.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
 const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
-type Meta = { bio: string; albumSort: HubAlbumSort; members?: string[] | null };
+type Meta = { bio: string; albumSort: HubAlbumSort; members?: string[] | null; musicbrainz?: HubArtistMatch['musicbrainz']; deezer?: HubArtistMatch['deezer']; facts?: HubArtistFacts | null };
 const HUB_LISTS = [['genres', 'Genres', 'Add a genre', 'tag-genres'], ['styles', 'Styles', 'Add a style, like Teen Pop', 'tag-styles'], ['moods', 'Moods', 'Add a mood, like Cheerful', 'tag-moods'], ['collections', 'Collections', 'Add to a collection', 'tag-collections']] as const;
 type HubKey = (typeof HUB_LISTS)[number][0];
 const hubBody = (d: Pick<Draft, HubKey>) => ({ genres: d.genres, styles: d.styles, moods: d.moods, collections: d.collections });
@@ -80,6 +107,8 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const [saved, setSaved] = useState<{ batches: string[]; files: number; name: string; meta?: Meta; memberMoved?: boolean; ai?: { was: boolean; moved: boolean; changed: boolean }; hub?: { lists: Pick<Draft, HubKey>; hadAny: boolean; moved: boolean } }>();
   /** The members the Hub had (null = not set), and whether it keeps members at all (an older one doesn't). */
   const [hubMembers, setHubMembers] = useState<string[] | null | undefined>();
+  /** The Hub keeps matches and facts (an older one doesn't). */
+  const [matchOn, setMatchOn] = useState(false);
   /** The Hub keeps AI marks (an older one doesn't). */
   const [aiKnown, setAiKnown] = useState(false);
   /** The Hub keeps artist tags (an older one doesn't), and whether this artist has any yet. */
@@ -110,7 +139,11 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         moods: own?.facets.mood ?? [],
         collections: own?.facets.collection ?? [],
         albumSort: meta.albumSort,
+        mb: meta.match?.musicbrainz ?? null,
+        dz: meta.match?.deezer ?? null,
+        facts: meta.facts ?? NO_FACTS,
       };
+      setMatchOn(meta.match !== undefined);
       setHubMembers(meta.members);
       setStart(d);
       setDraft(d);
@@ -133,7 +166,11 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
   const songGenres = genresChanged && (writeSongs || !hubOn);
   const membersOn = hubMembers !== undefined;
   const membersChanged = membersOn && !!draft && !!start && !sameList(draft.members, start.members);
-  const metaChanged = !!draft && !!start && (draft.bio.trim() !== start.bio || draft.albumSort !== start.albumSort || membersChanged);
+  const matchChanged = matchOn && !!draft && !!start && (draft.mb !== start.mb || draft.dz !== start.dz);
+  const factsChanged = matchOn && !!draft && !!start && !sameFacts(draft.facts, start.facts);
+  const metaChanged = !!draft && !!start && (draft.bio.trim() !== start.bio || draft.albumSort !== start.albumSort || membersChanged || matchChanged || factsChanged);
+  const startHasMatch = !!start && (start.mb !== null || start.dz !== null || !!cleanFacts(start.facts));
+  const problem = draft && factsChanged ? factsProblem(draft.facts) : undefined;
   const aiChanged = aiKnown && !!draft && !!start && draft.ai !== start.ai;
 
   /** The tags each song gets: the rename first, then the sort name and genres on the songs that are theirs. */
@@ -171,13 +208,18 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
         if (r.error) throw new Error(r.error);
       }
       let meta: Meta | undefined;
-      // the biography, album order and members follow a rename; emptying the members goes back to MusicBrainz's
-      if (metaChanged || (renamed && (start.bio || start.albumSort || hubMembers != null))) {
+      // the biography, album order, members, match and facts follow a rename; emptying the members goes back to MusicBrainz's
+      if (metaChanged || (renamed && (start.bio || start.albumSort || hubMembers != null || startHasMatch))) {
         const members = membersChanged ? (draft.members.length ? draft.members : null) : hubMembers;
-        const m = await c.setArtistMeta(to, { bio: draft.bio, albumSort: draft.albumSort, ...(membersOn && { members }) });
+        const matched = matchOn && { musicbrainz: draft.mb, deezer: draft.dz, facts: cleanFacts(draft.facts) };
+        const m = await c.setArtistMeta(to, { bio: draft.bio, albumSort: draft.albumSort, ...(membersOn && { members }), ...matched });
         useArtistMetaStore.getState().put(m);
-        meta = { bio: start.bio, albumSort: start.albumSort, ...(membersOn && { members: hubMembers }) };
-        if (renamed) useArtistMetaStore.getState().put(await c.setArtistMeta(start.name, { bio: '', albumSort: '', ...(membersOn && { members: null }) }));
+        if (matchOn) putMatch(to, { musicbrainz: draft.mb, deezer: draft.dz });
+        meta = { bio: start.bio, albumSort: start.albumSort, ...(membersOn && { members: hubMembers }), ...(matchOn && { musicbrainz: start.mb, deezer: start.dz, facts: cleanFacts(start.facts) }) };
+        if (renamed) {
+          useArtistMetaStore.getState().put(await c.setArtistMeta(start.name, { bio: '', albumSort: '', ...(membersOn && { members: null }), ...(matchOn && { musicbrainz: null, deezer: null, facts: null }) }));
+          if (matchOn) putMatch(start.name, undefined);
+        }
       }
       // groups that list them as a member list the new name
       const memberMoved = membersOn && renamed && (await c.renameMember(start.name, to)).groups.length > 0;
@@ -217,8 +259,13 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
     try {
       for (const b of saved.batches) await c.undoTags(b);
       if (saved.meta) {
-        if (!same(draft.name, saved.name)) useArtistMetaStore.getState().put(await c.setArtistMeta(draft.name, { bio: '', albumSort: '', ...(saved.meta.members !== undefined && { members: null }) }));
+        const hadMatch = saved.meta.musicbrainz !== undefined;
+        if (!same(draft.name, saved.name)) {
+          useArtistMetaStore.getState().put(await c.setArtistMeta(draft.name, { bio: '', albumSort: '', ...(saved.meta.members !== undefined && { members: null }), ...(hadMatch && { musicbrainz: null, deezer: null, facts: null }) }));
+          if (hadMatch) putMatch(draft.name, undefined);
+        }
         useArtistMetaStore.getState().put(await c.setArtistMeta(saved.name, saved.meta));
+        if (hadMatch) putMatch(saved.name, { musicbrainz: saved.meta.musicbrainz ?? null, deezer: saved.meta.deezer ?? null });
       }
       if (saved.memberMoved) {
         await c.renameMember(draft.name, saved.name);
@@ -246,13 +293,31 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
     }
   };
 
+  // the Poster tab offers the matched artist's pictures first: Deezer's, and Wikipedia's
+  const [posters, setPosters] = useState<HubArtCandidate[]>([]);
+  const dzPick = draft?.dz;
+  const mbPick = draft?.mb;
+  useEffect(() => {
+    let alive = true;
+    const dzId = typeof dzPick === 'number' ? dzPick : undefined;
+    const mbId = mbPick && mbPick !== 'none' ? mbPick : undefined;
+    if (!dzId && !mbId) return setPosters([]);
+    Promise.all([
+      dzId ? deezerArtistById(dzId).then((a) => a.picture && ({ source: 'Deezer', title: a.name, subtitle: 'Matched on Deezer', thumb: a.picture, url: a.picture.replace(/\/\d+x\d+-/, '/1000x1000-') }), () => undefined) : undefined,
+      mbId ? artistBioById(mbId).then((b) => b.image && ({ source: 'Wikipedia', title: b.name, subtitle: 'Matched on MusicBrainz', thumb: b.image, url: b.image }), () => undefined) : undefined,
+    ]).then((list) => alive && setPosters((list as (HubArtCandidate | '' | undefined)[]).filter((x): x is HubArtCandidate => !!x)));
+    return () => {
+      alive = false;
+    };
+  }, [dzPick, mbPick]);
+
   const songsPage = () => {
     onClose();
     useUi.getState().go({ view: 'artistTags', artist });
   };
 
   const what = [
-    renamed && 'name', sortChanged && 'sort name', membersChanged && 'members', aiChanged && (draft?.ai ? 'marked as AI' : 'not AI'), ...HUB_LISTS.filter(([k]) => listChanged(k)).map(([k]) => k), draft && start && draft.bio.trim() !== start.bio && 'biography', draft && start && draft.albumSort !== start.albumSort && 'album order',
+    renamed && 'name', sortChanged && 'sort name', membersChanged && 'members', matchChanged && 'match', factsChanged && 'details and links', aiChanged && (draft?.ai ? 'marked as AI' : 'not AI'), ...HUB_LISTS.filter(([k]) => listChanged(k)).map(([k]) => k), draft && start && draft.bio.trim() !== start.bio && 'biography', draft && start && draft.albumSort !== start.albumSort && 'album order',
   ].filter(Boolean).join(', ');
 
   return (
@@ -260,12 +325,12 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
       footer={<>
         <span className="small edit-dialog-msg" role="status">
           {saved ? <>Saved{saved.files ? ` ${plural(saved.files, 'song')}` : ''}. {saved.files ? `${LibraryServer()} shows it after its rescan, in a minute or so.` : ''}</>
-            : msg && draft ? msg : dirty ? `Changes: ${what}${changes.length ? ` (${plural(changes.length, 'song')})` : ''}` : ''}
+            : msg && draft ? msg : problem ? problem : dirty ? `Changes: ${what}${changes.length ? ` (${plural(changes.length, 'song')})` : ''}` : ''}
         </span>
         {saved && <button className="btn ghost" onClick={undo} disabled={busy}>Undo</button>}
         <button className="btn ghost" onClick={songsPage} disabled={busy} title="See every song a rename changes, album by album">Review songs…</button>
         <button className="btn" onClick={onClose} disabled={busy}>{saved ? 'Close' : 'Cancel'}</button>
-        <button className="btn primary" onClick={save} disabled={busy || !dirty}>Save changes</button>
+        <button className="btn primary" onClick={save} disabled={busy || !dirty || !!problem}>Save changes</button>
       </>}>
       <TagLists values={values} />
       {!draft || !songs ? (msg ? <div className="errors">{msg}</div> : <Spinner />) : tab === 'general' ? (
@@ -282,6 +347,7 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
           <label className="span2">Biography
             <textarea rows={7} value={draft.bio} onChange={(e) => set('bio', e.target.value)} placeholder="Leave empty to show Wikipedia’s" />
           </label>
+          {matchOn && <FactsFields facts={draft.facts} onChange={(v) => set('facts', v)} from={draft.mb === 'none' ? undefined : mbBio} />}
           {membersOn && <MembersField members={draft.members} onChange={(v) => set('members', v)} suggested={mbBio?.members.map((m) => m.name) ?? []} group={draft.name} />}
           {aiKnown && (
             <div className="span2 edit-field">
@@ -324,8 +390,11 @@ export function ArtistEditor({ artist, picture, onClose }: { artist: Artist; pic
             </p>
           )}
         </div>
+      ) : tab === 'match' ? (
+        matchOn ? <ArtistMatchPanel name={start?.name ?? artist.name} mb={draft.mb} dz={draft.dz} onChange={(m) => setDraft((d) => (d ? { ...d, ...(m.mb !== undefined && { mb: m.mb }), ...(m.dz !== undefined && { dz: m.dz }) } : d))} />
+          : <p className="muted">Your Hub is too old to keep matches. Update it to match {artist.name} by hand.</p>
       ) : tab === 'poster' ? (
-        <ArtworkPicker inline kind="artist" artist={artist.name} album="" current={picture} onClose={() => undefined} />
+        <ArtworkPicker inline kind="artist" artist={artist.name} album="" current={picture} onClose={() => undefined} extra={posters} />
       ) : (
         <div className="edit-fields">
           <label className="span2">Album sorting
@@ -376,6 +445,48 @@ export function EditArtistButton({ artist, picture }: { artist: Artist; picture?
     <>
       <button className="btn" title="Rename, sort name, biography, members, AI-generated, genres, picture and album order" onClick={() => setOpen(true)}>Edit artist</button>
       {open && <ArtistEditor artist={artist} picture={picture} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/**
+ * Details filled in by hand (Edit artist → General), for an artist MusicBrainz doesn't have or has wrong: what they
+ * are, where they're from, their years, and links. Each one shows on their page over MusicBrainz's; empty ones show
+ * MusicBrainz's (`from`, as placeholders).
+ */
+export function FactsFields({ facts, onChange, from }: { facts: HubArtistFacts; onChange(f: HubArtistFacts): void; from?: { type?: string; area?: string; began?: string; ended?: string } | null }) {
+  const set = <K extends keyof HubArtistFacts>(k: K, v: HubArtistFacts[K]) => onChange({ ...facts, [k]: v });
+  const person = (facts.type || from?.type) === 'Person';
+  const links = facts.links.length ? facts.links : [];
+  const setLink = (i: number, l: { label: string; url: string }) => set('links', links.map((x, j) => (j === i ? l : x)));
+  return (
+    <>
+      <label>Type
+        <select value={facts.type} onChange={(e) => set('type', e.target.value as HubArtistType)}>
+          {ARTIST_TYPES.map((t) => <option key={t.value} value={t.value}>{t.value ? t.label : from?.type ? `MusicBrainz’s (${from.type})` : t.label}</option>)}
+        </select>
+      </label>
+      <label>{facts.type === 'Group' ? 'Formed in' : 'From'}
+        <input value={facts.area} placeholder={from?.area ?? 'Atlanta, Georgia'} onChange={(e) => set('area', e.target.value)} />
+      </label>
+      <label>{person ? 'Born' : 'Started'}
+        <input value={facts.began} placeholder={from?.began ?? 'Year, like 1998'} inputMode="numeric" onChange={(e) => set('began', e.target.value)} />
+      </label>
+      <label>{person ? 'Died' : 'Ended'}
+        <input value={facts.ended} placeholder={from?.ended ?? 'Empty if still going'} inputMode="numeric" onChange={(e) => set('ended', e.target.value)} />
+      </label>
+      <div className="span2 edit-field">
+        <span className="edit-field-label">Links</span>
+        {links.map((l, i) => (
+          <div key={i} className="row gap facts-link">
+            <input value={l.label} placeholder="Name (Instagram)" aria-label="Link name" onChange={(e) => setLink(i, { ...l, label: e.target.value })} />
+            <input value={l.url} placeholder="https://…" aria-label="Link" onChange={(e) => setLink(i, { ...l, url: e.target.value })} />
+            <button type="button" className="btn small ghost" title="Remove this link" onClick={() => set('links', links.filter((_, j) => j !== i))}>✕</button>
+          </div>
+        ))}
+        <div><button type="button" className="link small" onClick={() => set('links', [...links, { label: '', url: '' }])}>+ Add a link</button></div>
+        <p className="edit-hint small muted"><span>Shown on their page, over MusicBrainz’s, for everyone on your Hub. Fill these in for an artist MusicBrainz doesn’t have; leave them empty to show MusicBrainz’s.</span></p>
+      </div>
     </>
   );
 }

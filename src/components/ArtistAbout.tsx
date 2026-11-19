@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { artistBio, type ArtistBio } from '../lib/artistInfo';
+import { mergeFacts, useArtistMatch } from '../lib/artistMatches';
 import { useArtistMeta } from '../lib/artistMeta';
 import { useFeature } from '../lib/features';
 import type { HubTourEvent } from '../sources/hub';
@@ -9,12 +10,14 @@ const fmtDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(unde
 
 /**
  * Artist page: the story (Wikipedia), facts (MusicBrainz), links, and upcoming shows (lib/artistInfo.ts, hub/src/tours.ts).
- * A group's members have their own shelf above it (components/ArtistMembers.tsx).
+ * A group's members have their own shelf above it (components/ArtistMembers.tsx). An artist matched by hand
+ * (Edit artist → Match) is looked up by their MusicBrainz id, and facts and links filled in there come first.
  */
 export function ArtistAbout({ name }: { name: string }) {
   const info = useFeature('artistInfo');
   const [bio, setBio] = useState<ArtistBio | null | undefined>();
   const [more, setMore] = useState(false);
+  const mbMatch = useArtistMatch(name).match?.musicbrainz;
   useEffect(() => {
     if (!info) return;
     let alive = true;
@@ -24,17 +27,22 @@ export function ArtistAbout({ name }: { name: string }) {
     return () => {
       alive = false;
     };
-  }, [name, info]);
+  }, [name, info, mbMatch]);
 
-  const facts = bio ? [
-    bio.type && bio.area ? `${bio.type === 'Group' ? 'Formed in' : 'From'} ${bio.area}` : bio.area,
-    bio.began ? `${bio.type === 'Person' ? 'Born' : 'Started'} ${bio.began.slice(0, 4)}` : undefined,
-    bio.ended ? `${bio.type === 'Person' ? 'Died' : 'Ended'} ${bio.ended.slice(0, 4)}` : undefined,
-  ].filter(Boolean) : [];
-  // a biography an admin wrote in Edit artist comes first, and shows even with artist info turned off
-  const own = useArtistMeta(name)?.bio;
-  const summary = own || bio?.summary;
-  const hasBio = !!own || (info && !!bio && (!!bio.summary || facts.length > 0));
+  // a biography, facts and links an admin filled in in Edit artist come first, and show even with artist info turned off
+  const meta = useArtistMeta(name);
+  const own = meta?.bio;
+  const ownFacts = meta?.facts;
+  const f = mergeFacts(info ? bio : null, ownFacts);
+  const facts = [
+    f.type && f.area ? `${f.type === 'Group' ? 'Formed in' : 'From'} ${f.area}` : f.area,
+    f.began ? `${f.type === 'Person' ? 'Born' : 'Started'} ${f.began.slice(0, 4)}` : undefined,
+    f.ended ? `${f.type === 'Person' ? 'Died' : 'Ended'} ${f.ended.slice(0, 4)}` : undefined,
+  ].filter(Boolean);
+  const wikipedia = info ? bio?.wikipedia : undefined;
+  const summary = own || (info ? bio?.summary : undefined);
+  const hasBio = !!summary || facts.length > 0 || f.links.length > 0 || !!wikipedia;
+  const fromMb = info && !!bio;
 
   return (
     <>
@@ -45,14 +53,14 @@ export function ArtistAbout({ name }: { name: string }) {
             <p className={`bio ${more ? '' : 'short'}`}>{summary}</p>
             {summary.length > 420 && <button className="link small" onClick={() => setMore(!more)}>{more ? 'Less' : 'Read more'}</button>}
           </>}
-          {bio && facts.length > 0 && <div className="facts muted small">{facts.map((f) => <span key={f}>{f}</span>)}</div>}
-          {bio && (bio.links.length > 0 || bio.wikipedia) && (
+          {facts.length > 0 && <div className="facts muted small">{facts.map((x) => <span key={x}>{x}</span>)}</div>}
+          {(f.links.length > 0 || wikipedia) && (
             <div className="row gap wrap small">
-              {bio.links.map((l) => <a key={l.url} className="chip" href={l.url} target="_blank" rel="noreferrer">{l.label}</a>)}
-              {bio.wikipedia && <a className="chip" href={bio.wikipedia} target="_blank" rel="noreferrer">Wikipedia</a>}
+              {f.links.map((l) => <a key={l.url} className="chip" href={l.url} target="_blank" rel="noreferrer">{l.label}</a>)}
+              {wikipedia && <a className="chip" href={wikipedia} target="_blank" rel="noreferrer">Wikipedia</a>}
             </div>
           )}
-          {bio && <p className="muted small credit-src">{own ? 'Facts and links from MusicBrainz.' : 'From Wikipedia and MusicBrainz.'}</p>}
+          {fromMb && <p className="muted small credit-src">{own || ownFacts ? 'Some facts and links from MusicBrainz.' : 'From Wikipedia and MusicBrainz.'}</p>}
         </section>
       )}
       <TourDates name={name} />

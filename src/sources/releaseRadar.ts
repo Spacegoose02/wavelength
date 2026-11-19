@@ -1,4 +1,5 @@
 import { sameNameArtists, type ArtistCandidate } from '../lib/artistMatch';
+import { matchFor } from '../lib/artistMatches';
 import { getJson, qs } from '../lib/http';
 import { pool, primaryArtist } from '../lib/match';
 import { norm, sourceFor } from './registry';
@@ -57,12 +58,48 @@ export interface DeezerArtistHit {
 // name lookups, kept for the session (a miss too, so a library artist Deezer doesn't have isn't asked about again)
 const found = new Map<string, Promise<ArtistCandidate[]>>();
 
+// artists looked up by id (a match made by hand), kept for the session
+const byId = new Map<number, Promise<ArtistCandidate>>();
+
+/** The Deezer artist with this id, with their fan count. Throws when Deezer has no such artist. */
+export function deezerArtistById(id: number): Promise<ArtistCandidate> {
+  let hit = byId.get(id);
+  if (!hit) {
+    hit = getJson(`https://api.deezer.com/artist/${id}`).then((a) => {
+      // Deezer answers 200 with { error } for unknown ids
+      if (!a || a.error || typeof a.id !== 'number') throw new Error(a?.error?.message ?? 'Deezer has no such artist');
+      return { id: a.id as number, name: String(a.name), picture: (a.picture_medium as string) || undefined, fans: Number(a.nb_fan) || 0 };
+    });
+    hit.catch(() => byId.delete(id));
+    byId.set(id, hit);
+  }
+  return hit;
+}
+
 /**
  * The Deezer artists with exactly this name (case and accents don't matter), most fans first; empty when Deezer
  * has none. Deezer often has several artists with the same name, so this asks for 25 results, not the first few.
- * A failed lookup isn't kept, so it's tried again next time.
+ * A failed lookup isn't kept, so it's tried again next time. An artist matched by hand (Edit artist → Match,
+ * lib/artistMatches.ts) is just that Deezer artist, or nobody when matched to none.
  */
-export function deezerArtistsNamed(name: string): Promise<ArtistCandidate[]> {
+export async function deezerArtistsNamed(name: string): Promise<ArtistCandidate[]> {
+  const m = (await matchFor(name))?.deezer;
+  if (m === 'none') return [];
+  if (typeof m === 'number') return [await deezerArtistById(m)];
+  return deezerArtistsByName(name);
+}
+
+/** Search Deezer's artists by any name (Edit artist → Match), Deezer's order. Not kept. */
+export async function searchDeezerArtists(text: string, limit = 10): Promise<ArtistCandidate[]> {
+  if (!text.trim()) return [];
+  const s = await getJson(`https://api.deezer.com/search/artist?${qs({ q: text.trim(), limit })}`);
+  return ((s?.data ?? []) as any[])
+    .filter((a) => a && typeof a.id === 'number')
+    .map((a) => ({ id: a.id as number, name: String(a.name), picture: (a.picture_medium as string) || undefined, fans: Number(a.nb_fan) || 0 }));
+}
+
+/** deezerArtistsNamed without the match: what a lookup by name alone finds. */
+export function deezerArtistsByName(name: string): Promise<ArtistCandidate[]> {
   const key = norm(name);
   let hit = found.get(key);
   if (!hit) {

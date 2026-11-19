@@ -289,7 +289,28 @@ export interface HubArtistMeta {
   members?: string[] | null;
   /** The groups whose members list has this artist. */
   memberOf?: string[];
+  /** Which MusicBrainz and Deezer artist they are, matched by hand in Edit artist → Match. An older Hub has none. */
+  match?: HubArtistMatch;
+  /** Facts filled in by hand, shown over MusicBrainz's; null when none. An older Hub has none. */
+  facts?: HubArtistFacts | null;
   updatedAt: number | null;
+}
+/**
+ * An artist matched by hand (hub/src/routes/artistMeta.ts): a MusicBrainz artist id and a Deezer artist id, 'none'
+ * when they aren't on that site (nothing is looked up), or null to look them up by name.
+ */
+export interface HubArtistMatch {
+  musicbrainz: string | 'none' | null;
+  deezer: number | 'none' | null;
+}
+export type HubArtistType = '' | 'Person' | 'Group' | 'Orchestra' | 'Choir' | 'Character' | 'Other';
+/** Facts filled in by hand. Dates are YYYY, YYYY-MM or YYYY-MM-DD; empty when not filled in. */
+export interface HubArtistFacts {
+  type: HubArtistType;
+  area: string;
+  began: string;
+  ended: string;
+  links: { label: string; url: string }[];
 }
 export type HubTags = Partial<Record<HubTagKey, string>>;
 /** Styles, moods, collections and artist genres kept on the Hub (hub/src/itemTags.ts). */
@@ -1293,7 +1314,10 @@ export class HubClient {
   /** One song's file and tags (Navidrome song id; its album id helps a Hub whose catalog hasn't matched it yet). */
   tagSong = (id: string, albumId?: string) => this.call<HubTagSong>('GET', `/api/admin/tags/song/${encodeURIComponent(id)}${albumId ? `?album=${encodeURIComponent(albumId)}` : ''}`);
   artistMeta = (name: string) => this.call<HubArtistMeta>('GET', `/api/artist-meta?name=${encodeURIComponent(name)}`);
-  setArtistMeta = (name: string, meta: { bio?: string; albumSort?: HubAlbumSort; members?: string[] | null }) => this.call<HubArtistMeta>('PUT', '/api/admin/artist-meta', { name, ...meta });
+  setArtistMeta = (name: string, meta: { bio?: string; albumSort?: HubAlbumSort; members?: string[] | null; musicbrainz?: HubArtistMatch['musicbrainz']; deezer?: HubArtistMatch['deezer']; facts?: HubArtistFacts | null }) =>
+    this.call<HubArtistMeta>('PUT', '/api/admin/artist-meta', { name, ...meta });
+  /** Every artist matched by hand (404 on an older Hub). */
+  artistMatches = () => this.call<{ matches: (HubArtistMatch & { name: string })[] }>('GET', '/api/artist-matches');
   /** An artist was renamed: every group listing them as a member lists the new name. */
   renameMember = (from: string, to: string) => this.call<{ groups: string[] }>('PUT', '/api/admin/artist-meta/member-rename', { from, to });
   /** Artists an admin marked as AI-generated (hub/src/routes/aiArtists.ts). */
