@@ -2033,7 +2033,8 @@ what's playing, so the only way to name the song is to recognise the audio, like
 > `streamTitle()` in `sources/radio.ts`, and keeps using whichever gave a title first. The ICY parser is
 > `lib/icy.ts` (apps) and `hub/src/radio.ts` (Hub, `GET /api/radio/now-playing`); `hub/test/radio.test.ts`
 > checks they agree. HLS (`.m3u8`) streams carry no ICY titles and are skipped. A title equal to the
-> station's own name is ignored.
+> station's own name is ignored. On an Icecast server with several streams, only the stream being played names the
+> song (`parseNowPlaying`); with no match, the stream's own ICY title is used.
 
 ### Get the song you hear
 
@@ -2041,6 +2042,19 @@ When a station's title reads like "Artist - Song", **Now Playing** shows a butto
 your library, it says **Queue from library** and plays it after the station. If not, it says **Get this song**,
 which sends it to deemix (or yt-dlp when Deezer doesn't have it) or, without Autodownload, requests it, like
 **Get** in Discover.
+
+After it's sent, the button follows the download in deemix's queue: **Waiting**, **Downloading 40%**, then
+**Adding to library** once deemix has it. It checks your library every 20 seconds (for half an hour), and when your
+server has scanned the song in, the button turns into **Queue from library**. If deemix can't get it, the button
+says **Failed · try again** (hover for the reason) and clicking sends it again. Without Autodownload it says
+**Requested**, and the song shows in your Inbox once it's added.
+
+The button goes by the station's title, so it can only be as right as the station's title is. Some stations update
+their title a little before or after the song actually changes; if the title names the wrong song, wait for it to
+catch up before pressing **Get this song**.
+
+> **Developer notes.** `components/RadioGetButton.tsx`; the status rules are `radioGetStatus()` in
+> `lib/radioGet.ts`, matching the sent Deezer track id to deemix's queue (`lib/deemixQueue.ts`).
 
 ### Stations for you
 

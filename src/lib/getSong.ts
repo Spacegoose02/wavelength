@@ -49,23 +49,28 @@ export async function viaYtdlp(e: Wanted): Promise<'yt-dlp'> {
 
 /** Returns how it was sent. Throws NotOnDeezer when Deezer doesn't have it and yt-dlp can't stand in. */
 export async function getSong(e: Wanted): Promise<'request' | 'deemix' | 'yt-dlp'> {
+  return (await sendSong(e)).via;
+}
+
+/** getSong, also giving the Deezer link it sent, so the caller can follow it in deemix's queue (lib/radioGet.ts). */
+export async function sendSong(e: Wanted): Promise<{ via: 'request' | 'deemix' | 'yt-dlp'; link?: string }> {
   if (mustRequest()) {
     const link = await deezerLinkFor(e);
     if (!link) throw new NotOnDeezer();
     await requestMusic({ link, kind: 'track', title: e.title, artist: e.artist, cover: e.cover });
-    return 'request';
+    return { via: 'request', link };
   }
   const deemix = useSettings.getState().deemix;
   if (!deemix.url) {
-    if (ytdlpAvailable()) return viaYtdlp(e);
+    if (ytdlpAvailable()) return { via: await viaYtdlp(e) };
     const { token, permissions } = useHub.getState();
     throw new Error(token && !permissions.includes('downloads.run') ? 'Ask your Hub admin for Autodownload' : 'Set your deemix URL in Settings');
   }
   const link = await deezerLinkFor(e);
   if (!link) {
-    if (ytdlpAvailable()) return viaYtdlp(e);
+    if (ytdlpAvailable()) return { via: await viaYtdlp(e) };
     throw new NotOnDeezer();
   }
   await deemixClient().addToQueue(link, deemix.bitrate);
-  return 'deemix';
+  return { via: 'deemix', link };
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.58.1
+- **Get this song on the radio follows the download.** It used to say **Downloading** and stay greyed out for good,
+  whether deemix got the song or not. Now it reads deemix's queue (`useFollowDeemix`) and shows **Waiting**,
+  **Downloading 40%**, **Adding to library** or **Failed · try again** (the reason is in the tooltip; clicking sends
+  it again). It checks the library every 20 seconds for half an hour, and once the song is there it turns into
+  **Queue from library**. A send that fails (deemix unreachable, not set up) can be tried again too. The status
+  rules are `src/lib/radioGet.ts`; `sendSong()` in `src/lib/getSong.ts` is `getSong()` that also returns the Deezer
+  link it sent.
+- **Radio titles from the right stream.** An Icecast now-playing page that lists several streams used to fall back
+  to the first one when none matched the stream being played, which could name a song from a sister station. Now
+  only a server with one stream falls back; otherwise the title inside the stream itself is used.
+
 ## 0.58.0
 - **Match an artist by hand (admins, Hub).** **Edit artist → Match** picks which MusicBrainz and Deezer artist a
   library artist is, when looking them up by name finds nobody or the wrong one. It shows what each site has now
