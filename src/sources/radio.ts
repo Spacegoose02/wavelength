@@ -101,7 +101,10 @@ export function parseNowPlaying(json: any, streamUrl?: string): string | undefin
   if (json.icestats) {
     const src = ([] as any[]).concat(json.icestats.source ?? []);
     const path = streamUrl ? safePath(streamUrl) : undefined;
-    const match = src.find((s) => path && s.listenurl && safePath(s.listenurl) === path) ?? src[0];
+    // with several streams on one server, only the one being played names this song; another stream (a sister
+    // station, a different quality fed from a different playout) may be on something else entirely. No match →
+    // undefined, and the title inside the stream itself is used instead.
+    const match = src.find((s) => path && s.listenurl && safePath(s.listenurl) === path) ?? (src.length === 1 ? src[0] : undefined);
     return match?.title || (match?.artist ? `${match.artist} — ${match.title ?? ''}` : undefined);
   }
   const song = json.now_playing?.song ?? json.nowPlaying ?? json.now_playing ?? json.current ?? json.track ?? json.song ?? json;
