@@ -7,6 +7,10 @@ import { Cover } from './common';
 import { Critter, critterLabel, nextAct, nextSpecies } from './critters/Critter';
 import { MouthTuner } from './MouthTuner';
 import { useFeature } from '../lib/features';
+import { keepsOwnMenu, useLongPress } from '../lib/contextMenu';
+import { useUi } from '../store/ui';
+import { openContextMenu } from './ContextMenu';
+import { sceneMenu } from './SceneMenu';
 
 /**
  * Now Playing "scenes": tap the artwork to cycle through full-size visualizers that react to the
@@ -260,6 +264,8 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
  * and to the next act (DJ, country, rapper, rocker, drums, theremin, synth, accordion, driver, coast driver, night driver, reactor, bongo, pianist,
  * marimba, violinist, acoustic, surf rock, singer, taiko, disco), and a third opens the
  * mouth tuner (components/MouthTuner.tsx) beside the critter, unless a Hub admin switched the tuner off.
+ * Right-click (or long-press, or the TV remote's Menu key) for lists of every scene, critter, act and theme
+ * (components/SceneMenu.ts).
  */
 export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
   const scene = useSettings((s) => s.npScene);
@@ -299,8 +305,19 @@ export function NowPlayingStage({ art, alt }: { art?: string; alt: string }) {
     setHint(critterLabel(critter, n.id));
   };
 
+  const menu = (e: { clientX: number; clientY: number; preventDefault(): void }) => {
+    const st = useSettings.getState();
+    openContextMenu(e, sceneMenu(st, {
+      ...st,
+      tune: canTune ? () => setTuning(true) : undefined,
+      settings: () => useUi.getState().go({ view: 'settings', tab: 'themes' }),
+      hint: setHint,
+    }, SCENES), 'Now Playing scene');
+  };
+  const press = useLongPress(menu);
+
   return (
-    <div className="np-stage-wrap">
+    <div className="np-stage-wrap" onContextMenu={(e) => !keepsOwnMenu(e.target) && menu(e)} {...press}>
       <button className={`np-stage ${scene === 'art' ? '' : 'scene'}`} onClick={next} title={`${label}: tap for the next visualizer`} aria-label={`Visualizer: ${label}. Tap for the next one.`}>
         {scene === 'art' ? <Cover key={art} src={art} alt={alt} className="np-art" /> : scene === 'raccoon' ? <Critter species={critter} act={act} /> : <SceneCanvas scene={scene} art={art} />}
         {hint && <span className="np-stage-hint">{hint}</span>}

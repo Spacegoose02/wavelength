@@ -19,6 +19,9 @@ export let hotkeyProblem = '';
 
 export const toggleMiniPlayer = () => (canDesktop ? invoke('mini_toggle').catch(() => undefined) : Promise.resolve());
 
+/** Right-click the player → Switch to mini player: opens the mini player and hides this window until it comes back. */
+export const switchToMiniPlayer = () => (canDesktop ? invoke('mini_switch').catch(() => undefined) : Promise.resolve());
+
 function act(what: RemoteAction) {
   const p = usePlayer.getState();
   if (what === 'toggle') p.toggle();

@@ -14,8 +14,10 @@ import { TogetherButton } from './Together';
 import { EqButton } from './Equalizer';
 import { IconNext, IconPause, IconPlay, IconPrev, IconMini, IconQueue, IconRepeat, IconVolume } from './Icons';
 import { Visualizer } from './Visualizer';
+import { keepsOwnMenu, useLongPress } from '../lib/contextMenu';
+import { openPlayerMenu } from './PlayerMenu';
 
-/** Bottom deck: Plexamp layout with a Winamp LCD in the middle. */
+/** Bottom deck: Plexamp layout with a Winamp LCD in the middle. Right-click (or long-press) it for the player menu. */
 export function PlayerBar() {
   const p = usePlayerControls();
   const smart = useSettings((s) => s.smartShuffle);
@@ -26,10 +28,11 @@ export function PlayerBar() {
   useArtworkList();
   const art = p.liveCover ?? trackArt(t);
   const live = t?.kind === 'radio';
+  const press = useLongPress((e) => openPlayerMenu(e, { queue: true }));
   const marquee = t ? `${live && p.liveTitle ? p.liveTitle : `${t.artist} — ${t.title}`}` : 'Wavelength  ·  nothing playing';
 
   return (
-    <footer className={`deck ${covered ? 'covered' : ''}`}>
+    <footer className={`deck ${covered ? 'covered' : ''}`} onContextMenu={(e) => !keepsOwnMenu(e.target) && openPlayerMenu(e, { queue: true })} {...press}>
       <button className="deck-now" onClick={() => t && ui.setNowPlaying(true)} title="Open Now Playing">
         <Cover key={art} src={art} alt={t?.title ?? 'Wavelength'} />
         <div className="deck-meta">

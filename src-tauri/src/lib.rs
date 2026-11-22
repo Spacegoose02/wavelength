@@ -39,7 +39,7 @@ pub fn run() {
             discord::discord_set, discord::discord_clear,
             hifi::hifi_available, hifi::hifi_load, hifi::hifi_command, hifi::hifi_status,
             #[cfg(desktop)] desktop::hotkeys_set, #[cfg(desktop)] desktop::tray_close_to,
-            #[cfg(desktop)] desktop::mini_toggle, #[cfg(desktop)] desktop::main_show,
+            #[cfg(desktop)] desktop::mini_toggle, #[cfg(desktop)] desktop::main_show, #[cfg(desktop)] desktop::mini_switch, #[cfg(desktop)] desktop::mini_back,
             #[cfg(desktop)] titlebar::titlebar_paint])
         .run(tauri::generate_context!())
         .expect("error while running Wavelength");

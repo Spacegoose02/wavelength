@@ -122,6 +122,23 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 .track-menu .menu-item { justify-content: flex-start; gap: 8px; background: none; border: 0; color: inherit; text-align: left; width: 100%; cursor: pointer; font: inherit; }
 .track-menu .menu-item:disabled { opacity: 0.5; cursor: default; }
 .track-menu .menu-wrap { display: flex; }
+/* right-click menus for the player and the Now Playing scene (components/ContextMenu.tsx) */
+.menu.context-menu { width: 290px; max-height: min(560px, calc(100vh - 16px)); }
+.context-menu .menu-row { display: flex; flex-direction: column; }
+.context-menu .menu-item { align-items: center; }
+.context-menu .menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.context-menu .menu-check { width: 14px; flex: none; color: var(--accent); text-align: center; }
+.context-menu .menu-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.context-menu .menu-item small { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.context-menu .menu-more { flex: none; color: var(--muted); font-size: 16px; line-height: 1; }
+.context-menu .menu-back { font-weight: 700; color: var(--text); }
+/* phone-sized: a sheet along the bottom instead of a menu at the finger */
+.menu.context-menu.sheet { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 70vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
+.context-menu.sheet .menu-item { padding: 11px 12px; }
+/* a long-press opens our menu, not the phone's own (save image, select text) */
+.deck, .mini-player, .np-stage-wrap { -webkit-touch-callout: none; }
+.mini-player, .np-stage-wrap { -webkit-user-select: none; user-select: none; }
 
 .main { grid-area: main; overflow-y: auto; position: relative; }
 .back {

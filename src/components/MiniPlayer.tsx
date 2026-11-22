@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { emitTo, listen } from '@tauri-apps/api/event';
+import { Menu } from '@tauri-apps/api/menu';
 import { useEffect, useState } from 'react';
 import type { MiniState, RemoteAction } from '../lib/miniState';
 import { IconNext, IconPause, IconPlay, IconPrev } from './Icons';
@@ -9,7 +10,8 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
 /**
  * The mini player window (src-tauri/src/desktop.rs opens it): cover, song, play/pause, next and previous, always
  * on top. It plays nothing itself: the main window does, and tells it what's playing (lib/desktop.ts).
- * Kept free of the app's stores so the window stays light.
+ * Kept free of the app's stores so the window stays light. Right-click it for a small native menu (the window is too
+ * short for the app's own menus): play/pause, next, previous, Back to full player and Close.
  */
 export function MiniPlayer() {
   const [s, setS] = useState<MiniState>({ playing: false, position: 0, duration: 0 });
@@ -20,8 +22,22 @@ export function MiniPlayer() {
   }, []);
   const send = (what: RemoteAction) => () => void emitTo('main', 'remote', what);
   const pct = s.duration ? Math.min(100, (s.position / s.duration) * 100) : 0;
+  const menu = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    const m = await Menu.new({
+      items: [
+        { id: 'toggle', text: s.playing ? 'Pause' : 'Play', action: send('toggle') },
+        { id: 'next', text: 'Next', action: send('next') },
+        { id: 'prev', text: 'Previous', action: send('prev') },
+        { item: 'Separator' },
+        { id: 'back', text: 'Back to full player', action: () => void invoke('mini_back') },
+        { id: 'close', text: 'Close mini player', action: () => void invoke('mini_toggle') },
+      ],
+    });
+    await m.popup();
+  };
   return (
-    <div className="mini-window" data-tauri-drag-region>
+    <div className="mini-window" data-tauri-drag-region onContextMenu={(e) => void menu(e).catch(() => undefined)}>
       {s.cover ? <img className="mini-cover" src={s.cover} alt="" data-tauri-drag-region /> : <div className="mini-cover" data-tauri-drag-region />}
       <div className="mini-main" data-tauri-drag-region>
         <button type="button" className="mini-title" title="Show Wavelength" onClick={() => void invoke('main_show')}>
