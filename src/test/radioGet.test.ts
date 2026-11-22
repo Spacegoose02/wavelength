@@ -61,3 +61,15 @@ describe('Icecast now-playing pages', () => {
     expect(parseNowPlaying({ icestats: { source: { listenurl: 'http://x:8000/a', title: 'A - B' } } }, 'https://x/b')).toBe('A - B');
   });
 });
+
+describe('the DJ list’s Get', () => {
+  test('a row says how its song is going, and only a failure can be pressed again', async () => {
+    const { songSendStatus } = await import('../lib/radioGet');
+    expect(songSendStatus(undefined, [], true)).toMatchObject({ label: '', canGet: true });
+    expect(songSendStatus({ sending: true }, [], true)).toMatchObject({ label: 'Sending…', canGet: false });
+    expect(songSendStatus({ error: 'deemix is unreachable' }, [], true)).toMatchObject({ label: 'Failed · try again', detail: 'deemix is unreachable', canGet: true });
+    expect(songSendStatus({ error: 'Not on Deezer', notOnDeezer: true }, [], true)).toMatchObject({ label: 'Not on Deezer', canGet: false });
+    expect(songSendStatus({ sent }, queue('downloading', { progress: 10 }), true, 1000)).toMatchObject({ label: 'Downloading 10%', canGet: false });
+    expect(songSendStatus({ sent }, queue('failed'), true, 1000)).toMatchObject({ kind: 'error', canGet: true });
+  });
+});

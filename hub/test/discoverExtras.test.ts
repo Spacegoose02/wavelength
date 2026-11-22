@@ -71,6 +71,14 @@ test('chart songs are matched against the Hub’s copy of the Navidrome library 
   assert.equal((await json(app, 'POST', '/api/discover/match', { token: tokens.member, body: { songs: Array(301).fill(songs[0]) } })).status, 400);
 });
 
+test('cleanTitle drops a leading "Artist - " naming the song’s own artist', () => {
+  assert.equal(cleanTitle('50 - The Clash - Should I Stay or Should I Go (Remastered)', 'The Clash'), cleanTitle('Should I Stay or Should I Go'));
+  assert.equal(cleanTitle('Clash - Should I Stay', 'The Clash'), cleanTitle('Should I Stay'));
+  // someone else's name stays: it's part of the title
+  assert.equal(cleanTitle('Tom Sawyer - Live', 'Rush'), cleanTitle('Tom Sawyer - Live'));
+  assert.equal(cleanTitle('The Clash - Should I Stay'), cleanTitle('The Clash - Should I Stay'));
+});
+
 test('cleanTitle drops the same extras as the app', () => {
   assert.equal(cleanTitle('01 - Song (feat. X) [Remastered 2011]'), cleanTitle('Song'));
   assert.equal(cleanTitle('Song (Radio Edit)'), 'song');

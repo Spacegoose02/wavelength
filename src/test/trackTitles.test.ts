@@ -25,6 +25,16 @@ describe('track numbers in titles', () => {
     expect(withoutTrackNumber('')).toBe('');
   });
 
+  test('a number followed by the song’s own artist comes off with the artist, whatever the number', () => {
+    expect(withoutTrackNumber('50 - The Clash - Should I Stay or Should I Go (Remastered)', 3, 'The Clash')).toBe('Should I Stay or Should I Go (Remastered)');
+    expect(withoutTrackNumber('7. Clash - Train in Vain', undefined, 'The Clash')).toBe('Train in Vain');
+    expect(withoutTrackNumber('04 - The Clash - London Calling', 4, 'The Clash')).toBe('London Calling');
+    // another name after the number is part of the title, and without the artist nothing changes
+    expect(withoutTrackNumber('22 - Taylor', 3, 'Taylor Swift')).toBe('22 - Taylor');
+    expect(withoutTrackNumber('50 - The Clash - Should I Stay', 3)).toBe('50 - The Clash - Should I Stay');
+    expect(withoutTrackNumber('7 Rings', 7, 'Ariana Grande')).toBe('7 Rings');
+  });
+
   test('lookups also try a short number without the track number', () => {
     expect(looseWithoutTrackNumber('4 - Song')).toBe('Song');
     expect(looseWithoutTrackNumber('7 Rings')).toBe('7 Rings');
@@ -42,10 +52,12 @@ describe('track numbers in titles', () => {
       { path: 'a/04 - x.mp3', albumId: 'al1', tags: { title: "04 - God's Plan", track: '4/18' } },
       { path: 'a/05 - y.mp3', albumId: 'al1', tags: { title: 'Nice For What', track: '5' } },
       { path: 'a/06 - z.mp3', albumId: 'al1', tags: { title: '6 - In My Feelings', track: '6' } },
+      { path: 'b/x.mp3', albumId: 'al2', tags: { title: '50 - The Clash - Should I Stay', track: '3', artist: 'The Clash' } },
     ]);
     expect(fixes).toEqual([
       { path: 'a/04 - x.mp3', albumId: 'al1', from: "04 - God's Plan", to: "God's Plan" },
       { path: 'a/06 - z.mp3', albumId: 'al1', from: '6 - In My Feelings', to: 'In My Feelings' },
+      { path: 'b/x.mp3', albumId: 'al2', from: '50 - The Clash - Should I Stay', to: 'Should I Stay' },
     ]);
   });
 });

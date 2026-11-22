@@ -67,10 +67,10 @@ export function TagEditor({ album }: { album: Album }) {
   const changed = (rows ?? []).filter((r) => Object.keys(r.edit).some((k) => (r.edit[k as keyof HubTags] ?? '') !== (r.tags[k as keyof HubTags] ?? '')));
 
   // "04 - Song" titles a renaming tool left (lib/trackTitles.ts)
-  const numbered = (rows ?? []).filter((r) => numberedTitle(r.edit.title ?? '', num(r.edit.track) || undefined)).length;
+  const numbered = (rows ?? []).filter((r) => numberedTitle(r.edit.title ?? '', num(r.edit.track) || undefined, r.edit.artist)).length;
   const unnumber = () => {
     setRows((rs) => rs?.map((r) => {
-      const hit = numberedTitle(r.edit.title ?? '', num(r.edit.track) || undefined);
+      const hit = numberedTitle(r.edit.title ?? '', num(r.edit.track) || undefined, r.edit.artist);
       return hit ? { ...r, edit: { ...r.edit, title: hit.title } } : r;
     }));
     setMsg(`Took the track number out of ${numbered} title${numbered === 1 ? '' : 's'}. Check them, then Save`);

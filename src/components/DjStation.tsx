@@ -4,7 +4,9 @@ import { pickStation, SEGMENT_LABELS, startStation, stopStation, useStation } fr
 import { useSettings } from '../store/settings';
 import { useDjAvailable } from '../lib/djStatus';
 import { useFeature } from '../lib/features';
-import { getSong, NotOnDeezer } from '../lib/getSong';
+import { useDeemixQueue, useFollowDeemix } from '../lib/deemixQueue';
+import { sendOne, songSendStatus, useSongSends } from '../lib/radioGet';
+import { songKey } from '../sources/charts';
 import { useMustRequest } from '../lib/inbox';
 import { myPlaylists, type MyPlaylist } from '../lib/myPlaylists';
 import type { HubMixSong, HubStationKind } from '../sources/hub';
@@ -145,39 +147,37 @@ export function DjStationPanel({ sheet = false }: { sheet?: boolean }) {
   );
 }
 
-const songKey = (x: HubMixSong) => `${x.artist}\u0000${x.title}`.toLowerCase();
-
 /** The songs this segment's list has that your library doesn't: Get (or Request) them one by one or all at once. */
 function MissingSongs({ songs, title }: { songs: HubMixSong[]; title: string }) {
   const ask = useMustRequest();
-  const [state, setState] = useState<Record<string, string>>({});
+  const sends = useSongSends((x) => x.songs);
+  const items = useDeemixQueue((x) => x.items);
+  const read = useDeemixQueue((x) => x.read);
   const [all, setAll] = useState(false);
-  const get = async (x: HubMixSong) => {
-    const k = songKey(x);
-    setState((m) => ({ ...m, [k]: '…' }));
-    try {
-      const via = await getSong({ title: x.title, artist: x.artist, cover: x.coverUrl });
-      setState((m) => ({ ...m, [k]: via === 'request' ? 'Requested' : 'Downloading' }));
-    } catch (e) {
-      setState((m) => ({ ...m, [k]: e instanceof NotOnDeezer ? 'Not on Deezer' : String((e as Error)?.message ?? e).slice(0, 60) }));
-    }
-  };
+  useFollowDeemix(songs.some((x) => sends[songKey(x)]?.sent?.via === 'deemix'));
+  // the Hub's Deezer suggestion already has the link: no second lookup that could miss it or pick another song
+  const wanted = (x: HubMixSong) => ({ title: x.title, artist: x.artist, cover: x.coverUrl, deezerLink: x.deezer?.link });
   const getAll = async () => {
     setAll(true);
-    for (const x of songs) if (!state[songKey(x)]) await get(x);
+    try {
+      for (const x of songs) if (songSendStatus(useSongSends.getState().songs[songKey(x)], items, read).canGet) await sendOne(wanted(x));
+    } finally {
+      setAll(false);
+    }
   };
-  const left = songs.filter((x) => !state[songKey(x)]).length;
+  const left = songs.filter((x) => !sends[songKey(x)]).length;
   return (
     <details className="dj-station-missing">
       <summary>{songs.length} {songs.length === 1 ? 'song' : 'songs'} on {title || 'this list'} you don’t have</summary>
       <ul>
         {songs.map((x) => {
-          const st = state[songKey(x)];
+          const k = songKey(x);
+          const st = songSendStatus(sends[k], items, read);
           return (
-            <li key={songKey(x)}>
+            <li key={k}>
               <span><b>{x.title}</b> <small className="muted">{x.artist}</small></span>
-              <button className="chip" disabled={!!st} title={st ?? `${ask ? 'Request' : 'Get'} ${x.title} by ${x.artist}`} onClick={() => void get(x)}>
-                {st ?? <><IconDownload /> {ask ? 'Request' : 'Get'}</>}
+              <button className="chip" disabled={!st.canGet} title={st.detail ?? (st.label || `${ask ? 'Request' : 'Get'} ${x.title} by ${x.artist}`)} onClick={() => void sendOne(wanted(x))}>
+                {st.label || <><IconDownload /> {ask ? 'Request' : 'Get'}</>}
               </button>
             </li>
           );

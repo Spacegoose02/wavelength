@@ -2,8 +2,21 @@ import { norm, sourceFor } from '../sources/registry';
 import { enabledSources } from '../store/settings';
 import type { MusicSource, Track } from '../sources/types';
 
-export const cleanTitle = (s: string) =>
-  norm(s.replace(/^\d{1,3}\s*[-.]\s+/, '').replace(/\s*[([](feat|ft|with|remaster|remastered|live|explicit|clean|edited|censored|radio edit|\d{4} remaster)[^)\]]*[)\]]/gi, ''));
+/**
+ * A title for matching: no "01 - ", no "(feat. …)", "(Remastered)", "(Radio Edit)" … With `artist`, also no leading
+ * "Artist - " when it's the song's own artist, as some files are titled ("50 - The Clash - Should I Stay or Should I Go").
+ */
+export const cleanTitle = (s: string, artist?: string) =>
+  norm(withoutArtist(s.replace(/^\d{1,3}\s*[-.]\s+/, ''), artist).replace(/\s*[([](feat|ft|with|remaster|remastered|live|explicit|clean|edited|censored|radio edit|\d{4} remaster)[^)\]]*[)\]]/gi, ''));
+
+/** "The Clash - Should I Stay" → "Should I Stay" when the song is by The Clash; anything else unchanged. */
+export function withoutArtist(title: string, artist?: string): string {
+  if (!artist) return title;
+  const m = /^(.+?)\s+[-–—]\s+(.+)$/.exec(title.trim());
+  if (!m) return title;
+  const head = norm(m[1]);
+  return head && (head === norm(artist) || head === norm(primaryArtist(artist))) ? m[2] : title;
+}
 
 /** "Drake Featuring Future & Lil Baby" → "Drake" — charts list features in the artist field. */
 export const primaryArtist = (s: string) => s.split(/\s+(?:featuring|feat\.?|ft\.?|with|x|&|and|•)\s+|\s*[,;；]\s*|\s+\/\s+/i)[0].trim();
@@ -14,7 +27,7 @@ export async function findTrackOnSource(src: MusicSource, t: { title: string; ar
   const artist = norm(primaryArtist(t.artist));
   const title = cleanTitle(t.title);
   const pick = (cands: Track[]) => {
-    const same = cands.filter((c) => cleanTitle(c.title) === title || cleanTitle(c.title).startsWith(title));
+    const same = cands.filter((c) => cleanTitle(c.title, c.artist) === title || cleanTitle(c.title, c.artist).startsWith(title));
     return (
       same.find((c) => norm(primaryArtist(c.artist)) === artist) ??
       same.find((c) => norm(c.artist).includes(artist) || artist.includes(norm(primaryArtist(c.artist))))

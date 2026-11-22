@@ -63,7 +63,7 @@ export function isCleanEdition(candidate: any, explicitSongs: string[]): boolean
   if (!tracks.length || tracks.some((t) => t.explicit_lyrics === true || EXPLICIT_CONTENT.includes(t.explicit_content_lyrics))) return false;
   if (candidate.explicit_content_lyrics === EDITED) return true;
   const titles = new Set(tracks.map((t) => cleanTitle(t.title ?? '')));
-  const wanted = [...new Set(explicitSongs.map(cleanTitle))];
+  const wanted = [...new Set(explicitSongs.map((t) => cleanTitle(t)))];
   // the songs that needed editing are there, edited
   return wanted.length > 0 && wanted.filter((t) => titles.has(t)).length * 2 >= wanted.length;
 }

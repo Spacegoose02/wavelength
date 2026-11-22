@@ -149,7 +149,7 @@ export function tagRoutes(app: FastifyInstance, { db, config, library, catalog }
     const { songs, total } = await nd.songs(offset, offset + limit);
     const fixes: { path: string; albumId: string; artist: string; album: string; from: string; to: string }[] = [];
     for (const s of songs) {
-      const hit = numberedTitle(s.title, s.trackNumber || undefined);
+      const hit = numberedTitle(s.title, s.trackNumber || undefined, s.artist);
       if (!hit) continue;
       let f: string;
       try {
