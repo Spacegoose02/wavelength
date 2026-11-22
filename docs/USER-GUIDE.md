@@ -1238,7 +1238,7 @@ fields Wavelength has no data for (artist country, critic rating, skips, trash, 
   writes the title without the number back into the files, a few songs at a time with a running count. If the
   Hub stops answering partway, the songs already fixed drop off the list and **Fix** again carries on. The whole
   fix is one entry under **Settings → Server → Tag edits**, which can undo it. A number only counts as a track number when it has a leading zero ("04") or
-  is the song's own track number, so "7 Rings" and "99 Problems" are left alone. Wavelength already shows and
+  is the song's own track number, so "7 Rings" and "99 Problems" are left alone. A number followed by the song's own artist ("50 - The Clash - Should I Stay or Should I Go", from a numbered playlist download) always counts, and the artist comes off too. Wavelength already shows and
   looks up these songs without the number before you fix them, and an album's **Edit tags** page has a
   **Take track numbers out of titles** button for one album.
 - **Unmatched songs** (Hub admins): songs whose tags keep Navidrome from filing them under the right artist or

@@ -116,7 +116,7 @@ export class NavidromeSource implements MusicSource {
     id: s.id,
     sourceId: this.config.id,
     kind: 'track',
-    title: withoutTrackNumber(s.title ?? '', s.track),
+    title: withoutTrackNumber(s.title ?? '', s.track, s.artist),
     artist: s.artist ? tidyCredit(s.artist) : 'Unknown artist',
     album: s.album,
     albumId: s.albumId,

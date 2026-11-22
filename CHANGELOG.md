@@ -11,6 +11,11 @@
   song's own artist ("50 - The Clash - Should I Stay or Should I Go (Remastered)") now counts as that song, so DJ mode
   and Discover stop listing it as missing. `cleanTitle(title, artist)` drops the leading artist in the app
   (`src/lib/match.ts`) and in the Hub's library index (`hub/src/libraryIndex.ts`), only when it names the song's own artist.
+- **"50 - The Clash - Song" shows as "Song".** The track-number cleanup only took a number off when it had a leading
+  zero ("04") or was the song's own track number, so a playlist position like "50" (Should I Stay or Should I Go is
+  track 3) stayed, along with "The Clash - ". A number followed by the song's own artist now always comes off with
+  the artist: in titles shown from Navidrome and Plex, in Library care → **Numbered titles** and in **Edit tags**
+  (`numberedTitle(title, track, artist)` in `src/lib/trackTitles.ts` and `hub/src/trackTitles.ts`).
 
 ## 0.59.0
 - **Switch to mini player.** Right-click the player bar (wide or narrow) → **Switch to mini player** opens the mini

@@ -41,6 +41,12 @@ test('the Hub takes the same leading numbers for track numbers as the app', () =
   assert.equal(numberedTitle('1-800-273-8255', 1), undefined);
 });
 
+test('a number followed by the song’s own artist comes off with it, like the app', () => {
+  assert.deepEqual(numberedTitle('50 - The Clash - Should I Stay or Should I Go', 3, 'The Clash'), { number: 50, title: 'Should I Stay or Should I Go' });
+  assert.equal(numberedTitle('22 - Taylor', 3, 'Taylor Swift'), undefined);
+  assert.equal(numberedTitle('50 - The Clash - Should I Stay', 3), undefined);
+});
+
 test('numbered titles come from Navidrome’s song list, a page at a time, and a big fix is one Save in parts', async () => {
   const music = mkdtempSync(join(tmpdir(), 'wl-numbered-'));
   mkdirSync(join(music, 'A/B'), { recursive: true });
