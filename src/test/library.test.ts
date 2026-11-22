@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { mergeAlbums, mergeArtists, norm } from '../sources/registry';
-import { cleanTitle, pool, primaryArtist } from '../lib/match';
+import { cleanTitle, findTrackOnSource, pool, primaryArtist } from '../lib/match';
+import type { MusicSource, Track } from '../sources/types';
 import { versionKey } from '../lib/versions';
 import type { Album, Artist } from '../sources/types';
 
@@ -18,6 +19,14 @@ describe('matching the same music across servers', () => {
     expect(cleanTitle('01 - Song Name (feat. Someone)')).toBe(norm('Song Name'));
     expect(cleanTitle('Song Name [2011 Remaster]')).toBe(norm('Song Name'));
     expect(cleanTitle('Song Name (Clean)')).toBe(norm('Song Name'));
+  });
+
+  test('a file titled "50 - The Clash - Song" is The Clash\'s "Song"', async () => {
+    expect(cleanTitle('50 - The Clash - Should I Stay or Should I Go (Remastered)', 'The Clash')).toBe(norm('Should I Stay or Should I Go'));
+    expect(cleanTitle('Tom Sawyer - Live', 'Rush')).toBe(norm('Tom Sawyer - Live'));
+    const mine = { id: '1', title: '50 - The Clash - Should I Stay or Should I Go (Remastered)', artist: 'The Clash', kind: 'track' } as Track;
+    const src = { search: async () => ({ tracks: [mine] }) } as unknown as MusicSource;
+    expect(await findTrackOnSource(src, { title: 'Should I Stay or Should I Go (Remastered)', artist: 'The Clash' })).toBe(mine);
   });
 
   test('the first credited artist is the one to match on', () => {

@@ -1880,7 +1880,7 @@ start: **Mix it up**, a segment, one of your playlists ("more like Road Trip"), 
 "something chill for cooking"). DJ Trash Panda then runs a station for you: your favourites, new finds, throwbacks
 and top hits in turns, or more like your playlist, each introduced out loud. Tap a segment or type to change course,
 and use **DJ loudness** if the DJ is hard to hear over the music. Songs on the list you don't have (like Top hits
-you're missing) show up under **songs you don't have**, with **Get** or **Request** for each, or all at once. In the DJ chat you can also ask about your playlists
+you're missing) show up under **songs you don't have**, with **Get** or **Request** for each, or all at once. After **Get**, each song shows how its download is going (**Waiting**, **Downloading 40%**, **Adding to library**), or **Failed · try again** with the reason when you hover. In the DJ chat you can also ask about your playlists
 ("make me something like my Gym playlist"). DJ mode only starts when you start it from that panel. Play your own
 music (pick a song, album or playlist in your Library) and DJ mode stops, the DJ goes quiet mid-sentence and your
 music plays; **Play next** and **Add to queue** keep DJ mode going. There's no limit on how many songs it plays:

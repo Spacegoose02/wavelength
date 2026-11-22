@@ -1,4 +1,7 @@
+import { create } from 'zustand';
+import { songKey } from '../sources/charts';
 import type { DeemixItem } from './deemixQueue';
+import { NotOnDeezer, sendSong, type Wanted } from './getSong';
 
 /**
  * Following a song sent from a radio station's **Get this song** (components/RadioGetButton.tsx) until it's in the
@@ -48,4 +51,44 @@ export function radioGetStatus(sent: RadioSent, items: DeemixItem[], read: boole
   }
   if (read && id && now - sent.at > LOST_MS) return { label: 'Sent to deemix', detail: 'It isn’t in deemix’s queue any more. It may already be in your library, or the list was cleared', kind: 'done' };
   return { label: 'Sent to deemix', kind: 'busy' };
+}
+
+// ---- songs sent from a DJ station's "songs you don't have" list (components/DjStation.tsx) ----
+
+export interface SongSend {
+  sending?: boolean;
+  sent?: RadioSent;
+  error?: string;
+  notOnDeezer?: boolean;
+}
+
+/**
+ * What was sent from the DJ's list, by song (sources/charts.ts songKey). Kept outside the panel, so folding it away,
+ * closing it or the next segment doesn't forget a song was sent and offer Get again as if nothing happened.
+ */
+export const useSongSends = create<{ songs: Record<string, SongSend> }>()(() => ({ songs: {} }));
+
+const setSend = (k: string, s: SongSend) => useSongSends.setState((st) => ({ songs: { ...st.songs, [k]: s } }));
+
+/** Send one song (lib/getSong.ts sendSong). Never throws: the outcome is in useSongSends. */
+export async function sendOne(e: Wanted): Promise<boolean> {
+  const k = songKey(e);
+  setSend(k, { sending: true });
+  try {
+    const r = await sendSong(e);
+    setSend(k, { sent: { ...r, at: Date.now() } });
+    return true;
+  } catch (err) {
+    setSend(k, { error: String((err as Error)?.message ?? err).slice(0, 120), notOnDeezer: err instanceof NotOnDeezer });
+    return false;
+  }
+}
+
+/** What a row says for a song, and whether Get (again) can be pressed. */
+export function songSendStatus(s: SongSend | undefined, items: DeemixItem[], read: boolean, now = Date.now()): RadioGetStatus & { canGet: boolean } {
+  if (!s) return { label: '', kind: 'busy', canGet: true };
+  if (s.sending) return { label: 'Sending…', kind: 'busy', canGet: false };
+  if (s.error) return { label: s.notOnDeezer ? 'Not on Deezer' : 'Failed · try again', detail: s.error, kind: 'error', canGet: !s.notOnDeezer };
+  const st = radioGetStatus(s.sent!, items, read, now);
+  return { ...st, canGet: st.kind === 'error' };
 }

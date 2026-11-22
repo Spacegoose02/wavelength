@@ -33,9 +33,19 @@ export interface IndexStatus {
   error: string | null;
 }
 
-/** Like the app's cleanTitle(): no "01 - ", no "(feat. …)", "(Remastered)", "(Radio Edit)" … */
-export const cleanTitle = (s: string) =>
-  normName(s.replace(/^\d{1,3}\s*[-.]\s+/, '').replace(/\s*[([](feat|ft|with|remaster|remastered|live|explicit|clean|edited|censored|radio edit|\d{4} remaster)[^)\]]*[)\]]/gi, ''));
+/** Like the app's cleanTitle() (src/lib/match.ts): no "01 - ", no "(feat. …)", "(Remastered)", "(Radio Edit)" …, and with
+ * `artist`, no leading "Artist - " naming the song's own artist ("50 - The Clash - Should I Stay or Should I Go"). */
+export const cleanTitle = (s: string, artist?: string) =>
+  normName(withoutArtist(s.replace(/^\d{1,3}\s*[-.]\s+/, ''), artist).replace(/\s*[([](feat|ft|with|remaster|remastered|live|explicit|clean|edited|censored|radio edit|\d{4} remaster)[^)\]]*[)\]]/gi, ''));
+
+/** Like the app's withoutArtist(): "The Clash - Should I Stay" → "Should I Stay" for a song by The Clash. */
+export function withoutArtist(title: string, artist?: string): string {
+  if (!artist) return title;
+  const m = /^(.+?)\s+[-–—]\s+(.+)$/.exec(title.trim());
+  if (!m) return title;
+  const head = normName(m[1]);
+  return head && (head === normName(artist) || head === normName(primaryArtist(artist))) ? m[2] : title;
+}
 
 const PREFIX = 5;
 
@@ -159,7 +169,7 @@ export class LibraryIndex {
     this.byTitle = new Map();
     this.byPrefix = new Map();
     for (const x of songs) {
-      const t = cleanTitle(x.title);
+      const t = cleanTitle(x.title, x.artist);
       if (!t) continue;
       push(this.byTitle, t, x);
       push(this.byPrefix, t.slice(0, PREFIX), x);
@@ -213,7 +223,7 @@ export class LibraryIndex {
     const exact = pick(this.byTitle.get(title) ?? []);
     if (exact) return exact;
     // "Song" on the chart, "Song - From the Movie" in the library
-    return pick((this.byPrefix.get(title.slice(0, PREFIX)) ?? []).filter((c) => cleanTitle(c.title).startsWith(title)));
+    return pick((this.byPrefix.get(title.slice(0, PREFIX)) ?? []).filter((c) => cleanTitle(c.title, c.artist).startsWith(title)));
   }
 }
 

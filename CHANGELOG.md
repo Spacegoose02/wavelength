@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.59.1
+- **DJ mode's Get follows the download.** In **N songs on <segment> you don't have**, Get used to show
+  "Downloading" and forget it as soon as the panel was folded or closed, so every song read **Get** again with no
+  sign of what happened. Each row now remembers what was sent (`useSongSends` in `src/lib/radioGet.ts`) and follows
+  deemix's queue like the radio's **Get this song**: **Sending…**, **Waiting**, **Downloading 40%**, **Adding to
+  library**, or **Failed · try again** with the reason on hover. It sends the Hub's own Deezer link for the song
+  instead of looking it up again, which could miss it.
+- **Songs titled "50 - The Clash - Song" match.** A library file whose title starts with a track number and the
+  song's own artist ("50 - The Clash - Should I Stay or Should I Go (Remastered)") now counts as that song, so DJ mode
+  and Discover stop listing it as missing. `cleanTitle(title, artist)` drops the leading artist in the app
+  (`src/lib/match.ts`) and in the Hub's library index (`hub/src/libraryIndex.ts`), only when it names the song's own artist.
+
 ## 0.59.0
 - **Switch to mini player.** Right-click the player bar (wide or narrow) → **Switch to mini player** opens the mini
   player and hides the big window; the music keeps going in it. The mini player's right-click menu (a native one,
