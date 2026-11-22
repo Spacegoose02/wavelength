@@ -5,6 +5,10 @@
 //! Playback lives in the main window, so everything here sends the main window a `remote` event with what to do
 //! ("toggle", "next", "prev"), and src/lib/desktop.ts does it. The mini player is the same app in a second
 //! window that only draws the mini player (src/components/MiniPlayer.tsx).
+//!
+//! "Switch to mini player" (right-click the player) opens the mini player and hides the main window. The main window
+//! comes back with the mini player's "Back to full player", or when the mini player is closed, so the app is never
+//! left with no window at all.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -13,6 +17,8 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Windo
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 static CLOSE_TO_TRAY: AtomicBool = AtomicBool::new(false);
+/// The main window is hidden because the person switched to the mini player.
+static SWITCHED: AtomicBool = AtomicBool::new(false);
 
 const KEYS: [(Code, &str); 3] = [(Code::Space, "toggle"), (Code::ArrowRight, "next"), (Code::ArrowLeft, "prev")];
 
@@ -25,6 +31,7 @@ fn remote(app: &AppHandle, what: &str) {
 }
 
 fn show_main(app: &AppHandle) {
+    SWITCHED.store(false, Ordering::Relaxed);
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.unminimize();
         let _ = w.show();
@@ -32,12 +39,13 @@ fn show_main(app: &AppHandle) {
     }
 }
 
-/// Opens the mini player, or closes it when it's open.
-fn toggle_mini(app: &AppHandle) -> tauri::Result<()> {
+/// Opens the mini player (or brings it to the front when it's already open).
+fn open_mini(app: &AppHandle) -> tauri::Result<()> {
     if let Some(w) = app.get_webview_window("mini") {
-        return w.close();
+        let _ = w.show();
+        return w.set_focus();
     }
-    WebviewWindowBuilder::new(app, "mini", WebviewUrl::App("index.html".into()))
+    let w = WebviewWindowBuilder::new(app, "mini", WebviewUrl::App("index.html".into()))
         .title("Wavelength mini player")
         .inner_size(360.0, 112.0)
         .min_inner_size(280.0, 112.0)
@@ -46,7 +54,22 @@ fn toggle_mini(app: &AppHandle) -> tauri::Result<()> {
         .always_on_top(true)
         .skip_taskbar(true)
         .build()?;
+    let handle = app.clone();
+    w.on_window_event(move |e| {
+        // closing the mini player after switching to it brings the big window back
+        if matches!(e, WindowEvent::Destroyed) && SWITCHED.load(Ordering::Relaxed) {
+            show_main(&handle);
+        }
+    });
     Ok(())
+}
+
+/// Opens the mini player, or closes it when it's open.
+fn toggle_mini(app: &AppHandle) -> tauri::Result<()> {
+    if let Some(w) = app.get_webview_window("mini") {
+        return w.close();
+    }
+    open_mini(app)
 }
 
 pub fn plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
@@ -138,4 +161,24 @@ pub fn mini_toggle(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn main_show(app: AppHandle) {
     show_main(&app);
+}
+
+/// Switch to mini player: the mini player opens and the main window hides (it keeps playing).
+#[tauri::command]
+pub fn mini_switch(app: AppHandle) -> Result<(), String> {
+    open_mini(&app).map_err(|e| e.to_string())?;
+    SWITCHED.store(true, Ordering::Relaxed);
+    if let Some(w) = app.get_webview_window("main") {
+        w.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// The mini player's "Back to full player": the main window comes back and the mini player closes.
+#[tauri::command]
+pub fn mini_back(app: AppHandle) {
+    show_main(&app);
+    if let Some(w) = app.get_webview_window("mini") {
+        let _ = w.close();
+    }
 }

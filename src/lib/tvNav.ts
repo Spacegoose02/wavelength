@@ -1,7 +1,7 @@
 /**
  * TV remote (D-pad) navigation for Android TV / Google TV / Fire TV.
  * WebView has no built-in spatial navigation, so arrow keys move focus to the nearest focusable
- * element in that direction; OK/Enter activates it (native for buttons). Media keys drive the
+ * element in that direction; OK/Enter activates it (native for buttons). The Menu button opens the right-click menu of whatever has focus. Media keys drive the
  * player. Only enabled on non-touch Android devices, so desktop keyboards behave as usual.
  */
 import { usePlayer } from '../store/player';
@@ -53,6 +53,12 @@ function firstFocusable() {
   return [...document.querySelectorAll<HTMLElement>('.main ' + FOCUSABLE.split(', ').join(', .main '))].find(visible);
 }
 
+/** Sends `el` a right-click in its middle, so its own onContextMenu opens its menu. */
+export function openMenuOn(el: Element) {
+  const r = el.getBoundingClientRect();
+  el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, button: 2 }));
+}
+
 export function enableTvNavigation(force = false) {
   if (!isTV && !force) return;
   document.documentElement.classList.add('tv');
@@ -76,6 +82,13 @@ export function enableTvNavigation(force = false) {
         case 'MediaRewind':
           e.preventDefault();
           return p.prev();
+      }
+      // the remote's Menu button: the right-click menu of whatever has focus (the player, the scene, a song)
+      if (e.key === 'ContextMenu') {
+        e.preventDefault();
+        const el = document.activeElement as HTMLElement | null;
+        if (el && el !== document.body) openMenuOn(el);
+        return;
       }
       const dirs: Record<string, Dir> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
       const dir: Dir | undefined = dirs[e.key];

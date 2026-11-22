@@ -15,6 +15,8 @@ import { inboxBadge, useInbox } from '../lib/inbox';
 import { KID_VIEWS, useIsKid } from '../lib/kids';
 import { useHub } from '../store/hub';
 import { ProfileButton } from './WhosListening';
+import { keepsOwnMenu, useLongPress } from '../lib/contextMenu';
+import { openPlayerMenu } from './PlayerMenu';
 
 const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route['view'][] }[] = [
   { view: 'home', label: 'Home', icon: <IconHome />, also: ['mix', 'blend'] },
@@ -24,7 +26,8 @@ const TABS: { view: Route['view']; label: string; icon: ReactNode; also?: Route[
   { view: 'library', label: 'Library', icon: <IconLibrary />, also: ['browse', 'aiArtists', 'albums', 'artists', 'album', 'artist', 'favorites', 'recent', 'playlists', 'playlist', 'serverPlaylist', 'history', 'books', 'book', 'podcasts', 'podcast', 'radio', 'downloads', 'inbox', 'settings', 'offline', 'offlineCollection', 'dj'] },
 ];
 
-/** Phone layout: mini player + bottom tab bar (replaces the sidebar and desktop deck). */
+/** Phone layout: mini player + bottom tab bar (replaces the sidebar and desktop deck). Right-click or long-press the
+ * player strip for the player menu (components/PlayerMenu.ts). */
 export function MobileNav() {
   const { route, go, setNowPlaying } = useUi();
   const p = usePlayerControls();
@@ -33,12 +36,13 @@ export function MobileNav() {
   const art = p.liveCover ?? trackArt(t);
   const badge = useInbox(inboxBadge);
   const live = t?.kind === 'radio';
+  const press = useLongPress((e) => openPlayerMenu(e));
   return (
     <div className="mobile-dock">
       <DjStationPanel sheet />
       {!t && <DjModeBar />}
       {t && (
-        <div className="mini-player" onClick={() => setNowPlaying(true)}>
+        <div className="mini-player" onClick={() => setNowPlaying(true)} onContextMenu={(e) => !keepsOwnMenu(e.target) && openPlayerMenu(e)} {...press}>
           <MiniProgress live={live} />
           <Cover key={art} src={art} alt={t.title} className="tiny" />
           <div className="track-main">

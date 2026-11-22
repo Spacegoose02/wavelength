@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.59.0
+- **Switch to mini player.** Right-click the player bar (wide or narrow) → **Switch to mini player** opens the mini
+  player and hides the big window; the music keeps going in it. The mini player's right-click menu (a native one,
+  `@tauri-apps/api/menu`) has **Back to full player** and **Close mini player**; closing it after a switch shows the
+  big window again. New Tauri commands `mini_switch` and `mini_back` (`src-tauri/src/desktop.rs`).
+- **Right-click the player.** Open Now Playing, Show the queue, Play / Pause, Next, Previous, Shuffle, Repeat, Go to
+  artist, Go to album, and the song's own menu (`components/PlayerMenu.ts`).
+- **Right-click the Now Playing scene.** Lists of every scene, critter, act and theme, Boy or girl, Holiday themes in
+  season, A different theme every day, Tune mouth and a link to Settings → Themes & critters
+  (`components/SceneMenu.ts`). Picking a critter or an act switches to the critter scene.
+- **One menu for mouse, finger and remote.** `components/ContextMenu.tsx` opens lists in place with a Back row, and
+  is a sheet along the bottom on phone-sized screens. Press and hold opens it on phones and tablets
+  (`useLongPress`, lib/contextMenu.ts), and the TV remote's Menu button opens the menu of whatever has focus
+  (lib/tvNav.ts), song rows included. Text boxes and open panels inside the player keep the system's menu.
+
 ## 0.58.1
 - **Get this song on the radio follows the download.** It used to say **Downloading** and stay greyed out for good,
   whether deemix got the song or not. Now it reads deemix's queue (`useFollowDeemix`) and shows **Waiting**,

@@ -691,7 +691,15 @@ with a Hub. A Hub admin can turn the tuner off in **Settings → Features**, whi
 defaults.
 
 **Switching.** On the critter visualizer, tap **Switch critter** in its top-right corner for the next critter
-(keeping the act), or **Switch act** under it for the next act (keeping the critter). Or go to **Settings →
+(keeping the act), or **Switch act** under it for the next act (keeping the critter). To jump straight to one,
+right-click the scene (press and hold on a phone or tablet, or press the remote's Menu button on a TV): **Scene**,
+**Critter**, **Act**, **Boy or girl** and **Theme** each open a list in place, with a **‹** row at the top to go
+back. Picking a critter or an act also switches to the critter scene; picking a theme turns Random daily off. The
+same menu has **Tune mouth** (on the critter scene) and **Theme and critter settings…**.
+
+![Right-click the Now Playing scene](screenshots/scene-menu.png)
+
+Or go to **Settings →
 Themes & critters**, which keeps everything about how the app looks in one place, in four sub-tabs: **Theme**
 (the skin, Seasonal, Random daily and Motion), **Critters**, **Scenes** and **Visualizer**. The **Critters** cards
 show each critter in your current scene (act), and the **Scenes** cards show your current critter in each scene.
@@ -1752,6 +1760,11 @@ In the Windows, Mac and Linux apps:
 - **Mini player.** The small-window button next to the queue button in the player bar (or the tray icon's menu, or
   **Settings → Playback**) opens a little window with the cover, the song, play/pause, next and previous. It
   stays on top of your other apps; drag it by its background. Click the song name to bring Wavelength back.
+- **Switch to mini player.** Right-click the player at the bottom (the wide player bar, or the narrow one in a small
+  window) and pick **Switch to mini player**: the mini player opens and the big window hides while the music keeps
+  going. Right-click the mini player for **Play / Pause**, **Next**, **Previous**, **Back to full player** and
+  **Close mini player**; closing it brings the big window back too, so Wavelength is never left without a window.
+  The small-window button and the tray's **Mini player** still open it beside the big window.
 - **Tray icon** (the menu bar on a Mac): **Play / pause**, **Next**, **Previous**, **Mini player**, **Show
   Wavelength** and **Quit**. Clicking the icon shows Wavelength.
 - **Hotkeys that work in any app:** Ctrl+Alt+Space play/pause, Ctrl+Alt+→ next, Ctrl+Alt+← previous (⌃⌥ on a
@@ -1760,7 +1773,24 @@ In the Windows, Mac and Linux apps:
 - **Keep playing in the tray when I close the window** (off by default): closing the window hides it instead and
   the music carries on. Quit from the tray icon.
 
-> **Developer notes.** `src-tauri/src/desktop.rs` (tray, the global-shortcut plugin, the `mini` window,
+**The player's right-click menu** (every app, and the browser): right-click the player at the bottom, or press and
+hold it on a phone, for **Open Now Playing**, **Show the queue**, **Play / Pause**, **Next**, **Previous**,
+**Shuffle**, **Repeat** (Off, Repeat all, Repeat this song), **Go to artist**, **Go to album** and **Add to playlist
+and more…** (the song's own menu). On a phone it slides up from the bottom. Text boxes and open panels inside the
+player keep their usual menu.
+
+![Right-click the player](screenshots/player-menu.png)
+
+> **Developer notes.** Right-click menus that aren't a song's are `components/ContextMenu.tsx` (one host in
+> App.tsx; lists open in place so a D-pad works), built by `components/PlayerMenu.ts` and `components/SceneMenu.ts`.
+> `useLongPress` (lib/contextMenu.ts) adds press-and-hold for iPhone and iPad, which send no contextmenu event;
+> `menuGuard` stops Android's own contextmenu event after a long-press opening it twice. On a TV, lib/tvNav.ts turns
+> the remote's Menu key into a contextmenu event on whatever has focus. **Switch to mini player** is the
+> `mini_switch` command: it opens the mini window and hides `main`; `mini_back`, or the mini window closing, shows
+> it again (`SWITCHED` in desktop.rs). The mini player's own menu is a native one (`@tauri-apps/api/menu`), since
+> its window is too short for an HTML menu.
+>
+> `src-tauri/src/desktop.rs` (tray, the global-shortcut plugin, the `mini` window,
 > close-to-tray) sends the main window `remote` events; `src/lib/desktop.ts` acts on them and sends the mini
 > player `mini-state`. `src/components/MiniPlayer.tsx` is drawn instead of the app when the window's label is
 > `mini` (`main.tsx`), and loads none of the app's stores. Settings: `desktop` (per computer, not synced).

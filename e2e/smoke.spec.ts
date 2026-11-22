@@ -188,3 +188,32 @@ test('Move from Spotify reads a Spotify data file and lists what isn’t in the 
   await expect(page.getByText('Not in your library (2)')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('right-click the player and the Now Playing scene for their menus', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  const t = (n: number) => ({ id: `t${n}`, sourceId: 'x', kind: 'track', title: `Song ${n}`, artist: 'Some Band', album: 'An Album', duration: 200 });
+  await page.addInitScript((tracks) => {
+    localStorage.setItem('tonearm.library', JSON.stringify({ state: { playlists: [{ id: 'p1', name: 'Test', tracks, createdAt: 0, updatedAt: 0 }], history: [] }, version: 0 }));
+  }, [t(1), t(2)]);
+  await page.goto('/');
+  await page.locator('.side-item', { hasText: 'Test' }).dispatchEvent('click');
+  await page.locator('.track-row').first().dblclick();
+  await page.locator('.deck-meta').click({ button: 'right' });
+  const menu = page.locator('.context-menu');
+  await expect(menu).toContainText('Song 1 · Some Band');
+  await expect(menu).toContainText('Repeat');
+  // a list opens in place, with a way back
+  await menu.getByRole('menuitem', { name: /^Repeat/ }).click();
+  await menu.getByRole('menuitemcheckbox', { name: /Repeat all/ }).click();
+  await expect(page.locator('.lcd-flags')).toContainText('REP');
+  await page.locator('.deck-meta').click({ button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Open Now Playing' }).click();
+  await expect(menu).toBeHidden();
+  await page.locator('.np-stage').click({ button: 'right' });
+  await menu.getByRole('menuitem', { name: /^Critter/ }).click();
+  await menu.getByRole('menuitemcheckbox', { name: /Shark/ }).click();
+  await expect(menu).toBeHidden();
+  await expect(page.locator('.np-stage')).toHaveAttribute('aria-label', /shark/i);
+  expect(errors).toEqual([]);
+});
