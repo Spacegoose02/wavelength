@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **Song titles fit on the TV again.** On a TV or a narrow window, every song row in Favorites, playlists and
+  albums cut its title and artist to one letter ("T.."), because the row's action chips (Next, + Queue, + Playlist,
+  Kids, Share, Edit) held their full width even while hidden. They now take no room until the row is hovered or
+  focused, and on the focused row the title keeps at least a readable width while the chips wrap onto a second
+  line beside it.
+
 ## 0.59.2
 - **An artist with no albums of their own opens without Navidrome.** With Navidrome off, the artist page and Edit
   artist for someone who is only on other people's songs (featured, or a joined credit like "Lil Baby;Jeremih")

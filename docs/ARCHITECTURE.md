@@ -233,6 +233,9 @@ Tauri generates this project once; we edit it by hand and commit it.
   sidebar + deck. Tablets and TVs use the desktop layout (with a compact mode for short screens like car units).
 - **TV**: `lib/tvNav.ts` turns arrow keys into spatial focus movement on non-touch Android devices;
   `html.tv` adds big focus rings. Hover-only controls also appear on `:focus-within`.
+- **Song row actions** (Next, + Queue, + Playlist, Kids, Share, Edit …) take no room until the row is hovered,
+  focused or has a menu open (`.track-actions` in `styles.css`, wider than a phone). While shown, the title keeps
+  at least `min(16rem, 40%)` of the row and the chips wrap onto more lines rather than squeezing it.
 - **Skins**: `data-skin` on `<html>`; each skin overrides the CSS variables (`--bg`, `--panel`, `--accent`,
   `--lcd-*`, `--viz-*`, `--bevel` …) and optionally a few component rules. The list lives in `SKINS`
   (`store/settings.ts`), each with a `group` for Settings → Themes & critters → Theme. The skin on screen is not always the saved
