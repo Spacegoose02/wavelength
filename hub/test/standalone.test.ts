@@ -180,6 +180,32 @@ test('without Navidrome, new songs get the Hub’s ids, join their album, and al
   assert.equal(row('Drake/Scorpion/02.mp3').nd_album_id, 'al1');
 });
 
+test('without Navidrome, an artist who is only on other people’s songs still opens, with no albums of their own', async () => {
+  const { app, tokens, put, catalog, login, as } = await setup();
+  await json(app, 'PUT', '/api/admin/catalog/navidrome', { token: tokens.admin, body: { off: true, force: true } });
+  // Clever sings on a Drake album and has none of his own: the song artist gets an id, but no album artist does
+  TAGS['Drake/Scorpion/03.mp3'] = { title: 'Life’s A Mess', artist: 'Clever', album_artist: 'Drake', album: 'Scorpion', track: '3', date: '2018', genre: 'Rap' };
+  put('Drake/Scorpion/03.mp3');
+  await catalog.scan();
+  const id = (app as any).hubCatalog.db.prepare('SELECT nd_artist_id FROM catalog_songs WHERE path = ?').get('Drake/Scorpion/03.mp3').nd_artist_id;
+  assert.match(id, /^h[0-9a-f]{20}$/);
+  const rest = as(await login(tokens.member));
+
+  // the artist page and Edit artist ask for them by that id (it was "The Hub doesn't know that (getArtist)")
+  const artist = await rest('getArtist', { id });
+  assert.equal(artist.by, 'hub');
+  assert.equal(artist.body.status, 'ok');
+  assert.equal(artist.body.artist.name, 'Clever');
+  assert.equal(artist.body.artist.albumCount, 0);
+  assert.deepEqual(artist.body.artist.album, []);
+  assert.equal((await rest('getArtistInfo2', { id })).body.status, 'ok');
+  assert.equal((await rest('getMusicDirectory', { id })).body.directory.name, 'Clever');
+  // they still aren't listed as an artist of their own, as with Navidrome
+  assert.deepEqual((await rest('getArtists')).body.artists.index.flatMap((i: { artist: { name: string }[] }) => i.artist.map((a) => a.name)), ['The Beatles', 'Drake']);
+  // an id nobody has still says so
+  assert.equal((await rest('getArtist', { id: 'nobody' })).body.error.code, 70);
+});
+
 test('Navidrome stays on while someone’s copy fails, unless the admin says otherwise', async () => {
   const { app, tokens, ids, serviceId } = await setup();
   await json(app, 'PUT', `/api/admin/services/${serviceId}/users/${ids.kid}`, { token: tokens.admin, body: { secrets: { username: 'kit', password: 'wrong' } } });
