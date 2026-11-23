@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.60.0
+- **Signing in on a TV without typing.** The app now looks for the Hub on the home network by itself
+  (`src-tauri/src/hubscan.rs` tries the Hub's port 7780 on every address of the device's network; `src/lib/hubScan.ts`
+  keeps the ones that answer `/api/health` as a Hub). With one Hub in the house it's picked straight away; with
+  several, each is a button. Typing the address is still there for a Hub somewhere else.
+- **On a TV, the code comes first.** After connecting, a TV shows the QR code and pairing code up front instead of
+  username and password boxes: scan it with a phone, sign in there (single sign-on or password) and press **Allow**.
+  The password and invite are still under **Other ways to sign in**. The **Open sign-in** button that tried to open
+  a browser on the TV is gone there; the QR code does that job.
+- **The QR code works on Hubs without `WAVELENGTH_PUBLIC_URL`.** Such a Hub hands out `http://localhost:7780/link`,
+  which a phone can't open. The app now swaps in the address it reached the Hub at (`phoneLink()`).
+- **The code stays put.** The pairing code started over whenever the sign-in screen redrew, so the code on screen
+  could stop working while someone typed it; it now stays until it's used. A code that runs out (after 10 minutes)
+  is replaced by a fresh one by itself instead of an error.
+- **The remote stays on the sign-in screen.** Arrow keys could move focus to the app hidden behind the welcome
+  screen, and the first press often did nothing. Focus now starts on, and stays inside, the sign-in screen
+  (`src/lib/tvNav.ts`), the keyboard no longer pops up on its own, and the code scrolls into view once connected.
+
 ## 0.59.2
 - **An artist with no albums of their own opens without Navidrome.** With Navidrome off, the artist page and Edit
   artist for someone who is only on other people's songs (featured, or a joined credit like "Lil Baby;Jeremih")

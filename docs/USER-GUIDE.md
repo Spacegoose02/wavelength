@@ -2103,6 +2103,11 @@ it: `192.168.1.10`, `192.168.1.10:7780`, `nas.local` or `music.example.com` all 
 the Hub's pages or an invite link. Wavelength tries `http://`, `https://` and the Hub's port (7780) by itself and
 takes the one that answers. Then sign in, and your music, podcasts and settings arrive on their own.
 
+In the app (Android, Android TV, Windows and the other desktops) you often don't have to type anything: while the
+welcome screen is open, Wavelength looks for a Hub on your home network. If it finds one, it connects by itself; if
+it finds several, pick yours from **Found on your network**. Nothing found? Check the TV is on the same Wi-Fi as
+the Hub, press **look again**, or type the address.
+
 Not using a Hub? Press **Skip, I'm not using a Hub**. The welcome screen doesn't come back; add Navidrome, Plex and
 your other servers under **Settings → Sources**, or connect to a Hub later from Home (**Connect to a Hub**) or
 **Settings → Account**. Anyone who already has a server or a Hub on the device never sees the welcome screen.
@@ -2115,11 +2120,13 @@ your other servers under **Settings → Sources**, or connect to a Hub later fro
 
 **Settings → Account** (or the welcome screen): type the Hub's address and press **Connect**. One way to sign in
 shows straight away: **Sign in with tinyauth** when single sign-on is on, otherwise your username and password.
-**Other ways to sign in** has the rest:
+On a TV it's always the code (below), so nobody types a password with the remote. **Other ways to sign in** has the
+rest:
 
 - **Sign in with a code** is the easy way, and the only comfortable one on a TV. Wavelength shows a code and
   a QR code. Scan it with your phone (or open the address shown and type the code), sign in there with single
-  sign-on (tinyauth) or your Hub password, and press **Allow**. The TV signs itself in a moment later.
+  sign-on (tinyauth) or your Hub password, and press **Allow**. The TV signs itself in a moment later. A code
+  works for 10 minutes; leave the screen open longer and a new one appears by itself.
 - **Sign in with a password** signs in with your Hub username and password directly.
 - **I have an invite** makes your account from an invite link an admin sent you, and signs this device in.
 - On a brand-new Hub, the Account tab offers **Set up this Hub** instead: that creates the first admin (you).

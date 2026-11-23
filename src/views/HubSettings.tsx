@@ -18,6 +18,8 @@ import { useFeature } from '../lib/features';
 import { useWebHub, wantsWebSso } from '../lib/webHub';
 import { FamilyPicker } from '../components/FamilyPicker';
 import { findHub, HubNotFound } from '../lib/hubAddress';
+import { phoneLink, scanForHubs, shortAddress, type FoundHub } from '../lib/hubScan';
+import { isTV } from '../lib/tvNav';
 import { useSettings } from '../store/settings';
 import { useUi } from '../store/ui';
 
@@ -30,7 +32,8 @@ const when = (t?: number | null) => (t ? new Date(t).toLocaleString() : 'never')
 /**
  * Shows a pairing code and waits for it to be approved in a browser. With `sso`, the link goes straight to the
  * single sign-on page (tinyauth signs you in there), so nobody types the code. A family sign-in approves with
- * its profile picker (`onPick`).
+ * its profile picker (`onPick`). A code that runs out is swapped for a new one, so a TV left on this screen still
+ * has a working code when someone gets to it.
  */
 function Pairing({ client, onDone, take, sso, onPick }: { client: HubClient; onDone(): void; take?: (s: HubSession) => void; sso?: string; onPick(p: HubPickResponse['pick']): void }) {
   const signedIn = useHub((s) => s.signedIn);
@@ -38,8 +41,13 @@ function Pairing({ client, onDone, take, sso, onPick }: { client: HubClient; onD
   takeRef.current = take;
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
+  // kept in a ref: the parent hands a new onDone every render, and a new one mustn't start a new code
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
   const [p, setP] = useState<HubPairing>();
   const [err, setErr] = useState('');
+  /** Bumped when a code expires, for a fresh one. */
+  const [round, setRound] = useState(0);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -57,11 +65,12 @@ function Pairing({ client, onDone, take, sso, onPick }: { client: HubClient; onD
             if (s && isPick(s)) pickRef.current(s.pick);
             else if (s) {
               (takeRef.current ?? signedIn)(s);
-              onDone();
+              doneRef.current();
             } else timer = setTimeout(poll, pairing.interval * 1000);
           } catch (e) {
             if (!alive.current) return;
-            if (e instanceof HubError) setErr(e.message);
+            if (e instanceof HubError && e.status === 410) setRound((r) => r + 1);
+            else if (e instanceof HubError) setErr(e.message);
             else timer = setTimeout(poll, pairing.interval * 2000); // offline for a moment: keep waiting
           }
         };
@@ -74,7 +83,7 @@ function Pairing({ client, onDone, take, sso, onPick }: { client: HubClient; onD
       alive.current = false;
       clearTimeout(timer);
     };
-  }, [client, signedIn, onDone]);
+  }, [client, signedIn, round]);
 
   if (err) return <div className="errors">{err}</div>;
   if (!p) return <p className="muted">Getting a code…</p>;
@@ -85,7 +94,7 @@ function Pairing({ client, onDone, take, sso, onPick }: { client: HubClient; onD
         <Qr text={link} />
         <div>
           <p>Open the {sso} sign-in in your browser, sign in there and allow this device. Or scan the code with your phone.</p>
-          <a className="btn primary" href={link} target="_blank" rel="noreferrer">Open {sso} sign-in</a>
+          {!isTV && <a className="btn primary" href={link} target="_blank" rel="noreferrer">Open {sso} sign-in</a>}
           <p className="muted small">The code on the page is <b>{p.userCode}</b>. It works for {Math.round(p.expiresIn / 60)} minutes.</p>
         </div>
       </div>
@@ -93,9 +102,9 @@ function Pairing({ client, onDone, take, sso, onPick }: { client: HubClient; onD
   }
   return (
     <div className="hub-pair">
-      <Qr text={p.verificationUrlComplete} />
+      <Qr text={phoneLink(p.verificationUrlComplete, client.url)} />
       <div>
-        <p>Scan the code with your phone, or open <b>{p.verificationUrl}</b> in any browser and enter:</p>
+        <p>Scan the code with your phone, or open <b>{phoneLink(p.verificationUrl, client.url)}</b> in any browser and enter:</p>
         <div className="hub-code">{p.userCode}</div>
         <p className="muted small">Sign in there with single sign-on or your Hub password, then allow this device. The code works for {Math.round(p.expiresIn / 60)} minutes.</p>
       </div>
@@ -127,6 +136,8 @@ export function SignedOut({ adding, onCancel, firstRun }: { adding?: boolean; on
   /** "Other ways to sign in" is open. */
   const [more, setMore] = useState(false);
   const [finding, setFinding] = useState(false);
+  /** Hubs this device found on the network (lib/hubScan.ts): undefined while it's still looking. */
+  const [found, setFound] = useState<FoundHub[]>();
   /** A family sign-in answered: pick a profile (components/FamilyPicker.tsx). */
   const [pick, setPick] = useState<HubPickResponse['pick']>();
   const family = useHub((s) => s.family);
@@ -169,7 +180,37 @@ export function SignedOut({ adding, onCancel, firstRun }: { adding?: boolean; on
   };
   useEffect(() => {
     if (url) connect();
+    else void look();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const use = (h: FoundHub) => {
+    setErr('');
+    setMode(null);
+    setMore(false);
+    setUrl(h.url);
+    setDraft(h.url);
+    setHealth(h.health);
+  };
+  /** Looks for a Hub on the home network, so nobody has to type its address (with a TV remote, least of all). */
+  const typed = useRef(false);
+  const look = async () => {
+    if (!isTauri) return setFound([]);
+    setFound(undefined);
+    const list = await scanForHubs();
+    setFound(list);
+    // only one Hub in the house and nothing typed yet: that's the one
+    if (list.length === 1 && !typed.current && !useHub.getState().url) use(list[0]);
+  };
+  const signinRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // on a TV the code sits below the address box, often past the bottom of the screen: bring it up
+    if (isTV && health && !health.setupNeeded) signinRef.current?.scrollIntoView({ block: 'center' });
+  }, [health]);
+  const foundRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // on a TV, land on the first Hub found so one press of OK picks it
+    if (isTV && found?.length && !health) foundRef.current?.querySelector<HTMLElement>('button')?.focus();
+  }, [found, health]);
 
   /** In a browser on the Hub's own page: single sign-on straight from the proxy, or through tinyauth's login. */
   const onHubPage = !isTauri && !!webOrigin && webOrigin === url;
@@ -215,9 +256,11 @@ export function SignedOut({ adding, onCancel, firstRun }: { adding?: boolean; on
     }
   };
 
-  // one way to sign in up front (single sign-on when it's on, otherwise a password); the rest under "Other ways"
-  const primary = health?.sso ? 'sso' : 'password';
-  const shown = mode ?? (primary === 'password' ? 'password' : null);
+  // one way to sign in up front (single sign-on when it's on, otherwise a password); the rest under "Other ways".
+  // On a TV it's the code: scanned with a phone, where signing in (single sign-on or a password) is easy, instead of
+  // typing a password letter by letter with the remote.
+  const primary = isTV ? 'code' : health?.sso ? 'sso' : 'password';
+  const shown = mode ?? (primary === 'sso' ? null : primary);
   // single sign-on, when it's on, keeps its own big button above, so it's never one of the others
   const others = (['code', 'password', 'invite'] as const).filter((m) => m !== shown);
   const otherLabel = { code: 'Sign in with a code', password: 'Sign in with a password', invite: 'I have an invite' };
@@ -242,7 +285,7 @@ export function SignedOut({ adding, onCancel, firstRun }: { adding?: boolean; on
       <form className="editor" onSubmit={connect}>
         <div className="editor-grid">
           <label className="span2">{firstRun ? 'Server address' : 'Hub address'}
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="192.168.1.10:7780 or music.example.com" required autoFocus={firstRun} autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode="url" />
+            <input value={draft} onChange={(e) => { typed.current = true; setDraft(e.target.value); }} placeholder="192.168.1.10:7780 or music.example.com" required autoFocus={firstRun && !isTV} autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode="url" />
           </label>
         </div>
         <div className="row gap">
@@ -250,6 +293,29 @@ export function SignedOut({ adding, onCancel, firstRun }: { adding?: boolean; on
           {health && <span className="ok">✓ Wavelength Hub {health.version}</span>}
         </div>
       </form>
+      {!health && isTauri && (
+        <div className="hub-found" ref={foundRef}>
+          {found === undefined ? (
+            <p className="muted small">Looking for a Hub on your network…</p>
+          ) : found.length ? (
+            <>
+              <p className="muted small">Found on your network:</p>
+              <div className="row gap wrap">
+                {found.map((h) => (
+                  <button key={h.url} className="btn primary" onClick={() => use(h)}>
+                    {shortAddress(h.url)}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="muted small">
+              No Hub found on this network. Type its address above, or{' '}
+              <button type="button" className="link" onClick={() => void look()}>look again</button>.
+            </p>
+          )}
+        </div>
+      )}
       {err && <div className="errors">{err}</div>}
 
       {health?.setupNeeded && (
@@ -266,7 +332,7 @@ export function SignedOut({ adding, onCancel, firstRun }: { adding?: boolean; on
       )}
 
       {health && !health.setupNeeded && (
-        <div className="editor">
+        <div className="editor" ref={signinRef}>
           {primary === 'sso' && mode !== 'sso' && (
             <div className="row gap"><button className="btn primary" onClick={startSso}>{ssoLabel}</button></div>
           )}

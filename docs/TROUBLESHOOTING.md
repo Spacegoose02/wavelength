@@ -40,6 +40,8 @@ Real problems we've hit, what caused them, and the fix. Search this page for the
 | SUB/WAVE: Shows list has initials, not the hosts' pictures | `/schedule` gives each persona's `avatar` as `/persona-avatar/<id>` (under the API), unlike `/settings`, which gives the file name | `sw.avatarFor()` takes both. A host with no picture still shows initials: click the circle on the show (or DJs → Edit → Change picture) to upload one |
 | SUB/WAVE: editing a DJ crashes the page (`object is not iterable … at new Set`) | Newer SUB/WAVE sends `/settings` → `tts.available` as an object (`{ kokoro: true, … }`), not a list | Read through `availableEngines()` in `sources/subwave.ts`, which takes either |
 | SUB/WAVE: "Too late — already on its way to air" on cancel | The song was already handed to Liquidsoap and is playing | Expected; only songs still in the queue can be cancelled |
+| TV: "No Hub found on this network" | The TV is on another network (guest Wi-Fi, a VLAN) or the Hub isn't on port 7780 | Put the TV on the same network, or type the address. The search only tries port 7780 on the TV's own /24 (`src-tauri/src/hubscan.rs`) |
+| Phone can't open the QR code from **Sign in with a code** | The Hub's public address points somewhere the phone can't reach | Set `WAVELENGTH_PUBLIC_URL` to the address phones use. A Hub without it already gets the address the TV connected with (`phoneLink()`) |
 
 ## Playback
 

@@ -25,7 +25,8 @@ function nearest(from: Element, dir: Dir): HTMLElement | undefined {
   const ax = a.left + a.width / 2;
   const ay = a.top + a.height / 2;
   // stay inside an open overlay (Now Playing, menus) if focus is in one
-  const scope = from.closest('.np, .menu, .queue') ?? document;
+  // and inside the sign-in screen, which covers the app: focus mustn't slip behind it
+  const scope = from.closest('.np, .menu, .queue, .web-signin') ?? document;
   let best: HTMLElement | undefined;
   let bestScore = Infinity;
   for (const el of scope.querySelectorAll<HTMLElement>(FOCUSABLE)) {
@@ -50,7 +51,9 @@ function nearest(from: Element, dir: Dir): HTMLElement | undefined {
 }
 
 function firstFocusable() {
-  return [...document.querySelectorAll<HTMLElement>('.main ' + FOCUSABLE.split(', ').join(', .main '))].find(visible);
+  // the sign-in screen (components/FirstRun.tsx, WebSignIn.tsx) covers the app when it's showing
+  const within = (root: string) => [...document.querySelectorAll<HTMLElement>(FOCUSABLE.split(', ').map((f) => `${root} ${f}`).join(', '))].find(visible);
+  return within('.web-signin') ?? within('.main');
 }
 
 /** Sends `el` a right-click in its middle, so its own onContextMenu opens its menu. */
