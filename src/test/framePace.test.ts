@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { createPacer } from '../lib/framePace';
+import { describe, expect, it, vi } from 'vitest';
+import { createCanvasFit, createPacer, LOW_POWER_FPS } from '../lib/framePace';
 
 describe('createPacer', () => {
   it('draws every frame while playing', () => {
@@ -43,5 +43,36 @@ describe('reduce motion', () => {
     expect(pace(400, true)).toBe(0);
     expect(pace(500, true)).toBeCloseTo(1 / 60);
     expect(pace(700, false)).toBe(0);
+  });
+});
+
+describe('low-power cap (Android)', () => {
+  it('draws every other 60 Hz frame while playing', () => {
+    const pace = createPacer(20, () => false, LOW_POWER_FPS);
+    const drawn = Array.from({ length: 13 }, (_, i) => pace(i * (1000 / 60), true) > 0).filter(Boolean).length;
+    expect(drawn).toBe(7);
+  });
+});
+
+describe('createCanvasFit', () => {
+  const fake = (w: number, h: number) => ({ clientWidth: w, clientHeight: h, width: 300, height: 150 }) as unknown as HTMLCanvasElement;
+
+  it('resizes once on a fractional pixel ratio, not every frame', () => {
+    vi.stubGlobal('window', { devicePixelRatio: 2.625 });
+    const canvas = fake(96, 34);
+    const fit = createCanvasFit(canvas, 4);
+    expect(fit.fit().resized).toBe(true);
+    expect([canvas.width, canvas.height]).toEqual([252, 89]);
+    expect(fit.fit().resized).toBe(false);
+    expect(fit.fit().resized).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it('caps the pixel ratio', () => {
+    vi.stubGlobal('window', { devicePixelRatio: 3.5 });
+    const canvas = fake(100, 40);
+    const { sx, sy } = createCanvasFit(canvas, 2).fit();
+    expect([canvas.width, canvas.height, sx, sy]).toEqual([200, 80, 2, 2]);
+    vi.unstubAllGlobals();
   });
 });
