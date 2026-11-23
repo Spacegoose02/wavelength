@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.59.2
+- **An artist with no albums of their own opens without Navidrome.** With Navidrome off, the artist page and Edit
+  artist for someone who is only on other people's songs (featured, or a joined credit like "Lil Baby;Jeremih")
+  showed "The Hub doesn't know that (getArtist), and Navidrome is off", and every tab of Edit artist, Match
+  included, stayed empty. The Hub only knew album artists. It now also keeps song artists who are no album's
+  artist (`View.featured` in `hub/src/subsonicCatalog.ts`) and answers `getArtist` for them with no albums, as
+  Navidrome does, so the app falls back to the albums their songs are on. `getArtistInfo2`, `getMusicDirectory`,
+  `getStarred2` and their picture (the newest album they're on) know them too; `getArtists` and search still list
+  only album artists. Needs the Hub update.
+
 ## 0.59.1
 - **DJ mode's Get follows the download.** In **N songs on <segment> you don't have**, Get used to show
   "Downloading" and forget it as soon as the panel was folded or closed, so every song read **Get** again with no

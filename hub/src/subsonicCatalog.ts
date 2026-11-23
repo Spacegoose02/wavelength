@@ -109,6 +109,12 @@ class View {
   byPath = new Map<string, Row>();
   albums = new Map<string, Album>();
   artists = new Map<string, Artist>();
+  /**
+   * Artists of songs who are no album's artist here (someone only ever featured, a joined credit like
+   * "Lil Baby;Jeremih"), with their songs. Navidrome answers getArtist for them with no albums, and the app opens
+   * their page from a song; they aren't listed in getArtists or search, as with Navidrome.
+   */
+  featured = new Map<string, Artist & { songs: Row[] }>();
   genres = new Map<string, { name: string; songs: number; albums: Set<string> }>();
   /** every song, in album order */
   ordered: Row[] = [];
@@ -136,6 +142,12 @@ class View {
       ar.albums.push(a);
     }
     for (const ar of this.artists.values()) ar.albums.sort(byYear);
+    for (const r of rows) {
+      if (!r.nd_artist_id || this.artists.has(r.nd_artist_id)) continue;
+      let f = this.featured.get(r.nd_artist_id);
+      if (!f) this.featured.set(r.nd_artist_id, (f = { id: r.nd_artist_id, name: r.artist, albums: [], songs: [] }));
+      f.songs.push(r);
+    }
     this.order();
     for (const r of rows) this.words.set(r.nd_id, fold(`${r.title} ${r.artist} ${r.album} ${r.album_artist}`));
   }
@@ -343,7 +355,7 @@ function answerAlone(db: Db, method: string, q: Record<string, string>, starred:
       return r ? ok({ indexes: { ...r.artists, lastModified: 0 } }) : null;
     }
     case 'getMusicDirectory': {
-      const ar = v.artists.get(q.id ?? '');
+      const ar = v.artists.get(q.id ?? '') ?? v.featured.get(q.id ?? '');
       if (ar) return ok({ directory: { id: ar.id, name: ar.name, child: ar.albums.map((a) => ({ ...album(a, starred), parent: ar.id })) } });
       const a = v.albums.get(q.id ?? '');
       if (a) return ok({ directory: { id: a.id, name: a.name, ...(a.artistId && { parent: a.artistId }), child: a.songs.map((r) => song(r, starred)) } });
@@ -368,10 +380,11 @@ function answerAlone(db: Db, method: string, q: Record<string, string>, starred:
     }
     case 'getArtistInfo':
     case 'getArtistInfo2': {
-      const ar = v.artists.get(q.id ?? '');
+      const ar = v.artists.get(q.id ?? '') ?? v.featured.get(q.id ?? '');
       if (!ar) return null;
-      // other artists who share the most genres with this one
-      const mine = new Set(ar.albums.flatMap((a) => a.genres.map((g) => g.toLowerCase())));
+      // other artists who share the most genres with this one (someone only featured: their songs' genres)
+      const songs = 'songs' in ar ? (ar.songs as Row[]) : [];
+      const mine = new Set([...ar.albums.flatMap((a) => a.genres), ...songs.flatMap((r) => genresOf(r.genre))].map((g) => g.toLowerCase()));
       const count = int(q.count, 20, 100);
       const similar = mine.size ? [...v.artists.values()].filter((x) => x !== ar)
         .map((x) => [x, new Set(x.albums.flatMap((a) => a.genres.map((g) => g.toLowerCase())).filter((g) => mine.has(g))).size] as const)
@@ -453,7 +466,7 @@ function answerFor(db: Db, method: string, q: Record<string, string>, starred: S
       return ok({ artists: { ignoredArticles: IGNORED_ARTICLES.join(' '), index: [...index].map(([name, artist]) => ({ name, artist })) } });
     }
     case 'getArtist': {
-      const ar = v.artists.get(q.id ?? '');
+      const ar = v.artists.get(q.id ?? '') ?? v.featured.get(q.id ?? '');
       if (!ar) return null;
       return ok({ artist: { ...artist(ar, starred), album: ar.albums.map((a) => album(a, starred)) } });
     }
@@ -472,7 +485,7 @@ function answerFor(db: Db, method: string, q: Record<string, string>, starred: S
       const ids = [...starred].sort((a, b) => b[1].localeCompare(a[1])).map(([id]) => id);
       const songs = ids.map((id) => v.songs.get(id)).filter((r): r is Row => !!r);
       const albums = ids.map((id) => v.albums.get(id)).filter((a): a is Album => !!a);
-      const artists = ids.map((id) => v.artists.get(id)).filter((a): a is Artist => !!a);
+      const artists = ids.map((id) => v.artists.get(id) ?? v.featured.get(id)).filter((a): a is Artist => !!a);
       const body = { artist: artists.map((a) => artist(a, starred)), album: albums.map((a) => album(a, starred)), song: songs.map((r) => song(r, starred)) };
       return ok(method === 'getStarred2' ? { starred2: body } : { starred: body });
     }
@@ -586,7 +599,7 @@ function searchArtists(v: View, query: string, match: (text: string) => boolean)
 /**
  * The files a cover id points at, best first: "al-<album id>" or "mf-<song id>" (with or without Navidrome's
  * "_<time>"), or a bare album or song id. A song comes first and then the rest of its album, so a song whose file has
- * no picture still gets its album's cover, as with Navidrome. An artist ("ar-…") gets their latest album's cover;
+ * no picture still gets its album's cover, as with Navidrome. An artist ("ar-…") gets their latest album's cover (someone only featured: the latest album they're on);
  * an id the catalog doesn't know, nothing.
  */
 export function coverSources(db: Db, id: string): { dir: string; file: string }[] {
@@ -594,9 +607,15 @@ export function coverSources(db: Db, id: string): { dir: string; file: string }[
   const m = /^(al|mf|ar)-(.+?)(_[0-9a-f]+)?$/.exec(id);
   const kind = m?.[1], key = m ? m[2] : id;
   const song = kind === 'mf' || !kind ? v.songs.get(key) : undefined;
-  const album = kind === 'al' ? v.albums.get(key) : kind === 'ar' ? v.artists.get(key)?.albums.at(-1) : song ? v.albums.get(song.nd_album_id) : v.albums.get(key);
+  const album = kind === 'al' ? v.albums.get(key) : kind === 'ar' ? v.artists.get(key)?.albums.at(-1) ?? featuredAlbum(v, key) : song ? v.albums.get(song.nd_album_id) : v.albums.get(key);
   const rows = [...(song ? [song] : []), ...(album?.songs ?? []).filter((r) => r !== song)];
   return rows.map((r) => ({ dir: dirname(r.path), file: r.path }));
+}
+
+/** The newest album a featured-only artist has a song on, for their picture. */
+function featuredAlbum(v: View, id: string): Album | undefined {
+  const albums = (v.featured.get(id)?.songs ?? []).map((r) => v.albums.get(r.nd_album_id)).filter((a): a is Album => !!a);
+  return albums.sort(byYear).at(-1);
 }
 
 function run(args: string[]): Promise<Buffer | null> {

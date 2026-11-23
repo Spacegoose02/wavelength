@@ -1098,7 +1098,9 @@ and hands out ids.
   for albums and songs. Answers use Navidrome's ids, so `stream`, stars, playlists and scrobbles still go to
   Navidrome unchanged; hearts come from the person's `getStarred2` (kept a minute, cleared when they star). Albums
   are grouped by Navidrome's album id and listed under the album artist's id (`nd_album_artist_id`, from Navidrome's
-  own API); genres split on ";" like Navidrome's; "newest" goes by when a file first turned up (`created`).
+  own API). An artist who is only ever a song's artist (featured, or a joined credit) and no album's is kept too:
+  `getArtist` answers for them with no albums, as Navidrome does, and so do `getArtistInfo2`, `getMusicDirectory` and
+  their picture (the newest album they're on), but `getArtists` and search list only album artists. Genres split on ";" like Navidrome's; "newest" goes by when a file first turned up (`created`).
   Loudness (`replayGain`) comes from the files' `REPLAYGAIN_*` tags; migration 31 adds these columns and reads every
   file once more to fill them. Covers: the album folder's `cover.*`, `folder.*` or `front.*`, else the picture in the
   file (a song's own, then its album's other songs', so a song without a picture still gets the album's), resized
