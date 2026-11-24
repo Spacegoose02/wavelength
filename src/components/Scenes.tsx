@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createAudioReader } from '../player/analysis';
 import { useSettings, type NpScene } from '../store/settings';
 import { usePlayer } from '../store/player';
-import { createCssVars, createPacer } from '../lib/framePace';
+import { createCanvasFit, createCssVars, createPacer, VIZ_MAX_FPS } from '../lib/framePace';
 import { Cover } from './common';
 import { Critter, critterLabel, nextAct, nextSpecies } from './critters/Critter';
 import { MouthTuner } from './MouthTuner';
@@ -218,21 +218,16 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
     const read = createAudioReader();
     let t = 0;
     let raf = 0;
-    const pace = createPacer();
+    const pace = createPacer(undefined, undefined, VIZ_MAX_FPS);
     const cssVar = createCssVars(canvas);
+    const size = createCanvasFit(canvas);
 
     const loop = (now = performance.now()) => {
       raf = requestAnimationFrame(loop);
       const dt = pace(now, usePlayer.getState().playing);
       if (!dt) return;
-      const dpr = window.devicePixelRatio || 1;
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(h * dpr);
-      }
-      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const { w, h, sx, sy } = size.fit();
+      g.setTransform(sx, 0, 0, sy, 0, 0);
       t += dt;
       const { freq, wave, bass, mid, treble, beat } = read(t);
 
@@ -252,7 +247,10 @@ function SceneCanvas({ scene, art }: { scene: Exclude<NpScene, 'art' | 'raccoon'
       });
     };
     loop();
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      size.stop();
+    };
   }, [scene, art]);
 
   return <canvas ref={ref} className="np-scene-canvas" />;

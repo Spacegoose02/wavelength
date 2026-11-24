@@ -17,6 +17,19 @@
 - **The remote stays on the sign-in screen.** Arrow keys could move focus to the app hidden behind the welcome
   screen, and the first press often did nothing. Focus now starts on, and stays inside, the sign-in screen
   (`src/lib/tvNav.ts`), the keyboard no longer pops up on its own, and the code scrolls into view once connected.
+## Unreleased
+- **Song titles fit on the TV again.** On a TV or a narrow window, every song row in Favorites, playlists and
+  albums cut its title and artist to one letter ("T.."), because the row's action chips (Next, + Queue, + Playlist,
+  Kids, Share, Edit) held their full width even while hidden. They now take no room until the row is hovered or
+  focused, and on the focused row the title keeps at least a readable width while the chips wrap onto a second
+  line beside it.
+- **The visualizer is smooth on Android.** The spectrum in the player bar (and on Now Playing) resized its canvas
+  on every frame on screens with a fractional pixel ratio, which most Android phones and many TVs have (2.625×,
+  2.75×, 1.5×): the size check compared the canvas's whole-number width with an unrounded `width × ratio`, so it
+  never matched, and each frame reallocated and cleared the canvas. It now resizes only when the size really
+  changes (`createCanvasFit` in `src/lib/framePace.ts`), reads its size from a ResizeObserver instead of layout,
+  builds its gradient once, and the LCD bars copy a pre-drawn column instead of drawing every segment. On Android
+  the visualizer and Now Playing scenes also run at 30 fps and at most 2× resolution.
 
 ## 0.59.2
 - **An artist with no albums of their own opens without Navidrome.** With Navidrome off, the artist page and Edit

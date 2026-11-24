@@ -233,6 +233,9 @@ Tauri generates this project once; we edit it by hand and commit it.
   sidebar + deck. Tablets and TVs use the desktop layout (with a compact mode for short screens like car units).
 - **TV**: `lib/tvNav.ts` turns arrow keys into spatial focus movement on non-touch Android devices;
   `html.tv` adds big focus rings. Hover-only controls also appear on `:focus-within`.
+- **Song row actions** (Next, + Queue, + Playlist, Kids, Share, Edit …) take no room until the row is hovered,
+  focused or has a menu open (`.track-actions` in `styles.css`, wider than a phone). While shown, the title keeps
+  at least `min(16rem, 40%)` of the row and the chips wrap onto more lines rather than squeezing it.
 - **Skins**: `data-skin` on `<html>`; each skin overrides the CSS variables (`--bg`, `--panel`, `--accent`,
   `--lcd-*`, `--viz-*`, `--bevel` …) and optionally a few component rules. The list lives in `SKINS`
   (`store/settings.ts`), each with a `group` for Settings → Themes & critters → Theme. The skin on screen is not always the saved
@@ -245,4 +248,9 @@ Tauri generates this project once; we edit it by hand and commit it.
   same file. Animation loops (`Visualizer`, `Scenes`, `critters/rig.ts`) go through `lib/framePace.ts`:
   `createPacer()` keeps full frame rate while music plays and drops to 20 fps while paused, and
   `createCssVars()` reads the skin colours twice a second instead of calling `getComputedStyle` every frame.
+  Canvas loops size their canvas with `createCanvasFit()`: a ResizeObserver supplies the CSS size (no layout
+  read per frame) and the backing size is rounded, since an unrounded `w * devicePixelRatio` on a 2.625× Android
+  screen never equals the canvas's whole-number width and resized (reallocated) the canvas every frame. On
+  Android the visualizer and scenes cap at 30 fps (`VIZ_MAX_FPS`) and 2× pixel ratio (`VIZ_MAX_DPR`). The classic
+  LCD visualizer pre-draws one lit column of segments and copies a slice of it per bar.
   The deck under Now Playing stops drawing (`Visualizer off`, `.deck.covered`) since Now Playing covers it.
