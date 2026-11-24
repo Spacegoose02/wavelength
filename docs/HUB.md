@@ -348,9 +348,20 @@ every likely spelling at once (for a LAN name or IP `http://host`, `http://host:
 name `https://` first) and takes the likeliest that answers `{ ok: true }`. A link to `/link`, `/setup`, `/auth/…`
 or `/invite/<code>` finds the Hub in front of it (an invite also fills the invite in).
 
+In the app, nobody has to type even that: with no Hub address saved yet, the sign-in screen looks for one
+(`scanForHubs()` in `src/lib/hubScan.ts`). The Rust side (`hub_scan` in `src-tauri/src/hubscan.rs`) finds the
+device's own address, and only on a private network (10/8, 172.16/12, 192.168.0.0/16) tries a TCP connection to
+port 7780 on every address of its /24, 32 at a time with a 350 ms timeout (about 3 seconds). Each that answers is
+asked `GET /api/health`, and only Hubs are listed; a single one is used straight away. This works with Docker's
+port mapping, where mDNS from inside the container wouldn't. A Hub on another port or network still needs its address
+typed.
+
 Every device shows the same choices: **Sign in with tinyauth** (while single sign-on is on), **Sign in with a
 code**, **Sign in with a password** and **I have an invite**. One shows up front, single sign-on when it's on and
-otherwise the password; the others are under **Other ways to sign in**. A family sign-in, whichever way, ends at the profile
+otherwise the password, and on a TV (`isTV` in `src/lib/tvNav.ts`) always the code; the others are under **Other
+ways to sign in**. The code's QR link is the Hub's `WAVELENGTH_PUBLIC_URL`; when that was never set the Hub says
+`http://localhost:7780`, so the app shows the address it reached the Hub at instead (`phoneLink()` in
+`src/lib/hubScan.ts`). An expired code (410 from `/auth/device/token`) is replaced with a new one. A family sign-in, whichever way, ends at the profile
 picker ([Family sign-ins](#family-sign-ins)).
 
 **Sign in with tinyauth**: in the apps, this pairs the device (below) with a link that goes straight to
