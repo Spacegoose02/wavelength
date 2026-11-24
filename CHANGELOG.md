@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.61.0
 - **Parents switch to their kids' profiles, and only their PIN gets them back.** Signed in as a parent, the
   button with your initial (Who's listening?) lists your kids, even on a Hub without families, and taps straight
   into their profile without their PIN (`POST /api/me/switch` lets a kid's parents in, `GET /api/me/family` lists
