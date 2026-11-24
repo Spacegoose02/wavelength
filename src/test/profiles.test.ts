@@ -5,7 +5,7 @@ vi.hoisted(() => {
   const m = new Map<string, string>();
   globalThis.localStorage ??= { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear(), key: () => null, length: 0 } as Storage;
 });
-import { profilePinHash, sameFamily, STAMPS_KEY, useHub } from '../store/hub';
+import { mustSetPinFirst, profilePinHash, sameFamily, STAMPS_KEY, useHub } from '../store/hub';
 import type { HubSession } from '../sources/hub';
 
 const session = (id: number, name: string): HubSession =>
@@ -61,5 +61,17 @@ describe('profiles on a shared device', () => {
   test('a PIN hash is tied to the person', async () => {
     expect(await profilePinHash(1, '1234')).not.toBe(await profilePinHash(2, '1234'));
     expect(await profilePinHash(1, '1234')).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe('a parent handing a shared device to their kid', () => {
+  test('sets their PIN first only when nothing else would get them back', () => {
+    const base = { viewerIsKid: false, toRole: 'kid', isParent: true, grownUpPinSet: false, hasSwitchPin: false };
+    expect(mustSetPinFirst(base)).toBe(true);
+    expect(mustSetPinFirst({ ...base, hasSwitchPin: true })).toBe(false);
+    expect(mustSetPinFirst({ ...base, grownUpPinSet: true })).toBe(false);
+    expect(mustSetPinFirst({ ...base, isParent: false })).toBe(false);
+    expect(mustSetPinFirst({ ...base, toRole: 'member' })).toBe(false);
+    expect(mustSetPinFirst({ ...base, viewerIsKid: true })).toBe(false);
   });
 });

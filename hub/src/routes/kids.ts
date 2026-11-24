@@ -5,6 +5,7 @@ import { hashPassword, verifyPassword } from '../crypto.ts';
 import type { Db } from '../db.ts';
 import { clientIp, HttpError, signedIn } from '../http.ts';
 import { familyActor, familyPinKey, getFamily } from '../families.ts';
+import { parentPinHashes } from '../family.ts';
 
 /**
  * Kid profiles (docs/USERS-AND-ADMIN.md §6.5): an admin sets each kid's bedtime and daily listening limit,
@@ -38,6 +39,18 @@ const setting = (db: Db, key: string) => (db.prepare('SELECT value FROM hub_sett
  */
 const pinHash = (db: Db, familyId?: number | null) => (familyId ? setting(db, familyPinKey(familyId)) : null) ?? setting(db, PIN_KEY);
 
+/**
+ * Every PIN that lets a grown-up take over from this person's profile: the grown-up PIN, and for a kid, the
+ * switching PIN of each of their parents (family.ts). So a parent's own PIN gets them back from their kid's profile.
+ */
+function unlockHashes(db: Db, user: { id: number; role: string; familyId: number | null }): { hash: string; by: 'grown-up' | 'parent' }[] {
+  const grownUp = pinHash(db, user.familyId);
+  return [
+    ...(grownUp ? [{ hash: grownUp, by: 'grown-up' as const }] : []),
+    ...(user.role === 'kid' ? parentPinHashes(db, user.id).map((hash) => ({ hash, by: 'parent' as const })) : []),
+  ];
+}
+
 /** The device's local date, as it sent it; anything else is refused. */
 function dayOf(v: unknown): string {
   if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new HttpError(400, "Send the day as 'YYYY-MM-DD'");
@@ -56,7 +69,7 @@ export function kidRoutes(app: FastifyInstance, { db, limits }: Ctx) {
   app.get('/api/me/kid', async (req) => {
     const { user } = signedIn(req);
     const day = dayOf((req.query as { day?: unknown }).day);
-    return { kid: user.role === 'kid', rules: user.role === 'kid' ? rulesFor(db, user.id) : NO_RULES, usedSeconds: used(db, user.id, day), pinSet: !!pinHash(db, user.familyId) };
+    return { kid: user.role === 'kid', rules: user.role === 'kid' ? rulesFor(db, user.id) : NO_RULES, usedSeconds: used(db, user.id, day), pinSet: unlockHashes(db, user).length > 0 };
   });
 
   /** Add listening time (a device reports every minute or so). `{ day, seconds }`, at most 5 minutes at once. */
@@ -74,16 +87,20 @@ export function kidRoutes(app: FastifyInstance, { db, limits }: Ctx) {
     return { usedSeconds: used(db, user.id, day) };
   });
 
-  /** Check the grown-up PIN (to keep listening after bedtime or the limit, or to sign out of a kid profile). */
+  /**
+   * Check the grown-up PIN (to keep listening after bedtime or the limit, or to leave a kid profile). A kid's
+   * parents can type their own switching PIN instead.
+   */
   app.post('/api/kid/unlock', async (req) => {
     const { user } = signedIn(req);
     const pin = (req.body as { pin?: unknown } | null)?.pin;
-    const hash = pinHash(db, user.familyId);
-    if (!hash) throw new HttpError(404, 'No grown-up PIN is set. An admin sets one under Settings → Users');
+    const hashes = unlockHashes(db, user);
+    if (!hashes.length) throw new HttpError(404, 'No grown-up PIN is set. A parent sets their PIN under Settings → Account, or an admin sets one under Settings → Users');
     limits.login.hit(`pin:${user.id}`);
-    const ok = typeof pin === 'string' && (await verifyPassword(pin, hash));
-    audit(db, { actorId: user.id, action: ok ? 'kid.unlocked' : 'kid.pin_failed', ip: clientIp(req) });
-    if (!ok) throw new HttpError(403, "That's not the PIN");
+    let by: string | undefined;
+    if (typeof pin === 'string') for (const h of hashes) if (await verifyPassword(pin, h.hash)) { by = h.by; break; }
+    audit(db, { actorId: user.id, action: by ? 'kid.unlocked' : 'kid.pin_failed', ...(by && { detail: { by } }), ip: clientIp(req) });
+    if (!by) throw new HttpError(403, "That's not the PIN");
     limits.login.clear(`pin:${user.id}`);
     return { ok: true };
   });

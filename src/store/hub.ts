@@ -87,6 +87,14 @@ export interface SavedProfile {
  */
 export const sameFamily = (a?: Pick<HubUser, 'familyId'>, b?: Pick<HubUser, 'familyId'>) => (a?.familyId ?? null) === (b?.familyId ?? null);
 
+/**
+ * A grown-up switching to their own kid with no PIN anywhere to get back with (no grown-up PIN, no switching PIN of
+ * their own): they set their PIN first, or the device would be stuck in the kid's profile.
+ */
+export function mustSetPinFirst(o: { viewerIsKid: boolean; toRole: string; isParent: boolean; grownUpPinSet: boolean; hasSwitchPin: boolean }): boolean {
+  return !o.viewerIsKid && o.toRole === 'kid' && o.isParent && !o.grownUpPinSet && !o.hasSwitchPin;
+}
+
 /** A PIN only keeps the household from switching into each other's profiles by accident; the Hub isn't involved. */
 export async function profilePinHash(userId: number, pin: string): Promise<string> {
   const data = new TextEncoder().encode(`wavelength-profile:${userId}:${pin}`);

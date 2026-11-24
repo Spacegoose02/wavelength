@@ -209,7 +209,7 @@ Effort: **S** ≈ a day or two, **M** ≈ up to a week, **L** ≈ 1–2 weeks, *
 
 | Card | Design | Needs Hub | Effort |
 |---|---|---|---|
-| **Users / profiles** | Profile = display name, avatar (upload or initials), role, linked services, devices. Profile switcher on shared devices (like a TV) with an optional PIN. **Done:** Settings → Account → People on this device; each saved profile's token in the keychain (`hub.profile.<id>`), PIN hashed on the device, grown-up PIN to leave a kid profile. Two-step sign-in (TOTP) for Hub passwords. | Yes | M |
+| **Users / profiles** | Profile = display name, avatar (upload or initials), role, linked services, devices. Profile switcher on shared devices (like a TV) with an optional PIN. **Done:** Settings → Account → People on this device; each saved profile's token in the keychain (`hub.profile.<id>`), PIN hashed on the device, grown-up PIN (or a parent's own switching PIN) to leave a kid profile; a parent switches to their own kids without a PIN, also without families. Two-step sign-in (TOTP) for Hub passwords. | Yes | M |
 | **tinyauth SSO** | §3, device pairing + forward-auth headers. | Yes | M |
 | **Keys under users, own Navidrome profile** | §4. | Yes | L |
 | **Account sign-in sync across devices** | §3 "Sign-in sync". | Yes | M |

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+- **Parents switch to their kids' profiles, and only their PIN gets them back.** Signed in as a parent, the
+  button with your initial (Who's listening?) lists your kids, even on a Hub without families, and taps straight
+  into their profile without their PIN (`POST /api/me/switch` lets a kid's parents in, `GET /api/me/family` lists
+  them with `parent` and `noPinNeeded`). The kid stays signed in on the device, across restarts, with your profile
+  kept beside it. Leaving the kid profile (switching back, signing out, or unlocking bedtime) now takes **a
+  parent's own switching PIN** as well as the grown-up PIN (`/api/kid/unlock` checks both, `parentPinHashes` in
+  `hub/src/family.ts`), so a parent no longer needs an admin to set a household PIN first. A parent with neither
+  PIN set is asked to set theirs (twice) before the first switch, so the device can't get stuck in the kid's
+  profile. **Hub update needed.**
+
 ## 0.60.0
 - **Signing in on a TV without typing.** The app now looks for the Hub on the home network by itself
   (`src-tauri/src/hubscan.rs` tries the Hub's port 7780 on every address of the device's network; `src/lib/hubScan.ts`

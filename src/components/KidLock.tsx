@@ -6,7 +6,7 @@ import { ProfileSwitcher } from './ProfileSwitcher';
 import { SignedOut } from '../views/HubSettings';
 
 /** Ask for the grown-up PIN. `check` throws with the Hub's message when the PIN is wrong. */
-export function PinDialog({ title, note, check, onDone, onCancel }: { title: string; note?: string; check(pin: string): Promise<void>; onDone(): void; onCancel(): void }) {
+export function PinDialog({ title, note, submitLabel = 'OK', check, onDone, onCancel }: { title: string; note?: string; submitLabel?: string; check(pin: string): Promise<void>; onDone(pin: string): void; onCancel(): void }) {
   const [pin, setPin] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -16,7 +16,7 @@ export function PinDialog({ title, note, check, onDone, onCancel }: { title: str
     setErr('');
     try {
       await check(pin);
-      onDone();
+      onDone(pin);
     } catch (x) {
       setErr(String((x as Error).message ?? x));
       setPin('');
@@ -33,7 +33,7 @@ export function PinDialog({ title, note, check, onDone, onCancel }: { title: str
           value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
         {err && <div className="card-err small">{err}</div>}
         <div className="row gap">
-          <button className="btn primary" disabled={busy || pin.length < 4}>{busy ? '…' : 'OK'}</button>
+          <button className="btn primary" disabled={busy || pin.length < 4}>{busy ? '…' : submitLabel}</button>
           <button type="button" className="btn ghost" onClick={onCancel}>Cancel</button>
         </div>
       </form>
@@ -60,7 +60,7 @@ export function KidLockScreen() {
       </p>
       {pinSet && <button className="btn" onClick={() => setAsking(true)}>A grown-up can unlock</button>}
       {asking && (
-        <PinDialog title="Grown-up PIN" note="Unlocks 30 more minutes." check={unlockKidTime} onDone={() => setAsking(false)} onCancel={() => setAsking(false)} />
+        <PinDialog title="Grown-up PIN" note="A parent's PIN or the grown-up PIN. Unlocks 30 more minutes." check={unlockKidTime} onDone={() => setAsking(false)} onCancel={() => setAsking(false)} />
       )}
     </div>
   );
@@ -103,11 +103,11 @@ export function KidSettings() {
       {hasProfiles && <section><ProfileSwitcher /></section>}
       <section>
         <h2>Switch profile</h2>
-        <p className="muted small">{pinSet ? 'A grown-up types the PIN to sign out of this kid profile.' : 'Ask a grown-up to set a PIN under Settings → Users before this profile can be signed out.'}</p>
+        <p className="muted small">{pinSet ? 'A parent types their PIN (or the grown-up PIN) to sign out of this kid profile.' : 'Ask a parent to set their PIN under Settings → Account (or an admin to set a grown-up PIN under Settings → Users) before this profile can be signed out.'}</p>
         <button className="btn" disabled={!pinSet} onClick={() => setAsking(true)}>Sign out</button>
       </section>
       {asking && (
-        <PinDialog title="Grown-up PIN" note={`Signs ${name} out of this device.`} check={checkPin}
+        <PinDialog title="Grown-up PIN" note={`A parent's PIN or the grown-up PIN. Signs ${name} out of this device.`} check={checkPin}
           onDone={() => {
             setAsking(false);
             useHub.getState().signOut();
