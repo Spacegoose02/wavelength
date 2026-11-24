@@ -248,4 +248,9 @@ Tauri generates this project once; we edit it by hand and commit it.
   same file. Animation loops (`Visualizer`, `Scenes`, `critters/rig.ts`) go through `lib/framePace.ts`:
   `createPacer()` keeps full frame rate while music plays and drops to 20 fps while paused, and
   `createCssVars()` reads the skin colours twice a second instead of calling `getComputedStyle` every frame.
+  Canvas loops size their canvas with `createCanvasFit()`: a ResizeObserver supplies the CSS size (no layout
+  read per frame) and the backing size is rounded, since an unrounded `w * devicePixelRatio` on a 2.625× Android
+  screen never equals the canvas's whole-number width and resized (reallocated) the canvas every frame. On
+  Android the visualizer and scenes cap at 30 fps (`VIZ_MAX_FPS`) and 2× pixel ratio (`VIZ_MAX_DPR`). The classic
+  LCD visualizer pre-draws one lit column of segments and copies a slice of it per bar.
   The deck under Now Playing stops drawing (`Visualizer off`, `.deck.covered`) since Now Playing covers it.
