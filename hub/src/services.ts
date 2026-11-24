@@ -125,11 +125,23 @@ const getRow = (db: Db, id: number) => db.prepare('SELECT * FROM services WHERE 
 const familyIds = (db: Db, id: number) =>
   (db.prepare('SELECT family_id FROM service_families WHERE service_id = ? ORDER BY family_id').all(id) as { family_id: number }[]).map((r) => r.family_id);
 
-/** A server limited to some families is only for people in them (and admins). */
-const familyAllows = (db: Db, id: number, user: { role: string; familyId: number | null }) => {
+/**
+ * The families a person counts as part of for a server's family list: their own, or, for a kid who isn't in one,
+ * their parents' (family.ts guardians). A kid an admin made and gave parents is then covered by the parents' family
+ * without also being put in it by hand.
+ */
+const familiesOf = (db: Db, user: { id: number; role: string; familyId: number | null }): number[] => {
+  if (user.familyId !== null) return [user.familyId];
+  if (user.role !== 'kid') return [];
+  return (db.prepare(`SELECT DISTINCT u.family_id FROM guardians g JOIN users u ON u.id = g.guardian_id
+    WHERE g.kid_id = ? AND u.family_id IS NOT NULL AND u.role <> 'kid' AND u.disabled = 0`).all(user.id) as { family_id: number }[]).map((r) => r.family_id);
+};
+
+/** A server limited to some families is only for people in them (and admins, and kids whose parents are). */
+const familyAllows = (db: Db, id: number, user: { id: number; role: string; familyId: number | null }) => {
   if (user.role === 'admin') return true;
   const ids = familyIds(db, id);
-  return !ids.length || (user.familyId !== null && ids.includes(user.familyId));
+  return !ids.length || familiesOf(db, user).some((f) => ids.includes(f));
 };
 
 /** Which families get this server; an empty list means every family. */
@@ -436,7 +448,7 @@ export function relayTarget(db: Db, key: Buffer, id: number, userId: number, rol
   const mine = mineOf(db, id, userId);
   if (!accessAllows(r, role, mine)) return undefined;
   const familyId = (db.prepare('SELECT family_id FROM users WHERE id = ?').get(userId) as { family_id: number | null } | undefined)?.family_id ?? null;
-  if (!familyAllows(db, id, { role, familyId })) return undefined;
+  if (!familyAllows(db, id, { id: userId, role, familyId })) return undefined;
   const own = open(key, mine?.secrets ?? null, aadUser(id, userId)).fields;
   if (own.username && own.password) return { url: r.url, username: own.username, password: own.password };
   // without Navidrome the login isn't used; the Hub still checks who may use the library above

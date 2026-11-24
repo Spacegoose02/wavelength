@@ -962,7 +962,9 @@ Users → Families); everyone else's calls to them get `403`, and the app never 
   **wins over one typed on a device**.
 - **Servers per family.** A Hub server (Plex, Audiobookshelf, SUB/WAVE, Navidrome…) can be kept to some families:
   tick them under its **Who can use it** (none ticked = every family). Admins always get every server; the
-  Navidrome relay checks the same rule.
+  Navidrome relay checks the same rule. A kid who isn't in a family counts as being in their parents' families
+  (`familiesOf` in `hub/src/services.ts`), so a kid an admin made and gave parents gets the family's servers
+  without also being put in the family by hand.
 - **Switching profiles.** See below.
 
 ### Switching profiles

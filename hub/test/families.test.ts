@@ -154,6 +154,24 @@ test('a Hub server can be kept to some families', async () => {
   assert.deepEqual(await names(tokens.member), ['Smith Plex']);
 });
 
+test('a kid in no family gets their parents’ family’s servers', async () => {
+  const { app, tokens, ids, mine } = await twoFamilies();
+  const s = (await json(app, 'POST', '/api/admin/services', { token: tokens.admin, body: { kind: 'plex', name: 'Home Plex', url: 'http://plex', access: 'everyone', secrets: { token: 't' } } })).body.service;
+  await json(app, 'PUT', `/api/admin/services/${s.id}/families`, { token: tokens.admin, body: { ids: [mine.id] } });
+  await json(app, 'PUT', `/api/admin/users/${ids.kid}/family`, { token: tokens.admin, body: { familyId: null } });
+  const names = async () => (await json(app, 'GET', '/api/me/services', { token: tokens.kid })).body.services.map((x: { name: string }) => x.name);
+  const person = async () => (await json(app, 'GET', `/api/admin/users/${ids.kid}/services`, { token: tokens.admin })).body.services[0];
+  assert.deepEqual(await names(), [], 'no family and no parents: not theirs');
+  assert.equal((await person()).otherFamilies, true);
+
+  await json(app, 'PUT', `/api/admin/users/${ids.kid}/guardians`, { token: tokens.admin, body: { ids: [ids.member] } });
+  assert.deepEqual(await names(), ['Home Plex'], 'their parent is in the family');
+  assert.equal((await person()).otherFamilies, false);
+
+  await json(app, 'PUT', `/api/admin/users/${ids.member}/family`, { token: tokens.admin, body: { familyId: null } });
+  assert.deepEqual(await names(), [], 'the parent left the family');
+});
+
 test('a family’s Downloads rule: own switches, everyone downloads, everyone requests, or nothing', async () => {
   const { app, tokens, ids, mine, samToken, smiths } = await twoFamilies();
   const perms = async (token: string) => (await json(app, 'GET', '/api/me', { token })).body.permissions as string[];
