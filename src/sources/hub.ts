@@ -88,6 +88,10 @@ export interface HubFamilyPerson {
   displayName: string;
   role: HubRole;
   hasSwitchPin: boolean;
+  /** GET /api/me/family only: you're this kid's parent (they're listed even in a Hub without families). */
+  parent?: boolean;
+  /** GET /api/me/family only: you switch to them without their PIN (your kid, or a kid in your family without one). */
+  noPinNeeded?: boolean;
 }
 
 /** A person in the family a manager manages. */

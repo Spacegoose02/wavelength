@@ -40,7 +40,7 @@ export function ProfileSwitcher({ onAdd }: { onAdd?: () => void }) {
         ))}
         {!kid && onAdd && <button className="btn small ghost" onClick={onAdd}>+ Add someone</button>}
       </div>
-      {kid && profiles.length > 0 && !pinSet && <p className="muted small">A grown-up needs to set a PIN under Settings → Users before this profile can switch.</p>}
+      {kid && profiles.length > 0 && !pinSet && <p className="muted small">A parent needs to set their PIN under Settings → Account (or an admin a grown-up PIN under Settings → Users) before this profile can switch.</p>}
       {!kid && profiles.length > 0 && (
         settingPin ? (
           <form className="row gap" onSubmit={async (e) => { e.preventDefault(); await setProfilePin(user.id, draft); setDraft(''); setSettingPin(false); }}>
@@ -53,7 +53,7 @@ export function ProfileSwitcher({ onAdd }: { onAdd?: () => void }) {
         )
       )}
       {asking?.step === 'grown-up' && (
-        <PinDialog title="Grown-up PIN" note={`Switches to ${asking.to.user.displayName}.`} check={checkPin}
+        <PinDialog title="Grown-up PIN" note={`A parent's PIN or the grown-up PIN. Switches to ${asking.to.user.displayName}.`} check={checkPin}
           onDone={() => go(asking.to, 'grown-up')} onCancel={() => setAsking(undefined)} />
       )}
       {asking?.step === 'profile' && (

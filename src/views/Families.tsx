@@ -335,7 +335,7 @@ export function FamilyTab() {
             </>}
             {f.kidControls && p.role === 'kid' && p.guardians && (
               <details className="hub-guardians">
-                <summary className="btn small" title="Their requests and weekly report go to these grown-ups">Parents{p.guardians.length ? ` (${p.guardians.length})` : ''}</summary>
+                <summary className="btn small" title="Their requests and weekly report go to these grown-ups, who can also switch to them on a shared device without a PIN">Parents{p.guardians.length ? ` (${p.guardians.length})` : ''}</summary>
                 <div className="hub-guardians-list">
                   {data.people.filter((g) => g.role !== 'kid').map((g) => (
                     <label key={g.id} className="check">

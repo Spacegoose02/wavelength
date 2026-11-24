@@ -974,9 +974,22 @@ everyone in your family, plus anyone else signed in on this device. Tap someone:
   takes the grown-up PIN, as before);
 - in your family but not on this device: type their **switching PIN** and the Hub signs them in here
   (`POST /api/me/switch` makes a device token for them, named after this device). No pairing, no password.
+- **your own kid** (you're one of their **Parents**, Settings → Users → People): no PIN, even if the kid set one,
+  and even on a Hub **without families**: the picker lists a parent's kids either way (`GET /api/me/family` marks
+  them `parent: true`, `noPinNeeded: true`). A parent and kid in different families aren't switched between.
+
+**Getting back from a kid profile.** Leaving a kid profile (switching to someone already on the device, **Sign
+out** on the kid's **Me** page, or unlocking bedtime) asks for a PIN, checked by `POST /api/kid/unlock`: the
+**grown-up PIN** (the family's, else the Hub's), or **the switching PIN of any of the kid's parents** who isn't
+turned off. A kid's own switching PIN never counts. So a parent who set their switching PIN can hand a TV to their
+kid without an admin setting a household PIN, and the kid can't get back into the parent's profile. A parent with
+neither set is asked to set their switching PIN (typed twice) right before the first switch to their kid, so the
+device never ends up stuck in the kid's profile with no way out. `GET /api/me/kid` says `pinSet: true` when any of
+these PINs exists. Unlocks are rate limited and audited (`kid.unlocked` with `by: grown-up | parent`).
 
 Everyone sets their switching PIN under **Settings → Account → Switching PIN** (4 to 8 digits, kept as a scrypt
-hash). Without one, nobody can switch to them. A grown-up can switch to a kid in their family without a PIN; a kid
+hash). Without one, nobody can switch to them. A grown-up can switch to a kid in their family without a PIN (unless the kid set one), and a
+parent to their own kid always; a kid
 always needs the other person's PIN, so a kid can't step into a grown-up's profile. Switching never crosses
 families: the Hub refuses it, the picker only shows your own family, a profile from another family that's still
 signed in on the device can't be switched to (`sameFamily` in `src/store/hub.ts`), and **Add someone to this device**

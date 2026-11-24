@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { checkPin, useKidTime } from '../lib/kidTime';
 import type { HubFamilyPerson } from '../sources/hub';
-import { hubClient, profilePinHash, sameFamily, thisDevice, useHub, type SavedProfile } from '../store/hub';
+import { hubClient, mustSetPinFirst, profilePinHash, sameFamily, thisDevice, useHub, type SavedProfile } from '../store/hub';
 import { PinDialog } from './KidLock';
 
 /**
  * "Who's listening?" (docs/USER-GUIDE.md "Switching profiles"): everyone in your family on the Hub, plus anyone
  * else signed in on this device, a tap away. Someone already on this device switches at once (with their PIN on
  * this device, if they set one). Someone in your family who isn't signs in here through the Hub with their
- * switching PIN (POST /api/me/switch), no pairing needed. A grown-up can switch to a kid without one; leaving a
- * kid profile always takes a PIN.
+ * switching PIN (POST /api/me/switch), no pairing needed. A grown-up can switch to a kid without one, and a parent
+ * to their own kids always (listed even in a Hub without families); leaving a kid profile always takes a PIN: the
+ * grown-up PIN or one of the kid's parents' switching PINs. A parent with neither set is asked to set their PIN
+ * before the first switch, so the device can't end up stuck in the kid's profile.
  */
 
 interface Person {
@@ -20,6 +22,10 @@ interface Person {
   saved?: SavedProfile;
   /** In the family on the Hub, with a switching PIN. */
   hubPin?: boolean;
+  /** The Hub lets you switch to them without their PIN (your kid, or a kid in your family without one). */
+  noPinNeeded?: boolean;
+  /** You're this kid's parent. */
+  parent?: boolean;
 }
 
 /** The family's people from the Hub, refreshed when the profile changes. */
@@ -44,7 +50,7 @@ export function useSwitchablePeople(): Person[] {
   for (const f of family) {
     if (f.id === user.id) continue;
     const had = byId.get(f.id);
-    byId.set(f.id, { ...had, id: f.id, displayName: f.displayName, role: f.role, hubPin: f.hasSwitchPin });
+    byId.set(f.id, { ...had, id: f.id, displayName: f.displayName, role: f.role, hubPin: f.hasSwitchPin, noPinNeeded: f.noPinNeeded, parent: f.parent });
   }
   return [...byId.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
@@ -67,10 +73,10 @@ export function ProfileButton({ compact }: { compact?: boolean }) {
 }
 
 export function WhosListening({ onClose }: { onClose(): void }) {
-  const { user, switchProfile, addProfile } = useHub();
+  const { user, switchProfile, addProfile, kids: myKids } = useHub();
   const people = useSwitchablePeople();
   const pinSet = useKidTime((s) => s.pinSet);
-  const [asking, setAsking] = useState<{ to: Person; step: 'grown-up' | 'device' | 'hub' }>();
+  const [asking, setAsking] = useState<{ to: Person; step: 'grown-up' | 'device' | 'hub' | 'new-pin' | 'confirm-pin'; draft?: string }>();
   const [err, setErr] = useState('');
   if (!user) return null;
   const kid = user.role === 'kid';
@@ -82,16 +88,19 @@ export function WhosListening({ onClose }: { onClose(): void }) {
     onClose();
   };
 
-  const pick = async (to: Person, from: 'start' | 'grown-up' = 'start') => {
+  const pick = async (to: Person, from: 'start' | 'grown-up' | 'pin-ready' = 'start') => {
     setErr('');
+    // a parent handing the device to their kid: make sure there's a PIN to get back with first
+    const isParent = to.parent || myKids.some((k) => k.id === to.id);
+    if (from === 'start' && mustSetPinFirst({ viewerIsKid: kid, toRole: to.role, isParent, grownUpPinSet: pinSet, hasSwitchPin: !!user.hasSwitchPin })) return setAsking({ to, step: 'new-pin' });
     if (to.saved) {
       if (from === 'start' && kid) return setAsking({ to, step: 'grown-up' });
       if (to.saved.pin) return setAsking({ to, step: 'device' });
       switchProfile(to.id);
       return onClose();
     }
-    // a kid always needs the other person's PIN; a grown-up needs it unless switching to a kid without one
-    if (to.hubPin || kid) return setAsking({ to, step: 'hub' });
+    // a kid always needs the other person's PIN; a grown-up needs it unless switching to their own kid or a kid without one
+    if (kid || (to.hubPin && !to.noPinNeeded)) return setAsking({ to, step: 'hub' });
     try {
       await viaHub(to);
     } catch (e) {
@@ -99,7 +108,7 @@ export function WhosListening({ onClose }: { onClose(): void }) {
     }
   };
 
-  const reachable = (p: Person) => !!p.saved || p.hubPin || (p.role === 'kid' && !kid);
+  const reachable = (p: Person) => !!p.saved || p.hubPin || p.noPinNeeded || (p.role === 'kid' && !kid);
 
   return (
     <div className="pin-backdrop" onClick={onClose}>
@@ -116,7 +125,7 @@ export function WhosListening({ onClose }: { onClose(): void }) {
               onClick={() => pick(p)}>
               <span className="hub-avatar">{p.displayName.slice(0, 1).toUpperCase()}</span>
               <span>{p.displayName}</span>
-              <small className="muted">{(p.saved?.pin || p.hubPin) ? '🔒' : ''}{p.role === 'kid' ? ' kid' : ''}{!reachable(p) ? ' no PIN yet' : ''}</small>
+              <small className="muted">{(p.saved?.pin || (p.hubPin && !p.noPinNeeded && !kid) || (kid && (p.saved || p.hubPin))) ? '🔒' : ''}{p.role === 'kid' ? ' kid' : ''}{!reachable(p) ? ' no PIN yet' : ''}</small>
             </button>
           ))}
         </div>
@@ -124,8 +133,23 @@ export function WhosListening({ onClose }: { onClose(): void }) {
         <p className="muted small">Set the PIN your family switches to you with under Settings → Account.</p>
         <button className="btn ghost" onClick={onClose}>Close</button>
       </div>
+      {asking?.step === 'new-pin' && (
+        <PinDialog title="Set your PIN first" submitLabel="Next"
+          note={`So ${asking.to.displayName} can't get into your profile: you'll type this PIN to switch back to you. It's also your switching PIN (Settings → Account).`}
+          check={async () => undefined} onDone={(p) => setAsking({ to: asking.to, step: 'confirm-pin', draft: p })} onCancel={() => setAsking(undefined)} />
+      )}
+      {asking?.step === 'confirm-pin' && (
+        <PinDialog title="Type it again" note={`Then Wavelength switches to ${asking.to.displayName}.`}
+          check={async (p) => {
+            if (p !== asking.draft) throw new Error("The PINs don't match");
+            await hubClient()!.setSwitchPin(p);
+            await useHub.getState().refresh();
+          }}
+          onDone={() => { const to = asking.to; setAsking(undefined); void pick(to, 'pin-ready'); }}
+          onCancel={() => setAsking(undefined)} />
+      )}
       {asking?.step === 'grown-up' && (
-        <PinDialog title="Grown-up PIN" note={`Switches to ${asking.to.displayName}.`} check={checkPin}
+        <PinDialog title="Grown-up PIN" note={`A parent's PIN or the grown-up PIN. Switches to ${asking.to.displayName}.`} check={checkPin}
           onDone={() => pick(asking.to, 'grown-up')} onCancel={() => setAsking(undefined)} />
       )}
       {asking?.step === 'device' && (
@@ -147,10 +171,11 @@ export function WhosListening({ onClose }: { onClose(): void }) {
 export function SwitchPinSetting() {
   const user = useHub((s) => s.user);
   const refresh = useHub((s) => s.refresh);
+  const hasKids = useHub((s) => s.kids.length > 0);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [err, setErr] = useState('');
-  if (!user || !user.familyId) return null;
+  if (!user || (!user.familyId && !hasKids)) return null;
   const save = async (pin: string | null) => {
     try {
       await hubClient()!.setSwitchPin(pin);
@@ -168,6 +193,7 @@ export function SwitchPinSetting() {
       <p className="muted small">
         People in your family can switch to your profile on a shared device (the button with your initial, top left) by typing
         this PIN, without signing in again. {user.role === 'kid' ? '' : 'Without one, nobody can switch to you.'}
+        {hasKids && ' It also gets you back from your kids\' profiles, so they can\'t switch into yours without it.'}
       </p>
       {editing ? (
         <form className="row gap" onSubmit={(e) => { e.preventDefault(); save(draft); }}>

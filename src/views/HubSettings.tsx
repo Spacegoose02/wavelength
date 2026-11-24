@@ -1188,7 +1188,7 @@ export function UsersTab() {
             }}>Reset 2-step</button>}
             {u.role === 'kid' && u.guardians && (
               <details className="hub-guardians">
-                <summary className="btn small" title="Their requests go to these grown-ups too, and their weekly report">Parents{u.guardians.length ? ` (${u.guardians.length})` : ''}</summary>
+                <summary className="btn small" title="Their requests go to these grown-ups too, and their weekly report. Parents can switch to them on a shared device without a PIN, and their own PIN gets them back">Parents{u.guardians.length ? ` (${u.guardians.length})` : ''}</summary>
                 <div className="hub-guardians-list">
                   {users.filter((g) => g.role !== 'kid').map((g) => (
                     <label key={g.id} className="check">

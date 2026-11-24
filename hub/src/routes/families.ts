@@ -8,7 +8,7 @@ import {
   createFamily, deleteFamily, familyMembers, familySize, getFamily, isSharedKey, keyStatus, listFamilies, managedFamily,
   managerMayTouch, saveKey, SHARED_KEYS, setMembership, updateFamily, type Family,
 } from '../families.ts';
-import { guardiansOf, setGuardians } from '../family.ts';
+import { guardiansOf, isGuardian, kidsOf, setGuardians } from '../family.ts';
 import { clientIp, HttpError, need, signedIn, str } from '../http.ts';
 import { welcomeNewPerson } from '../newPeople.ts';
 import { createUser, getUser, getUserForLogin, updateUser, USERNAME_RE, type User } from '../users.ts';
@@ -213,14 +213,32 @@ export function familyRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
 
   // ---- everyone: switching profiles on a shared device ----
 
-  /** The people in your family, for the profile picker. Names only: no family settings. */
+  /**
+   * A grown-up who is this kid's parent (family.ts), in the same family or both in none: they switch to the kid
+   * without a PIN, even in a Hub without families, and even when the kid set a switching PIN of their own.
+   */
+  const parentOf = (me: User, kid: User | undefined) =>
+    !!kid && kid.role === 'kid' && me.role !== 'kid' && !kid.disabled && kid.familyId === me.familyId && isGuardian(db, me.id, kid.id);
+
+  /**
+   * The people in your family, and your own kids, for the profile picker. Names only: no family settings.
+   * `noPinNeeded`: you switch to them without their PIN (your kid, or a kid in your family without one).
+   */
   app.get('/api/me/family', async (req) => {
     const { user } = signedIn(req);
-    if (!user.familyId) return { people: [] };
-    const f = getFamily(db, user.familyId);
+    const f = user.familyId ? getFamily(db, user.familyId) : undefined;
+    const people = user.familyId ? familyMembers(db, user.familyId).filter((u) => !u.disabled) : [];
+    // a parent's kids, also in a Hub without families
+    for (const id of kidsOf(db, user.id)) {
+      const k = getUser(db, id);
+      if (parentOf(user, k) && !people.some((p) => p.id === id)) people.push(k!);
+    }
     return {
       name: f?.name ?? null,
-      people: familyMembers(db, user.familyId).filter((u) => !u.disabled).map((u) => ({ id: u.id, displayName: u.displayName, role: u.role, hasSwitchPin: u.hasSwitchPin })),
+      people: people.map((u) => ({
+        id: u.id, displayName: u.displayName, role: u.role, hasSwitchPin: u.hasSwitchPin,
+        ...(u.id !== user.id && { parent: parentOf(user, u), noPinNeeded: parentOf(user, u) || (u.role === 'kid' && user.role !== 'kid' && !u.hasSwitchPin) }),
+      })),
     };
   });
 
@@ -236,17 +254,21 @@ export function familyRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
 
   /**
    * `{ userId, pin?, deviceName?, platform? }` → a session for that person on this device, without pairing again.
-   * Only within one family. The other person's switching PIN is needed, except a grown-up switching to a kid
-   * without one. Kids always need it, so a kid can't step into a grown-up's profile.
+   * Only within one family, or to your own kid. The other person's switching PIN is needed, except a grown-up
+   * switching to a kid without one, or a parent switching to their own kid. Kids always need it, so a kid can't
+   * step into a grown-up's profile.
    */
   app.post('/api/me/switch', async (req) => {
     const { user, device } = signedIn(req);
     const b = body(req.body);
     const target = getUser(db, Number(b.userId));
-    if (!user.familyId || !target || target.id === user.id || target.familyId !== user.familyId || target.disabled) throw new HttpError(404, 'That person isn’t in your family');
+    const parent = parentOf(user, target);
+    if (!target || target.id === user.id || target.disabled || !(parent || (user.familyId && target.familyId === user.familyId))) throw new HttpError(404, 'That person isn’t in your family');
     const row = getUserForLogin(db, target.username)!;
     const pinHash = (db.prepare('SELECT switch_pin FROM users WHERE id = ?').get(target.id) as { switch_pin: string | null }).switch_pin;
-    if (pinHash) {
+    if (parent) {
+      // your own kid: no PIN
+    } else if (pinHash) {
       limits.login.hit(`switch:${device.id}:${target.id}`);
       const pin = b.pin;
       if (!(typeof pin === 'string' && (await verifyPassword(pin, pinHash)))) {
@@ -258,7 +280,7 @@ export function familyRoutes(app: FastifyInstance, { db, config, limits }: Ctx) 
       throw new HttpError(409, `${target.displayName} hasn’t set a switching PIN yet (Settings → Account)`);
     }
     const made = createDevice(db, target.id, str(b, 'deviceName', 60) || device.name, str(b, 'platform', 30) || device.platform);
-    audit(db, { actorId: user.id, action: 'user.switched', target: target.username, detail: { device: made.device.name }, ip: clientIp(req) });
+    audit(db, { actorId: user.id, action: 'user.switched', target: target.username, detail: { device: made.device.name, ...(parent && { parent: true }) }, ip: clientIp(req) });
     return session(made.token, target, made.device);
   });
 }

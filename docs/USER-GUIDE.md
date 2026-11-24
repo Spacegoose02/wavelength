@@ -2254,7 +2254,8 @@ without it.
 A TV or a shared tablet can keep everyone signed in. Settings → Account → **People on this device → + Add
 someone** signs in another person, and their name then switches to them in a tap, with their own settings,
 playlists, requests and Inbox. **Ask for a PIN before switching to me** keeps the others out of your profile by
-accident (it's checked on this device only). Leaving a kid profile takes the grown-up PIN. **✕** signs someone
+accident (it's checked on this device only). Leaving a kid profile takes a PIN: a parent's own switching PIN or
+the grown-up PIN. **✕** signs someone
 out of this device.
 
 ### Who's listening? (families)
@@ -2264,6 +2265,18 @@ the top of the sidebar (top right of **Library** on phones) shows everyone in yo
 **switching PIN**, and Wavelength is theirs: their settings, playlists, history and requests. They don't need to
 have signed in on this device before. Set yours under **Settings → Account → Switching PIN**; without one, nobody can
 switch to you. Grown-ups can switch to their family's kids without a PIN; kids always need one.
+
+### Handing a device to your kid
+
+If you're set as one of a kid's **Parents** (an admin does this under **Settings → Users → People**, a family manager
+under **Settings → My family**), your kids show up under the button with your initial, even on a Hub without
+families. Tap one and Wavelength switches to them straight away, no PIN and no pairing: handy on the living-room
+TV after you've signed it in with the QR code. The kid stays signed in there, also after the app or TV restarts,
+and your own profile stays on the device too.
+
+To get back, tap your name (or **Sign out** on the kid's **Me** page) and type **your switching PIN** (Settings →
+Account → Switching PIN) or the household grown-up PIN. Your kid can't get into your profile without one. If you
+haven't set either yet, Wavelength asks you to pick your PIN before the first switch, so you can always get back.
 
 A family's **manager** gets **Settings → My family**: depending on what the Hub admin allows for the family, they add
 people to it, look after its kids (parents, bedtimes, limits and the family's own grown-up PIN) and set its own keys. The Hub
@@ -2375,7 +2388,8 @@ music library (e.g. `/music/slskd`) and Navidrome picks the music up.
 
 Someone with the **Kid** role gets a simpler Wavelength: a shorter menu with bigger buttons, **Ask for music**
 instead of Downloads, and **Me** instead of Settings. Admins set each kid's **bedtime** and **minutes a day**
-under **Settings → Users → Kid profiles**, along with one **grown-up PIN** for the household.
+under **Settings → Users → Kid profiles**, along with one **grown-up PIN** for the household. A kid's parents can
+always type their own switching PIN wherever the grown-up PIN is asked for.
 
 - At bedtime, or once today's minutes are used up, the music stops and a "Time for bed" screen covers the
   app. Minutes add up across all the kid's devices, and bedtime uses the device's clock, so it works offline.
