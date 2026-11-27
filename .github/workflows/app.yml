@@ -36,6 +36,10 @@ jobs:
       # Only what ships in the app; dev-server tooling is covered by Dependabot
       - run: npm audit --omit=dev --audit-level=moderate
       # End-to-end smoke test of the browser build (e2e/, playwright.config.ts)
+      # The runner image's Microsoft apt repo can answer 403, which makes `apt-get update` (and so --with-deps)
+      # fail; the browser's libraries all come from Ubuntu, so drop that repo first
+      - name: Drop the runner's Microsoft apt repo
+        run: sudo grep -rl packages.microsoft.com /etc/apt/sources.list.d/ 2>/dev/null | xargs -r sudo rm -f
       # --with-deps uses apt, so it gets a limit of its own in case an Ubuntu mirror hangs
       - run: npx playwright install --with-deps chromium
         timeout-minutes: 15
