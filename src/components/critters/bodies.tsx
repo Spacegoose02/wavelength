@@ -1134,8 +1134,8 @@ const redPanda = roundFigure({
   ),
 });
 
-/** Splayed three-toed clawed HokieBird foot at `at` (right foot wrapped in `boot` pivot for tapping). */
-function HokieFoot({ at, right }: { at: P; right?: boolean }) {
+/** Splayed three-toed clawed Hobird foot at `at` (right foot wrapped in `boot` pivot for tapping). */
+function HobirdFoot({ at, right }: { at: P; right?: boolean }) {
   const [x, y] = at;
   const foot = (
     <g transform={`translate(${x} ${y}) scale(${right ? -1.2 : 1.2} 1.2) translate(${-x} ${-y})`}>
@@ -1153,25 +1153,25 @@ function HokieFoot({ at, right }: { at: P; right?: boolean }) {
   return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
 }
 
-/** Seven-feather squared maroon-and-white tail fan behind the HokieBird (`turkey` id kept for saved picks). */
-const HOKIE_FAN = [-76, -51, -25, 0, 25, 51, 76].map((r) => ({
+/** Seven-feather squared maroon-and-white tail fan behind the Hobird (`turkey` id kept for saved picks). */
+const HOBIRD_FAN = [-76, -51, -25, 0, 25, 51, 76].map((r) => ({
   r,
   tip: 152 + Math.round(Math.abs(r) * 0.16),
   band: 194 + Math.round(Math.abs(r) * 0.13),
 }));
 
 /**
- * HokieBird (id `turkey`): the round top with a seven-feather squared maroon-and-white tail fan spread behind
+ * Hobird (id `turkey`): the round top with a seven-feather squared maroon-and-white tail fan spread behind
  * it, orange legs and splayed three-toed clawed orange feet. Its arms are wings, with feathered tips
  * (`hand: 'wing'`).
  */
 const turkey = roundFigure({
   hand: 'wing',
   leg: [16, 12],
-  Bare: (p) => <HokieFoot {...p} />,
+  Bare: (p) => <HobirdFoot {...p} />,
   Back: () => (
     <g className="turkey-fan">
-      {HOKIE_FAN.map(({ r, tip, band }) => (
+      {HOBIRD_FAN.map(({ r, tip, band }) => (
         <g key={r} transform={`rotate(${r} 200 296)`}>
           <path d={`M200 296 L 177 ${tip} Q 200 ${tip - 8} 223 ${tip} Z`} className="turkey-feather ol" />
           <path

@@ -1,10 +1,10 @@
 # Changelog
 
 ## 0.62.0
-- **The turkey critter is now the HokieBird.** A maroon head with a single swept crown tuft, twin rounded brow
+- **The turkey critter is now the Hobird.** A maroon head with a single swept crown tuft, twin rounded brow
   ridges, a broad smiling burnt-orange beak and a draped orange snood (`TurkeyFace` in
   `src/components/critters/faces.tsx`), a squared seven-feather maroon-and-white tail fan and splayed three-toed
-  orange feet (`HokieFoot` in `bodies.tsx`), in Chicago Maroon, Burnt Orange and white (`.species-turkey` in
+  orange feet (`HobirdFoot` in `bodies.tsx`), in maroon, burnt orange and white (`.species-turkey` in
   `styles.css`). The species keeps `id: 'turkey'`, so saved picks still work, and keeps wings for hands, so every
   act's instrument and the girl outfits still fit.
 - **Kids with no family get their parents' family's servers.** A Hub server kept to some families (its **Who can
