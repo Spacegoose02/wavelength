@@ -1406,7 +1406,7 @@ export function RedPandaFace() {
 }
 
 /**
- * The HokieBird's face (replacing the generic turkey, keeping `id="turkey"` for saved settings): Chicago Maroon
+ * The Hobird's face (replacing the generic turkey, keeping `id="turkey"` for saved settings): maroon
  * head with a single swept crown tuft, twin rounded brow ridges, sculpted white eyes with dark pupils, a broad
  * smiling burnt-orange beak with nostrils and the singing mouth underneath, and the signature orange snood
  * draped over the left side of the beak. No ears, so hats sit on the crown; the maroon-and-white tail fan,
