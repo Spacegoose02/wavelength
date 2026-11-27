@@ -1880,15 +1880,14 @@ html.tv ::-webkit-scrollbar { width: 0; height: 0; }
 .species-red-panda { --skin: #3a1a10; --skin-dark: #1e0e08; --belly: #fff6ee; }
 .critter .red-panda-tail { fill: #d0602c; }
 .critter .red-panda-ring { stroke: #f2b080; fill: none; }
-/* the turkey: maroon with an orange beak and feet, wings for arms, and a fan of maroon and orange tail feathers
-   (hidden under the hazmat suit) */
-.species-turkey { --skin: #861f3c; --skin-dark: #560f24; --belly: #f4e6d8; }
+/* the HokieBird (id `turkey`): Chicago Maroon with an orange beak and clawed feet, wings for arms, and a fan of
+   maroon-and-white tail feathers (hidden under the hazmat suit) */
+.species-turkey { --skin: #861f41; --skin-dark: #560d26; --belly: #f7f2ee; }
 .critter.species-turkey .sleeve { stroke: var(--skin); }
-.critter.species-turkey .hand { fill: #a8304e; }
-.critter .turkey-foot { fill: #f08a24; }
-.critter .turkey-feather { fill: #861f3c; }
-.critter .turkey-feather-alt { fill: #e8761c; }
-.critter .turkey-tip { fill: #f4e6d8; }
+.critter.species-turkey .hand { fill: #a8184e; }
+.critter .turkey-foot { fill: #e87722; }
+.critter .turkey-feather { fill: #861f41; }
+.critter .turkey-tip { fill: #f7f2ee; }
 :root[data-skin-group='nuclear'] .critter .turkey-fan { display: none; }
 /* the opossum: a pale face on a grey crown, dark arms and legs, pink hands and feet, and a long bare pink tail
    with a dark furry base; it plays dead on a flourish */

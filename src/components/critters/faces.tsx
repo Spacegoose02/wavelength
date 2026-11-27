@@ -1405,45 +1405,54 @@ export function RedPandaFace() {
   );
 }
 
-/** A feather of the turkey's crest (the middle one; the others are turned copies), curling over at the tip. */
-const TURKEY_CREST = 'M206 100 C 200 82, 204 64, 218 56 C 226 52, 232 60, 226 66 C 218 72, 214 84, 214 100 Z';
-
 /**
- * A turkey's face, an original college-mascot-style bird in maroon and orange: a round maroon head with a curl
- * of crest feathers on top, big white eyes with dark irises under bold brows, an orange beak hooked down at
- * the tip with the singing mouth under it, and a little red wattle at the chin. No ears, so hats sit on the
- * round head; the fan of tail feathers, the wings and the orange feet are on the figure (`FIGURES.turkey`).
+ * The HokieBird's face (replacing the generic turkey, keeping `id="turkey"` for saved settings): Chicago Maroon
+ * head with a single swept crown tuft, twin rounded brow ridges, sculpted white eyes with dark pupils, a broad
+ * smiling burnt-orange beak with nostrils and the singing mouth underneath, and the signature orange snood
+ * draped over the left side of the beak. No ears, so hats sit on the crown; the maroon-and-white tail fan,
+ * wing arms and splayed clawed orange feet are on the figure (`FIGURES.turkey`).
  */
 export function TurkeyFace() {
   return (
-    <Placed cx={206} cy={176} s={0.84}>
+    <Placed cx={206} cy={176} s={0.86}>
       <defs>
-        <Shade id="tk-skin" hi="#b0405e" mid="#861f3c" lo="#560f24" />
-        <Shade id="tk-beak" hi="#ffb25a" lo="#e86a10" />
+        <Shade id="tk-skin" hi="#a8184e" mid="#861f41" lo="#560d26" />
+        <Shade id="tk-beak" hi="#ffaa44" mid="#e87722" lo="#cf4420" />
       </defs>
-      {[-24, 0, 22].map((r) => (
-        <path key={r} d={TURKEY_CREST} transform={`rotate(${r} 210 104)`} fill="url(#tk-skin)" className="ol-thin" />
-      ))}
-      <HeadShape id="turkey" fill="url(#tk-skin)" d="M206 94 C 266 94, 300 130, 300 176 C 300 224, 262 254, 206 254 C 150 254, 112 224, 112 176 C 112 130, 146 94, 206 94 Z">
-        <ellipse cx="176" cy="116" rx="34" ry="11" fill="rgb(255 255 255 / 0.18)" transform="rotate(-14 176 116)" />
+      <HeadShape
+        id="turkey"
+        fill="url(#tk-skin)"
+        d="M206 94 C 202 74, 212 58, 224 54 C 218 64, 218 76, 226 88 C 254 90, 272 104, 274 126 C 292 140, 298 164, 288 190 C 278 214, 252 246, 206 248 C 160 246, 134 214, 124 190 C 114 164, 120 140, 138 126 C 140 104, 158 90, 186 88 C 192 84, 198 88, 206 94 Z"
+      >
+        <ellipse cx="174" cy="112" rx="28" ry="9" fill="rgb(255 255 255 / 0.16)" transform="rotate(-14 174 112)" />
       </HeadShape>
       <g data-part="eyes">
-        <ellipse cx={168} cy={168} rx={24} ry={26} fill="#fff" className="ol-thin" />
-        <ellipse cx={244} cy={168} rx={22} ry={26} fill="#fff" className="ol-thin" />
-        <ellipse cx={172} cy={174} rx={11} ry={13} fill="#1b1012" />
-        <ellipse cx={246} cy={174} rx={10} ry={13} fill="#1b1012" />
-        <circle data-shine="" cx={176} cy={168} r={4.4} fill="#fff" />
-        <circle data-shine="" cx={250} cy={168} r={4} fill="#fff" />
-        <Lashes l={[146, 152]} r={[264, 152]} />
+        <path d="M158 154 C 154 128, 186 124, 198 148 C 201 158, 193 166, 177 166 C 164 166, 159 161, 158 154 Z" fill="#fff" className="ol-thin" />
+        <path d="M254 154 C 258 128, 226 124, 214 148 C 211 158, 219 166, 235 166 C 248 166, 253 161, 254 154 Z" fill="#fff" className="ol-thin" />
+        <ellipse cx={182} cy={150} rx={10} ry={13} fill="#14080d" />
+        <ellipse cx={230} cy={150} rx={10} ry={13} fill="#14080d" />
+        <circle data-shine="" cx={185} cy={144} r={3.8} fill="#fff" />
+        <circle data-shine="" cx={233} cy={144} r={3.8} fill="#fff" />
+        <Lashes l={[158, 140]} r={[254, 140]} />
       </g>
-      <Pair l="M142 136 Q 160 124 184 132" mid={206} stroke="#2a0a14" width={6} />
-      <path data-part="smile" d="M184 228 Q 206 242 228 228" fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
-      <Mouth id="turkey" x={206} y={224} w={16} h={26} fill="#5a1a24" line={INK} teeth="none" />
-      {/* the beak, hooked down at the tip, and a little red wattle under the chin */}
-      <path d="M182 202 Q 206 188 230 202 Q 236 216 222 222 Q 214 226 210 234 Q 206 240 202 234 Q 198 226 190 222 Q 176 216 182 202 Z" fill="url(#tk-beak)" className="ol-thin" />
-      <path d="M190 210 Q 206 216 222 210" fill="none" stroke="rgb(0 0 0 / 0.2)" strokeWidth="1.6" />
-      <ellipse cx="198" cy="200" rx="7" ry="2" fill="rgb(255 255 255 / 0.7)" />
-      <path d="M232 236 C 240 244, 240 258, 232 262 C 224 258, 224 246, 232 236 Z" fill="#d8283a" className="ol-thin" />
+      <Pair l="M150 128 Q 174 118 194 134" mid={206} stroke="#360618" width={4.5} />
+      {/* broad smiling orange beak */}
+      <path
+        d="M164 174 Q 206 156 248 174 C 266 183, 264 207, 243 211 Q 222 215 206 220 Q 190 215 169 211 C 148 207, 146 183, 164 174 Z"
+        fill="url(#tk-beak)"
+        className="ol-thin"
+      />
+      <ellipse cx="195" cy="178" rx="2.8" ry="4.2" transform="rotate(-12 195 178)" fill="#14080d" />
+      <ellipse cx="217" cy="178" rx="2.8" ry="4.2" transform="rotate(12 217 178)" fill="#14080d" />
+      <ellipse cx="198" cy="169" rx="7" ry="1.8" fill="rgb(255 255 255 / 0.55)" />
+      <path data-part="smile" d="M166 197 Q 186 205 206 192 Q 226 205 246 197" fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
+      <Mouth id="turkey" x={206} y={198} w={15} h={26} fill="#4a081e" line={INK} teeth="none" />
+      {/* signature orange snood draping over the left side of the beak */}
+      <path
+        d="M196 160 C 193 153, 212 153, 210 161 C 201 164, 194 172, 192 187 C 190 204, 193 222, 189 233 C 185 240, 175 240, 173 231 C 172 218, 174 196, 179 178 C 183 168, 190 162, 196 160 Z"
+        fill="url(#tk-beak)"
+        className="ol-thin"
+      />
     </Placed>
   );
 }

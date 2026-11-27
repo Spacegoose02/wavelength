@@ -111,7 +111,7 @@ export const SPECIES: SpeciesInfo[] = [
   { id: 'frog', noun: 'frog', label: 'Frog', Face: FrogFace, figure: FIGURES.frog, fit: { w: 1.1, lift: -26, eyeY: 140, eyes: [1.5, 1.3], mask: 18, bow: [162, 92, -20] } },
   { id: 'bunny', noun: 'bunny', label: 'Bunny', Face: BunnyFace, figure: FIGURES.bunny, fit: { eyeY: 170, eyes: [1.28, 1.2], mask: 10, bow: [178, 112, -10] } },
   { id: 'red-panda', noun: 'red panda', label: 'Red panda', Face: RedPandaFace, figure: FIGURES.redPanda, fit: { eyeY: 170, eyes: [1.3, 1.2], mask: 10, bow: [168, 114, -20] } },
-  { id: 'turkey', noun: 'turkey', label: 'Turkey', Face: TurkeyFace, figure: FIGURES.turkey, fit: { eyeY: 168, eyes: [1.36, 1.3], mask: 12, bow: [166, 112, -20] } },
+  { id: 'turkey', noun: 'HokieBird', label: 'HokieBird', Face: TurkeyFace, figure: FIGURES.turkey, fit: { eyeY: 156, eyes: [1.15, 1.15], mask: 10, bow: [162, 108, -20] } },
   { id: 'opossum', noun: 'opossum', label: 'Opossum', Face: OpossumFace, figure: FIGURES.opossum, fit: { eyeY: 170, eyes: [1.28, 1.2], mask: 14, bow: [166, 112, -20] } },
   { id: 'capybara', noun: 'capybara', label: 'Capybara', Face: CapybaraFace, figure: FIGURES.capybara, fit: { w: 1.04, eyeY: 166, eyes: [1.2, 1.1], mask: 12, bow: [166, 112, -20] } },
   { id: 'crocodile', noun: 'crocodile', label: 'Crocodile', Face: CrocodileFace, figure: FIGURES.crocodile, fit: { w: 1.06, lift: -26, eyeY: 130, eyes: [1.4, 1.3], mask: 16, bow: [162, 92, -20] } },
