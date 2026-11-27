@@ -1134,24 +1134,50 @@ const redPanda = roundFigure({
   ),
 });
 
-/** One tail feather of the turkey's fan (pointing straight up from its root at 200,300; the rest are turned copies). */
-const TURKEY_FEATHER = 'M200 300 C 178 264, 176 190, 186 156 Q 200 138 214 156 C 224 190, 222 264, 200 300 Z';
+/** Splayed three-toed clawed HokieBird foot at `at` (right foot wrapped in `boot` pivot for tapping). */
+function HokieFoot({ at, right }: { at: P; right?: boolean }) {
+  const [x, y] = at;
+  const foot = (
+    <g transform={`translate(${x} ${y}) scale(${right ? -1.2 : 1.2} 1.2) translate(${-x} ${-y})`}>
+      <path
+        d={`M${x} ${y - 6} C ${x - 8} ${y - 3}, ${x - 20} ${y}, ${x - 26} ${y + 5} C ${x - 23} ${y + 9}, ${x - 15} ${y + 7}, ${x - 9} ${y + 4} C ${x - 12} ${y + 10}, ${x - 12} ${y + 16}, ${x - 7} ${y + 18} C ${x - 2} ${y + 17}, ${x - 1} ${y + 10}, ${x} ${y + 7} C ${x + 1} ${y + 10}, ${x + 3} ${y + 17}, ${x + 8} ${y + 18} C ${x + 13} ${y + 16}, ${x + 12} ${y + 9}, ${x + 8} ${y + 4} C ${x + 13} ${y + 6}, ${x + 19} ${y + 7}, ${x + 22} ${y + 3} C ${x + 18} ${y - 2}, ${x + 8} ${y - 3}, ${x} ${y - 6} Z`}
+        className="turkey-foot ol-thin"
+      />
+      <path
+        d={`M${x - 26} ${y + 5} l-4 2 4 1 Z M${x - 7} ${y + 18} l-1 4 4 -4 Z M${x + 8} ${y + 18} l2 4 1 -5 Z`}
+        fill="#fff"
+        className="ol-thin"
+      />
+    </g>
+  );
+  return right ? <Pivot from={[236, 362]} to={at} part="boot">{foot}</Pivot> : foot;
+}
+
+/** Seven-feather squared maroon-and-white tail fan behind the HokieBird (`turkey` id kept for saved picks). */
+const HOKIE_FAN = [-76, -51, -25, 0, 25, 51, 76].map((r) => ({
+  r,
+  tip: 152 + Math.round(Math.abs(r) * 0.16),
+  band: 194 + Math.round(Math.abs(r) * 0.13),
+}));
 
 /**
- * Turkey: the round top with a big fan of tail feathers spread behind it, maroon and orange in turn with pale
- * tips, thin orange legs and three-toed orange feet. Its arms are wings, with feathered tips (`hand: 'wing'`).
+ * HokieBird (id `turkey`): the round top with a seven-feather squared maroon-and-white tail fan spread behind
+ * it, orange legs and splayed three-toed clawed orange feet. Its arms are wings, with feathered tips
+ * (`hand: 'wing'`).
  */
 const turkey = roundFigure({
   hand: 'wing',
   leg: [16, 12],
-  Bare: (p) => <WebbedFoot {...p} className="turkey-foot" s={1.2} />,
+  Bare: (p) => <HokieFoot {...p} />,
   Back: () => (
     <g className="turkey-fan">
-      {[-84, -63, -42, -21, 0, 21, 42, 63, 84].map((r, i) => (
-        <g key={r} transform={`rotate(${r} 200 300)`}>
-          <path d={TURKEY_FEATHER} className={i % 2 ? 'turkey-feather-alt ol' : 'turkey-feather ol'} />
-          <path d="M187 160 Q 200 140 213 160 Q 200 172 187 160 Z" className="turkey-tip" />
-          <path d="M200 296 V160" stroke="rgb(0 0 0 / 0.2)" strokeWidth="2" />
+      {HOKIE_FAN.map(({ r, tip, band }) => (
+        <g key={r} transform={`rotate(${r} 200 296)`}>
+          <path d={`M200 296 L 177 ${tip} Q 200 ${tip - 8} 223 ${tip} Z`} className="turkey-feather ol" />
+          <path
+            d={`M184 ${band} L 177 ${tip} Q 200 ${tip - 8} 223 ${tip} L 216 ${band} Q 200 ${band - 7} 184 ${band} Z`}
+            className="turkey-tip ol-thin"
+          />
         </g>
       ))}
     </g>
