@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.61.1
+- **Kids with no family get their parents' family's servers.** A Hub server kept to some families (its **Who can
+  use it**) was hidden from a kid an admin made and gave parents, because the kid wasn't in a family themselves:
+  the kid profile had no sources and Services said "only for other families". A kid in no family now counts as
+  being in their parents' families (`familiesOf` in `hub/src/services.ts`, also used by the Navidrome relay), and
+  the Services note says to put them or a parent in a family when nobody is in one. **Hub update needed.**
+
 ## 0.61.0
 - **Parents switch to their kids' profiles, and only their PIN gets them back.** Signed in as a parent, the
   button with your initial (Who's listening?) lists your kids, even on a Hub without families, and taps straight
