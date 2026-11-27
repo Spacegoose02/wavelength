@@ -994,6 +994,14 @@ function ServiceLabel({ name, what, note }: { name: string; what: string; note?:
   );
 }
 
+/** Why a switched-on server still isn't theirs: it's kept to some families (Families, further down) they aren't in. */
+const familyNote = (user: HubAdminUser) =>
+  user.familyId != null
+    ? 'only for other families, so they don’t get it yet'
+    : user.role === 'kid'
+      ? 'only for some families: put them or a parent in one under Families below'
+      : 'only for some families: put them in one under Families below';
+
 /**
  * One person's servers, each with a switch (hub/src/services.ts setServiceAccess): Music, Podcasts and audiobooks,
  * Plex, SUB/WAVE. Off keeps their own login. Navidrome also needs an account of theirs, made here with one press.
@@ -1032,7 +1040,7 @@ function PersonServices({ user }: { user: HubAdminUser }) {
             <span className="switch">
               <input type="checkbox" checked={s.on} disabled={s.locked || busy === s.id} onChange={(e) => run(s.id, () => c.setServiceAccess(s.id, user.id, e.target.checked))} /><span />
             </span>
-            <ServiceLabel name={s.name} what={SERVICE_WHAT[s.kind] ?? s.kind} note={s.on && s.otherFamilies ? 'only for other families, so they don’t get it yet' : undefined} />
+            <ServiceLabel name={s.name} what={SERVICE_WHAT[s.kind] ?? s.kind} note={s.on && s.otherFamilies ? familyNote(user) : undefined} />
           </label>
           {s.on && s.needsAccount && (
             <button className="btn small" disabled={busy === s.id} onClick={() => run(s.id, () => c.createNavidromeAccount(s.id, user.id))} title="Navidrome gives music only to people with an account there">
