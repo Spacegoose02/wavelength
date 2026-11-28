@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.63.0
 - **Speed up a SUB/WAVE DJ on Ollama from Wavelength.** A station's **AI & voice** tab has a new **How fast the DJ
   answers** panel for SUB/WAVE's own speed settings: the DJ's thinking (`llm.reasoning`; off sends Ollama
   `think: false`), how songs, requests and segments are picked (`trackSelection`, `requestMatching`,
