@@ -5,6 +5,8 @@ import {
   blankPersona,
   speedForm,
   speedPatch,
+  thinkingStarved,
+  THINKING_MIN_OUTPUT,
   FAST_SPEED,
   type SubWaveSource,
   type SwArchive,
@@ -485,7 +487,11 @@ export function SwStationSettings({ sw }: { sw: SubWaveSource }) {
           </label>
           <label>Longest answer (tokens)
             <input type="number" min={0} max={8000} step={100} value={form.maxOut} onChange={(e) => set({ maxOut: e.target.value })} placeholder="SUB/WAVE's default" />
-            <small className="muted">Empty = SUB/WAVE's default. 500 to 8000.</small>
+            <small className="muted">Empty = SUB/WAVE's default (4000 for talk, 8000 for picks). 500 to 8000.</small>
+            {thinkingStarved(form) && (
+              <small className="errors" style={{ display: 'block', marginBottom: 0 }}>With thinking on, the thinking counts toward this limit too. Below {THINKING_MIN_OUTPUT} the model often runs out
+                before it answers, and SUB/WAVE then fails the call. Leave it empty.</small>
+            )}
           </label>
           {form.provider === 'ollama' && (
             <label>Context window (tokens)
