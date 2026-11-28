@@ -2031,15 +2031,47 @@ tabs under **Run the station** need SUB/WAVE's admin login, either on the source
 | **Shows** | Make and edit shows: host, guests, brief and moods. Each show has its host's picture: click it to upload a new one (it changes that DJ's picture everywhere). |
 | **DJs** | The station's DJs (SUB/WAVE calls them personas). Edit one's name, tagline, how much and how long they talk, humour, warmth and local colour, personality, language, voice engine and voice, and picture. **Make default** picks who hosts when no show is on. **New DJ** starts from SUB/WAVE's default, and **Browse the catalog** adds a ready-made one. Deleting a DJ also deletes the shows they host. |
 | **Skills** | What the DJ does between songs: weather, time checks, trivia and so on. Switch each on or off. A skill that's off can still be fired by hand from DJ control. |
-| **AI & voice** | The AI provider and model (the refresh button lists the provider's models), its API key, and a daily token limit. Near the limit the DJ talks less, and at the limit the music carries on without the DJ. Below that: whether the DJ talks at all, the station's voice engine and its Kokoro voice. **Restart the mixer** if the stream is stuck. |
+| **AI & voice** | The AI provider and model (the refresh button lists the provider's models), its API key, and a daily token limit. Near the limit the DJ talks less, and at the limit the music carries on without the DJ. **How fast the DJ answers** turns the DJ's thinking on or off, picks whether songs, requests and segments take several AI calls or one, and sets the time limit, the longest answer and (on Ollama) the context window. **Make it fast** sets the quick choices for a model on your own computer: see [A slow DJ on Ollama](#a-slow-dj-on-ollama). Below that: whether the DJ talks at all, the station's voice engine and its Kokoro voice. **Restart the mixer** if the stream is stuck. |
 | **Health** | SUB/WAVE's own check of the music server, AI, voices, stream and library. Shows the last result. **Run the check** runs it again (up to a minute), and some problems have a button that fixes them. |
 | **Archive** | Every hour on air, when hourly archives are on in SUB/WAVE. **Listen** plays an hour here, **Save** downloads its MP3, and **Clear the archive** deletes them all. |
 | **Stations** | Station profiles. One SUB/WAVE can keep up to eight stations, each with its own DJs, shows, schedule and settings, but only one is on air at a time. **Go on air** switches (the stream stops for a few seconds), and **New station** copies this one or starts empty. To run two stations at the same time, run a second SUB/WAVE container with its own port and data folder and add it as another source. **Copy from another SUB/WAVE** then turns the new one into a copy of the first in one go: settings, DJs and their pictures, shows, schedule, jingles, sound effects, voices, skills and library analysis. It keeps its own name, music server login and API keys. Both stations need their admin login in the same place, either both on the Hub or both on this device. |
 | **Stats** | Listeners connected now, and the AI and voice calls the station has made. |
 
 A few things are still only in SUB/WAVE's own admin: Ollama and OpenAI-compatible server addresses, a backup
-model, the finer agent settings, each DJ's skills and music leanings, custom skills, jingles and beds, playlists,
+model, the rest of the agent settings, each DJ's skills and music leanings, custom skills, jingles and beds, playlists,
 the library tagger and backups.
+
+
+### A slow DJ on Ollama
+
+SUB/WAVE's dashboard shows **DJ latency** with a red line at the agent's time limit (45 seconds unless you change
+it), and **Failed** counts the AI calls that ran out of time. On a model on your own computer, such as
+`qwen3.5:9b` on Ollama, the DJ is slow for three reasons:
+
+1. **Thinking.** Qwen 3.5 and other thinking models write a long reasoning first, which can take minutes on a home
+   GPU, before a two-line DJ answer. Turn off **The DJ thinks before it answers** (SUB/WAVE then sends Ollama
+   `think: false`).
+2. **Agentic routes.** By default the AI searches the library itself to pick songs, match requests and prepare
+   segments, which is several AI calls one after another. **Picking songs: from a shortlist**, **Listener requests:
+   matched straight from the library** and **Segments and skills: one AI call** make each of those one call.
+3. **Several stations on one Ollama.** Ollama answers one request at a time per model unless it's told otherwise,
+   so three stations wait in line behind each other. See the Ollama settings below.
+
+**Make it fast** does 1 and 2 in one press; do it on each station, then **Save**.
+
+On the computer that runs Ollama (set these as environment variables for the Ollama service, then restart it):
+
+| Setting | Why |
+|---|---|
+| `OLLAMA_NUM_PARALLEL=3` | Answers the three stations at the same time instead of in turn. Each slot keeps its own context, so it needs room for 3× the context window on the GPU: if `ollama ps` then shows less than 100% GPU, go back to 2 or lower the context window. |
+| `OLLAMA_KEEP_ALIVE=-1` | Keeps the model loaded, so the first call after a quiet spell doesn't wait for it to load. |
+| `OLLAMA_FLASH_ATTENTION=1` and `OLLAMA_KV_CACHE_TYPE=q8_0` | Make each slot's context about half the size, which leaves room for more slots. |
+| `OLLAMA_MAX_LOADED_MODELS=1` | Stops a second copy of a model from pushing the first off the GPU. |
+
+Use **the same context window** on every station and on the Hub's AI DJ (Settings → AI DJ → Ollama) when they
+share one Ollama and one model. A request with a different context window makes Ollama reload the model, which
+takes several seconds every time the stations take turns. 8192 is enough for the shortlist and direct routes;
+the agentic routes want 16384.
 
 ## Song titles on radio
 

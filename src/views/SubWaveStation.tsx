@@ -3,12 +3,16 @@ import {
   archiveDays,
   availableEngines,
   blankPersona,
+  speedForm,
+  speedPatch,
+  FAST_SPEED,
   type SubWaveSource,
   type SwArchive,
   type SwDoctorReport,
   type SwPersonaFull,
   type SwSettings,
   type SwSkill,
+  type SwSpeedForm,
   type SwStationProfile,
 } from '../sources/subwave';
 import { Cover, Spinner } from '../components/common';
@@ -358,9 +362,11 @@ const PROVIDER_KEYS: Record<string, string> = {
   gateway: 'AI_GATEWAY_API_KEY',
 };
 
+type SwStationForm = SwSpeedForm & { provider: string; model: string; cap: string; talk: boolean; engine: string; kokoro: string; key: string };
+
 export function SwStationSettings({ sw }: { sw: SubWaveSource }) {
   const loaded = useLoad(() => sw.settings(), [sw]);
-  const [form, setForm] = useState<{ provider: string; model: string; cap: string; talk: boolean; engine: string; kokoro: string; key: string }>();
+  const [form, setForm] = useState<SwStationForm>();
   const [models, setModels] = useState<string[]>([]);
   const { run, busy, view } = useAction();
 
@@ -371,6 +377,7 @@ export function SwStationSettings({ sw }: { sw: SubWaveSource }) {
       provider: v.llm?.provider ?? 'ollama',
       model: v.llm?.model ?? '',
       cap: v.llm?.dailyTokenCap ? String(v.llm.dailyTokenCap) : '',
+      ...speedForm(v.llm),
       talk: v.tts?.enabled !== false,
       engine: v.tts?.defaultEngine ?? 'piper',
       kokoro: v.tts?.kokoro?.voice ?? '',
@@ -392,7 +399,7 @@ export function SwStationSettings({ sw }: { sw: SubWaveSource }) {
       if (keyEnv && form.key.trim()) await sw.saveSecrets({ [keyEnv]: form.key.trim() });
       const cap = Number(form.cap);
       const r = await sw.saveSettings({
-        llm: { provider: form.provider, model: form.model.trim(), dailyTokenCap: Number.isFinite(cap) && cap > 0 ? Math.round(cap) : 0 },
+        llm: { provider: form.provider, model: form.model.trim(), dailyTokenCap: Number.isFinite(cap) && cap > 0 ? Math.round(cap) : 0, ...speedPatch(form) },
         tts: { enabled: form.talk, defaultEngine: form.engine, ...(form.kokoro ? { kokoro: { voice: form.kokoro } } : {}) },
       });
       loaded.reload();
@@ -439,7 +446,54 @@ export function SwStationSettings({ sw }: { sw: SubWaveSource }) {
             <small className="muted">Near it the DJ talks less; at it the music carries on without the DJ.</small>
           </label>
         </div>
-        <p className="muted small">Ollama addresses, OpenAI-compatible servers, a backup model and the finer agent settings are in SUB/WAVE's own admin.</p>
+        <p className="muted small">Ollama addresses, OpenAI-compatible servers and a backup model are in SUB/WAVE's own admin.</p>
+      </section>
+
+      <section className="panel">
+        <h2>How fast the DJ answers</h2>
+        <p className="muted small">
+          A model on your own computer (Ollama) is much slower than a cloud one. When the Stats tab shows the DJ's
+          answers taking longer than the time limit, or failing, start with <b>Make it fast</b>.
+        </p>
+        <button type="button" className="btn small" disabled={!!busy} onClick={() => set(FAST_SPEED)}>Make it fast</button>
+        <label className="check">
+          <span className="switch"><input type="checkbox" checked={form.reasoning} onChange={(e) => set({ reasoning: e.target.checked })} /><span /></span>
+          <span>The DJ thinks before it answers <small className="muted">(slower, often by minutes on Ollama, for a few-line answer. Off sends Ollama <code>think: false</code>)</small></span>
+        </label>
+        <div className="editor-grid">
+          <label>Picking songs
+            <select value={form.trackSelection} onChange={(e) => set({ trackSelection: e.target.value as SwStationForm['trackSelection'] })}>
+              <option value="agentic">The AI searches the library (several AI calls)</option>
+              <option value="shortlist">The AI picks from a shortlist (one AI call, quicker)</option>
+            </select>
+          </label>
+          <label>Listener requests
+            <select value={form.requestMatching} onChange={(e) => set({ requestMatching: e.target.value as SwStationForm['requestMatching'] })}>
+              <option value="agentic">The AI searches for the song (several AI calls)</option>
+              <option value="direct">Matched straight from the library (quicker)</option>
+            </select>
+          </label>
+          <label>Segments and skills
+            <select value={form.segmentRuntime} onChange={(e) => set({ segmentRuntime: e.target.value as SwStationForm['segmentRuntime'] })}>
+              <option value="agentic">The AI can look things up first (several AI calls)</option>
+              <option value="direct">One AI call (quicker)</option>
+            </select>
+          </label>
+          <label>Time limit (seconds)
+            <input type="number" min={5} max={300} step={5} value={form.deadline} onChange={(e) => set({ deadline: e.target.value })} />
+            <small className="muted">How long the AI gets to pick before the station falls back to its own pick.</small>
+          </label>
+          <label>Longest answer (tokens)
+            <input type="number" min={0} max={8000} step={100} value={form.maxOut} onChange={(e) => set({ maxOut: e.target.value })} placeholder="SUB/WAVE's default" />
+            <small className="muted">Empty = SUB/WAVE's default. 500 to 8000.</small>
+          </label>
+          {form.provider === 'ollama' && (
+            <label>Context window (tokens)
+              <input type="number" min={2048} max={131072} step={1024} value={form.numCtx} onChange={(e) => set({ numCtx: e.target.value })} placeholder="Ollama's own" />
+              <small className="muted">Use the same number on every station and the Hub that share one Ollama, or Ollama reloads the model each time it changes.</small>
+            </label>
+          )}
+        </div>
       </section>
 
       <section className="panel">
