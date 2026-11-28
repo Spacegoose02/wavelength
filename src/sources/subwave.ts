@@ -675,3 +675,52 @@ export class SubWaveSource implements MusicSource {
     return this.req('POST', `/stations/${encodeURIComponent(id)}/activate`, { admin: true, body: {} });
   }
 }
+
+/** SUB/WAVE's speed settings for the DJ's AI (its `llm.*` fields of the same names). */
+export interface SwSpeedForm {
+  reasoning: boolean;
+  trackSelection: 'agentic' | 'shortlist';
+  requestMatching: 'agentic' | 'direct';
+  segmentRuntime: 'agentic' | 'direct';
+  /** Seconds, as typed. */
+  deadline: string;
+  /** Tokens, as typed; empty = SUB/WAVE's default. */
+  maxOut: string;
+  /** Tokens, as typed; empty = Ollama's own. */
+  numCtx: string;
+}
+
+/** The quick setup for a model on your own computer: no thinking, and one AI call wherever SUB/WAVE allows it. */
+export const FAST_SPEED: Partial<SwSpeedForm> = { reasoning: false, trackSelection: 'shortlist', requestMatching: 'direct', segmentRuntime: 'direct' };
+
+/** SUB/WAVE's stored `llm` → the form. Missing fields read as SUB/WAVE's defaults. */
+export function speedForm(llm: Record<string, unknown> | undefined): SwSpeedForm {
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+  return {
+    reasoning: llm?.reasoning === true,
+    trackSelection: llm?.trackSelection === 'shortlist' ? 'shortlist' : 'agentic',
+    requestMatching: llm?.requestMatching === 'direct' ? 'direct' : 'agentic',
+    segmentRuntime: llm?.segmentRuntime === 'direct' ? 'direct' : 'agentic',
+    deadline: String(Math.round((n(llm?.agentTimeoutMs) || 45_000) / 1000)),
+    maxOut: n(llm?.maxOutputTokens) ? String(n(llm?.maxOutputTokens)) : '',
+    numCtx: n(llm?.numCtx) ? String(n(llm?.numCtx)) : '',
+  };
+}
+
+/** The form → the `llm` fields to save, clamped to what SUB/WAVE accepts. */
+export function speedPatch(f: SwSpeedForm): Record<string, unknown> {
+  const num = (s: string) => (s.trim() === '' ? NaN : Number(s));
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(v)));
+  const deadline = num(f.deadline);
+  const maxOut = num(f.maxOut);
+  const numCtx = num(f.numCtx);
+  return {
+    reasoning: f.reasoning,
+    trackSelection: f.trackSelection,
+    requestMatching: f.requestMatching,
+    segmentRuntime: f.segmentRuntime,
+    ...(Number.isFinite(deadline) && deadline > 0 && { agentTimeoutMs: clamp(deadline * 1000, 5_000, 300_000) }),
+    maxOutputTokens: Number.isFinite(maxOut) && maxOut > 0 ? clamp(maxOut, 500, 8000) : 0,
+    numCtx: Number.isFinite(numCtx) && numCtx > 0 ? clamp(numCtx, 2048, 131072) : 0,
+  };
+}

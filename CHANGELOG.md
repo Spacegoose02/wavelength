@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+- **Speed up a SUB/WAVE DJ on Ollama from Wavelength.** A station's **AI & voice** tab has a new **How fast the DJ
+  answers** panel for SUB/WAVE's own speed settings: the DJ's thinking (`llm.reasoning`; off sends Ollama
+  `think: false`), how songs, requests and segments are picked (`trackSelection`, `requestMatching`,
+  `segmentRuntime`: several AI calls or one), the time limit (`agentTimeoutMs`), the longest answer
+  (`maxOutputTokens`) and, on Ollama, the context window (`numCtx`). **Make it fast** sets thinking off and one AI
+  call everywhere (`FAST_SPEED`, `speedForm` and `speedPatch` in `src/sources/subwave.ts`). The user guide's new
+  [A slow DJ on Ollama](docs/USER-GUIDE.md#a-slow-dj-on-ollama) explains what's slow and the Ollama settings
+  (`OLLAMA_NUM_PARALLEL` and friends) for several stations on one Ollama.
+
 ## 0.62.0
 - **The turkey critter is now the Hobird.** A maroon head with a single swept crown tuft, twin rounded brow
   ridges, a broad smiling burnt-orange beak and a draped orange snood (`TurkeyFace` in
