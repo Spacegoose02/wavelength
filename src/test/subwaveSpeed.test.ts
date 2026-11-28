@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { FAST_SPEED, speedForm, speedPatch } from '../sources/subwave';
+import { FAST_SPEED, speedForm, speedPatch, thinkingStarved } from '../sources/subwave';
 
 describe('SUB/WAVE speed settings', () => {
   test('missing fields read as SUB/WAVE defaults', () => {
@@ -24,5 +24,14 @@ describe('SUB/WAVE speed settings', () => {
     const empty = speedPatch({ ...speedForm(undefined), deadline: '', maxOut: '', numCtx: '' });
     expect(empty.agentTimeoutMs).toBeUndefined();
     expect(empty).toMatchObject({ maxOutputTokens: 0, numCtx: 0 });
+  });
+});
+
+describe('thinking vs the longest answer', () => {
+  test('warns only when thinking is on and the cap is low', () => {
+    expect(thinkingStarved({ reasoning: true, maxOut: '500' })).toBe(true);
+    expect(thinkingStarved({ reasoning: true, maxOut: '' })).toBe(false);
+    expect(thinkingStarved({ reasoning: true, maxOut: '4000' })).toBe(false);
+    expect(thinkingStarved({ reasoning: false, maxOut: '500' })).toBe(false);
   });
 });

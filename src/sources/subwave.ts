@@ -724,3 +724,13 @@ export function speedPatch(f: SwSpeedForm): Record<string, unknown> {
     numCtx: Number.isFinite(numCtx) && numCtx > 0 ? clamp(numCtx, 2048, 131072) : 0,
   };
 }
+
+/** Below this "longest answer", a thinking model (Qwen 3.5 on Ollama) tends to spend it all on thinking, so the
+ *  reply hits the cap and SUB/WAVE fails the call ("reply truncated at the output-token cap"). */
+export const THINKING_MIN_OUTPUT = 4000;
+
+/** True when thinking is on and the longest answer is set low enough to starve it. */
+export function thinkingStarved(f: Pick<SwSpeedForm, 'reasoning' | 'maxOut'>): boolean {
+  const n = Number(f.maxOut);
+  return f.reasoning && f.maxOut.trim() !== '' && Number.isFinite(n) && n > 0 && n < THINKING_MIN_OUTPUT;
+}

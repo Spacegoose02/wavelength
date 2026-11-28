@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **A warning when thinking would starve the DJ's answers.** On a station's **How fast the DJ answers**, a
+  **Longest answer** under 4000 tokens with thinking on now says why it fails: the thinking counts toward the
+  limit, so the model runs out before it answers and SUB/WAVE fails the call ("reply truncated at the output-token
+  cap"). `thinkingStarved` in `src/sources/subwave.ts`.
+
 ## 0.63.0
 - **Speed up a SUB/WAVE DJ on Ollama from Wavelength.** A station's **AI & voice** tab has a new **How fast the DJ
   answers** panel for SUB/WAVE's own speed settings: the DJ's thinking (`llm.reasoning`; off sends Ollama
